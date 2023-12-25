@@ -2866,6 +2866,8 @@ export class HeroSystem6eItem extends Item {
             //    only determined by DC decay)
             // 5e AOE has levels at base 0 with DOUBLEAREA adders (so x8 is 3 levels)
             // 6e AOE has levels which represent the radius but the explosion negative adder doesn't
+            //
+            // See ItemAttackFormApplication.getData() for similar behaviour that probably needs to be shared.
 
             this.system.areaOfEffect = {
                 type: type.toLowerCase(),

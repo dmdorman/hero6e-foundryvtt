@@ -119,7 +119,7 @@ export async function AttackOptions(item) {
         }
     }
 
-    const aoe = item.findModsByXmlid("AOE");
+    const aoe = item.hasAoeModifier();
 
     if (
         game.settings.get("hero6efoundryvttv2", "hit locations") &&
@@ -184,7 +184,9 @@ export async function AttackAoeToHit(item, options) {
 
     const actor = item.actor;
     if (!actor) {
-        return ui.notifications.error(`Attack details are no longer availble.`);
+        return ui.notifications.error(
+            `Attack details are no longer available.`,
+        );
     }
 
     const token = actor.getActiveTokens()[0];
@@ -207,7 +209,7 @@ export async function AttackAoeToHit(item, options) {
         dcvTargetNumber = 3;
     }
 
-    const aoe = item.findModsByXmlid("AOE");
+    const aoe = item.hasAoeModifier();
     const SELECTIVETARGET = aoe?.adders
         ? aoe.ADDER.find((o) => o.XMLID === "SELECTIVETARGET")
         : null;
@@ -681,7 +683,7 @@ export async function AttackToHit(item, options) {
         item.update({ "system.charges.value": charges - spentCharges });
     }
 
-    const aoe = item.findModsByXmlid("AOE");
+    const aoe = item.hasAoeModifier();
     const aoeTemplate =
         game.scenes.current.templates.find((o) => o.flags.itemId === item.id) ||
         game.scenes.current.templates.find((o) => o.user.id === game.user.id);
@@ -840,34 +842,6 @@ export async function AttackToHit(item, options) {
         return ChatMessage.create(chatData);
     }
 
-    //const aoe = item.system.modifiers.find(o => o.XMLID === "AOE");
-    //const explosion = aoe?.adders ? aoe.adders.find(o=> o.XMLID === "EXPLOSION") : null;
-
-    // Attack Tags
-    // let attackTags = []
-    // attackTags.push({name: item.system.class});
-    // if (item.system.killing) {
-    //     attackTags.push({name: `killing`});
-    // }
-    // if (item.system.stunBodyDamage != 'stunbody') {
-    //     attackTags.push({name: item.system.stunBodyDamage});
-    // }
-    // if (item.system.piercing) {
-    //     attackTags.push({name: `APx${item.system.piercing}`, title: `Armor Piercing`});
-    // }
-    // if (item.system.penetrating) {
-    //     attackTags.push({name: `PENx${item.system.penetrating}`, title: `Penetrating`});
-    // }
-    // if (autofire) {
-    //     attackTags.push({name: `AFx${autoFireShots}`, title: `Autofire`});
-    // }
-    // if (aoe) {
-    //     attackTags.push({name: `${aoe.OPTION_ALIAS}(${aoe.LEVELS})`});
-    // }
-    // if (explosion) {
-    //     attackTags.push({name: `explosion`});
-    // }
-
     let cardData = {
         // dice rolls
         //rolls: [attackRoll],
@@ -979,16 +953,14 @@ function getAttackTags(item) {
                 }
                 break;
 
+            case "EXPLOSION":
             case "AOE":
+                // TODO: This needs to be corrected as the names are not consistent.
                 attackTags.push({
                     name: `${mod.OPTION_ALIAS}(${mod.LEVELS})`,
                     title: `${mod.XMLID}`,
                 });
                 break;
-
-            // case "LIMITEDPOWER":
-            //     attackTags.push({ name: `${mod.OPTION_ALIAS}`, title: `${mod.XMLID}` });
-            //     break;
 
             default:
                 attackTags.push({

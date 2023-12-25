@@ -63,6 +63,7 @@ export class ItemAttackFormApplication extends FormApplication {
 
         const aoe = item.hasAoeModifier();
         if (aoe) {
+            // TODO: This needs to change. Shouldn't it be looking at system.areaOfEffect?
             data.aoeText = aoe.OPTION_ALIAS;
             if (aoe.LEVELS) {
                 data.aoeText += ` (${aoe.LEVELS})`;
