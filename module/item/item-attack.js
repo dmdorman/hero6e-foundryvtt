@@ -1236,13 +1236,13 @@ export async function _onApplyDamage(event) {
 
         // If AOE then sort by distance from center
         if (item.hasExplosionAdvantage()) {
-        const aoeTemplate =
-            game.scenes.current.templates.find(
-                (o) => o.flags.itemId === item.id,
-            ) ||
-            game.scenes.current.templates.find(
-                (o) => o.user.id === game.user.id,
-            );
+            const aoeTemplate =
+                game.scenes.current.templates.find(
+                    (o) => o.flags.itemId === item.id,
+                ) ||
+                game.scenes.current.templates.find(
+                    (o) => o.user.id === game.user.id,
+                );
 
             targetsArray.sort(function (a, b) {
                 let distanceA = canvas.grid.measureDistance(
