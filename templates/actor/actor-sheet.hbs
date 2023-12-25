@@ -202,8 +202,8 @@
                                     {{else}}
                                         {{#if (ne item.system.areaOfEffect.type "none")}}
                                             {{item.system.areaOfEffect.type}}
-                                            {{#if (gt item.system.areaOfEffect.value 0)}}
-                                                ({{item.system.areaOfEffect.value}})
+                                            {{#if (or item.system.areaOfEffect.isExplosion (gt item.system.areaOfEffect.value 0))}}
+                                                ({{#if (gt item.system.areaOfEffect.value 0)}}{{item.system.areaOfEffect.value}}{{/if}}{{#if item.system.areaOfEffect.isExplosion}}e{{/if}})
                                             {{/if}}
                                         {{/if}}
                                     {{/if}}

@@ -2650,9 +2650,6 @@ export class HeroSystem6eItem extends Item {
         // Active cost is required for endurance calculation.
         // It should include all advantages (which we don't handle very well at the moment)
         // However this should be calculated during power upload (not here)
-        // let activeCost = (levels * 5)
-        // let end = Math.round(activeCost / 10 - 0.01);
-        //changes[`system.activeCost`] = activeCost
 
         this.system.subType = "attack";
         this.system.class = input === "ED" ? "energy" : "physical";
@@ -2781,7 +2778,6 @@ export class HeroSystem6eItem extends Item {
             this.system.uses = "omcv";
             this.system.knockbackMultiplier = 0;
             this.system.usesStrength = false;
-            //this.system.stunBodyDamage = "stunonly"
             this.system.noHitLocations = true;
         }
 
@@ -2829,14 +2825,6 @@ export class HeroSystem6eItem extends Item {
             this.system.knockbackMultiplier = 2;
         }
 
-        // Explosion
-        // const EXPLOSION = this.findModsByXmlid("EXPLOSION")
-        // if (EXPLOSION) {
-        //     if (game.settings.get(game.system.id, 'alphaTesting')) {
-        //         ui.notifications.warn(`EXPLOSION not implemented during HDC upload of ${this.actor.name}`)
-        //     }
-        // }
-
         // Alternate Combat Value (uses OMCV against DCV)
         let ACV = this.findModsByXmlid("ACV");
         if (ACV) {
@@ -2847,22 +2835,6 @@ export class HeroSystem6eItem extends Item {
                 ACV.OPTION_ALIAS.match(/against (\w+)/)?.[1] ||
                 this.system.targets
             ).toLowerCase();
-            // if (ACV.OPTION_ALIAS === "uses OMCV against DCV") {
-            //     this.system.uses = 'omcv'
-            //     this.system.targets = 'dcv'
-            // }
-            // if (ACV.OPTION_ALIAS === "uses OCV against DMCV") {
-            //     this.system.uses = 'ocv'
-            //     this.system.targets = 'dmcv'
-            // }
-            // if (ACV.OPTION_ALIAS === "uses OMCV against DCV") {
-            //     this.system.uses = 'omcv'
-            //     this.system.targets = 'dcv'
-            // }
-            // if (ACV.OPTION_ALIAS === "uses OMCV against DMCV") {
-            //     this.system.uses = 'omcv'
-            //     this.system.targets = 'dcv'
-            // }
         }
 
         if (this.findModsByXmlid("PLUSONEPIP")) {
@@ -2879,11 +2851,26 @@ export class HeroSystem6eItem extends Item {
             this.system.extraDice = "half";
         }
 
-        const aoe = this.findModsByXmlid("AOE");
-        if (aoe) {
+        const aoeModifier = this.hasAoeModifier();
+        if (aoeModifier) {
+            // 5e has a slightly different alias for an Explosive Radius in HDC.
+            // Otherwise, all other shapes seems the same.
+            const type =
+                aoeModifier.OPTION_ALIAS === "Normal (Radius)"
+                    ? "Radius"
+                    : aoeModifier.OPTION_ALIAS;
+
+            // TODO: levels need some work.
+            //       explosion and AOE areas are calculated very differently.
+            // 5e explosion has levels 1..n which is the decay rate (not sure if max range is
+            //    only determined by DC decay)
+            // 5e AOE has levels at base 0 with DOUBLEAREA adders (so x8 is 3 levels)
+            // 6e AOE has levels which represent the radius but the explosion negative adder doesn't
+
             this.system.areaOfEffect = {
-                type: aoe.OPTION_ALIAS.toLowerCase(),
-                value: parseInt(aoe.LEVELS),
+                type: type.toLowerCase(),
+                value: parseInt(aoeModifier.LEVELS),
+                isExplosion: this.hasExplosionAdvantage(),
             };
         }
 
@@ -3132,13 +3119,20 @@ export class HeroSystem6eItem extends Item {
         };
     }
 
-    // 5e explosion is a modifier. 6e explosion is an adder to AOE modifier.
+    // In 5e explosion is a modifier, in 6e it's an adder to an AOE modifier.
     hasExplosionAdvantage() {
         return !!(
             this.findModsByXmlid("AOE")?.ADDER.find(
                 (o) => o.XMLID === "EXPLOSION",
             ) || this.findModsByXmlid("EXPLOSION")
         );
+    }
+
+    hasAoeModifier() {
+        const aoe = this.findModsByXmlid("AOE");
+        const explosion5e = this.findModsByXmlid("EXPLOSION");
+
+        return aoe || explosion5e;
     }
 }
 
