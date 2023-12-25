@@ -3131,6 +3131,15 @@ export class HeroSystem6eItem extends Item {
             enhances: enhances || "",
         };
     }
+
+    // 5e explosion is a modifier. 6e explosion is an adder to AOE modifier.
+    hasExplosionAdvantage() {
+        return !!(
+            this.findModsByXmlid("AOE")?.ADDER.find(
+                (o) => o.XMLID === "EXPLOSION",
+            ) || this.findModsByXmlid("EXPLOSION")
+        );
+    }
 }
 
 export function getItem(id) {

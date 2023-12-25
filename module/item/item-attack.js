@@ -685,9 +685,7 @@ export async function AttackToHit(item, options) {
     const aoeTemplate =
         game.scenes.current.templates.find((o) => o.flags.itemId === item.id) ||
         game.scenes.current.templates.find((o) => o.user.id === game.user.id);
-    const explosion = aoe?.adders
-        ? aoe.ADDER.find((o) => o.XMLID === "EXPLOSION")
-        : null;
+    const explosion = item.hasExplosionAdvantage();
     const SELECTIVETARGET = aoe?.adders
         ? aoe.ADDER.find((o) => o.XMLID === "SELECTIVETARGET")
         : null;
@@ -1075,17 +1073,13 @@ export async function _onRollDamage(event) {
 
     const damageDetail = await _calcDamage(damageResult, item, toHitData);
 
-    const aoe = item.findModsByXmlid("AOE");
     const aoeTemplate =
         game.scenes.current.templates.find((o) => o.flags.itemId === item.id) ||
         game.scenes.current.templates.find((o) => o.user.id === game.user.id);
-    const explosion = aoe?.ADDER
-        ? aoe.ADDER.find((o) => o.XMLID === "EXPLOSION")
-        : null;
+    const explosion = item.hasExplosionAdvantage();
 
     // Apply Damage button for specific targets
     let targetTokens = [];
-    //let damageAoe = []
     for (const id of toHitData.targetids.split(",")) {
         let token = canvas.scene.tokens.get(id);
         if (token) {
@@ -1093,7 +1087,7 @@ export async function _onRollDamage(event) {
                 token,
                 terms: JSON.stringify(damageResult.terms),
             };
-            //targetTokens.push(token)
+
             if (explosion) {
                 // Distance from center
                 if (aoeTemplate) {
@@ -1238,10 +1232,10 @@ export async function _onApplyDamage(event) {
 
     // All targets
     if (toHitData.targetIds) {
-        let targetsArray = toHitData.targetIds.split(",");
+        const targetsArray = toHitData.targetIds.split(",");
 
         // If AOE then sort by distance from center
-        const aoe = item.findModsByXmlid("AOE");
+        if (item.hasExplosionAdvantage()) {
         const aoeTemplate =
             game.scenes.current.templates.find(
                 (o) => o.flags.itemId === item.id,
@@ -1249,11 +1243,7 @@ export async function _onApplyDamage(event) {
             game.scenes.current.templates.find(
                 (o) => o.user.id === game.user.id,
             );
-        const explosion = aoe?.ADDER
-            ? aoe.ADDER.find((o) => o.XMLID === "EXPLOSION")
-            : null;
 
-        if (explosion) {
             targetsArray.sort(function (a, b) {
                 let distanceA = canvas.grid.measureDistance(
                     aoeTemplate,
@@ -1314,22 +1304,17 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
     // Spoof previous roll (foundry won't process a generic term, needs to be a proper Die instance)
     let newTerms = JSON.parse(damageData.terms);
 
-    const aoe = item.findModsByXmlid("AOE");
     const aoeTemplate =
         game.scenes.current.templates.find((o) => o.flags.itemId === item.id) ||
         game.scenes.current.templates.find((o) => o.user.id === game.user.id);
-    const explosion = aoe?.ADDER
-        ? aoe.ADDER.find((o) => o.XMLID === "EXPLOSION")
-        : null;
 
-    // Explosion
-    if (explosion) {
+    if (item.hasExplosionAdvantage()) {
         // Distance from center
         if (aoeTemplate) {
             // Explosion
             // Simple rules is to remove the hightest dice term for each
             // hex distance from center.  Works fine when radius = dice,
-            // but that isn't alwasy the case.
+            // but that isn't always the case.
             // First thing to do is sort the dice terms (high to low)
             let results = newTerms[0].results;
             results.sort(function (a, b) {

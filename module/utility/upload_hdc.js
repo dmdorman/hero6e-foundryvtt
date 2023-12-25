@@ -245,8 +245,7 @@ export async function makeAttack(item) {
     }
 
     // Explosion
-    let EXPLOSION = item.system.modifiers.find((o) => o.XMLID == "EXPLOSION");
-    if (EXPLOSION) {
+    if (item.hasExplosionAdvantage()) {
         if (game.settings.get(game.system.id, "alphaTesting")) {
             ui.notifications.warn(
                 `EXPLOSION not implemented during HDC upload of ${item.actor.name}`,
