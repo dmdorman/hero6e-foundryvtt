@@ -168,43 +168,61 @@
                         </th>
                     </tr>
                     {{#each items as |item id|}}
-                    {{#if (or (eq item.type "attack") (and (ne item.type "maneuver") (eq item.system.subType "attack")))
-                    }}
-                    <tr class="item {{#if (gt item.system.value item.system.max)}} overMax{{/if}}{{#if (lt item.system.value item.system.max)}} underMax{{/if}}"
-                        data-item-id="{{item._id}}">
-                        <td>
-                            <div class="item-image"><img src="{{item.img}}" title="{{item.name}}" width="24"
-                                    height="24" /></div>
-                        </td>
-                        <td class="left">{{{itemName item}}}</td>
-                        <td>{{item.system.ocvEstimated}}</td>
-                        <td>{{item.system.dcvEstimated}}</td>
-                        <td>{{item.system.uses}} vs {{item.system.targets}}</td>
-                        <td>{{item.system.damage}}</td>
-                        <td>{{item.system.class}}</td>
-                        <td>{{item.system.endEstimate}}</td>
-                        {{#if (eq item.system.areaOfEffect.type "none")}}
-                        <td>-</td>
+                        {{#if (or (eq item.type "attack") (and (ne item.type "maneuver") (eq item.system.subType "attack")))}}
+                            <tr class="item {{#if (gt item.system.value item.system.max)}} overMax{{/if}}{{#if (lt item.system.value item.system.max)}} underMax{{/if}}"
+                                data-item-id="{{item._id}}">
+                                <td>
+                                    <div class="item-image"><img src="{{item.img}}" title="{{item.name}}" width="24"
+                                            height="24" /></div>
+                                </td>
+                                <td class="left">
+                                    {{{itemName item}}}
+                                </td>
+                                <td>
+                                    {{item.system.ocvEstimated}}
+                                </td>
+                                <td>
+                                    {{item.system.dcvEstimated}}
+                                </td>
+                                <td>
+                                    {{item.system.uses}} vs {{item.system.targets}}
+                                </td>
+                                <td>
+                                    {{item.system.damage}}
+                                </td>
+                                <td>
+                                    {{item.system.class}}
+                                </td>
+                                <td>
+                                    {{item.system.endEstimate}}
+                                </td>
+                                <td>
+                                    {{#if (eq item.system.areaOfEffect.type "none")}}
+                                        -
+                                    {{else}}
+                                        {{#if (ne item.system.areaOfEffect.type "none")}}
+                                            {{item.system.areaOfEffect.type}}
+                                            {{#if (gt item.system.areaOfEffect.value 0)}}
+                                                ({{item.system.areaOfEffect.value}})
+                                            {{/if}}
+                                        {{/if}}
+                                    {{/if}}
+                                </td>
+                                <td>
+                                    <a class="item-image item-rollable"><i class="fas fa-dice" title="{{item.name}}" width="24" height="24"></i></a>
+                                </td>
+                                <td>
+                                    <div class="item-controls" data-group="mode">
+                                        <a class="item-control item-chat" title="Send to chat"><i class="fas fa-comment-alt"></i></a>
+                                        <a class="item-control item-edit" title="Edit Item"><i class="fas fa-edit"></i></a>
+                                        <a class="item-control item-delete" title="Delete Item"><i class="fas fa-trash"></i></a>
+                                    </div>
+                                </td>
+                                </td>
+                            </tr>
                         {{/if}}
-                        {{#if (ne item.system.areaOfEffect.type "none")}}
-                        <td>{{item.system.areaOfEffect.type}}{{#if (gt item.system.areaOfEffect.value 0)}}
-                            ({{item.system.areaOfEffect.value}}){{/if}}</td>
-                        {{/if}}
-                        <td><a class="item-image item-rollable"><i class="fas fa-dice" title="{{item.name}}" width="24"
-                                    height="24"></i></a></td>
-                        <td>
-                            <div class="item-controls" data-group="mode">
-                                <a class="item-control item-chat" title="Send to chat"><i
-                                        class="fas fa-comment-alt"></i></a>
-                                <a class="item-control item-edit" title="Edit Item"><i class="fas fa-edit"></i></a>
-                                <a class="item-control item-delete" title="Delete Item"><i class="fas fa-trash"></i></a>
-                            </div>
-                        </td>
-                    </tr>
-                    {{/if}}
                     {{/each}}
                 </table>
-
             </div> {{!-- Attacks Tab --}}
 
             {{!-- MartialArts Tab --}}
