@@ -3,6 +3,8 @@
 ## Version 3.0.54 (So far...)
 
 - The character sheet's power tab now has the dice icon for attack powers to initiate attacks.
+- Damage calculations with an additional term (i.e 1/2 die) are no longer short changed. Resolves [#508](https://github.com/dmdorman/hero6e-foundryvtt/issues/508)
+- Add explosions for 5e.
 
 ## Version 3.0.53
 
