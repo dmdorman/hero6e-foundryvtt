@@ -3122,7 +3122,7 @@ export class HeroSystem6eItem extends Item {
     // In 5e explosion is a modifier, in 6e it's an adder to an AOE modifier.
     hasExplosionAdvantage() {
         return !!(
-            this.findModsByXmlid("AOE")?.ADDER.find(
+            this.findModsByXmlid("AOE")?.ADDER?.find(
                 (o) => o.XMLID === "EXPLOSION",
             ) || this.findModsByXmlid("EXPLOSION")
         );
