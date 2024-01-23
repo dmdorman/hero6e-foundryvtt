@@ -48,7 +48,6 @@
                         </div>
                     </li>
 
-
                     <ul class="defenses">
                         <li title="{{defense.PDtags}}"><span>PD={{defense.PD}}</span></li>
                         <li title="{{defense.rPDtags}}"><span>rPD={{defense.rPD}}</span></li>
@@ -69,8 +68,7 @@
                         <li title="{{defense.POWDtags}}"><span>POWD={{defense.POWD}}</span></li>
                         {{#if defense.rPOWD}}<li title="{{defense.rPOWDtags}}"><span>rPOWD={{defense.rPOWD}}</span></li>{{/if}}
                     </ul>
-
-                    <div class="sidebar-actions flexrow flex-group-center">
+                    <div class="sidebar-actions flexcolumn flex-group-center">
                         <button type="button" class="recovery-button">Take Recovery</button>
                         <button type="button" class="presence-button">Presence Attack</button>
                         <button type="button" class="full-health-button"
@@ -234,6 +232,7 @@
                         <th>{{localize "ActorSheet.Phase"}}</th>
                         <th>{{localize "ActorSheet.OCV"}}</th>
                         <th>{{localize "ActorSheet.DCV"}}</th>
+                        <th />
 
                         {{!-- <th>
                             <a class="item-control item-create" title="Create Martial Art" data-type="martialArt">

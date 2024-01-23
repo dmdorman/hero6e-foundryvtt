@@ -1,6 +1,10 @@
+@import "colors";
+
 .tab-body {
   height: 100%;
   overflow-y: auto;
+  background-color: $sheetLighterBackground;
+  margin: 10px;
 }
 
 .tab-header {

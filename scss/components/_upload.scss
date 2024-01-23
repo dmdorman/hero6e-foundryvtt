@@ -1,3 +1,5 @@
+@import "colors";
+
 .hero input[type="file"] {
   display: none;
 }
@@ -5,14 +7,19 @@
 .upload-button {
   height: 30px;
   margin: 3px 5px;
+  padding: 0 4px;
   background: rgba(255, 255, 240, 0.8);
-  border: 1px solid #b5b3a4;
-  border-radius: 3px;
   font-size: 14px;
   line-height: 28px;
   font-family: "Signika", sans-serif;
   align-content: center;
   text-align: center;
+  border-radius: 7px;
+  border-style: solid;
+  border-color: rgb(226, 226, 226);
+  border-width: 2px;
+  border: 2px groove var(--color-border-light-highlight);
+  background-color: $sheetHighlightBackground;
 
   &:hover,
   &:focus {
@@ -28,9 +35,4 @@
   &>i {
     margin-right: 3px;
   }
-}
-
-form .upload-button {
-  background: rgba(0, 0, 0, 0.1);
-  border: 2px groove #f0f0e0;
 }

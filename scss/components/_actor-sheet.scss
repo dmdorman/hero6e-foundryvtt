@@ -1,7 +1,13 @@
+@import "colors";
+
 /* Minimum size of actor sheet */
 .actor-sheet {
     min-height: 310px;
     min-width: 500px;
+}
+
+::-webkit-scrollbar-track {
+    box-shadow: none;
 }
 
 /* minimal padding around window content */
@@ -15,8 +21,7 @@
     grid:
         "sidebar header" 75px
         "sidebar nav" minmax(min-content, max-content)
-        "sidebar content" 1fr/100px 1fr;
-    /* height: 100%; */
+        "sidebar content" 1fr/136px 1fr;
     /* background-color: red; */
 }
 
@@ -26,12 +31,13 @@
     flex-direction: column;
     grid-area: sidebar;
     /* background-color: lightgreen; */
-    border-right: thin solid darkgrey;
 }
 
 .actor-sheet .sidebar {
     overflow: hidden scroll;
     padding: 0 2px 2px 8px;
+    background-color: $sheetLighterBackground;
+    height: 100%;
     /* background-color: lavender; */
 }
 
@@ -44,14 +50,14 @@
 
 .actor-sheet nav.sheet-navigation {
     align-items: center;
-    border-bottom: 1px solid black;
-    border-top: 1px solid black;
+    border-radius: 8px 0 0 0;
     display: inline-flex;
     justify-content: center;
     position: relative;
     transition: all 0.1s ease-out;
     grid-area: nav;
-    /* background-color: lightcyan; */
+    padding: 10px;
+    background-color: $sheetMiddleBackground;
 }
 
 .actor-sheet .sheet-body,
@@ -67,9 +73,19 @@
     display: flex;
     flex-direction: column;
     position: absolute;
-    width: 100%;
+    top: 0.5em;
+    left: 1.5%;
+    width: 98%;
+    background-color: $sheetLighterBackground;
     /* background-color: red; */
 }
+
+.sheet-content table {
+    border: none;
+    padding: 4px;
+    margin: 0;
+}
+
 
 .actor-sheet ul.attributes {
     list-style: none;
@@ -78,10 +94,10 @@
 
 .actor-sheet .attributes .attribute {
     position: relative;
-    margin: 0;
+    margin: 8px;
     border: none;
-    border-top: 2px groove #eeede0;
-    border-radius: 0;
+    background-color: $sheetHighlightBackground;
+    border-radius: 7px;
 }
 
 .actor-sheet .attributes .attribute-name {
@@ -89,10 +105,12 @@
 }
 
 .actor-sheet h4.box-title {
-    height: 18px;
+    height: 20px;
     line-height: 16px;
-    margin: 4px 8px 2px;
-    border-bottom: 1px solid #c9c7b8;
+    padding: 4px 8px 5px;
+    border-radius: 7px 7px 0 0;
+    background-color: $sheetHeaderBackground;
+    margin-bottom: 0.2em;
 
     white-space: nowrap;
 }
@@ -101,12 +119,17 @@
     text-align: center;
 }
 
+.actor-sheet input[type="text"] {
+    border-radius: 7px;
+    border-color: rgb(226, 226, 226);
+    background-color: rgb(240, 240, 240);
+}
+
 .actor-sheet .attributes input[type="text"] {
     width: 35px;
     min-width: 20px;
     padding: 1px 3px;
     margin: 3px 0px;
-    /* border-color: transparent; */
 }
 
 .actor-sheet input[type="text"]:focus {
@@ -127,6 +150,7 @@
 
 .actor-sheet .profile-img {
     object-fit: contain;
+    margin: 10px;
 }
 
 .actor-sheet nav a {
@@ -135,19 +159,22 @@
     text-align: center;
     border: thin solid black;
     border-radius: 0.5em;
+    background-color: $sheetHighlightBackground;
 }
 
 .actor-sheet nav a.active {
     background: black;
-    color: white;
+    color: $sheetHighlightBackground;
 }
 
 .actor-sheet .sheet-header {
-    margin-left: 0.5em;
+    padding-left: 0.7em;
+    background-color: $sheetLighterBackground;
 }
 
 .actor-sheet .sheet-body {
-    margin-left: 0.5em;
+    background-color: $sheetDarkerBackground;
+
 }
 
 .actor-sheet table tr:first-child,
@@ -159,14 +186,16 @@
 .actor-sheet table tr.sticky {
     position: sticky;
     top: 0;
-    z-index: 1; /* pesky checkboxes */
-    background-color: #cfcec3;
+    z-index: 1;
+    /* pesky checkboxes */
+    background-color: $sheetHeaderBackground;
 }
 
 .actor-sheet table tr.sticky2 {
     position: sticky;
     top: 33px;
-    z-index: 1; /* pesky checkboxes */
+    z-index: 1;
+    /* pesky checkboxes */
     background-color: #cfcec3;
     box-shadow: inset 0 -1px 0 darkgray;
 }
@@ -178,6 +207,7 @@
 
 th.left,
 td.left {
+    padding-left: 1em;
     text-align: left;
 }
 
@@ -188,7 +218,7 @@ input.left {
 .actor-sheet table tr td.right,
 .actor-sheet table tr th.right {
     text-align: right;
-    padding-right: 2px;
+    padding-right: 4px;
 }
 
 .actor-sheet table tr td.right,
@@ -211,9 +241,22 @@ input.left {
     padding: 3px 0;
 }
 
+.actor-sheet table th {
+    background-color: $sheetHeaderBackground;
+}
+
+.actor-sheet .tab .form-group {
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+}
+
+.actor-sheet table td:first-child {
+    padding-left: 0.5em;
+}
+
 .actor-sheet table tr td {
-    padding: 3px 0;
-    max-width: 300px; /* power description can be a bit too big; alternatives pct or flexbox */
+    max-width: 300px;
+    /* power description can be a bit too big; alternatives pct or flexbox */
 }
 
 .actor-sheet table tr td button {
@@ -283,9 +326,17 @@ input.left {
     border: none;
 }
 
+.actor-sheet button {
+    border-radius: 7px;
+    border-color: rgb(236, 236, 236);
+    border-width: 2px;
+    background-color: $sheetHighlightBackground;
+}
+
 .actor-sheet .sidebar-actions button {
     line-height: normal;
     margin: 2px 0px;
+    padding: 4px;
 }
 
 .actor-sheet div.points {
@@ -294,7 +345,6 @@ input.left {
     height: 24px;
     padding: 2px 4px;
     font-size: 14px;
-    /* margin-top: 2px; */
     margin: 5px 5px;
     text-align: center;
 }
@@ -332,13 +382,12 @@ ul.left li {
     border: 1px dashed rgba(0, 0, 0, 0.3);
 }
 
-.actor-sheet .sidebar section ul li > span {
+.actor-sheet .sidebar section ul li>span {
     position: relative;
     left: -5px;
 }
 
 .actor-sheet .sidebar section .defenses {
-    border-top: 2px groove #eeede0;
     padding-top: 5px;
 }
 
@@ -348,9 +397,9 @@ ul.left li {
     padding: 5px;
 }
 
-td.characteristic-locked > input {
-  cursor: pointer;
-  pointer-events:none;
+td.characteristic-locked>input {
+    cursor: pointer;
+    pointer-events: none;
 }
 
 div.aoe-button {
@@ -375,7 +424,7 @@ form.item-sheet h1.charname input {
     margin-top: 0px;
 }
 
-.herosystem6e.sheet.item .form-group > div {
+.herosystem6e.sheet.item .form-group>div {
     margin-left: -5px;
 }
 
