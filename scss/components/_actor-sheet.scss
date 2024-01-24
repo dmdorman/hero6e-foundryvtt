@@ -1,4 +1,7 @@
-@import "colors";
+@import "../utils/_colors";
+
+$sidebar-width: 136px;
+
 
 /* Minimum size of actor sheet */
 .actor-sheet {
@@ -21,7 +24,7 @@
     grid:
         "sidebar header" 75px
         "sidebar nav" minmax(min-content, max-content)
-        "sidebar content" 1fr/136px 1fr;
+        "sidebar content" 1fr/#{$sidebar-width}  1fr;
     /* background-color: red; */
 }
 
@@ -35,10 +38,9 @@
 
 .actor-sheet .sidebar {
     overflow: hidden scroll;
-    padding: 0 2px 2px 8px;
-    background-color: $sheetLighterBackground;
+    padding: 4px;
+    background-color: $sheet-lighter-background;
     height: 100%;
-    /* background-color: lavender; */
 }
 
 .actor-sheet .char-header {
@@ -57,7 +59,7 @@
     transition: all 0.1s ease-out;
     grid-area: nav;
     padding: 10px;
-    background-color: $sheetMiddleBackground;
+    background-color: $sheet-middle-background;
 }
 
 .actor-sheet .sheet-body,
@@ -76,7 +78,7 @@
     top: 0.5em;
     left: 1.5%;
     width: 98%;
-    background-color: $sheetLighterBackground;
+    background-color: $sheet-lighter-background;
     /* background-color: red; */
 }
 
@@ -94,10 +96,11 @@
 
 .actor-sheet .attributes .attribute {
     position: relative;
-    margin: 8px;
+    margin: 8px 6px;
     border: none;
-    background-color: $sheetHighlightBackground;
+    background-color: $sheet-highlight-background;
     border-radius: 7px;
+    min-width: calc($sidebar-width - 20%);
 }
 
 .actor-sheet .attributes .attribute-name {
@@ -109,7 +112,7 @@
     line-height: 16px;
     padding: 4px 8px 5px;
     border-radius: 7px 7px 0 0;
-    background-color: $sheetHeaderBackground;
+    background-color: $sheet-header-background;
     margin-bottom: 0.2em;
 
     white-space: nowrap;
@@ -150,7 +153,7 @@
 
 .actor-sheet .profile-img {
     object-fit: contain;
-    margin: 10px;
+    margin: 12px;
 }
 
 .actor-sheet nav a {
@@ -159,21 +162,21 @@
     text-align: center;
     border: thin solid black;
     border-radius: 0.5em;
-    background-color: $sheetHighlightBackground;
+    background-color: $sheet-highlight-background;
 }
 
 .actor-sheet nav a.active {
     background: black;
-    color: $sheetHighlightBackground;
+    color: $sheet-highlight-background;
 }
 
 .actor-sheet .sheet-header {
     padding-left: 0.7em;
-    background-color: $sheetLighterBackground;
+    background-color: $sheet-lighter-background;
 }
 
 .actor-sheet .sheet-body {
-    background-color: $sheetDarkerBackground;
+    background-color: $sheet-darker-background;
 
 }
 
@@ -186,16 +189,14 @@
 .actor-sheet table tr.sticky {
     position: sticky;
     top: 0;
-    z-index: 1;
-    /* pesky checkboxes */
-    background-color: $sheetHeaderBackground;
+    z-index: 1; /* pesky checkboxes */
+    background-color: $sheet-header-background;
 }
 
 .actor-sheet table tr.sticky2 {
     position: sticky;
     top: 33px;
-    z-index: 1;
-    /* pesky checkboxes */
+    z-index: 1; /* pesky checkboxes */
     background-color: #cfcec3;
     box-shadow: inset 0 -1px 0 darkgray;
 }
@@ -242,7 +243,7 @@ input.left {
 }
 
 .actor-sheet table th {
-    background-color: $sheetHeaderBackground;
+    background-color: $sheet-header-background;
 }
 
 .actor-sheet .tab .form-group {
@@ -330,13 +331,14 @@ input.left {
     border-radius: 7px;
     border-color: rgb(236, 236, 236);
     border-width: 2px;
-    background-color: $sheetHighlightBackground;
+    background-color: $sheet-highlight-background;
 }
 
 .actor-sheet .sidebar-actions button {
     line-height: normal;
     margin: 2px 0px;
-    padding: 4px;
+    padding: 4px 0;
+    width: calc($sidebar-width - 20%);
 }
 
 .actor-sheet div.points {

@@ -1,9 +1,9 @@
-@import "colors";
+@import "../utils/colors";
 
 .tab-body {
   height: 100%;
   overflow-y: auto;
-  background-color: $sheetLighterBackground;
+  background-color: $sheet-lighter-background;
   margin: 10px;
 }
 

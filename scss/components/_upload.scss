@@ -1,4 +1,4 @@
-@import "colors";
+@import "../utils/_colors";
 
 .hero input[type="file"] {
   display: none;
@@ -19,7 +19,7 @@
   border-color: rgb(226, 226, 226);
   border-width: 2px;
   border: 2px groove var(--color-border-light-highlight);
-  background-color: $sheetHighlightBackground;
+  background-color: $sheet-highlight-background;
 
   &:hover,
   &:focus {
