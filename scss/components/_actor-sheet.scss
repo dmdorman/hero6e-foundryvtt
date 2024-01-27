@@ -67,6 +67,7 @@ $sidebar-width: 136px;
     grid-area: content;
     position: relative;
     overflow: hidden scroll;
+    border-top: 10px solid $sheet-darker-background;
     /* background-color: steelblue; */
 }
 
@@ -75,9 +76,9 @@ $sidebar-width: 136px;
     display: flex;
     flex-direction: column;
     position: absolute;
-    top: 0.5em;
-    left: 1.5%;
-    width: 98%;
+    top: 0px;
+    left: 10px;
+    width: calc(100% - 20px);
     background-color: $sheet-lighter-background;
     /* background-color: red; */
 }
@@ -216,6 +217,10 @@ input.left {
     text-align: left;
 }
 
+.actor-sheet table tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.6);
+}
+
 .actor-sheet table tr td.right,
 .actor-sheet table tr th.right {
     text-align: right;
@@ -234,6 +239,8 @@ input.left {
 
 .actor-sheet .item-image img {
     display: block;
+    filter: brightness(0.2);
+    border: none;
 }
 
 .actor-sheet table tr {
@@ -422,8 +429,13 @@ div.xmlid {
     margin-left: 8px;
 }
 
-form.item-sheet h1.charname input {
+.actor-sheet .header-fields.flexrow {
+    align-items: center;
+}
+
+.actor-sheet h1.charname input {
     margin-top: 0px;
+    font-size: 80%;
 }
 
 .herosystem6e.sheet.item .form-group>div {
