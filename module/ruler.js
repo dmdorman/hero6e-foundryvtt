@@ -345,13 +345,13 @@ export class HeroRuler {
                     const tool = $(this).attr("data-tool");
 
                     await relevantToken.actor.update({
-                        "flags.activeMovement": tool
+                        "flags.activeMovement": tool,
                     });
 
                     await game.user.update({
                         "flags.activeMovement": tool,
-                        "flags.controlled": canvas.tokens.controlled[0].id
-                    })
+                        "flags.controlled": canvas.tokens.controlled[0].id,
+                    });
 
                     renderRadioOptions();
                 });
@@ -373,11 +373,11 @@ function setHeroRulerLabel() {
         _segmentDistance,
         totalDistance,
     ) {
-        const relevantUser =  game.users.get(this.user._id);
+        const relevantUser = game.users.get(this.user._id);
         const activeMovement = relevantUser.flags.activeMovement || "";
         const relevantTokenId = relevantUser.flags.controlled;
         if (!relevantTokenId) {
-            console.error("HERO | failed to determine token id for ruler")
+            console.error("HERO | failed to determine token id for ruler");
         }
         const relevantToken = game.scenes.active.tokens.get(relevantTokenId);
 
@@ -390,7 +390,9 @@ function setHeroRulerLabel() {
             game.scenes.current.grid.units || ""
         }]`;
 
-        if (!game.modules.get("drag-ruler")?.active) { return }
+        if (!game.modules.get("drag-ruler")?.active) {
+            return;
+        }
 
         const movementPowers = relevantToken.actor.system.is5e
             ? CONFIG.HERO.movementPowers5e
