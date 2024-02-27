@@ -348,13 +348,6 @@ export class HeroRuler {
                         "flags.activeMovement": tool
                     });
 
-                    game.socket.emit('system.hero6efoundryvttv2', {
-                        action: "setActiveMovement",
-                        id: game.user._id,
-                        controlled: canvas.tokens.controlled[0].id,
-                        activeMovement
-                    });
-
                     await game.user.update({
                         "flags.activeMovement": tool,
                         "flags.controlled": canvas.tokens.controlled[0].id
