@@ -345,8 +345,20 @@ export class HeroRuler {
                     const tool = $(this).attr("data-tool");
 
                     await relevantToken.actor.update({
-                        "flags.activeMovement": tool,
+                        "flags.activeMovement": tool
                     });
+
+                    game.socket.emit('system.hero6efoundryvttv2', {
+                        action: "setActiveMovement",
+                        id: game.user._id,
+                        controlled: canvas.tokens.controlled[0].id,
+                        activeMovement
+                    });
+
+                    await game.user.update({
+                        "flags.activeMovement": tool,
+                        "flags.controlled": canvas.tokens.controlled[0].id
+                    })
 
                     renderRadioOptions();
                 });
@@ -365,58 +377,50 @@ export class HeroRuler {
 
 function setHeroRulerLabel() {
     Ruler.prototype._getSegmentLabel = function _getSegmentLabel(
-        segmentDistance,
+        _segmentDistance,
         totalDistance,
     ) {
-        const relevantToken = canvas.tokens.controlled[0];
+        const relevantUser =  game.users.get(this.user._id);
+        const activeMovement = relevantUser.flags.activeMovement || "";
+        const relevantTokenId = relevantUser.flags.controlled;
+        if (!relevantTokenId) {
+            console.error("HERO | failed to determine token id for ruler")
+        }
+        const relevantToken = game.scenes.active.tokens.get(relevantTokenId);
+
         let factor = relevantToken?.actor?.system?.is5e ? 4 : 8;
         let rangeMod = Math.ceil(Math.log2(totalDistance / factor)) * 2;
 
         rangeMod = rangeMod < 0 ? 0 : rangeMod;
 
-        let label = `[${Math.round(segmentDistance.distance)}${
+        let label = `[${Math.round(totalDistance)}${
             game.scenes.current.grid.units || ""
         }]`;
 
-        if (
-            game.modules.get("drag-ruler")?.active &&
-            canvas.tokens.controlled.length > 0
-        ) {
-            if (!relevantToken || !relevantToken.actor) {
-                return;
+        if (!game.modules.get("drag-ruler")?.active) { return }
+
+        const movementPowers = relevantToken.actor.system.is5e
+            ? CONFIG.HERO.movementPowers5e
+            : CONFIG.HERO.movementPowers;
+
+        let movementItems = [];
+        for (const key of Object.keys(
+            relevantToken.actor.system.characteristics,
+        ).filter((o) => movementPowers[o])) {
+            const char = relevantToken.actor.system.characteristics[key];
+            if ((parseInt(char.value) || 0) > 0) {
+                char._id = key;
+                char.name = movementPowers[key];
+                movementItems.push(char);
             }
+        }
 
-            const movementPowers = relevantToken.actor.system.is5e
-                ? CONFIG.HERO.movementPowers5e
-                : CONFIG.HERO.movementPowers;
-
-            let movementItems = [];
-            for (const key of Object.keys(
-                relevantToken.actor.system.characteristics,
-            ).filter((o) => movementPowers[o])) {
-                const char = relevantToken.actor.system.characteristics[key];
-                if ((parseInt(char.value) || 0) > 0) {
-                    char._id = key;
-                    char.name = movementPowers[key];
-                    movementItems.push(char);
-                }
-            }
-
-            const activeMovement =
-                movementItems.length === 0
-                    ? "none"
-                    : movementItems.find(
-                          (o) =>
-                              o._id == relevantToken.actor.flags.activeMovement,
-                      )?._id || movementItems[0]._id;
-
-            const activeMovementLabel =
-                activeMovement === "none"
-                    ? "Running"
-                    : movementItems.find((e) => e._id === activeMovement)?.name;
-            if (activeMovementLabel) {
-                label += "\n" + activeMovementLabel;
-            }
+        const activeMovementLabel =
+            activeMovement === "none"
+                ? "Running"
+                : movementItems.find((e) => e._id === activeMovement)?.name;
+        if (activeMovementLabel) {
+            label += "\n" + activeMovementLabel;
         }
 
         label += "\n-" + rangeMod + " Range Modifier";

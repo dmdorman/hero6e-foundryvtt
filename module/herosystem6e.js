@@ -160,6 +160,19 @@ Hooks.once("ready", async function () {
             `Recommend setting Simple Calendar GameWorldTimeIntegration = Mixed`,
         );
     }
+
+    game.socket.on('system.hero6efoundryvttv2', async (data) => {
+        switch (data.action) {
+            case "setActiveMovement":
+                game.users.get(data.id).update({
+                    "flags.activeMovement" : data.activeMovement,
+                    "flags.controlled" : data.controlled
+                })
+                break;
+            default:
+                console.error("HERO | failed to run action ", action);
+        }
+    });
 });
 
 Hooks.on("renderChatMessage", (app, html, data) => {
