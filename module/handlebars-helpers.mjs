@@ -9,6 +9,7 @@ export function initializeHandlebarsHelpers() {
     Handlebars.registerHelper("isdefined", function (value) {
         return value !== undefined;
     });
+    Handlebars.registerHelper("compare", compare);
 }
 
 function indexOf(str, searchTerm) {
@@ -29,4 +30,36 @@ function gameConfigValue(configSetting) {
 
 function getModulePath(templateDirectory) {
     return `systems/${HEROSYS.module}/templates/${templateDirectory}`;
+}
+
+function compare(param1, operator, param2, insensitive) {
+    let v1 = param1;
+    let v2 = param2;
+    if (insensitive === "insensitive") {
+        //handle case insensitive conditions if 4 param is passed.
+        v1 = param1.toLowerCase();
+        v2 = param2.toLowerCase();
+    }
+    switch (operator) {
+        case "==":
+            return v1 == v2;
+        case "!=":
+            return v1 != v2;
+        case "===":
+            return v1 === v2;
+        case "<":
+            return v1 < v2;
+        case "<=":
+            return v1 <= v2;
+        case ">":
+            return v1 > v2;
+        case ">=":
+            return v1 >= v2;
+        case "&&":
+            return !!(v1 && v2);
+        case "||":
+            return !!(v1 || v2);
+        default:
+            return false;
+    }
 }

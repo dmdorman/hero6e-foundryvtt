@@ -1012,12 +1012,17 @@ export class HeroSystem6eItem extends Item {
                 )
                     ? true
                     : false,
+                boostable: (CHARGES.ADDER || []).find(
+                    (o) => o.XMLID == "BOOSTABLE",
+                )
+                    ? true
+                    : false,
                 continuing: (CHARGES.ADDER || []).find(
                     (o) => o.XMLID == "CONTINUING",
                 )?.OPTIONID,
             };
-            if (this.system.charges?.value === undefined) {
-                this.system.charges.value ??= this.system.charges.max;
+            if (this.system.charges.value === undefined) {
+                this.system.charges.value = this.system.charges.max;
                 changed = true;
             }
         } else {

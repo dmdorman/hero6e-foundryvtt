@@ -122,4 +122,22 @@
       padding-right: 0;
     }
   }
+  .note{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    .notes{
+      flex-grow: 1;
+    }
+    .error {
+      color: red;
+    }
+  }
+  
+  .ellipsis-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;    
+  }
 }

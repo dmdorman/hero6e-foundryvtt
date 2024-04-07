@@ -1,0 +1,77 @@
+﻿<div>
+  {{!-- Attack Announcement --}}
+  <div class="dice-roll description-medium">
+  {{!-- text Always shown --}}
+  <div class="dice-result">
+    {{!-- text Always shown --}}
+    <div class="dice-formula card-section">
+      <header class="card-header attack flexrow">
+        <img src="{{attackerToken.document.texture.src}}" title="{{attackerToken.name}}" width="36" height="36"/>
+        <h3 class="item-name">{{attackerToken.name}}</h3>
+      </header>
+      used
+      <header class="card-header attack flexrow">
+{{!--        <img src="{{item.img}}" title="{{item.name}}" width="36" height="36"/> --}}
+        <h3 class="item-name">{{{itemName item}}}¹</h3>
+      </header>
+    </div>
+    <div class="dice-tooltip">
+      {{!-- text hidden --}}
+      <div class="tags">
+        <div class="tags">
+          {{#each tags as |tag id|}}
+            <span class="tag tag_transparent" {{#if tag.title}}title="{{tag.title}}" {{/if}}>{{tag.name}}{{tag.value}}</span>
+          {{/each}}
+        </div>
+        <div>{{item.system.description}}</div>
+        <br>
+        <div>
+          {{#each attackTags as |tag id|}}
+            <span class="tag" {{#if tag.title}}title="{{tag.title}}" {{/if}}>{{tag.name}}</span>
+          {{/each}}
+        </div>
+      </div>
+      {{#if useEnd}}
+        <div class="card-section">
+          <div class="description-tiny">{{{ enduranceText }}}</div>
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</div>
+  {{!-- Show Targets, if any --}}
+  {{#each targetData as |target|}}
+    <div class=" dice-roll">
+      <div class="dice-result">
+        <div class="dice-formula card-section">
+          <div class="description-medium">
+            Rolled {{target.roller._successRolledValue}},
+            {{#if (compare target.result.hit '==' "Hit") }}
+              Hitting {{target.name}}<br>
+              (Hits a {{target.toHitChar}} {{target.toHitRollTotal}} or less)
+            {{else}}
+              Missing {{target.name}}<br>
+              (Missed a {{target.toHitChar}} more than {{target.toHitRollTotal}})
+            {{/if}}
+          </div>
+        </div>
+        <div class="dice-tooltip">
+          <div class="target-dc">
+            <span>Target: {{target.name}}</span>
+            <span data-visibility="gm">({{target.toHitChar}} {{target.value}})</span>
+            <br/>
+            <span>Result:
+              <span class="{{target.result.hit}}">{{target.result.hit}}</span>
+              {{#if target.aoeAlwaysHit}}
+                due to AOE
+              {{else}}
+                <span data-visibility="gm" class="resultBy">by {{target.result.by}}</span>
+              {{/if}}
+            </span>
+          </div>
+          {{{ target.renderedRoll }}}
+        </div>
+      </div>
+    </div>
+  {{/each}}
+</div>

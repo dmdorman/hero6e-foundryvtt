@@ -45,7 +45,24 @@
       <label>Use Penalty Skill Levels</label>
       <input class="item-toggle" name="usePsl" type="checkbox" {{checked usePsl}} data-dtype="Boolean" />
     </div>
-
+    {{!-- autofire form --}}
+    {{#if autofireAttackInfo}}
+      {{#each autofireAttackInfo.targets as |autofireAttackTargetInfo|}}
+        <div class="form-group">
+          <label class="ellipsis-text">{{autofireAttackTargetInfo.target.name}}</label>
+          (OCV: {{autofireAttackTargetInfo.ocv}}) Shots on Target:
+          <input type="text" name="shots-on-tgt" value={{autofireAttackTargetInfo.shotsOnTarget}} />
+        </div>
+      {{/each}}
+    {{else}}
+      {{#each targets as |target|}}
+        <div class="form-group">
+          <label class="ellipsis-text">{{target.name}}</label>
+          <input type="text" name="somthing" value="something" />
+        </div>
+      {{/each}}
+    {{/if}}
+      
 
     <div class="form-group">
       <label>{{localize "Items.Attack.OcvMod"}}</label>
@@ -80,7 +97,6 @@
       <div class="form-group">
         <label>Boostable ({{boostableCharges}})</label>
         <input type="text" name="boostableCharges" value="0" />
-        
       </div>
     {{/if}}
 
@@ -99,7 +115,6 @@
         </div>
       </div>
     {{/if}}
-
   </div>
 
   {{!-- Conditional attack selection. DEADLY BLOW --}}
@@ -119,28 +134,32 @@
     </div>
 
   <footer class="sheet-footer flexcol">
-    {{#if (and noTargets (not aoeText))}}
+      {{#if (and noTargets (not aoeText))}}
       <div>
-        <p class="hero-warning">
-          <i class="fas fa-exclamation-triangle"></i>
-          {{localize "Items.Attack.NoTargetsSelected"}}
-        </p>
-        <i>{{localize "Items.Attack.TargetingExplanation"}}</i>
+          <p class="hero-warning">
+              <i class="fas fa-exclamation-triangle"></i>
+              {{localize "Items.Attack.NoTargetsSelected"}}
+          </p>
+          <i>{{localize "Items.Attack.TargetingExplanation"}}</i>
       </div>
-    {{/if}}
-
-    {{#if aoeText}}
-      <button class="aoe-button" type="submit" name="aoe">
-        Place {{aoeText}} template
-      </button>
-    {{/if}}
-
-    <button type="submit" name="roll">
-      {{#if aoeText}}
-        Roll Placement
-      {{else}}
-        Roll to Hit
       {{/if}}
-    </button>
+      {{#if cannotAttack}}
+      <div>
+          <p class="hero-warning">
+              <i class="fas fa-exclamation-triangle"></i>
+              <i>{{cannotAttack}}</i>
+          </p>
+      </div>
+      {{/if}}
+      {{#if aoeText}}
+          <button class="aoe-button" type="submit" name="aoe">
+              Place {{aoeText}} template
+          </button>
+      {{/if}}
+
+      <button type="submit" name="roll" {{#if rollHide}} disabled title="You must select at least 1 target token, preferably by using the AOE template." {{/if}} >
+          {{#if aoeText}}Roll Placement{{else}}Roll to Hit{{/if}}
+          {{#if cannotAttack}} Anyway{{/if}}
+      </button>
   </footer>
 </form>

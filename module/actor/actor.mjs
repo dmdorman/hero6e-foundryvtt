@@ -407,30 +407,15 @@ export class HeroSystem6eActor extends Actor {
 
     // When stunned, knockedout, etc you cannot act
     canAct(uiNotice) {
-        if (this.statuses.has("knockedOut")) {
-            if (uiNotice)
-                ui.notifications.error(
-                    `${this.name} is KNOCKED OUT and cannot act.`,
-                );
+        let reason = this.getTheReasonCannotAct();
+        if (reason != null) {
+            if (uiNotice) ui.notifications.error(reason);
             return false;
         }
+        return true;
+    }
 
-        if (this.statuses.has("stunned")) {
-            if (uiNotice)
-                ui.notifications.error(
-                    `${this.name} is STUNNED and cannot act.`,
-                );
-            return false;
-        }
-
-        if (this.statuses.has("aborted")) {
-            if (uiNotice)
-                ui.notifications.error(
-                    `${this.name} has ABORTED and cannot act.`,
-                );
-            return false;
-        }
-
+    getTheReasonCannotAct() {
         // A character
         // who is Stunned or recovering from being
         // Stunned can take no Actions, take no Recoveries
@@ -441,16 +426,28 @@ export class HeroSystem6eActor extends Actor {
         // Phase, and is the only thing the character can do
         // during that Phase.
 
-        if (this.statuses.has("stunned")) {
-            if (uiNotice)
-                ui.notifications.error(
-                    `${this.name} is STUNNED and cannot act.`,
-                );
-            return false;
+        // The obvious one:
+        if (this.statuses.has(HeroSystem6eActorActiveEffects.deadEffect.id)) {
+            return `${this.name} is DEAD and cannot act.`;
         }
-        return true;
-    }
 
+        if (
+            this.statuses.has(
+                HeroSystem6eActorActiveEffects.knockedOutEffect.id,
+            )
+        ) {
+            return `${this.name} is KNOCKED OUT and cannot act.`;
+        }
+
+        if (this.statuses.has(HeroSystem6eActorActiveEffects.stunEffect.id)) {
+            return `${this.name} is STUNNED and cannot act.`;
+        }
+        // maybe remove ABORT and check for blocking separately
+        if (this.statuses.has(HeroSystem6eActorActiveEffects.abortEffect.id)) {
+            return `${this.name} has ABORTED and cannot act.`;
+        }
+        return null;
+    }
     /**
      * Display changes to health as scrolling combat text.
      * Adapt the font size relative to the Actor's HP total to emphasize more significant blows.

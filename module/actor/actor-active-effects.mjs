@@ -51,6 +51,7 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
         icon: "icons/svg/blood.svg",
     };
 
+    // TODO: this appears not to be used; should it be removed?
     static unconsciousEffect = {
         name: "EFFECT.StatusUnconscious",
         id: "unconscious",

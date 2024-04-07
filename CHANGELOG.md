@@ -31,6 +31,7 @@
 
 - Fix velocity calculations for 5e. [#923](https://github.com/dmdorman/hero6e-foundryvtt/issues/923)
 - Calculated velocity for maneuvers can now be adjusted in the to hit dialog when necessary. [#923](https://github.com/dmdorman/hero6e-foundryvtt/issues/923)
+
 - Improved in-game editing:
   - You can add most skills, powers, etc to an actor in-game. Frameworks, compound powers, and enhancers can not be added in-game yet.
   - Some editing options are confusing and will be improved in future releases.

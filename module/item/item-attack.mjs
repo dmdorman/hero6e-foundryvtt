@@ -49,14 +49,15 @@ export async function onMessageRendered(html) {
     }
 }
 
-/// Dialog box for AttackOptions
+/*
+ * Dialog box for AttackOptions: only place things here that ought to be constant:
+ * the distance you moved
+ * the power used
+ *
+ */
 export async function AttackOptions(item) {
     const actor = item.actor;
     const token = actor.getActiveTokens()[0];
-
-    if (!actor.canAct(true)) {
-        return;
-    }
 
     const data = {
         item: item,
@@ -110,7 +111,8 @@ export async function AttackOptions(item) {
 
         // Penalty Skill Levels
         const PENALTY_SKILL_LEVELS = actor.items.find(
-            (o) => o.system.XMLID === "PENALTY_SKILL_LEVELS",
+            (penaltySkill) =>
+                penaltySkill.system.XMLID === "PENALTY_SKILL_LEVELS",
         );
         if (PENALTY_SKILL_LEVELS) {
             data.PENALTY_SKILL_LEVELS = PENALTY_SKILL_LEVELS;
@@ -118,6 +120,7 @@ export async function AttackOptions(item) {
     }
 
     await new ItemAttackFormApplication(data).render(true);
+    console.log("RWC ItemAttackFormApplication(data).render(true)");
 }
 
 export async function _processAttackOptions(item, formData) {
@@ -282,6 +285,9 @@ export async function AttackToHit(item, options) {
             `Attack details are no longer available.`,
         );
     }
+    console.log("RWC AttackToHit(item, options))");
+    console.log("RWC AttackToHit item", item);
+    console.log("RWC AttackToHit options", options);
 
     const actor = item.actor;
     const itemData = item.system;
@@ -847,7 +853,11 @@ export async function AttackToHit(item, options) {
         // misc
         tags: heroRoller.tags(),
         attackTags: getAttackTags(item),
+        targetTokens: game.user.targets,
+        attackerToken: actor.getActiveTokens()[0], // Educated guess for token
     };
+    console.log("attackerToken:", cardData.attackerToken);
+    console.log("targetTokens:", cardData.targetTokens);
 
     // render card
     const template =
@@ -856,8 +866,11 @@ export async function AttackToHit(item, options) {
             : `systems/${HEROSYS.module}/templates/chat/item-toHit-card.hbs`;
     const cardHtml = await renderTemplate(template, cardData);
 
-    const token = actor.token;
-    const speaker = ChatMessage.getSpeaker({ actor: actor, token });
+    // check API for this: why doesn't it use the token name
+    const speaker = ChatMessage.getSpeaker({
+        actor: actor,
+        token: cardData.attackerToken,
+    });
     speaker.alias = actor.name;
 
     const chatData = {
