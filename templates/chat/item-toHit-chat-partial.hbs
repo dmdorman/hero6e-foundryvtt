@@ -5,6 +5,7 @@
   <div class="dice-result">
     {{!-- text Always shown --}}
     <div class="dice-formula card-section">
+      <img class="more" src="icons/svg/downgrade.svg" data-tooltip="more..." width="16" height="16"/>
       <header class="card-header attack flexrow">
         <img src="{{attackerToken.document.texture.src}}" title="{{attackerToken.name}}" width="36" height="36"/>
         <h3 class="item-name">{{attackerToken.name}}</h3>
@@ -44,6 +45,7 @@
     <div class=" dice-roll">
       <div class="dice-result">
         <div class="dice-formula card-section">
+          <img class="more" src="icons/svg/downgrade.svg" data-tooltip="more..." width="16" height="16"/>
           <div class="description-medium">
             Rolled {{target.roller._successRolledValue}},
             {{#if (compare target.result.hit '==' "Hit") }}

@@ -160,5 +160,14 @@
       border: 0;
     }
 
-  } 
+  }
+
+  .dice-formula.card-section, .card-header.attack {
+    img.more {
+      z-index: 2;
+      position: absolute;
+      right: 2px;
+      top: 6px;
+    }
+  }
 }
