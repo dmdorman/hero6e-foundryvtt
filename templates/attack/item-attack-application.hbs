@@ -34,7 +34,7 @@
       </select>
     </div>
 
-  {{#if autofireAttackInfo}}
+  {{#if autofireAttackInfo.autofire}}
     <div>Autofire OCV penalties {{autofireAttackInfo.autofireOCV}}</div>
   {{/if}}
     
@@ -53,39 +53,33 @@
     
     
     {{!-- autofire form --}}
-    {{#if autofireAttackInfo}}
-      <table>
-        <thead>
-          <tr>
-            <th class = "target-name">Target</th>
-            <th>Range</th>
-            <th class = "ocv">OCV</th>
-            <th>Skip</th>
-            <th>Shots</th>
-          </tr>
-        </thead>
-        <tbody>
-  
-        {{#each autofireAttackInfo.targets as |autofireAttackTargetInfo|}}
-          <tr>
-            <td class="ellipsis-text target-name">{{autofireAttackTargetInfo.target.name}}</td>
-            <td>{{autofireAttackTargetInfo.range}}m</td>
-            <td>{{autofireAttackTargetInfo.ocv}}</td>
-            <td>{{autofireAttackTargetInfo.skippedShots}}</td>
-            <td><input type="text" name="{{autofireAttackTargetInfo.shots_on_target_id}}" value={{autofireAttackTargetInfo.shotsOnTarget}} /></td>
-          </tr>        
-        {{/each}}
-        </tbody>
-      </table>
-    {{else}} {{!-- just multiple targets --}}
-      {{#each targets as |target|}}
-        <div class="form-group">
-          <label class="ellipsis-text">{{target.name}}</label>
-          <input type="text" name="somthing" value="something" />
+    {{#if autofireAttackInfo.autofire}}
+      <div class="attack-options-target-container">
+        <div class="target-info-header">
+          <div>Target</div>
+          <div>Range</div>
+          <div class = "ocv">OCV</div>
+          <div>Skip</div>
+          <div>Shots</div>
         </div>
-      {{/each}}
+        {{#each autofireAttackInfo.targets as |autofireAttackTargetInfo|}}
+          <div class="target-info-row">
+              <div class="ellipsis-text target-name">{{autofireAttackTargetInfo.target.name}}</div>
+              <div>{{autofireAttackTargetInfo.range}}m</div>
+              <div>{{autofireAttackTargetInfo.ocv}}</div>
+              <div>{{autofireAttackTargetInfo.skippedShots}}</div>
+              {{!-- we need input if this is autofire on one target, or if they have Concentrated Sprayfire --}}
+              {{#if ../autofireAttackInfo.singleTarget}}
+                <div><input type="text" name="{{autofireAttackTargetInfo.shots_on_target_id}}" value={{autofireAttackTargetInfo.shotsOnTarget}} /></div>
+              {{else if ../autofireAttackInfo.autofireSkills.ACCURATE}}
+                <div><input type="text" name="{{autofireAttackTargetInfo.shots_on_target_id}}" value={{autofireAttackTargetInfo.shotsOnTarget}} /></div>
+              {{else}}
+                <div>{{autofireAttackTargetInfo.shotsOnTarget}}</div>
+              {{/if}}
+          </div>
+        {{/each}}
+      </div>
     {{/if}}
-      
 
     <div class="form-group">
       <label>{{localize "Items.Attack.OcvMod"}}</label>

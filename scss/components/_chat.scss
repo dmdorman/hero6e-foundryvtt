@@ -151,7 +151,6 @@
       width : 15%;
     }
     .target-name {
-      width : 40%;
     }
     td.target-name {
       text-align: left;
@@ -170,4 +169,65 @@
       top: 6px;
     }
   }
+  
+  .attack-options-target-container {
+    display: grid;
+    grid-template-columns: 8fr 3fr 3fr 3fr 3fr;
+    width: 100%;
+    border-collapse: collapse;
+    border-top: 1px solid var(--color-border-light-tertiary);
+    border-bottom: 1px solid var(--color-border-light-tertiary);
+    margin: 0.5em 0;    
+  }
+
+  .target-info-row .target-name {
+    padding-left: 2px;
+    text-align: left;
+    width : 100%;
+  }
+
+  .target-info-header {
+    display: contents;
+    color: var(--color-text-light-highlight);
+    text-shadow: 1px 2px var(--color-shadow-dark);
+    margin: 2px;
+  }
+  .target-info-header div{
+    padding-top: 3px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--color-border-dark);
+  }
+
+  .attack-options-target-container  {
+    text-align: center;
+  }
+  
+  .attack-options-target-container .target-info-header div{
+    font-weight: bold;
+    background-color: #696762;
+  }
+  .attack-options-target-container div div{
+    margin-bottom: 1px;
+    
+  }
+
+  .attack-options-target-container .target-info-row:nth-child(odd) div {
+    background-color: #dddbd2;
+  }
+
+  .attack-options-target-container .target-info-row:nth-child(even) div {
+    background-color: #cfcdc3;
+  }
+
+  .target-name {
+  }
+
+  .target-info-row {
+    display: contents;
+  }
+
+  .target-info-row div{
+    padding: 0.25em 0;
+  }
+
 }

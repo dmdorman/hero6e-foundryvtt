@@ -468,7 +468,7 @@ export class ItemAttackFormApplication extends FormApplication {
         return 0;
     }
 
-    static getReasonCannotAttack(item, targetsArray) {
+    static getReasonCannotAttack(item, targetsArray, autofireAttackInfo) {
         let reason = item.actor.getTheReasonCannotAct();
         if (reason) {
             return reason;
@@ -492,6 +492,8 @@ export class ItemAttackFormApplication extends FormApplication {
                 if (charges.value < targetsArray.length) {
                     return `${actingToken.name} has ${targetsArray.length} targets selected and only ${charges.value} charges left.`;
                 }
+                
+                // we don't need to refigure the autofire info, as it was passed in
                 const autofire = item.findModsByXmlid("AUTOFIRE");
                 const isAutofire = !!autofire;
                 if (isAutofire && targetsArray.length > 1) {
@@ -567,6 +569,7 @@ export class ItemAttackFormApplication extends FormApplication {
         return null;
     }
 
+    // todo: maybe I can make this more generic? getAttack Info? use a similar targets structure for other attacks
     static getAutofireAttackInfo(item, targetedTokens, oldAutofireAttackInfo) {
         const autofire = item.findModsByXmlid("AUTOFIRE");
         if (!autofire || targetedTokens.length === 0) {
@@ -582,9 +585,10 @@ export class ItemAttackFormApplication extends FormApplication {
             ? parseInt(autofire.OPTION_ALIAS.match(/\d+/))
             : 0;
 
-        const autofireSkills = item.actor.items
+        const autofireSkills = {};
+        item.actor.items
             .filter((skill) => "AUTOFIRE_SKILLS" === skill.system.XMLID)
-            .map((skill) => skill.system.OPTION);
+            .map((skill) => skill.system.OPTION).forEach((skillOption)=> autofireSkills[skillOption] = true);
 
         // use the form values for number of shots _unless_ they are switching to/from one target
         const assignedShots = {};
@@ -609,8 +613,9 @@ export class ItemAttackFormApplication extends FormApplication {
         };
         const targets = [];
         let totalSkippedMeters = 0;
-        // single target
-        if (targetedTokens.length === 1) {
+        autofireAttackInfo.singleTarget = (targetedTokens.length === 1);
+        
+        if (autofireAttackInfo.singleTarget) {
             let shotsOnTarget = autoFireShots;
             if (assignedShots[targetedTokens[0].id]) {
                 shotsOnTarget = assignedShots[targetedTokens[0].id];
@@ -627,8 +632,7 @@ export class ItemAttackFormApplication extends FormApplication {
                 range,
                 ocv: ItemAttackFormApplication.getRangeModifier(item, range),
             });
-        } else {
-            // multiple targets
+        } else {    // multiple targets
             for (let i = 0; i < targetedTokens.length; i++) {
                 let shotsOnTarget = 1; // for now...
                 if (assignedShots[targetedTokens[i].id]) {
