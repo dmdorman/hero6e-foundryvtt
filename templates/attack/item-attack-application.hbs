@@ -34,6 +34,11 @@
       </select>
     </div>
 
+  {{#if autofireAttackInfo}}
+    <div>Autofire OCV penalties {{autofireAttackInfo.autofireOCV}}</div>
+  {{/if}}
+    
+    
     {{!-- Penalty skill levels --}}
     <div class="description" {{#unless PENALTY_SKILL_LEVELS}}style="display: none;"{{/unless}}>
       <b>{{PENALTY_SKILL_LEVELS.name}}
@@ -45,16 +50,34 @@
       <label>Use Penalty Skill Levels</label>
       <input class="item-toggle" name="usePsl" type="checkbox" {{checked usePsl}} data-dtype="Boolean" />
     </div>
+    
+    
     {{!-- autofire form --}}
     {{#if autofireAttackInfo}}
-      {{#each autofireAttackInfo.targets as |autofireAttackTargetInfo|}}
-        <div class="form-group">
-          <label class="ellipsis-text">{{autofireAttackTargetInfo.target.name}}</label>
-          (OCV: {{autofireAttackTargetInfo.ocv}}) Shots on Target:
-          <input type="text" name="shots-on-tgt" value={{autofireAttackTargetInfo.shotsOnTarget}} />
-        </div>
-      {{/each}}
-    {{else}}
+      <table>
+        <thead>
+          <tr>
+            <th class = "target-name">Target</th>
+            <th>Range</th>
+            <th class = "ocv">OCV</th>
+            <th>Skip</th>
+            <th>Shots</th>
+          </tr>
+        </thead>
+        <tbody>
+  
+        {{#each autofireAttackInfo.targets as |autofireAttackTargetInfo|}}
+          <tr>
+            <td class="ellipsis-text target-name">{{autofireAttackTargetInfo.target.name}}</td>
+            <td>{{autofireAttackTargetInfo.range}}m</td>
+            <td>{{autofireAttackTargetInfo.ocv}}</td>
+            <td>{{autofireAttackTargetInfo.skippedShots}}</td>
+            <td><input type="text" name="{{autofireAttackTargetInfo.shots_on_target_id}}" value={{autofireAttackTargetInfo.shotsOnTarget}} /></td>
+          </tr>        
+        {{/each}}
+        </tbody>
+      </table>
+    {{else}} {{!-- just multiple targets --}}
       {{#each targets as |target|}}
         <div class="form-group">
           <label class="ellipsis-text">{{target.name}}</label>

@@ -140,4 +140,25 @@
     text-overflow: ellipsis;
     white-space: nowrap;    
   }
+
+  &.attack-card {
+    table {
+      min-width: 100%;
+    }
+
+    th,
+    td {
+      width : 15%;
+    }
+    .target-name {
+      width : 40%;
+    }
+    td.target-name {
+      text-align: left;
+    }
+    th:last-child {
+      border: 0;
+    }
+
+  } 
 }

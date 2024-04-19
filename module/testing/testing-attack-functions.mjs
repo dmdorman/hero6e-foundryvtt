@@ -14,6 +14,9 @@ export function registerAttackFunctionTests(quench) {
                 name: "Test Actor",
                 type: "pc",
             });
+
+            describe("CombatSetting", function () {});
+
             describe("AttackOptions", function () {
                 it("Attacker Can Act", async function () {
                     assert.equal(actor.canAct(false), true);
