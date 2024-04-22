@@ -10,6 +10,7 @@ export function initializeHandlebarsHelpers() {
         return value !== undefined;
     });
     Handlebars.registerHelper("compare", compare);
+    Handlebars.registerHelper("math", math);
 }
 
 function indexOf(str, searchTerm) {
@@ -59,6 +60,27 @@ function compare(param1, operator, param2, insensitive) {
             return !!(v1 && v2);
         case "||":
             return !!(v1 || v2);
+        default:
+            return false;
+    }
+}
+
+function math(...theArguments) {
+    const params = [];
+    const operator = theArguments[0];
+    for (const [index, arg] of theArguments.entries()) {
+        if (index > 0) {
+            if (typeof arg !== "number") {
+                break;
+            }
+            params.push(arg);
+        }
+    }
+    switch (operator) {
+        case "+":
+            return params.reduce((accumulator, currentValue) => {
+                return accumulator + currentValue;
+            }, 0);
         default:
             return false;
     }

@@ -208,7 +208,10 @@
   }
   .attack-options-target-container div div{
     margin-bottom: 1px;
-    
+  }
+
+  .attack-options-target-container .target-info-row div {
+    line-height: 2em;
   }
 
   .attack-options-target-container .target-info-row:nth-child(odd) div {

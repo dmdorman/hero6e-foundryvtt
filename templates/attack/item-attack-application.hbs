@@ -35,7 +35,11 @@
     </div>
 
   {{#if autofireAttackInfo.autofire}}
-    <div>Autofire OCV penalties {{autofireAttackInfo.autofireOCV}}</div>
+    <div>Autofire OCV penalties: {{autofireAttackInfo.autofireOCV}}</div>
+    <div>{{autofireAttackInfo.targets.length}} Targets and {{autofireAttackInfo.totalShotsSkipped}} Skipped is {{autofireAttackInfo.totalShotsFired}} Total Shots Fired</div>
+  {{/if}}
+  {{#if autofireAttackInfo.charges}}
+    <div>Charged Used: {{autofireAttackInfo.totalShotsFired}} of {{autofireAttackInfo.charges.value}} left.</div>
   {{/if}}
     
     
@@ -66,7 +70,7 @@
           <div class="target-info-row">
               <div class="ellipsis-text target-name">{{autofireAttackTargetInfo.target.name}}</div>
               <div>{{autofireAttackTargetInfo.range}}m</div>
-              <div>{{autofireAttackTargetInfo.ocv}}</div>
+              <div>{{math "+" autofireAttackTargetInfo.ocv ../autofireAttackInfo.autofireOCV}}</div>
               <div>{{autofireAttackTargetInfo.skippedShots}}</div>
               {{!-- we need input if this is autofire on one target, or if they have Concentrated Sprayfire --}}
               {{#if ../autofireAttackInfo.singleTarget}}
@@ -80,7 +84,6 @@
         {{/each}}
       </div>
     {{/if}}
-
     <div class="form-group">
       <label>{{localize "Items.Attack.OcvMod"}}</label>
       <input type="text" name="ocvMod" value="{{ocvMod}}" />
@@ -179,4 +182,4 @@
           {{#if cannotAttack}} Anyway{{/if}}
       </button>
   </footer>
-</form>
+</form>t

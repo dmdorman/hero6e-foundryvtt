@@ -492,11 +492,23 @@ export class ItemAttackFormApplication extends FormApplication {
                 if (charges.value < targetsArray.length) {
                     return `${actingToken.name} has ${targetsArray.length} targets selected and only ${charges.value} charges left.`;
                 }
-                
-                // we don't need to refigure the autofire info, as it was passed in
-                const autofire = item.findModsByXmlid("AUTOFIRE");
-                const isAutofire = !!autofire;
-                if (isAutofire && targetsArray.length > 1) {
+                if (
+                    !!autofireAttackInfo &&
+                    charges.value < autofireAttackInfo.totalShotsFired
+                ) {
+                    return `${actingToken.name} is going to use ${autofireAttackInfo.totalShotsFired} charges and only ${charges.value} charges left.`;
+                }
+
+                const autofire = autofireAttackInfo?.autofire;
+                if (
+                    !!autofireAttackInfo &&
+                    autofireAttackInfo.autoFireShots <
+                        autofireAttackInfo.totalShotsFired
+                ) {
+                    return `${actingToken.name} is going to use ${autofireAttackInfo.totalShotsFired} charges and can only fire ${autofireAttackInfo.autoFireShots} shots.`;
+                }
+
+                if (!!autofire && targetsArray.length > 1) {
                     // TODO autofire + number of shots fired per phase
                     console.log(
                         `RWC autofire  ${autofire} look for shots per phase`,
@@ -570,7 +582,17 @@ export class ItemAttackFormApplication extends FormApplication {
     }
 
     // todo: maybe I can make this more generic? getAttack Info? use a similar targets structure for other attacks
-    static getAutofireAttackInfo(item, targetedTokens, oldAutofireAttackInfo) {
+    //  oldAutofireAttackInfo, attackToHitOptions contain the same information that I want
+    // collect the data from options into a structure for passing arouns so it can be the same
+    // make the basic info a struct too
+    // put all the relevant infor into each target info so they are independent
+    // that way we can use this for multiattack, and haymaker too
+    static getAutofireAttackInfo(
+        item,
+        targetedTokens,
+        oldAutofireAttackInfo,
+        attackToHitOptions,
+    ) {
         const autofire = item.findModsByXmlid("AUTOFIRE");
         if (!autofire || targetedTokens.length === 0) {
             return null;
@@ -580,7 +602,6 @@ export class ItemAttackFormApplication extends FormApplication {
             item.actor.getActiveTokens()[0] || canvas.tokens.controlled[0];
         if (!attacker) return; // todo: message?
 
-        // TODO: also need to pull from the form data
         const autoFireShots = autofire
             ? parseInt(autofire.OPTION_ALIAS.match(/\d+/))
             : 0;
@@ -588,7 +609,8 @@ export class ItemAttackFormApplication extends FormApplication {
         const autofireSkills = {};
         item.actor.items
             .filter((skill) => "AUTOFIRE_SKILLS" === skill.system.XMLID)
-            .map((skill) => skill.system.OPTION).forEach((skillOption)=> autofireSkills[skillOption] = true);
+            .map((skill) => skill.system.OPTION)
+            .forEach((skillOption) => (autofireSkills[skillOption] = true));
 
         // use the form values for number of shots _unless_ they are switching to/from one target
         const assignedShots = {};
@@ -602,20 +624,34 @@ export class ItemAttackFormApplication extends FormApplication {
                 });
             }
         }
+        if (attackToHitOptions) {
+            console.log(attackToHitOptions);
+            // if (
+            //     oldAutofireAttackInfo.targets.length > 1 ==
+            //     targetedTokens.length > 1
+            // ) {
+            //     oldAutofireAttackInfo.targets.forEach((target) => {
+            //         assignedShots[target.target.id] = target.shotsOnTarget;
+            //     });
+            // }
+        }
 
         const autofireAttackInfo = {
             item,
             autofire,
+            autoFireShots,
             targetedTokens,
             charges: item.system.charges,
-            shotsFired: autoFireShots,
+            totalShotsFired: 0,
+            totalShotsSkipped: 0,
             autofireSkills,
         };
         const targets = [];
         let totalSkippedMeters = 0;
-        autofireAttackInfo.singleTarget = (targetedTokens.length === 1);
-        
+        autofireAttackInfo.singleTarget = targetedTokens.length === 1;
+
         if (autofireAttackInfo.singleTarget) {
+            // todo: this should be very similar to the loop below
             let shotsOnTarget = autoFireShots;
             if (assignedShots[targetedTokens[0].id]) {
                 shotsOnTarget = assignedShots[targetedTokens[0].id];
@@ -630,9 +666,12 @@ export class ItemAttackFormApplication extends FormApplication {
                 target: targetedTokens[0],
                 shotsOnTarget,
                 range,
+                shots_on_target_id: `shots_on_target_${targetedTokens[0].id}`,
                 ocv: ItemAttackFormApplication.getRangeModifier(item, range),
             });
-        } else {    // multiple targets
+            autofireAttackInfo.totalShotsFired = shotsOnTarget;
+        } else {
+            // multiple targets
             for (let i = 0; i < targetedTokens.length; i++) {
                 let shotsOnTarget = 1; // for now...
                 if (assignedShots[targetedTokens[i].id]) {
@@ -672,6 +711,12 @@ export class ItemAttackFormApplication extends FormApplication {
                     targetingData.range,
                 );
                 targets.push(targetingData);
+                autofireAttackInfo.totalShotsFired +=
+                    targetingData.shotsOnTarget;
+                autofireAttackInfo.totalShotsFired +=
+                    targetingData.skippedShots;
+                autofireAttackInfo.totalShotsSkipped +=
+                    targetingData.skippedShots;
             }
         }
         autofireAttackInfo.targets = targets;

@@ -291,7 +291,13 @@ export async function AttackToHit(item, options) {
 
     const actor = item.actor;
     const itemData = item.system;
-
+    const autofireAttackInfo = ItemAttackFormApplication.getAutofireAttackInfo(
+        item,
+        Array.from(game.user.targets),
+        null,
+        options,
+    );
+    console.log(autofireAttackInfo);
     const hitCharacteristic = actor.system.characteristics[itemData.uses].value;
 
     const toHitChar = CONFIG.HERO.defendsWith[itemData.targets];
