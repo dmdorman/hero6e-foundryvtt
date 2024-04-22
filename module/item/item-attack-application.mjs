@@ -1,4 +1,4 @@
-import { CombatSkillLevelsForAttack } from "../utility/damage.mjs";
+import {CombatSkillLevelsForAttack} from "../utility/damage.mjs";
 import {
     _processAttackOptions,
     _processAttackAoeOptions,
@@ -53,10 +53,6 @@ export class ItemAttackFormApplication extends FormApplication {
         );
     }
 
-    async updateItem() {
-        this.render();
-    }
-
     static get defaultOptions() {
         let options = super.defaultOptions;
         options = mergeObject(options, {
@@ -72,19 +68,270 @@ export class ItemAttackFormApplication extends FormApplication {
         return options;
     }
 
+    static _itemUsesMultipleTargets(item) {
+        // is there a system to indicate this?
+        const autofire = !!item.findModsByXmlid("AUTOFIRE");
+        const multipleAttack = item.system.XMLID === "MULTIPLEATTACK";
+        const moveby = item.system.XMLID === "MOVEBY";
+        return autofire || multipleAttack || moveby;
+    }
+
+    static getRangeModifier(item, range) {
+        const actor = item.actor;
+
+        if (item.system.range === "self") {
+            // TODO: Should not be able to use this on anyone else. Should add a check.
+        }
+
+        // TODO: Should consider if the target's range exceeds the power's range or not and display some kind of warning
+        //       in case the system has calculated it incorrectly.
+
+        const noRangeModifiers = !!item.findModsByXmlid("NORANGEMODIFIER");
+        const normalRange = !!item.findModsByXmlid("NORMALRANGE");
+
+        // There are no range penalties if this is a line of sight power or it has been bought with
+        // no range modifiers.
+        if (!(item.system.range === "los" || noRangeModifiers || normalRange)) {
+            const factor = actor.system.is5e ? 4 : 8;
+
+            let rangePenalty = -Math.ceil(Math.log2(range / factor)) * 2;
+            rangePenalty = rangePenalty > 0 ? 0 : rangePenalty;
+
+            // Brace (+2 OCV only to offset the Range Modifier)
+            const braceManeuver = item.actor.items.find(
+                (item) =>
+                    item.type == "maneuver" &&
+                    item.name === "Brace" &&
+                    item.system.active,
+            );
+            if (braceManeuver) {
+                //TODO: ???
+            }
+            return Math.floor(rangePenalty);
+        }
+        return 0;
+    }
+
+    static getReasonCannotAttack(item, targetsArray, autofireAttackInfo) {
+        let reason = item.actor.getTheReasonCannotAct();
+        if (reason) {
+            return reason;
+        }
+        const actingToken = item.actor.getActiveTokens()[0];
+
+        if (
+            targetsArray.length > 1 &&
+            !ItemAttackFormApplication._itemUsesMultipleTargets(item)
+        ) {
+            return `${actingToken.name} has ${targetsArray.length} targets selected and ${item.name} supports only one.`;
+        }
+        const autofire = autofireAttackInfo?.autofire;
+        const isAutofire = !!autofire;
+
+        let charges = null;
+        if (item.findModsByXmlid("CHARGES")) {
+            charges = item.system.charges;
+            if (charges) {
+                if (charges.value === 0) {
+                    return `${item.name} has no charges left.`;
+                }
+                if (charges.value < targetsArray.length) {
+                    return `${actingToken.name} has ${targetsArray.length} targets selected and only ${charges.value} charges left.`;
+                }
+                if ( isAutofire ){
+                    if( charges.value < autofire.totalShotsFired) {
+                        return `${actingToken.name} is going to use ${autofire.totalShotsFired} charges and only ${charges.value} charges left.`;
+                    }
+                }
+            }
+        }
+        if ( isAutofire ){
+            if (autofire.autoFireShots < autofire.totalShotsFired) {
+                return `${actingToken.name} is going to fire ${autofire.totalShotsFired} shots and can only fire ${autofire.autoFireShots} shots.`;
+            }
+        }
+
+        const selfOnly = !!item.findModsByXmlid("SELFONLY");
+        const onlySelf = !!item.findModsByXmlid("ONLYSELF");
+        const usableOnOthers = !!item.findModsByXmlid("UOO");
+        // supposedly item.system.range  has factored all of this in...
+        const rangeSelf = item.system.range === "self";
+
+        if (rangeSelf || selfOnly || onlySelf) {
+            if (usableOnOthers) {
+                console.log(
+                    `${item.name} is a self-only ability that is usable on others!!??`,
+                );
+            }
+            // TODO: Should not be able to use this on anyone else. Should add a check.
+            if (targetsArray.length > 1) {
+                return `There are ${targetsArray.length} targets selected and ${item.name} is a self-only ability.`;
+            }
+            if (targetsArray.length > 0) {
+                // check if the target is me
+                if (item.actor._id !== targetsArray[0].actor._id) {
+                    return `${targetsArray[0].name} is targeted and ${item.name} is a self-only ability.`;
+                }
+            }
+        }
+
+        const noRange = item.system.range === "no range";
+        if (noRange) {
+            for (let i = 0; i < targetsArray.length; i++) {
+                let target = targetsArray[i];
+                let distance = canvas.grid.measureDistance(
+                    actingToken,
+                    target,
+                    {gridSpaces: true},
+                );
+                // what are the units of distance? 2M is standard reach
+                // if the actor has a greater reach count that...
+                if (distance > 2) {
+                    // TODO: get reach (STRETCHING/GROWTH/SHRINK)
+                    return `${item.name} is a no range ability, and ${targetsArray[i].name} is at a distance of ${distance}`;
+                }
+            }
+        }
+        return null;
+    }
+    static getAutofireAttackTargets(autofireAttackInfo, assignedShots){
+        const autofire = autofireAttackInfo.autofire;
+        const targetedTokens = autofireAttackInfo.basic.targetedTokens;
+        const basic = autofireAttackInfo.basic;
+        const autofireSkills = autofire.autofireSkills;
+        const targets = [];
+        let totalSkippedMeters = 0;
+        autofire.singleTarget = targetedTokens.length === 1;
+
+        for (let i = 0; i < targetedTokens.length; i++) {
+            let shotsOnTarget = autofire.singleTarget
+                ? autofire.autoFireShots
+                : 1;
+            if (assignedShots[targetedTokens[i].id]) {
+                shotsOnTarget = assignedShots[targetedTokens[i].id];
+            }
+            // these are the targeting data used for the attack(s)
+            const targetingData = {
+                basic,
+                autofire,
+                target: targetedTokens[i],
+                shotsOnTarget,
+                shots_on_target_id: `shots_on_target_${targetedTokens[i].id}`,
+            };
+            if (i !== 0) {
+                const prevTarget = targetedTokens[i - 1];
+                const target = targetedTokens[i];
+                const skippedMeters = canvas.grid.measureDistance(
+                    prevTarget,
+                    target,
+                    {gridSpaces: true},
+                );
+                totalSkippedMeters += skippedMeters;
+                console.log(
+                    `skip ${skippedMeters} meters between ${prevTarget.name} and ${target.name}`,
+                );
+                targetingData.skippedMeters = skippedMeters;
+                targetingData.skippedShots = autofireSkills.SKIPOVER ? 0 : Math.floor(skippedMeters / 2 - 1); //todo: check zero
+            } else {
+                targetingData.skippedMeters = 0;
+                targetingData.skippedShots = 0;
+            }
+            targetingData.range = canvas.grid.measureDistance(
+                basic.attacker,
+                targetedTokens[i],
+                {gridSpaces: true},
+            );
+            targetingData.ocv = ItemAttackFormApplication.getRangeModifier(
+                basic.item,
+                targetingData.range,
+            );
+            targets.push(targetingData);
+            autofire.totalShotsFired += targetingData.shotsOnTarget;
+            autofire.totalShotsFired += autofireSkills.SKIPOVER ? 0 : targetingData.skippedShots;
+            autofire.totalShotsSkipped += targetingData.skippedShots;
+        }
+        autofire.autofireOCV = 0;
+        if(!autofire.singleTarget) {
+            if (autofireSkills.ACCURATE) {
+                autofire.autofireOCV -= 1;
+            } else {
+                autofire.autofireOCV -= totalSkippedMeters / 2;
+            }
+            if (autofireSkills.CONCENTRATED) {
+                autofire.autofireOCV -= 1;
+            }
+            if (autofireSkills.SKIPOVER) {
+                autofire.autofireOCV -= 1;
+            }
+        }        
+        return targets;
+    }
+    
+    // make it getAttackInfo and that way we can use this for multiattack, and haymaker too
+    static getAutofireAttackInfo(
+        item,
+        targetedTokens,
+        oldAutofireAttackInfo,
+        attackToHitOptions,
+    ) {
+        const autofireMod = item.findModsByXmlid("AUTOFIRE");
+        if (!autofireMod || targetedTokens.length === 0) {
+            return null;
+        }
+        const attacker =
+            item.actor.getActiveTokens()[0] || canvas.tokens.controlled[0];
+        if (!attacker) return; // todo: message?
+
+        const autoFireShots = parseInt(autofireMod.OPTION_ALIAS.match(/\d+/)) ?? 0;
+
+        const autofireSkills = {};
+        item.actor.items
+            .filter((skill) => "AUTOFIRE_SKILLS" === skill.system.XMLID)
+            .map((skill) => skill.system.OPTION)
+            .forEach((skillOption) => (autofireSkills[skillOption] = true));
+
+        const basic = {
+            item,
+            attacker,
+            targetedTokens,
+        }; // basic attack info
+        
+        const autofire = {
+            autofireMod,
+            autofireSkills,
+            autoFireShots,
+            totalShotsFired: 0,
+            totalShotsSkipped: 0,
+            autofireOCV: 0,
+        }; // autofire attack info
+        
+        const autofireAttackInfo = {
+            basic,
+            autofire,
+            charges: item.system.charges,
+        };
+        
+        // use the form values for number of shots _unless_ they are switching to/from one target
+        const assignedShots = attackToHitOptions ? {...attackToHitOptions} : {};
+        if (oldAutofireAttackInfo && (oldAutofireAttackInfo.targets.length > 1 === targetedTokens.length > 1)) {
+            oldAutofireAttackInfo.targets.forEach((target) => {
+                assignedShots[target.target.id] = target.shotsOnTarget;
+            });
+        }        
+        autofireAttackInfo.targets = ItemAttackFormApplication.getAutofireAttackTargets(autofireAttackInfo, assignedShots);
+
+        return autofireAttackInfo;
+    }
+
+    async updateItem() {
+        this.render();
+    }
+
     getData() {
         const data = this.data;
         const item = data.item;
         // move the stuff from item-attack.mjs so the data has one source of truth
         data.targets = Array.from(game.user.targets);
-        console.log("RWC AttackOptions(item)", item);
-        console.log("RWC data.targets:", data.targets);
-        for (const target of data.targets) {
-            console.log("RWC Target token name:", target.name);
-            console.log(
-                `RWC Target location: ${target.transform.worldTransform.tx}/${target.transform.worldTransform.ty}`,
-            );
-        }
         const autofireAttackInfo =
             ItemAttackFormApplication.getAutofireAttackInfo(
                 item,
@@ -150,7 +397,7 @@ export class ItemAttackFormApplication extends FormApplication {
             let mental = csl.skill.system.XMLID === "MENTAL_COMBAT_LEVELS";
             let _ocv = mental ? "omcv" : "ocv";
             let _dcv = mental ? "dmcv" : "dcv";
-            data.cslChoices = { [_ocv]: _ocv };
+            data.cslChoices = {[_ocv]: _ocv};
             if (csl.skill.system.OPTION != "SINGLE") {
                 data.cslChoices[_dcv] = _dcv;
                 data.cslChoices.dc = "dc";
@@ -198,7 +445,7 @@ export class ItemAttackFormApplication extends FormApplication {
 
         // CSL can cause differences in form size.
         if (this.position && this.rendered) {
-            this.setPosition({ height: "auto" });
+            this.setPosition({height: "auto"});
         }
     }
 
@@ -279,7 +526,7 @@ export class ItemAttackFormApplication extends FormApplication {
             const idx = parseInt(key.match(/\d+$/));
             if (csl.skill.system.csl[idx] != value) {
                 csl.skill.system.csl[idx] = value;
-                await csl.skill.update({ "system.csl": csl.skill.system.csl });
+                await csl.skill.update({"system.csl": csl.skill.system.csl});
             }
         }
     }
@@ -366,13 +613,12 @@ export class ItemAttackFormApplication extends FormApplication {
 
                 break;
 
-            case "ray":
-                {
-                    templateData.width =
-                        sizeConversionToMeters * areaOfEffect.width;
-                    templateData.flags.width = areaOfEffect.width;
-                    templateData.flags.height = areaOfEffect.height;
-                }
+            case "ray": {
+                templateData.width =
+                    sizeConversionToMeters * areaOfEffect.width;
+                templateData.flags.width = areaOfEffect.width;
+                templateData.flags.height = areaOfEffect.height;
+            }
                 break;
 
             case "rect": {
@@ -406,7 +652,7 @@ export class ItemAttackFormApplication extends FormApplication {
             ]);
         }
 
-        canvas.templates.activate({ tool: templateType });
+        canvas.templates.activate({tool: templateType});
         canvas.templates.selectObjects({
             x: templateData.x,
             y: templateData.y,
@@ -416,6 +662,12 @@ export class ItemAttackFormApplication extends FormApplication {
         });
     }
 
+    // todo: maybe I can make this more generic? getAttack Info? use a similar targets structure for other attacks
+    //  oldAutofireAttackInfo, attackToHitOptions contain the same information that I want
+    // collect the data from options into a structure for passing arouns so it can be the same
+    // make the basic info a struct too
+    // put all the relevant infor into each target info so they are independent
+
     getAoeTemplate() {
         return Array.from(canvas.templates.getDocuments()).find(
             (o) =>
@@ -423,306 +675,6 @@ export class ItemAttackFormApplication extends FormApplication {
                 o.flags.itemId === this.data.item.id,
         );
     }
-
-    static _itemUsesMultipleTargets(item) {
-        // is there a system to indicate this?
-        const autofire = !!item.findModsByXmlid("AUTOFIRE");
-        const multipleAttack = item.system.XMLID === "MULTIPLEATTACK";
-        const moveby = item.system.XMLID === "MOVEBY";
-        return autofire || multipleAttack || moveby;
-    }
-
-    static getRangeModifier(item, range) {
-        const actor = item.actor;
-
-        if (item.system.range === "self") {
-            // TODO: Should not be able to use this on anyone else. Should add a check.
-        }
-
-        // TODO: Should consider if the target's range exceeds the power's range or not and display some kind of warning
-        //       in case the system has calculated it incorrectly.
-
-        const noRangeModifiers = !!item.findModsByXmlid("NORANGEMODIFIER");
-        const normalRange = !!item.findModsByXmlid("NORMALRANGE");
-
-        // There are no range penalties if this is a line of sight power or it has been bought with
-        // no range modifiers.
-        if (!(item.system.range === "los" || noRangeModifiers || normalRange)) {
-            const factor = actor.system.is5e ? 4 : 8;
-
-            let rangePenalty = -Math.ceil(Math.log2(range / factor)) * 2;
-            rangePenalty = rangePenalty > 0 ? 0 : rangePenalty;
-
-            // Brace (+2 OCV only to offset the Range Modifier)
-            const braceManeuver = item.actor.items.find(
-                (item) =>
-                    item.type == "maneuver" &&
-                    item.name === "Brace" &&
-                    item.system.active,
-            );
-            if (braceManeuver) {
-                //TODO: ???
-            }
-            return rangePenalty;
-        }
-        return 0;
-    }
-
-    static getReasonCannotAttack(item, targetsArray, autofireAttackInfo) {
-        let reason = item.actor.getTheReasonCannotAct();
-        if (reason) {
-            return reason;
-        }
-        const actingToken = item.actor.getActiveTokens()[0];
-
-        if (
-            targetsArray.length > 1 &&
-            !ItemAttackFormApplication._itemUsesMultipleTargets(item)
-        ) {
-            return `${actingToken.name} has ${targetsArray.length} targets selected and ${item.name} supports only one.`;
-        }
-
-        let charges = null;
-        if (item.findModsByXmlid("CHARGES")) {
-            charges = item.system.charges;
-            if (charges) {
-                if (charges.value === 0) {
-                    return `${item.name} has no charges left.`;
-                }
-                if (charges.value < targetsArray.length) {
-                    return `${actingToken.name} has ${targetsArray.length} targets selected and only ${charges.value} charges left.`;
-                }
-                if (
-                    !!autofireAttackInfo &&
-                    charges.value < autofireAttackInfo.totalShotsFired
-                ) {
-                    return `${actingToken.name} is going to use ${autofireAttackInfo.totalShotsFired} charges and only ${charges.value} charges left.`;
-                }
-
-                const autofire = autofireAttackInfo?.autofire;
-                if (
-                    !!autofireAttackInfo &&
-                    autofireAttackInfo.autoFireShots <
-                        autofireAttackInfo.totalShotsFired
-                ) {
-                    return `${actingToken.name} is going to use ${autofireAttackInfo.totalShotsFired} charges and can only fire ${autofireAttackInfo.autoFireShots} shots.`;
-                }
-
-                if (!!autofire && targetsArray.length > 1) {
-                    // TODO autofire + number of shots fired per phase
-                    console.log(
-                        `RWC autofire  ${autofire} look for shots per phase`,
-                    );
-                    let totalSkippedMeters = 0;
-                    for (let i = 1; i < targetsArray.length; i++) {
-                        let prevTarget = targetsArray[i - 1];
-                        let target = targetsArray[i];
-                        let skippedMeters = canvas.grid.measureDistance(
-                            prevTarget,
-                            target,
-                            { gridSpaces: true },
-                        );
-                        totalSkippedMeters += skippedMeters;
-                        console.log(
-                            `skip ${skippedMeters} meters between ${prevTarget.name} and ${target.name}`,
-                        );
-                    }
-                    console.log(
-                        `total skipped meters ${totalSkippedMeters} meters`,
-                    );
-                    console.log(
-                        `Uses additional ${totalSkippedMeters / 2} shots`,
-                    );
-                    // TODO autofire + empty spaces + charges
-                }
-            }
-        }
-        const selfOnly = !!item.findModsByXmlid("SELFONLY");
-        const onlySelf = !!item.findModsByXmlid("ONLYSELF");
-        const usableOnOthers = !!item.findModsByXmlid("UOO");
-        // supposedly item.system.range  has factored all of this in...
-        const rangeSelf = item.system.range === "self";
-
-        if (rangeSelf || selfOnly || onlySelf) {
-            if (usableOnOthers) {
-                console.log(
-                    `${item.name} is a self-only ability that is usable on others!!??`,
-                );
-            }
-            // TODO: Should not be able to use this on anyone else. Should add a check.
-            if (targetsArray.length > 1) {
-                return `There are ${targetsArray.length} targets selected and ${item.name} is a self-only ability.`;
-            }
-            if (targetsArray.length > 0) {
-                // check if the target is me
-                if (item.actor._id !== targetsArray[0].actor._id) {
-                    return `${targetsArray[0].name} is targeted and ${item.name} is a self-only ability.`;
-                }
-            }
-        }
-
-        const noRange = item.system.range === "no range";
-        if (noRange) {
-            for (let i = 0; i < targetsArray.length; i++) {
-                let target = targetsArray[i];
-                let distance = canvas.grid.measureDistance(
-                    actingToken,
-                    target,
-                    { gridSpaces: true },
-                );
-                // what are the units of distance? 2M is standard reach
-                // if the actor has a greater reach count that...
-                if (distance > 2) {
-                    // TODO: get reach (STRETCHING/GROWTH/SHRINK)
-                    return `${item.name} is a no range ability, and ${targetsArray[i].name} is at a distance of ${distance}`;
-                }
-            }
-        }
-        return null;
-    }
-
-    // todo: maybe I can make this more generic? getAttack Info? use a similar targets structure for other attacks
-    //  oldAutofireAttackInfo, attackToHitOptions contain the same information that I want
-    // collect the data from options into a structure for passing arouns so it can be the same
-    // make the basic info a struct too
-    // put all the relevant infor into each target info so they are independent
-    // that way we can use this for multiattack, and haymaker too
-    static getAutofireAttackInfo(
-        item,
-        targetedTokens,
-        oldAutofireAttackInfo,
-        attackToHitOptions,
-    ) {
-        const autofire = item.findModsByXmlid("AUTOFIRE");
-        if (!autofire || targetedTokens.length === 0) {
-            return null;
-        }
-
-        const attacker =
-            item.actor.getActiveTokens()[0] || canvas.tokens.controlled[0];
-        if (!attacker) return; // todo: message?
-
-        const autoFireShots = autofire
-            ? parseInt(autofire.OPTION_ALIAS.match(/\d+/))
-            : 0;
-
-        const autofireSkills = {};
-        item.actor.items
-            .filter((skill) => "AUTOFIRE_SKILLS" === skill.system.XMLID)
-            .map((skill) => skill.system.OPTION)
-            .forEach((skillOption) => (autofireSkills[skillOption] = true));
-
-        // use the form values for number of shots _unless_ they are switching to/from one target
-        const assignedShots = {};
-        if (oldAutofireAttackInfo) {
-            if (
-                oldAutofireAttackInfo.targets.length > 1 ==
-                targetedTokens.length > 1
-            ) {
-                oldAutofireAttackInfo.targets.forEach((target) => {
-                    assignedShots[target.target.id] = target.shotsOnTarget;
-                });
-            }
-        }
-        if (attackToHitOptions) {
-            console.log(attackToHitOptions);
-            // if (
-            //     oldAutofireAttackInfo.targets.length > 1 ==
-            //     targetedTokens.length > 1
-            // ) {
-            //     oldAutofireAttackInfo.targets.forEach((target) => {
-            //         assignedShots[target.target.id] = target.shotsOnTarget;
-            //     });
-            // }
-        }
-
-        const autofireAttackInfo = {
-            item,
-            autofire,
-            autoFireShots,
-            targetedTokens,
-            charges: item.system.charges,
-            totalShotsFired: 0,
-            totalShotsSkipped: 0,
-            autofireSkills,
-        };
-        const targets = [];
-        let totalSkippedMeters = 0;
-        autofireAttackInfo.singleTarget = targetedTokens.length === 1;
-
-        if (autofireAttackInfo.singleTarget) {
-            // todo: this should be very similar to the loop below
-            let shotsOnTarget = autoFireShots;
-            if (assignedShots[targetedTokens[0].id]) {
-                shotsOnTarget = assignedShots[targetedTokens[0].id];
-            }
-            const range = canvas.grid.measureDistance(
-                attacker,
-                targetedTokens[0],
-                { gridSpaces: true },
-            );
-            // add our target manager
-            targets.push({
-                target: targetedTokens[0],
-                shotsOnTarget,
-                range,
-                shots_on_target_id: `shots_on_target_${targetedTokens[0].id}`,
-                ocv: ItemAttackFormApplication.getRangeModifier(item, range),
-            });
-            autofireAttackInfo.totalShotsFired = shotsOnTarget;
-        } else {
-            // multiple targets
-            for (let i = 0; i < targetedTokens.length; i++) {
-                let shotsOnTarget = 1; // for now...
-                if (assignedShots[targetedTokens[i].id]) {
-                    shotsOnTarget = assignedShots[targetedTokens[i].id];
-                }
-                // these are the targeting data used for the attack(s)
-                const targetingData = {
-                    target: targetedTokens[i],
-                    shotsOnTarget,
-                    shots_on_target_id: `shots_on_target_${targetedTokens[i].id}`,
-                };
-                if (i !== 0) {
-                    const prevTarget = targetedTokens[i - 1];
-                    const target = targetedTokens[i];
-                    const skippedMeters = canvas.grid.measureDistance(
-                        prevTarget,
-                        target,
-                        { gridSpaces: true },
-                    );
-                    totalSkippedMeters += skippedMeters;
-                    console.log(
-                        `skip ${skippedMeters} meters between ${prevTarget.name} and ${target.name}`,
-                    );
-                    targetingData.skippedMeters = skippedMeters;
-                    targetingData.skippedShots = skippedMeters / 2 - 1; //todo: check zero
-                } else {
-                    targetingData.skippedMeters = 0;
-                    targetingData.skippedShots = 0;
-                }
-                targetingData.range = canvas.grid.measureDistance(
-                    attacker,
-                    targetedTokens[i],
-                    { gridSpaces: true },
-                );
-                targetingData.ocv = ItemAttackFormApplication.getRangeModifier(
-                    item,
-                    targetingData.range,
-                );
-                targets.push(targetingData);
-                autofireAttackInfo.totalShotsFired +=
-                    targetingData.shotsOnTarget;
-                autofireAttackInfo.totalShotsFired +=
-                    targetingData.skippedShots;
-                autofireAttackInfo.totalShotsSkipped +=
-                    targetingData.skippedShots;
-            }
-        }
-        autofireAttackInfo.targets = targets;
-        autofireAttackInfo.autofireOCV = -totalSkippedMeters / 2;
-
-        return autofireAttackInfo;
-    }
 }
+
 window.ItemAttackFormApplication = ItemAttackFormApplication;
