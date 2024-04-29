@@ -1,8 +1,8 @@
 const DICE_SO_NICE_CUSTOM_SETS = {
     STUNx: {
         colorset: "Stun Multiplier",
-        foreground: "white",
-        background: "blue",
+        foreground: "blue",
+        background: "white",
         edge: "blue",
         material: "wood",
         fontScale: {
@@ -42,6 +42,7 @@ const DICE_SO_NICE_CATEGORY_NAME = "Hero System 6e (Unofficial) V2";
  * are the extras for hit location or stun multiplier.
  */
 Hooks.once("diceSoNiceReady", (diceSoNice) => {
+    HeroRoller.colorKeys = Object.keys(diceSoNice.exports.COLORSETS);
     diceSoNice.addColorset(
         {
             ...{
@@ -150,6 +151,13 @@ export class HeroRoller {
         return termsCluster.map((termCluster) => termCluster[property]);
     }
 
+    static #colorkeys = undefined;
+    static get colorKeys() {
+        return HeroRoller.#colorkeys;
+    }
+    static set colorKeys(colorkeys) {
+        HeroRoller.#colorkeys = colorkeys;
+    }
     /**
      * Add Dice So Nice dice skinning to rolls.
      */

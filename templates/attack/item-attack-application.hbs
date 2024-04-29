@@ -77,9 +77,7 @@
               <div>{{math "+" autofireAttackTargetInfo.ocv autofireAttackTargetInfo.autofire.autofireOCV}}</div>
               <div>{{autofireAttackTargetInfo.skippedShots}}</div>
               {{!-- we need input if this is autofire on one target, or if they have Concentrated Sprayfire --}}
-              {{#if autofireAttackTargetInfo.autofire.singleTarget}}
-                <div><input type="text" name="{{autofireAttackTargetInfo.shots_on_target_id}}" value={{autofireAttackTargetInfo.shotsOnTarget}} /></div>
-              {{else if autofireAttackTargetInfo.autofire.autofireSkills.CONCENTRATED}}
+              {{#if (compare autofireAttackTargetInfo.autofire.singleTarget '||' autofireAttackTargetInfo.autofire.autofireSkills.CONCENTRATED) }}
                 <div><input type="text" name="{{autofireAttackTargetInfo.shots_on_target_id}}" value={{autofireAttackTargetInfo.shotsOnTarget}} /></div>
               {{else}}
                 <div>{{autofireAttackTargetInfo.shotsOnTarget}}</div>

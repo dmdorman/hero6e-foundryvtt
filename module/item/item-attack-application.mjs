@@ -1,4 +1,4 @@
-import {CombatSkillLevelsForAttack} from "../utility/damage.mjs";
+import { CombatSkillLevelsForAttack } from "../utility/damage.mjs";
 import {
     _processAttackOptions,
     _processAttackAoeOptions,
@@ -8,6 +8,7 @@ import {
     getSystemDisplayUnits,
 } from "../utility/units.mjs";
 import { HEROSYS } from "../herosystem6e.mjs";
+import { Attack } from "../utility/attack.mjs";
 
 const heroAoeTypeToFoundryAoeTypeConversions = {
     any: "rect",
@@ -138,14 +139,12 @@ export class ItemAttackFormApplication extends FormApplication {
                 if (charges.value < targetsArray.length) {
                     return `${actingToken.name} has ${targetsArray.length} targets selected and only ${charges.value} charges left.`;
                 }
-                if ( isAutofire ){
-                    if( charges.value < autofire.totalShotsFired) {
-                        return `${actingToken.name} is going to use ${autofire.totalShotsFired} charges and only ${charges.value} charges left.`;
-                    }
+                if (isAutofire && charges.value < autofire.totalShotsFired) {
+                    return `${actingToken.name} is going to use ${autofire.totalShotsFired} charges and only ${charges.value} charges left.`;
                 }
             }
         }
-        if ( isAutofire ){
+        if (isAutofire) {
             if (autofire.autoFireShots < autofire.totalShotsFired) {
                 return `${actingToken.name} is going to fire ${autofire.totalShotsFired} shots and can only fire ${autofire.autoFireShots} shots.`;
             }
@@ -182,7 +181,7 @@ export class ItemAttackFormApplication extends FormApplication {
                 let distance = canvas.grid.measureDistance(
                     actingToken,
                     target,
-                    {gridSpaces: true},
+                    { gridSpaces: true },
                 );
                 // what are the units of distance? 2M is standard reach
                 // if the actor has a greater reach count that...
@@ -194,7 +193,8 @@ export class ItemAttackFormApplication extends FormApplication {
         }
         return null;
     }
-    static getAutofireAttackTargets(autofireAttackInfo, assignedShots){
+
+    static getAutofireAttackTargets(autofireAttackInfo, assignedShots) {
         const autofire = autofireAttackInfo.autofire;
         const targetedTokens = autofireAttackInfo.basic.targetedTokens;
         const basic = autofireAttackInfo.basic;
@@ -207,8 +207,10 @@ export class ItemAttackFormApplication extends FormApplication {
             let shotsOnTarget = autofire.singleTarget
                 ? autofire.autoFireShots
                 : 1;
-            if (assignedShots[targetedTokens[i].id]) {
-                shotsOnTarget = assignedShots[targetedTokens[i].id];
+            const shots_on_target_id = `shots_on_target_${targetedTokens[i].id}`;
+
+            if (assignedShots[shots_on_target_id]) {
+                shotsOnTarget = assignedShots[shots_on_target_id];
             }
             // these are the targeting data used for the attack(s)
             const targetingData = {
@@ -224,14 +226,16 @@ export class ItemAttackFormApplication extends FormApplication {
                 const skippedMeters = canvas.grid.measureDistance(
                     prevTarget,
                     target,
-                    {gridSpaces: true},
+                    { gridSpaces: true },
                 );
                 totalSkippedMeters += skippedMeters;
                 console.log(
                     `skip ${skippedMeters} meters between ${prevTarget.name} and ${target.name}`,
                 );
                 targetingData.skippedMeters = skippedMeters;
-                targetingData.skippedShots = autofireSkills.SKIPOVER ? 0 : Math.floor(skippedMeters / 2 - 1); //todo: check zero
+                targetingData.skippedShots = autofireSkills.SKIPOVER
+                    ? 0
+                    : Math.floor(skippedMeters / 2 - 1); //todo: check zero
             } else {
                 targetingData.skippedMeters = 0;
                 targetingData.skippedShots = 0;
@@ -239,19 +243,21 @@ export class ItemAttackFormApplication extends FormApplication {
             targetingData.range = canvas.grid.measureDistance(
                 basic.attacker,
                 targetedTokens[i],
-                {gridSpaces: true},
+                { gridSpaces: true },
             );
-            targetingData.ocv = ItemAttackFormApplication.getRangeModifier(
+            targetingData.ocv = Attack.getRangeModifier(
                 basic.item,
                 targetingData.range,
             );
             targets.push(targetingData);
             autofire.totalShotsFired += targetingData.shotsOnTarget;
-            autofire.totalShotsFired += autofireSkills.SKIPOVER ? 0 : targetingData.skippedShots;
+            autofire.totalShotsFired += autofireSkills.SKIPOVER
+                ? 0
+                : targetingData.skippedShots;
             autofire.totalShotsSkipped += targetingData.skippedShots;
         }
         autofire.autofireOCV = 0;
-        if(!autofire.singleTarget) {
+        if (!autofire.singleTarget) {
             if (autofireSkills.ACCURATE) {
                 autofire.autofireOCV -= 1;
             } else {
@@ -263,15 +269,15 @@ export class ItemAttackFormApplication extends FormApplication {
             if (autofireSkills.SKIPOVER) {
                 autofire.autofireOCV -= 1;
             }
-        }        
+        }
         return targets;
     }
-    
+
     // make it getAttackInfo and that way we can use this for multiattack, and haymaker too
     static getAutofireAttackInfo(
         item,
         targetedTokens,
-        oldAutofireAttackInfo,
+        formData,
         attackToHitOptions,
     ) {
         const autofireMod = item.findModsByXmlid("AUTOFIRE");
@@ -282,7 +288,8 @@ export class ItemAttackFormApplication extends FormApplication {
             item.actor.getActiveTokens()[0] || canvas.tokens.controlled[0];
         if (!attacker) return; // todo: message?
 
-        const autoFireShots = parseInt(autofireMod.OPTION_ALIAS.match(/\d+/)) ?? 0;
+        const autoFireShots =
+            parseInt(autofireMod.OPTION_ALIAS.match(/\d+/)) ?? 0;
 
         const autofireSkills = {};
         item.actor.items
@@ -295,7 +302,7 @@ export class ItemAttackFormApplication extends FormApplication {
             attacker,
             targetedTokens,
         }; // basic attack info
-        
+
         const autofire = {
             autofireMod,
             autofireSkills,
@@ -304,21 +311,47 @@ export class ItemAttackFormApplication extends FormApplication {
             totalShotsSkipped: 0,
             autofireOCV: 0,
         }; // autofire attack info
-        
+
         const autofireAttackInfo = {
             basic,
             autofire,
             charges: item.system.charges,
         };
-        
+
         // use the form values for number of shots _unless_ they are switching to/from one target
-        const assignedShots = attackToHitOptions ? {...attackToHitOptions} : {};
-        if (oldAutofireAttackInfo && (oldAutofireAttackInfo.targets.length > 1 === targetedTokens.length > 1)) {
-            oldAutofireAttackInfo.targets.forEach((target) => {
-                assignedShots[target.target.id] = target.shotsOnTarget;
+        const assignedShots = attackToHitOptions
+            ? { ...attackToHitOptions }
+            : {};
+        if (formData) {
+            targetedTokens.map((target) => {
+                const shots_on_target_id = `shots_on_target_${target.id}`;
+                const shotsOnTargetInput = formData[shots_on_target_id];
+                if (shotsOnTargetInput) {
+                    const shotValue = parseInt(shotsOnTargetInput.match(/\d+/));
+                    if (!isNaN(shotValue)) {
+                        assignedShots[shots_on_target_id] = shotValue;
+                    }
+                }
             });
-        }        
-        autofireAttackInfo.targets = ItemAttackFormApplication.getAutofireAttackTargets(autofireAttackInfo, assignedShots);
+        }
+        // this.data.autofireAttackInfo.targets.map((target) => {
+        //     const shotValue = parseInt(
+        //         formData[target.shots_on_target_id].match(/\d+/),
+        //     );
+        //     if (!isNaN(shotValue)) {
+        //         target.shotsOnTarget = shotValue;
+        //     }
+        // });
+
+        // if (oldAutofireAttackInfo && (oldAutofireAttackInfo.targets.length > 1 === targetedTokens.length > 1)) {
+        //     oldAutofireAttackInfo.targets.forEach((target) => {
+        //         assignedShots[target.target.id] = target.shotsOnTarget;
+        //     });
+        // }
+        autofireAttackInfo.targets = Attack.getAutofireAttackTargets(
+            autofireAttackInfo,
+            assignedShots,
+        );
 
         return autofireAttackInfo;
     }
@@ -332,15 +365,14 @@ export class ItemAttackFormApplication extends FormApplication {
         const item = data.item;
         // move the stuff from item-attack.mjs so the data has one source of truth
         data.targets = Array.from(game.user.targets);
-        const autofireAttackInfo =
-            ItemAttackFormApplication.getAutofireAttackInfo(
-                item,
-                data.targets,
-                data.autofireAttackInfo,
-            );
+        const autofireAttackInfo = Attack.getAutofireAttackInfo(
+            item,
+            data.targets,
+            data.formData,
+        );
         data.autofireAttackInfo = autofireAttackInfo;
         const oldReason = data.cannotAttack;
-        data.cannotAttack = ItemAttackFormApplication.getReasonCannotAttack(
+        data.cannotAttack = Attack.getReasonCannotAttack(
             item,
             data.targets,
             autofireAttackInfo,
@@ -397,7 +429,7 @@ export class ItemAttackFormApplication extends FormApplication {
             let mental = csl.skill.system.XMLID === "MENTAL_COMBAT_LEVELS";
             let _ocv = mental ? "omcv" : "ocv";
             let _dcv = mental ? "dmcv" : "dcv";
-            data.cslChoices = {[_ocv]: _ocv};
+            data.cslChoices = { [_ocv]: _ocv };
             if (csl.skill.system.OPTION != "SINGLE") {
                 data.cslChoices[_dcv] = _dcv;
                 data.cslChoices.dc = "dc";
@@ -445,7 +477,7 @@ export class ItemAttackFormApplication extends FormApplication {
 
         // CSL can cause differences in form size.
         if (this.position && this.rendered) {
-            this.setPosition({height: "auto"});
+            this.setPosition({ height: "auto" });
         }
     }
 
@@ -468,14 +500,7 @@ export class ItemAttackFormApplication extends FormApplication {
         }
         // collect the changed shots on target
         if (this.data.autofireAttackInfo) {
-            this.data.autofireAttackInfo.targets.map((target) => {
-                const shotValue = parseInt(
-                    formData[target.shots_on_target_id].match(/\d+/),
-                );
-                if (!isNaN(shotValue)) {
-                    target.shotsOnTarget = shotValue;
-                }
-            });
+            this.data.formData = { ...formData };
         }
 
         this._updateCsl(event, formData);
@@ -526,7 +551,7 @@ export class ItemAttackFormApplication extends FormApplication {
             const idx = parseInt(key.match(/\d+$/));
             if (csl.skill.system.csl[idx] != value) {
                 csl.skill.system.csl[idx] = value;
-                await csl.skill.update({"system.csl": csl.skill.system.csl});
+                await csl.skill.update({ "system.csl": csl.skill.system.csl });
             }
         }
     }
@@ -613,12 +638,13 @@ export class ItemAttackFormApplication extends FormApplication {
 
                 break;
 
-            case "ray": {
-                templateData.width =
-                    sizeConversionToMeters * areaOfEffect.width;
-                templateData.flags.width = areaOfEffect.width;
-                templateData.flags.height = areaOfEffect.height;
-            }
+            case "ray":
+                {
+                    templateData.width =
+                        sizeConversionToMeters * areaOfEffect.width;
+                    templateData.flags.width = areaOfEffect.width;
+                    templateData.flags.height = areaOfEffect.height;
+                }
                 break;
 
             case "rect": {
@@ -652,7 +678,7 @@ export class ItemAttackFormApplication extends FormApplication {
             ]);
         }
 
-        canvas.templates.activate({tool: templateType});
+        canvas.templates.activate({ tool: templateType });
         canvas.templates.selectObjects({
             x: templateData.x,
             y: templateData.y,

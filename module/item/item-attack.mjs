@@ -23,6 +23,7 @@ import {
     calculateVelocityInSystemUnits,
     calculateRangePenaltyFromDistanceInMetres,
 } from "../ruler.mjs";
+import { Attack } from "../utility/attack.mjs";
 
 export async function chatListeners(html) {
     html.on("click", "button.roll-damage", this._onRollDamage.bind(this));
@@ -285,23 +286,16 @@ export async function AttackToHit(item, options) {
             `Attack details are no longer available.`,
         );
     }
-    console.log("RWC AttackToHit(item, options))");
-    console.log("RWC AttackToHit item", item);
-    console.log("RWC AttackToHit options", options);
 
     const actor = item.actor;
     const itemData = item.system;
-    const autofireAttackInfo = ItemAttackFormApplication.getAutofireAttackInfo(
+    const autofireAttackInfo = Attack.getAutofireAttackInfo(
         item,
         Array.from(game.user.targets),
-        null,
         options,
     );
-    console.log(autofireAttackInfo);
     const hitCharacteristic = actor.system.characteristics[itemData.uses].value;
-
     const toHitChar = CONFIG.HERO.defendsWith[itemData.targets];
-
     const automation = game.settings.get(HEROSYS.module, "automation");
 
     const adjustment = getPowerInfo({
@@ -496,7 +490,7 @@ export async function AttackToHit(item, options) {
         if (itemData.usesStrength || itemData.usesTk) {
             let strEnd = Math.max(1, Math.round(options.effectiveStr / 10));
 
-            // TELIKENESIS is more expensive than normal STR
+            // TELEKINESIS is more expensive than normal STR
             if (itemData.usesTk) {
                 spentEnd = Math.ceil(
                     (spentEnd * options?.effectiveStr) / item.system.LEVELS,
@@ -528,8 +522,7 @@ export async function AttackToHit(item, options) {
                 newEnd = valueEnd;
             }
         }
-
-        if (newEnd < 0) {
+        if (spentEnd > 0 && newEnd < 0) {
             let stunDice = Math.ceil(Math.abs(newEnd) / 2);
 
             const stunForEndHeroRoller = new HeroRoller()
@@ -557,7 +550,7 @@ export async function AttackToHit(item, options) {
             await ui.notifications.warn(
                 `${actor.name} used STUN for ENDURANCE.`,
             );
-        } else {
+        } else if (spentEnd > 0) {
             enduranceText = "Spent " + spentEnd + " END";
 
             if (item.system.USE_END_RESERVE && enduranceReserve) {
@@ -601,8 +594,14 @@ export async function AttackToHit(item, options) {
             parseInt(options.boostableCharges) || 0,
             0,
             Math.min(charges - 1, 4),
-        ); // Maximum of 4
-        let spentCharges = 1 + options.boostableCharges;
+        ); // Maximum of 4 per rules
+        let spentCharges = 1;
+        if (autofireAttackInfo?.autofire) {
+            spentCharges = autofireAttackInfo.autofire.totalShotsFired;
+            spentCharges *= options.boostableCharges + 1;
+        } else {
+            spentCharges += options.boostableCharges;
+        }
         if (enduranceText === "") {
             enduranceText = `Spent ${spentCharges} charge${
                 spentCharges > 1 ? "s" : ""
@@ -652,6 +651,59 @@ export async function AttackToHit(item, options) {
     }
 
     // Make attacks against all targets
+    const colorArray = [
+        "#FF6633",
+        "#FFB399",
+        "#FF33FF",
+        "#FFFF99",
+        "#00B3E6",
+        "#E6B333",
+        "#3366E6",
+        "#999966",
+        "#99FF99",
+        "#B34D4D",
+        "#80B300",
+        "#809900",
+        "#E6B3B3",
+        "#6680B3",
+        "#66991A",
+        "#FF99E6",
+        "#CCFF1A",
+        "#FF1A66",
+        "#E6331A",
+        "#33FFCC",
+        "#66994D",
+        "#B366CC",
+        "#4D8000",
+        "#B33300",
+        "#CC80CC",
+        "#66664D",
+        "#991AFF",
+        "#E666FF",
+        "#4DB3FF",
+        "#1AB399",
+        "#E666B3",
+        "#33991A",
+        "#CC9999",
+        "#B3B31A",
+        "#00E680",
+        "#4D8066",
+        "#809980",
+        "#E6FF80",
+        "#1AFF33",
+        "#999933",
+        "#FF3380",
+        "#CCCC00",
+        "#66E64D",
+        "#4D80CC",
+        "#9900B3",
+        "#E64D66",
+        "#4DB380",
+        "#FF4D4D",
+        "#99E6E6",
+        "#6666FF",
+    ];
+    let diceColor = 0;
     for (const target of targetsArray) {
         let targetDefenseValue = RoundFavorPlayerUp(
             target.actor.system.characteristics[toHitChar.toLowerCase()].value,
@@ -662,19 +714,21 @@ export async function AttackToHit(item, options) {
         let by = 0;
         let autoSuccess = false;
 
+        targetHeroRoller._options = {
+            appearance: { background: colorArray[diceColor] },
+        };
+        diceColor = (diceColor + 1) % colorArray.length;
+        // TODO: Fix multiple hits on one target for autofire
+        // TODO: add autofire ocv mod
+        await targetHeroRoller.makeSuccessRoll(true, targetDefenseValue).roll();
+        const autoSuccess = targetHeroRoller.getAutoSuccess();
+        const toHitRollTotal = targetHeroRoller.getSuccessTotal();
+        const margin = targetDefenseValue - toHitRollTotal;
         let hit = "Miss";
         if (aoeAlwaysHit) {
             hit = "Hit";
             by = "AOE auto";
         } else {
-            // TODO: Autofire against multiple targets should have increasing difficulty
-
-            await targetHeroRoller
-                .makeSuccessRoll(true, targetDefenseValue)
-                .roll();
-            autoSuccess = targetHeroRoller.getAutoSuccess();
-            toHitRollTotal = targetHeroRoller.getSuccessTotal();
-            const margin = targetDefenseValue - toHitRollTotal;
 
             if (autoSuccess !== undefined) {
                 if (autoSuccess) {
