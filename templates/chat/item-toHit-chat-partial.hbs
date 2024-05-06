@@ -48,7 +48,7 @@
           <img class="more" src="icons/svg/downgrade.svg" data-tooltip="more..." width="16" height="16"/>
           <div class="description-medium">
             Rolled {{target.roller._successRolledValue}},
-            {{#if (compare target.result.hit '==' "Hit") }}
+            {{#if (eq target.result.hit "Hit") }}
               Hitting {{target.name}}<br>
               (Hits a {{target.toHitChar}} {{target.toHitRollTotal}} or less)
             {{else}}

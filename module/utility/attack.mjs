@@ -151,6 +151,7 @@ export class Attack {
                 autofire,
                 target: targetedTokens[i],
                 shotsOnTarget,
+                results: [],
                 shots_on_target_id: `shots_on_target_${targetedTokens[i].id}`,
             };
             if (i !== 0) {
@@ -285,7 +286,10 @@ export class Attack {
             autofireAttackInfo,
             assignedShots,
         );
-
+        autofireAttackInfo.targetIds = {};
+        autofireAttackInfo.targets.forEach((target)=>{
+            autofireAttackInfo.targetIds[target.target.id] = target;
+        });
         return autofireAttackInfo;
     }
 }

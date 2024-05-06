@@ -34,7 +34,28 @@
       </select>
     </div>
 
-  {{#if autofireAttackInfo.autofire}}
+  {{!-- multiple attack selection --}}
+  {{#each multipleattack as |multiAttack index|}}
+    <div class="form-group" {{#unless (eq @root/item.system.XMLID "MULTIPLEATTACK")}}style="display: none;"{{/unless}}>
+        <label>Multiple Attack
+        {{#if (eq index 0)}}
+            <i class="fas fa-plus add-multiattack" ></i>
+        {{else}}
+            <i class="fas fa-trash trash-multiattack " data-multiattack="{{multiAttack.attack}}"></i>
+        {{/if}}
+        </label>
+        <select name="{{multiAttack.attack}}" id="{{multiAttack.attack}}">
+          <option value="Strike">Strike</option>
+          {{#each @root/actor.items as |item|}}
+            {{#if (or (eq item.type "attack") (and (ne item.type "maneuver") (eq item.system.subType "attack")))}}
+              <option value={{item.id}}{{#if (eq item.id multiAttack.name)}} selected{{/if}}>{{{itemName item}}}</option>
+            {{/if}}
+          {{/each}}
+        </select>
+      </div>
+  {{/each}}
+
+      {{#if autofireAttackInfo.autofire}}
     <div>Autofire OCV penalties: {{autofireAttackInfo.autofire.autofireOCV}}</div>
     <div>{{autofireAttackInfo.targets.length}} Shots on Targets and {{autofireAttackInfo.autofire.totalShotsSkipped}} 
       Skipped is {{autofireAttackInfo.autofire.totalShotsFired}} Total Shots to be Fired</div>
@@ -77,7 +98,7 @@
               <div>{{math "+" autofireAttackTargetInfo.ocv autofireAttackTargetInfo.autofire.autofireOCV}}</div>
               <div>{{autofireAttackTargetInfo.skippedShots}}</div>
               {{!-- we need input if this is autofire on one target, or if they have Concentrated Sprayfire --}}
-              {{#if (compare autofireAttackTargetInfo.autofire.singleTarget '||' autofireAttackTargetInfo.autofire.autofireSkills.CONCENTRATED) }}
+              {{#if (or autofireAttackTargetInfo.autofire.singleTarget autofireAttackTargetInfo.autofire.autofireSkills.CONCENTRATED) }}
                 <div><input type="text" name="{{autofireAttackTargetInfo.shots_on_target_id}}" value={{autofireAttackTargetInfo.shotsOnTarget}} /></div>
               {{else}}
                 <div>{{autofireAttackTargetInfo.shotsOnTarget}}</div>

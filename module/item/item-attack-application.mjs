@@ -361,8 +361,41 @@ export class ItemAttackFormApplication extends FormApplication {
     }
 
     getData() {
+        console.log("RWC ItemAttackFormApplication");
+        
         const data = this.data;
         const item = data.item;
+        
+        //(or (eq item.type "attack") (and (ne item.type "maneuver") (eq item.system.subType "attack")))
+        const multipleAttack = item.system.XMLID === "MULTIPLEATTACK";
+        if(multipleAttack){
+            const actor = item.actor;
+            for(const key of actor.items.keys()){
+                const attackItem = actor.items.get(key);
+                if(attackItem.type === "attack"){
+                    console.log(`${attackItem.name} ${key} is an attack`);
+                }
+                if(attackItem.type !== "maneuver" && attackItem.system.subType === "attack"){
+                    console.log(`${attackItem.name} ${key} subType is an attack`);
+                }
+            }
+            // actor.items.forEach( (attackItem, key)=>{
+            //     if(attackItem.type === "attack"){
+            //         console.log(`${attackItem.name} is an attack`);
+            //     }
+            //     if(attackItem.type !== "maneuver" && attackItem.system.subType === "attack"){
+            //         console.log(`${attackItem.name} subType is an attack`);
+            //     }
+            // });
+
+            // Initialize multiple attack to the default option values
+            this.data.multipleattack ??= [{ name : "Strike", attack : `multipleattack-0` }];
+            for(let i= 0; i < this.data.multipleattack.length; i++){
+                this.data[ `multipleattack-${i}` ] = this.data.multipleattack[i];
+            }
+        }
+
+
         // move the stuff from item-attack.mjs so the data has one source of truth
         data.targets = Array.from(game.user.targets);
         const autofireAttackInfo = Attack.getAutofireAttackInfo(
@@ -413,6 +446,8 @@ export class ItemAttackFormApplication extends FormApplication {
         this.data.aim ??= "none";
         this.data.aimSide ??= "none";
 
+        
+        
         data.ocvMod ??= item.system.ocv;
         data.dcvMod ??= item.system.dcv;
         data.effectiveStr ??= data.str;
@@ -470,6 +505,48 @@ export class ItemAttackFormApplication extends FormApplication {
 
     activateListeners(html) {
         super.activateListeners(html);
+        // add to multiattack
+        html.find(".add-multiattack").click(this._onAddMultiAttack.bind(this));
+        html.find(".trash-multiattack").click(this._onTrashMultiAttack.bind(this));
+        
+    }
+    async _onAddMultiAttack(event) {
+        if(!this.data.multipleattack?.length){
+            return; 
+        }
+        const index = this.data.multipleattack?.length;
+        const attack = `multipleattack-${index}`;
+        const name = "Strike";
+        const attackName = { name, attack }; 
+        this.data[attack] = attackName 
+        this.data.multipleattack.push(attackName);
+        this.render();
+                
+    }
+    async _onTrashMultiAttack(event) {
+        if(!this.data.multipleattack?.length){
+            return;
+        }
+        const attack = event.target.dataset.multiattack;
+
+        console.log(`trash ${attack}`);
+        console.log(`data:`, this.data);
+        let index = this.data.multipleattack.length; 
+        const indexToRemove = this.data.multipleattack.findIndex(attackName => {
+            return (attackName.attack === attack);
+        });
+        const removed = this.data.multipleattack.splice(indexToRemove, 1)
+        delete this.data[`multipleattack-${this.data.multipleattack.length}`];
+        for(let i= 0; i < this.data.multipleattack.length; i++){
+            const attackName = this.data.multipleattack[i];
+            const attack = `multipleattack-${i}`;
+            attackName.attack = attack; 
+            this.data[ attack ] = attackName;
+        }
+
+        console.log(`data:`, this.data);
+        
+        this.render();
     }
 
     async _render(...args) {
@@ -508,6 +585,21 @@ export class ItemAttackFormApplication extends FormApplication {
         this.data.aim = formData.aim;
         this.data.aimSide = formData.aimSide;
 
+        if(this.data.multipleattack?.length){
+            console.log("_updateObject form:", formData);
+            console.log("_updateObject multiattack:", this.data.multipleattack);
+            console.log("_updateObject data:", this.data);
+            this.data.multipleattack = [];
+            let count = 0;
+            while(!!formData[`multipleattack-${count}`]){
+                const name = formData[`multipleattack-${count}`];
+                const attack = `multipleattack-${count}`;
+                this.data[`multipleattack-${count}`] = { name, attack };
+                this.data.multipleattack.push({ name, attack });
+                count++;
+            }
+        }
+        
         this.data.ocvMod = formData.ocvMod;
         this.data.dcvMod = formData.dcvMod;
 

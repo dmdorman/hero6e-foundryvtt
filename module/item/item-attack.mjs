@@ -286,7 +286,7 @@ export async function AttackToHit(item, options) {
             `Attack details are no longer available.`,
         );
     }
-
+    console.log("RWC AttackToHit");
     const actor = item.actor;
     const itemData = item.system;
     const autofireAttackInfo = Attack.getAutofireAttackInfo(
@@ -639,7 +639,7 @@ export async function AttackToHit(item, options) {
 
     // If AOE then sort by distance from center
     if (explosion) {
-        targetsArray.sort(function (a, b) {
+        targetsArray.sort(function(a, b) {
             let distanceA = canvas.grid.measureDistance(aoeTemplate, a, {
                 gridSpaces: true,
             });
@@ -785,7 +785,45 @@ export async function AttackToHit(item, options) {
             targetIds.push(target.id);
         }
     }
-
+    const hitRollData = {};
+    
+    if (autofireAttackInfo){
+        autofireAttackInfo.targets.forEach((target)=>{
+            hitRollData[target.target.id] = {
+                shotsOnTarget: target.shotsOnTarget,
+                results : []
+            };
+            hitRollData[`shots_on_target_${target.target.id}`] = target.shotsOnTarget;
+        });
+        
+        targetData.forEach((target) => {
+            const result = {
+                id: target.id,
+                name: target.name,
+                aoeAlwaysHit: !!(target.aoeAlwaysHit),
+                toHitChar: target.toHitChar,
+                toHitRollTotal: target.toHitRollTotal,
+                autoSuccess: !!(target.autoSuccess),
+                hitRollText: target.hitRollText,
+                value: target.value,
+                hit: target.result.hit,
+                by : target.result.by,
+                sequence : hitRollData[target.id].results.length
+            };
+            hitRollData[target.id].results.push(result);
+        });
+    }
+    //add shots_on_target_Gx0WyuwweCE9xL6W
+    // : 
+    // "5"
+    // shots_on_target_ouZw21CiT7ILIP4r
+    // : 
+    // "1"
+    // shots_on_target_uJPPkRjr4OBDTFgv
+    // : 
+    // "5"
+    
+    
     // AUTOFIRE
     if (autofire) {
         // Autofire check for multiple hits on single target
@@ -915,7 +953,9 @@ export async function AttackToHit(item, options) {
         attackTags: getAttackTags(item),
         targetTokens: game.user.targets,
         attackerToken: actor.getActiveTokens()[0], // Educated guess for token
+        autofireAttackInfo        
     };
+    cardData.hitRollData = JSON.stringify(hitRollData);
     console.log("attackerToken:", cardData.attackerToken);
     console.log("targetTokens:", cardData.targetTokens);
 
@@ -1090,9 +1130,13 @@ export async function _onRollAoeDamage(event) {
 // clicked on item-attack-card2.hbs
 // Notice the chatListeners function in this file.
 export async function _onRollDamage(event) {
+
+    console.log("RWC _onRollDamage");
+    
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kluge to fix.
     const toHitData = { ...button.dataset };
+    const hitRollData = JSON.parse(toHitData.hitrolldata);
     const item = fromUuidSync(toHitData.itemid);
     const actor = item?.actor;
 
@@ -1101,6 +1145,12 @@ export async function _onRollDamage(event) {
             `Attack details are no longer available.`,
         );
     }
+
+    const autofireAttackInfo = Attack.getAutofireAttackInfo(
+        item,
+        Array.from(game.user.targets),
+        hitRollData,
+    );
 
     const adjustment = getPowerInfo({
         item: item,
@@ -1215,6 +1265,15 @@ export async function _onRollDamage(event) {
                 game.settings.get(HEROSYS.module, "hitLocTracking") === "all",
             toHitData.aim === "none" ? "none" : toHitData.aimSide, // Can't just select a side to hit as that doesn't have a penalty
         );
+    
+    // autofire, multi-attack, move by rolls different damages for each target
+    // AoE, Explosion have multiple targets that all get the same damage
+    // autofire Aoe has multiple damages that are applied to groups of targets (implement last)
+    // so we should have a list of damages, and then a list of targets that damage applies to
+    
+    // stick all the damages into an array (even if it's just one)
+    
+    
 
     // Hackey solution to look for 0DC (STRMINIMUM)
     if (
