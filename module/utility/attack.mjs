@@ -4,6 +4,10 @@ export class Attack {
         if (reason) {
             return reason;
         }
+        if (item.system.XMLID === "MULTIPLEATTACK") {
+            return null;
+        }
+
         const actingToken = item.actor.getActiveTokens()[0];
 
         if (targetsArray.length > 1 && !Attack.itemUsesMultipleTargets(item)) {
@@ -129,8 +133,8 @@ export class Attack {
 
     static getAutofireAttackTargets(autofireAttackInfo, assignedShots) {
         const autofire = autofireAttackInfo.autofire;
-        const targetedTokens = autofireAttackInfo.basic.targetedTokens;
-        const basic = autofireAttackInfo.basic;
+        const targetedTokens = autofireAttackInfo.system.targetedTokens;
+        const system = autofireAttackInfo.system;
         const autofireSkills = autofire.autofireSkills;
         const targets = [];
         let totalSkippedMeters = 0;
@@ -147,7 +151,7 @@ export class Attack {
             }
             // these are the targeting data used for the attack(s)
             const targetingData = {
-                basic,
+                system,
                 autofire,
                 target: targetedTokens[i],
                 shotsOnTarget,
@@ -175,12 +179,106 @@ export class Attack {
                 targetingData.skippedShots = 0;
             }
             targetingData.range = canvas.grid.measureDistance(
-                basic.attacker,
+                system.attacker,
                 targetedTokens[i],
                 { gridSpaces: true },
             );
             targetingData.ocv = Attack.getRangeModifier(
-                basic.item,
+                system.item,
+                targetingData.range,
+            );
+            targets.push(targetingData);
+            autofire.totalShotsFired += targetingData.shotsOnTarget;
+            autofire.totalShotsFired += autofireSkills.SKIPOVER
+                ? 0
+                : targetingData.skippedShots;
+            autofire.totalShotsSkipped += targetingData.skippedShots;
+        }
+        autofire.autofireOCV = 0;
+        if (!autofire.singleTarget) {
+            if (autofireSkills.ACCURATE) {
+                autofire.autofireOCV -= 1;
+            } else {
+                autofire.autofireOCV -= totalSkippedMeters / 2;
+            }
+            if (autofireSkills.CONCENTRATED) {
+                autofire.autofireOCV -= 1;
+            }
+            if (autofireSkills.SKIPOVER) {
+                autofire.autofireOCV -= 1;
+            }
+        }
+        return targets;
+    }
+    static getAutofireAttackTargetsNew(autofireAttackInfo, formData) {
+        const autofire = autofireAttackInfo.autofire;
+        const targetedTokens = autofireAttackInfo.system.targetedTokens;
+        const system = autofireAttackInfo.system;
+        const autofireSkills = autofire.autofireSkills;
+        const targets = [];
+        let totalSkippedMeters = 0;
+        autofire.singleTarget = targetedTokens.length === 1;
+
+        const assignedShots = {};
+        // use the form values for number of shots _unless_ they are switching to/from one target
+        if (formData) {
+            targetedTokens.map((target) => {
+                const shots_on_target_id = `shots_on_target_${target.id}`;
+                const shotsOnTargetInput = formData[shots_on_target_id];
+                if (shotsOnTargetInput) {
+                    const shotValue = parseInt(shotsOnTargetInput.match(/\d+/));
+                    if (!isNaN(shotValue)) {
+                        assignedShots[shots_on_target_id] = shotValue;
+                    }
+                }
+            });
+        }
+
+        for (let i = 0; i < targetedTokens.length; i++) {
+            let shotsOnTarget = autofire.singleTarget
+                ? autofire.autoFireShots
+                : 1;
+            const shots_on_target_id = `shots_on_target_${targetedTokens[i].id}`;
+
+            if (assignedShots[shots_on_target_id]) {
+                shotsOnTarget = assignedShots[shots_on_target_id];
+            }
+            // these are the targeting data used for the attack(s)
+            const targetingData = {
+                system,
+                autofire,
+                target: targetedTokens[i],
+                shotsOnTarget,
+                results: [],
+                shots_on_target_id: `shots_on_target_${targetedTokens[i].id}`,
+            };
+            if (i !== 0) {
+                const prevTarget = targetedTokens[i - 1];
+                const target = targetedTokens[i];
+                const skippedMeters = canvas.grid.measureDistance(
+                    prevTarget,
+                    target,
+                    { gridSpaces: true },
+                );
+                totalSkippedMeters += skippedMeters;
+                console.log(
+                    `skip ${skippedMeters} meters between ${prevTarget.name} and ${target.name}`,
+                );
+                targetingData.skippedMeters = skippedMeters;
+                targetingData.skippedShots = autofireSkills.SKIPOVER
+                    ? 0
+                    : Math.floor(skippedMeters / 2 - 1); //todo: check zero
+            } else {
+                targetingData.skippedMeters = 0;
+                targetingData.skippedShots = 0;
+            }
+            targetingData.range = canvas.grid.measureDistance(
+                system.attacker,
+                targetedTokens[i],
+                { gridSpaces: true },
+            );
+            targetingData.ocv = Attack.getRangeModifier(
+                system.item,
                 targetingData.range,
             );
             targets.push(targetingData);
@@ -207,13 +305,7 @@ export class Attack {
         return targets;
     }
 
-    // make it getAttackInfo and that way we can use this for multiattack, and haymaker too
-    static getAutofireAttackInfo(
-        item,
-        targetedTokens,
-        formData,
-        attackToHitOptions,
-    ) {
+    static getAutofireAttackInfoNew(item, targetedTokens, formData) {
         const autofireMod = item.findModsByXmlid("AUTOFIRE");
         if (!autofireMod || targetedTokens.length === 0) {
             return null;
@@ -231,11 +323,11 @@ export class Attack {
             .map((skill) => skill.system.OPTION)
             .forEach((skillOption) => (autofireSkills[skillOption] = true));
 
-        const basic = {
+        const system = {
             item,
             attacker,
             targetedTokens,
-        }; // basic attack info
+        }; // system attack info
 
         const autofire = {
             autofireMod,
@@ -247,15 +339,13 @@ export class Attack {
         }; // autofire attack info
 
         const autofireAttackInfo = {
-            basic,
+            system,
             autofire,
             charges: item.system.charges,
         };
 
         // use the form values for number of shots _unless_ they are switching to/from one target
-        const assignedShots = attackToHitOptions
-            ? { ...attackToHitOptions }
-            : {};
+        const assignedShots = {};
         if (formData) {
             targetedTokens.map((target) => {
                 const shots_on_target_id = `shots_on_target_${target.id}`;
@@ -282,14 +372,246 @@ export class Attack {
         //         assignedShots[target.target.id] = target.shotsOnTarget;
         //     });
         // }
-        autofireAttackInfo.targets = Attack.getAutofireAttackTargets(
+        autofireAttackInfo.targets = Attack.getAutofireAttackTargetsNew(
             autofireAttackInfo,
-            assignedShots,
+            formData,
         );
         autofireAttackInfo.targetIds = {};
-        autofireAttackInfo.targets.forEach((target)=>{
+        autofireAttackInfo.targets.forEach((target) => {
             autofireAttackInfo.targetIds[target.target.id] = target;
         });
         return autofireAttackInfo;
+    }
+
+    // eslint-disable-next-line no-unused-vars
+    static getAttackActionTargetInfo(item, targetedTokens, formData) {
+        const targets = [];
+        const attacker =
+            item.actor.getActiveTokens()[0] || canvas.tokens.controlled[0];
+        const system = {
+            item,
+            attacker,
+            targetedTokens,
+        }; // system attack info
+
+        for (let i = 0; i < targetedTokens.length; i++) {
+            // these are the targeting data used for the attack(s)
+            const targetingData = {
+                system,
+                target: targetedTokens[i],
+                results: [],
+            };
+            targetingData.range = canvas.grid.measureDistance(
+                system.attacker,
+                targetedTokens[i],
+                { gridSpaces: true },
+            );
+            targetingData.ocv = Attack.getRangeModifier(
+                system.item,
+                targetingData.range,
+            );
+            targets.push(targetingData);
+        }
+        return targets;
+    }
+
+    static getAttackActionItemInfo(item, targetedTokens, formData) {
+        const autofireAttackInfo = Attack.getAutofireAttackInfoNew(
+            item,
+            targetedTokens,
+            formData,
+        );
+
+        const targets = autofireAttackInfo
+            ? Attack.getAutofireAttackTargetsNew(autofireAttackInfo, formData)
+            : Attack.getAttackActionTargetInfo(item, targetedTokens, formData);
+
+        // TODO: not sure now about saving the item here; maybe just the id?
+        // and what are we doing with targets? should there just be one or zero now, unless it's AoE?
+        const attackActionItemInfo = {
+            item,
+            targets,
+            autofire: autofireAttackInfo,
+        };
+        return attackActionItemInfo;
+    }
+
+    static addMultipleAttack(data) {
+        if (!data.action?.maneuver?.attackKeys?.length) {
+            return false;
+        }
+        const index = data.action.maneuver.attackKeys.length;
+        const attackKey = `attack-${index}`;
+        const itemKey = data.item.actor.items.find(
+            (item) => "STRIKE" === item.system.XMLID,
+        ).id;
+        const targetKey = data.action.targetedTokens?.length
+            ? data.action.targetedTokens[0].id
+            : "NONE";
+        const multipleAttackKeys = { itemKey, attackKey, targetKey };
+        data.action.maneuver[attackKey] = multipleAttackKeys;
+        data.action.maneuver.attackKeys.push(multipleAttackKeys);
+        data.formData ??= {};
+        data.action.maneuver.attackKeys.forEach((attackKeys) => {
+            data.formData[`${attackKeys.attackKey}-target`] =
+                attackKeys.targetKey;
+            data.formData[attackKeys.attackKey] = attackKeys.itemKey;
+        });
+        return true;
+    }
+
+    static trashMultipleAttack(data, attackKey) {
+        if (!data.action?.maneuver?.attackKeys?.length || !attackKey) {
+            return false;
+        }
+        console.log(`trash ${attackKey}`);
+        console.log(`data:`, data);
+        const indexToRemove = data.action.maneuver.attackKeys.findIndex(
+            (multipleAttackKeys) => {
+                return multipleAttackKeys.attackKey === attackKey;
+            },
+        );
+        data.action.maneuver.attackKeys.splice(indexToRemove, 1);
+        // all the info is in the array; reconstruct the properties
+        const keyToRemove = `attack-${data.action.maneuver.attackKeys.length}`;
+        delete data.action.maneuver[keyToRemove];
+        for (let i = 0; i < data.action.maneuver.attackKeys.length; i++) {
+            const multipleAttackKeys = data.action.maneuver.attackKeys[i];
+            const attackKey = `attack-${i}`;
+            multipleAttackKeys.attackKey = attackKey;
+            data[attackKey] = multipleAttackKeys;
+        }
+        data.formData ??= {};
+        if (data.formData[keyToRemove]) {
+            delete data.formData[keyToRemove];
+        }
+        if (data.formData[`${keyToRemove}-target`]) {
+            delete data.formData[`${keyToRemove}-target`];
+        }
+        data.action.maneuver.attackKeys.forEach((attackKeys) => {
+            data.formData[`${attackKeys.attackKey}-target`] =
+                attackKeys.targetKey;
+            data.formData[attackKeys.attackKey] = attackKeys.itemKey;
+        });
+        console.log(`data:`, data);
+        return true;
+    }
+
+    static getMultipleAttackManeuver(item, targetedTokens, formData) {
+        const isMultipleAttack = item.system.XMLID === "MULTIPLEATTACK";
+        if (!isMultipleAttack) return null;
+        const multipleAttackManeuver = {
+            isMultipleAttack,
+        };
+        if (formData) {
+            const keys = [];
+            let count = 0;
+            while (formData[`attack-${count}`]) {
+                const targetKey = formData[`attack-${count}-target`];
+                const attackKey = `attack-${count}`; // attackKey is 'attack-1' etc
+                const itemKey = formData[attackKey];
+                const attackKeys = { itemKey, attackKey, targetKey };
+                multipleAttackManeuver[attackKey] = attackKeys;
+                keys.push(attackKeys);
+                multipleAttackManeuver.attackKeys = keys;
+                count++;
+            }
+        }
+        // Initialize multiple attack to the default option values
+        multipleAttackManeuver.attackKeys ??= targetedTokens.map(
+            (target, index) => {
+                return {
+                    itemKey: item.actor.items.find(
+                        (item) => "STRIKE" === item.system.XMLID,
+                    ).id,
+                    attackKey: `attack-${index}`,
+                    targetKey: target.id,
+                };
+            },
+        );
+        multipleAttackManeuver.attacks = [];
+        const actor = item.actor;
+        for (let i = 0; i < multipleAttackManeuver.attackKeys.length; i++) {
+            const attackKeys = multipleAttackManeuver.attackKeys[i];
+            multipleAttackManeuver[`attack-${i}`] = attackKeys;
+            const multiAttackItem = actor.items.get(attackKeys.itemKey);
+            const multiAttackTarget = targetedTokens.find(
+                (target) => attackKeys.targetKey === target.id,
+            );
+            multipleAttackManeuver.attacks.push(
+                Attack.getAttackActionItemInfo(
+                    multiAttackItem,
+                    [multiAttackTarget],
+                    formData,
+                ),
+            );
+        }
+        return multipleAttackManeuver;
+    }
+
+    static getManeuverInfo(item, targetedTokens, formData) {
+        let multipleAttackInfo = Attack.getMultipleAttackManeuver(
+            item,
+            targetedTokens,
+            formData,
+        );
+        if (multipleAttackInfo) {
+            return multipleAttackInfo;
+        }
+        return {
+            attacks: [
+                Attack.getAttackActionItemInfo(item, targetedTokens, formData),
+            ],
+        };
+    }
+
+    static getAttackActionInfo(item, targetedTokens, formData) {
+        const attacker =
+            item.actor.getActiveTokens()[0] || canvas.tokens.controlled[0];
+        if (!attacker) {
+            console.error("There is no actor token!");
+            return null;
+        }
+        const attackerId = attacker.id;
+        // console.log("getAttackActionInfo form:", formData);
+        // const system = {
+        //     attacker,
+        //     item,
+        //     targetedTokens,
+        // };
+        const maneuver = this.getManeuverInfo(item, targetedTokens, formData);
+        const current = {
+            maneuver,
+            attackerId,
+            item,
+        };
+        const action = {
+            maneuver,
+            attackerId,
+            current,
+        };
+        // overwrite the maneuver for multiple attacks
+        if (
+            formData?.execute !== undefined &&
+            action.maneuver.isMultipleAttack
+        ) {
+            const attackKey = `attack-${formData.execute}`;
+            const attackKeys = action.maneuver[attackKey];
+            const maneuverItem = item.actor.items.get(attackKeys.itemKey);
+            const maneuverTarget = targetedTokens.find(
+                (token) => token.id === attackKeys.targetKey,
+            );
+            action.current.maneuver = this.getManeuverInfo(
+                maneuverItem,
+                [maneuverTarget],
+                formData,
+            );
+            action.current.execute = formData.execute;
+            action.current.step = attackKey;
+            action.current.item = maneuverItem;
+        }
+
+        console.log("RWC AttackActionInfo :", action);
+        return action;
     }
 }

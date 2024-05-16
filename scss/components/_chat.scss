@@ -170,16 +170,23 @@
     }
   }
   
-  .attack-options-target-container {
+  .target-container {
     display: grid;
-    grid-template-columns: 8fr 3fr 3fr 3fr 3fr;
     width: 100%;
     border-collapse: collapse;
     border-top: 1px solid var(--color-border-light-tertiary);
     border-bottom: 1px solid var(--color-border-light-tertiary);
-    margin: 0.5em 0;    
+    margin: 0.5em 0;
   }
 
+  .attack-options {
+    grid-template-columns: 8fr 3fr 3fr 3fr 3fr;
+  }
+
+  .multi-attack-options {
+    grid-template-columns: 8fr 8fr 1fr;
+  }
+  
   .target-info-row .target-name {
     padding-left: 2px;
     text-align: left;
@@ -198,27 +205,27 @@
     border-bottom: 1px solid var(--color-border-dark);
   }
 
-  .attack-options-target-container  {
+  .target-container  {
     text-align: center;
   }
   
-  .attack-options-target-container .target-info-header div{
+  .target-container .target-info-header div{
     font-weight: bold;
     background-color: #696762;
   }
-  .attack-options-target-container div div{
+  .target-container div div{
     margin-bottom: 1px;
   }
 
-  .attack-options-target-container .target-info-row div {
+  .target-container .target-info-row div {
     line-height: 2em;
   }
 
-  .attack-options-target-container .target-info-row:nth-child(odd) div {
+  .target-container .target-info-row:nth-child(odd) div {
     background-color: #dddbd2;
   }
 
-  .attack-options-target-container .target-info-row:nth-child(even) div {
+  .target-container .target-info-row:nth-child(even) div {
     background-color: #cfcdc3;
   }
 

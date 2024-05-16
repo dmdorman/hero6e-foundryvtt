@@ -113,292 +113,24 @@ export class ItemAttackFormApplication extends FormApplication {
         return 0;
     }
 
-    static getReasonCannotAttack(item, targetsArray, autofireAttackInfo) {
-        let reason = item.actor.getTheReasonCannotAct();
-        if (reason) {
-            return reason;
-        }
-        const actingToken = item.actor.getActiveTokens()[0];
-
-        if (
-            targetsArray.length > 1 &&
-            !ItemAttackFormApplication._itemUsesMultipleTargets(item)
-        ) {
-            return `${actingToken.name} has ${targetsArray.length} targets selected and ${item.name} supports only one.`;
-        }
-        const autofire = autofireAttackInfo?.autofire;
-        const isAutofire = !!autofire;
-
-        let charges = null;
-        if (item.findModsByXmlid("CHARGES")) {
-            charges = item.system.charges;
-            if (charges) {
-                if (charges.value === 0) {
-                    return `${item.name} has no charges left.`;
-                }
-                if (charges.value < targetsArray.length) {
-                    return `${actingToken.name} has ${targetsArray.length} targets selected and only ${charges.value} charges left.`;
-                }
-                if (isAutofire && charges.value < autofire.totalShotsFired) {
-                    return `${actingToken.name} is going to use ${autofire.totalShotsFired} charges and only ${charges.value} charges left.`;
-                }
-            }
-        }
-        if (isAutofire) {
-            if (autofire.autoFireShots < autofire.totalShotsFired) {
-                return `${actingToken.name} is going to fire ${autofire.totalShotsFired} shots and can only fire ${autofire.autoFireShots} shots.`;
-            }
-        }
-
-        const selfOnly = !!item.findModsByXmlid("SELFONLY");
-        const onlySelf = !!item.findModsByXmlid("ONLYSELF");
-        const usableOnOthers = !!item.findModsByXmlid("UOO");
-        // supposedly item.system.range  has factored all of this in...
-        const rangeSelf = item.system.range === "self";
-
-        if (rangeSelf || selfOnly || onlySelf) {
-            if (usableOnOthers) {
-                console.log(
-                    `${item.name} is a self-only ability that is usable on others!!??`,
-                );
-            }
-            // TODO: Should not be able to use this on anyone else. Should add a check.
-            if (targetsArray.length > 1) {
-                return `There are ${targetsArray.length} targets selected and ${item.name} is a self-only ability.`;
-            }
-            if (targetsArray.length > 0) {
-                // check if the target is me
-                if (item.actor._id !== targetsArray[0].actor._id) {
-                    return `${targetsArray[0].name} is targeted and ${item.name} is a self-only ability.`;
-                }
-            }
-        }
-
-        const noRange = item.system.range === "no range";
-        if (noRange) {
-            for (let i = 0; i < targetsArray.length; i++) {
-                let target = targetsArray[i];
-                let distance = canvas.grid.measureDistance(
-                    actingToken,
-                    target,
-                    { gridSpaces: true },
-                );
-                // what are the units of distance? 2M is standard reach
-                // if the actor has a greater reach count that...
-                if (distance > 2) {
-                    // TODO: get reach (STRETCHING/GROWTH/SHRINK)
-                    return `${item.name} is a no range ability, and ${targetsArray[i].name} is at a distance of ${distance}`;
-                }
-            }
-        }
-        return null;
-    }
-
-    static getAutofireAttackTargets(autofireAttackInfo, assignedShots) {
-        const autofire = autofireAttackInfo.autofire;
-        const targetedTokens = autofireAttackInfo.basic.targetedTokens;
-        const basic = autofireAttackInfo.basic;
-        const autofireSkills = autofire.autofireSkills;
-        const targets = [];
-        let totalSkippedMeters = 0;
-        autofire.singleTarget = targetedTokens.length === 1;
-
-        for (let i = 0; i < targetedTokens.length; i++) {
-            let shotsOnTarget = autofire.singleTarget
-                ? autofire.autoFireShots
-                : 1;
-            const shots_on_target_id = `shots_on_target_${targetedTokens[i].id}`;
-
-            if (assignedShots[shots_on_target_id]) {
-                shotsOnTarget = assignedShots[shots_on_target_id];
-            }
-            // these are the targeting data used for the attack(s)
-            const targetingData = {
-                basic,
-                autofire,
-                target: targetedTokens[i],
-                shotsOnTarget,
-                shots_on_target_id: `shots_on_target_${targetedTokens[i].id}`,
-            };
-            if (i !== 0) {
-                const prevTarget = targetedTokens[i - 1];
-                const target = targetedTokens[i];
-                const skippedMeters = canvas.grid.measureDistance(
-                    prevTarget,
-                    target,
-                    { gridSpaces: true },
-                );
-                totalSkippedMeters += skippedMeters;
-                console.log(
-                    `skip ${skippedMeters} meters between ${prevTarget.name} and ${target.name}`,
-                );
-                targetingData.skippedMeters = skippedMeters;
-                targetingData.skippedShots = autofireSkills.SKIPOVER
-                    ? 0
-                    : Math.floor(skippedMeters / 2 - 1); //todo: check zero
-            } else {
-                targetingData.skippedMeters = 0;
-                targetingData.skippedShots = 0;
-            }
-            targetingData.range = canvas.grid.measureDistance(
-                basic.attacker,
-                targetedTokens[i],
-                { gridSpaces: true },
-            );
-            targetingData.ocv = Attack.getRangeModifier(
-                basic.item,
-                targetingData.range,
-            );
-            targets.push(targetingData);
-            autofire.totalShotsFired += targetingData.shotsOnTarget;
-            autofire.totalShotsFired += autofireSkills.SKIPOVER
-                ? 0
-                : targetingData.skippedShots;
-            autofire.totalShotsSkipped += targetingData.skippedShots;
-        }
-        autofire.autofireOCV = 0;
-        if (!autofire.singleTarget) {
-            if (autofireSkills.ACCURATE) {
-                autofire.autofireOCV -= 1;
-            } else {
-                autofire.autofireOCV -= totalSkippedMeters / 2;
-            }
-            if (autofireSkills.CONCENTRATED) {
-                autofire.autofireOCV -= 1;
-            }
-            if (autofireSkills.SKIPOVER) {
-                autofire.autofireOCV -= 1;
-            }
-        }
-        return targets;
-    }
-
-    // make it getAttackInfo and that way we can use this for multiattack, and haymaker too
-    static getAutofireAttackInfo(
-        item,
-        targetedTokens,
-        formData,
-        attackToHitOptions,
-    ) {
-        const autofireMod = item.findModsByXmlid("AUTOFIRE");
-        if (!autofireMod || targetedTokens.length === 0) {
-            return null;
-        }
-        const attacker =
-            item.actor.getActiveTokens()[0] || canvas.tokens.controlled[0];
-        if (!attacker) return; // todo: message?
-
-        const autoFireShots =
-            parseInt(autofireMod.OPTION_ALIAS.match(/\d+/)) ?? 0;
-
-        const autofireSkills = {};
-        item.actor.items
-            .filter((skill) => "AUTOFIRE_SKILLS" === skill.system.XMLID)
-            .map((skill) => skill.system.OPTION)
-            .forEach((skillOption) => (autofireSkills[skillOption] = true));
-
-        const basic = {
-            item,
-            attacker,
-            targetedTokens,
-        }; // basic attack info
-
-        const autofire = {
-            autofireMod,
-            autofireSkills,
-            autoFireShots,
-            totalShotsFired: 0,
-            totalShotsSkipped: 0,
-            autofireOCV: 0,
-        }; // autofire attack info
-
-        const autofireAttackInfo = {
-            basic,
-            autofire,
-            charges: item.system.charges,
-        };
-
-        // use the form values for number of shots _unless_ they are switching to/from one target
-        const assignedShots = attackToHitOptions
-            ? { ...attackToHitOptions }
-            : {};
-        if (formData) {
-            targetedTokens.map((target) => {
-                const shots_on_target_id = `shots_on_target_${target.id}`;
-                const shotsOnTargetInput = formData[shots_on_target_id];
-                if (shotsOnTargetInput) {
-                    const shotValue = parseInt(shotsOnTargetInput.match(/\d+/));
-                    if (!isNaN(shotValue)) {
-                        assignedShots[shots_on_target_id] = shotValue;
-                    }
-                }
-            });
-        }
-        // this.data.autofireAttackInfo.targets.map((target) => {
-        //     const shotValue = parseInt(
-        //         formData[target.shots_on_target_id].match(/\d+/),
-        //     );
-        //     if (!isNaN(shotValue)) {
-        //         target.shotsOnTarget = shotValue;
-        //     }
-        // });
-
-        // if (oldAutofireAttackInfo && (oldAutofireAttackInfo.targets.length > 1 === targetedTokens.length > 1)) {
-        //     oldAutofireAttackInfo.targets.forEach((target) => {
-        //         assignedShots[target.target.id] = target.shotsOnTarget;
-        //     });
-        // }
-        autofireAttackInfo.targets = Attack.getAutofireAttackTargets(
-            autofireAttackInfo,
-            assignedShots,
-        );
-
-        return autofireAttackInfo;
-    }
-
     async updateItem() {
         this.render();
     }
 
     getData() {
-        console.log("RWC ItemAttackFormApplication");
-        
         const data = this.data;
         const item = data.item;
-        
-        //(or (eq item.type "attack") (and (ne item.type "maneuver") (eq item.system.subType "attack")))
-        const multipleAttack = item.system.XMLID === "MULTIPLEATTACK";
-        if(multipleAttack){
-            const actor = item.actor;
-            for(const key of actor.items.keys()){
-                const attackItem = actor.items.get(key);
-                if(attackItem.type === "attack"){
-                    console.log(`${attackItem.name} ${key} is an attack`);
-                }
-                if(attackItem.type !== "maneuver" && attackItem.system.subType === "attack"){
-                    console.log(`${attackItem.name} ${key} subType is an attack`);
-                }
-            }
-            // actor.items.forEach( (attackItem, key)=>{
-            //     if(attackItem.type === "attack"){
-            //         console.log(`${attackItem.name} is an attack`);
-            //     }
-            //     if(attackItem.type !== "maneuver" && attackItem.system.subType === "attack"){
-            //         console.log(`${attackItem.name} subType is an attack`);
-            //     }
-            // });
-
-            // Initialize multiple attack to the default option values
-            this.data.multipleattack ??= [{ name : "Strike", attack : `multipleattack-0` }];
-            for(let i= 0; i < this.data.multipleattack.length; i++){
-                this.data[ `multipleattack-${i}` ] = this.data.multipleattack[i];
-            }
-        }
-
+        const targets = Array.from(game.user.targets);
 
         // move the stuff from item-attack.mjs so the data has one source of truth
-        data.targets = Array.from(game.user.targets);
-        const autofireAttackInfo = Attack.getAutofireAttackInfo(
+        data.targets = targets;
+        this.data.action = Attack.getAttackActionInfo(
+            item,
+            targets,
+            data.formData,
+        );
+
+        const autofireAttackInfo = Attack.getAutofireAttackInfoNew(
             item,
             data.targets,
             data.formData,
@@ -446,8 +178,6 @@ export class ItemAttackFormApplication extends FormApplication {
         this.data.aim ??= "none";
         this.data.aimSide ??= "none";
 
-        
-        
         data.ocvMod ??= item.system.ocv;
         data.dcvMod ??= item.system.dcv;
         data.effectiveStr ??= data.str;
@@ -507,46 +237,22 @@ export class ItemAttackFormApplication extends FormApplication {
         super.activateListeners(html);
         // add to multiattack
         html.find(".add-multiattack").click(this._onAddMultiAttack.bind(this));
-        html.find(".trash-multiattack").click(this._onTrashMultiAttack.bind(this));
-        
+        html.find(".trash-multiattack").click(
+            this._onTrashMultiAttack.bind(this),
+        );
     }
-    async _onAddMultiAttack(event) {
-        if(!this.data.multipleattack?.length){
-            return; 
+
+    async _onAddMultiAttack() {
+        if (Attack.addMultipleAttack(this.data)) {
+            this.render();
         }
-        const index = this.data.multipleattack?.length;
-        const attack = `multipleattack-${index}`;
-        const name = "Strike";
-        const attackName = { name, attack }; 
-        this.data[attack] = attackName 
-        this.data.multipleattack.push(attackName);
-        this.render();
-                
     }
+
     async _onTrashMultiAttack(event) {
-        if(!this.data.multipleattack?.length){
-            return;
+        const multipleAttackKey = event.target.dataset.multiattack;
+        if (Attack.trashMultipleAttack(this.data, multipleAttackKey)) {
+            this.render();
         }
-        const attack = event.target.dataset.multiattack;
-
-        console.log(`trash ${attack}`);
-        console.log(`data:`, this.data);
-        let index = this.data.multipleattack.length; 
-        const indexToRemove = this.data.multipleattack.findIndex(attackName => {
-            return (attackName.attack === attack);
-        });
-        const removed = this.data.multipleattack.splice(indexToRemove, 1)
-        delete this.data[`multipleattack-${this.data.multipleattack.length}`];
-        for(let i= 0; i < this.data.multipleattack.length; i++){
-            const attackName = this.data.multipleattack[i];
-            const attack = `multipleattack-${i}`;
-            attackName.attack = attack; 
-            this.data[ attack ] = attackName;
-        }
-
-        console.log(`data:`, this.data);
-        
-        this.render();
     }
 
     async _render(...args) {
@@ -562,44 +268,55 @@ export class ItemAttackFormApplication extends FormApplication {
         // changes to the form pass through here
         if (event.submitter?.name === "roll") {
             canvas.tokens.activate();
+            // this will close the window when we press "Roll to Hit"
             await this.close();
-
-            const aoe = this.data.item.getAoeModifier();
-            if (aoe) {
-                return _processAttackAoeOptions(this.data.item, formData);
-            }
-
             return _processAttackOptions(this.data.item, formData);
+        }
+        this.data.formData ??= {};
+        if (event.submitter?.name === "executeMultiattack") {
+            const begin = this.data.action.current.execute === undefined;
+            // we pressed the button to execute multiple attacks
+            // the first time does not get a roll, but sets up the first attack
+            if (begin) {
+                this.data.formData.execute = 0;
+            } else {
+                // the subsequent presses will roll the attack and set up the next attack
+                // this is the roll:
+                await _processAttackOptions(this.data.item, this.data.formData);
+                this.data.formData.execute =
+                    this.data.action.current.execute + 1;
+            }
+            const end =
+                this.data.formData.execute >=
+                this.data.action.maneuver.attackKeys.length;
+            // this is the last step
+            if (end) {
+                canvas.tokens.activate();
+                await this.close();
+            } else {
+                return await new ItemAttackFormApplication(this.data).render(
+                    true,
+                );
+            }
+        }
+
+        if (event.submitter?.name === "cancelMultiattack") {
+            canvas.tokens.activate();
+            await this.close();
+            return;
         }
 
         if (event.submitter?.name === "aoe") {
             return this._spawnAreaOfEffect(this.data);
         }
-        // collect the changed shots on target
-        if (this.data.autofireAttackInfo) {
-            this.data.formData = { ...formData };
-        }
+        // collect the changed data; all of these changes can go into get data
+        this.data.formData = { ...formData };
 
         this._updateCsl(event, formData);
 
         this.data.aim = formData.aim;
         this.data.aimSide = formData.aimSide;
 
-        if(this.data.multipleattack?.length){
-            console.log("_updateObject form:", formData);
-            console.log("_updateObject multiattack:", this.data.multipleattack);
-            console.log("_updateObject data:", this.data);
-            this.data.multipleattack = [];
-            let count = 0;
-            while(!!formData[`multipleattack-${count}`]){
-                const name = formData[`multipleattack-${count}`];
-                const attack = `multipleattack-${count}`;
-                this.data[`multipleattack-${count}`] = { name, attack };
-                this.data.multipleattack.push({ name, attack });
-                count++;
-            }
-        }
-        
         this.data.ocvMod = formData.ocvMod;
         this.data.dcvMod = formData.dcvMod;
 
@@ -782,8 +499,7 @@ export class ItemAttackFormApplication extends FormApplication {
 
     // todo: maybe I can make this more generic? getAttack Info? use a similar targets structure for other attacks
     //  oldAutofireAttackInfo, attackToHitOptions contain the same information that I want
-    // collect the data from options into a structure for passing arouns so it can be the same
-    // make the basic info a struct too
+    // collect the data from options into a structure for passing around so it can be the same
     // put all the relevant infor into each target info so they are independent
 
     getAoeTemplate() {

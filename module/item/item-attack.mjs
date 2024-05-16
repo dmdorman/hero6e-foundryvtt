@@ -125,6 +125,9 @@ export async function AttackOptions(item) {
 }
 
 export async function _processAttackOptions(item, formData) {
+    if (item.getAoeModifier()) {
+        return _processAttackAoeOptions(item, formData);
+    }
     await AttackToHit(item, formData);
 }
 
@@ -280,20 +283,27 @@ export async function AttackAoeToHit(item, options) {
 }
 
 /// ChatMessage showing Attack To Hit
-export async function AttackToHit(item, options) {
-    if (!item) {
+export async function AttackToHit(itemArg, options) {
+    if (!itemArg) {
         return ui.notifications.error(
             `Attack details are no longer available.`,
         );
     }
-    console.log("RWC AttackToHit");
+    const targets = Array.from(game.user.targets);
+    const action = Attack.getAttackActionInfo(itemArg, targets, options);
+    console.log("RWC AttackToHit: ", action);
+    // TODO loop through these for combination items
+    const attack = action.current.maneuver.attacks[0];
+    const item = attack.item;
     const actor = item.actor;
     const itemData = item.system;
-    const autofireAttackInfo = Attack.getAutofireAttackInfo(
-        item,
-        Array.from(game.user.targets),
-        options,
-    );
+    const targetsArray = attack.targets.map((tgt) => tgt.target);
+    const autofireAttackInfo = attack.autofire;
+
+    // TODO: with the options and the action we should have the item and the current target list
+    // action.stage.maneuver.item
+    // action.stage.maneuver.targets
+
     const hitCharacteristic = actor.system.characteristics[itemData.uses].value;
     const toHitChar = CONFIG.HERO.defendsWith[itemData.targets];
     const automation = game.settings.get(HEROSYS.module, "automation");
@@ -635,11 +645,10 @@ export async function AttackToHit(item, options) {
 
     let targetData = [];
     const targetIds = [];
-    const targetsArray = Array.from(game.user.targets);
 
     // If AOE then sort by distance from center
     if (explosion) {
-        targetsArray.sort(function(a, b) {
+        targetsArray.sort(function (a, b) {
             let distanceA = canvas.grid.measureDistance(aoeTemplate, a, {
                 gridSpaces: true,
             });
@@ -786,44 +795,34 @@ export async function AttackToHit(item, options) {
         }
     }
     const hitRollData = {};
-    
-    if (autofireAttackInfo){
-        autofireAttackInfo.targets.forEach((target)=>{
+    if (autofireAttackInfo) {
+        autofireAttackInfo.targets.forEach((target) => {
             hitRollData[target.target.id] = {
                 shotsOnTarget: target.shotsOnTarget,
-                results : []
+                results: [],
             };
-            hitRollData[`shots_on_target_${target.target.id}`] = target.shotsOnTarget;
+            hitRollData[`shots_on_target_${target.target.id}`] =
+                target.shotsOnTarget;
         });
-        
+
         targetData.forEach((target) => {
             const result = {
                 id: target.id,
                 name: target.name,
-                aoeAlwaysHit: !!(target.aoeAlwaysHit),
+                aoeAlwaysHit: !!target.aoeAlwaysHit,
                 toHitChar: target.toHitChar,
                 toHitRollTotal: target.toHitRollTotal,
-                autoSuccess: !!(target.autoSuccess),
+                autoSuccess: !!target.autoSuccess,
                 hitRollText: target.hitRollText,
                 value: target.value,
                 hit: target.result.hit,
-                by : target.result.by,
-                sequence : hitRollData[target.id].results.length
+                by: target.result.by,
+                sequence: hitRollData[target.id].results.length,
             };
             hitRollData[target.id].results.push(result);
         });
     }
-    //add shots_on_target_Gx0WyuwweCE9xL6W
-    // : 
-    // "5"
-    // shots_on_target_ouZw21CiT7ILIP4r
-    // : 
-    // "1"
-    // shots_on_target_uJPPkRjr4OBDTFgv
-    // : 
-    // "5"
-    
-    
+
     // AUTOFIRE
     if (autofire) {
         // Autofire check for multiple hits on single target
@@ -953,7 +952,7 @@ export async function AttackToHit(item, options) {
         attackTags: getAttackTags(item),
         targetTokens: game.user.targets,
         attackerToken: actor.getActiveTokens()[0], // Educated guess for token
-        autofireAttackInfo        
+        action,
     };
     cardData.hitRollData = JSON.stringify(hitRollData);
     console.log("attackerToken:", cardData.attackerToken);
@@ -1130,9 +1129,8 @@ export async function _onRollAoeDamage(event) {
 // clicked on item-attack-card2.hbs
 // Notice the chatListeners function in this file.
 export async function _onRollDamage(event) {
-
     console.log("RWC _onRollDamage");
-    
+
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kluge to fix.
     const toHitData = { ...button.dataset };
@@ -1146,7 +1144,8 @@ export async function _onRollDamage(event) {
         );
     }
 
-    const autofireAttackInfo = Attack.getAutofireAttackInfo(
+    // const autofireAttackInfo =
+    Attack.getAutofireAttackInfoNew(
         item,
         Array.from(game.user.targets),
         hitRollData,
@@ -1265,12 +1264,12 @@ export async function _onRollDamage(event) {
                 game.settings.get(HEROSYS.module, "hitLocTracking") === "all",
             toHitData.aim === "none" ? "none" : toHitData.aimSide, // Can't just select a side to hit as that doesn't have a penalty
         );
-    
+
     // autofire, multi-attack, move by rolls different damages for each target
     // AoE, Explosion have multiple targets that all get the same damage
     // autofire Aoe has multiple damages that are applied to groups of targets (implement last)
     // so we should have a list of damages, and then a list of targets that damage applies to
-    
+
     // stick all the damages into an array (even if it's just one)
     
     

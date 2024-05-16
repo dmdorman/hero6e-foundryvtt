@@ -1,10 +1,10 @@
 {{ log 'HEROSYS ITEM ATTACK APPLICATION CARD' this }}
-<form data-actor-id="{{actor.id}}" data-item-id="{{item.id}}" data-token-id="{{token.id}}">
-  <div class="hero chat-card item-card attack-card">
-    <header class="card-header flexrow">
-      <img src="{{item.img}}" title="{{item.name}}" width="36" height="36" />
-      <h3 class="item-name">{{{itemName item}}}</h3>
-    </header>
+<form data-actor-id="{{actor.id}}" data-item-id="{{action.current.item.id}}" data-token-id="{{token.id}}">
+<div class="hero chat-card item-card attack-card">
+  <header class="card-header flexrow">
+    <img src="{{action.current.item.img}}" title="{{action.current.item.name}}" width="36" height="36" />
+    <h3 class="item-name">{{{itemName action.current.item}}}</h3>
+  </header>
 
       <div class="description">
           <b>{{{itemName item}}}
@@ -12,6 +12,53 @@
           </b>: {{item.system.description}}
       </div>
 
+  {{#if action.current.maneuver.isMultipleAttack}}
+  {{!-- multiple attack selection --}}
+    <div class="form-group">
+      <div class="multi-attack-options target-container">
+        <div class="target-info-header">
+          {{!-- could probably do this as an #each and pass it in if there are variations --}}
+          <div>Target</div>
+          <div>Attack</div>
+          <div>+/-</div>
+        </div>
+
+        {{#each action.maneuver.attackKeys as |multiAttack index|}}
+          <div class="target-info-row">
+            <select class="ellipsis-text target-name" name="{{multiAttack.attackKey}}-target"
+                    id="{{multiAttack.attackKey}}-target">
+              {{#each @root/targets as |target|}}
+                <option value={{target.id}}{{#if (eq target.id multiAttack.targetKey)}}
+                        selected{{/if}}>{{target.name}}</option>
+              {{/each}}
+            </select>
+            <select name="{{multiAttack.attackKey}}" id="{{multiAttack.attackKey}}">
+              {{#each @root/actor.items as |item|}}
+                {{#if (eq item.system.XMLID "STRIKE")}}
+                  <option value={{item.id}}{{#if (eq item.id multiAttack.itemKey)}} selected{{/if}}>{{{itemName
+                    item}}}</option>
+                {{/if}}
+              {{/each}}              
+              {{#each @root/actor.items as |item|}}
+                {{#if
+                  (or (eq item.type "attack") (and (ne item.type "maneuver") (eq item.system.subType "attack")))}}
+                  <option value={{item.id}}{{#if (eq item.id multiAttack.itemKey)}} selected{{/if}}>{{{itemName
+                    item}}}</option>
+                {{/if}}
+              {{/each}}
+            </select>
+            <label>
+              {{#if (eq index 0)}}
+                <i class="fas fa-plus add-multiattack"></i>
+              {{else}}
+                <i class="fas fa-trash trash-multiattack " data-multiattack="{{multiAttack.attackKey}}"></i>
+              {{/if}}
+            </label>
+          </div>
+        {{/each}}
+      </div>
+    </div>
+  {{else}}   {{!-- not multiple attack --}}
     {{!-- Aim (hit location) form group --}}
     <div class="form-group" {{#unless useHitLoc}}style="display: none;"{{/unless}}>
       <label>Aim</label>
@@ -34,39 +81,22 @@
       </select>
     </div>
 
-  {{!-- multiple attack selection --}}
-  {{#each multipleattack as |multiAttack index|}}
-    <div class="form-group" {{#unless (eq @root/item.system.XMLID "MULTIPLEATTACK")}}style="display: none;"{{/unless}}>
-        <label>Multiple Attack
-        {{#if (eq index 0)}}
-            <i class="fas fa-plus add-multiattack" ></i>
-        {{else}}
-            <i class="fas fa-trash trash-multiattack " data-multiattack="{{multiAttack.attack}}"></i>
-        {{/if}}
-        </label>
-        <select name="{{multiAttack.attack}}" id="{{multiAttack.attack}}">
-          <option value="Strike">Strike</option>
-          {{#each @root/actor.items as |item|}}
-            {{#if (or (eq item.type "attack") (and (ne item.type "maneuver") (eq item.system.subType "attack")))}}
-              <option value={{item.id}}{{#if (eq item.id multiAttack.name)}} selected{{/if}}>{{{itemName item}}}</option>
-            {{/if}}
-          {{/each}}
-        </select>
-      </div>
-  {{/each}}
+    {{#each @root/action.current.maneuver.attacks as |attack index|}}
+      {{#if attack.autofire}}
+        <div>Autofire OCV penalties: {{attack.autofire.autofireOCV}}</div>
+        <div>{{attack.targets.length}} Shots on Targets and {{attack.autofire.totalShotsSkipped}}
+          Skipped is {{attack.autofire.totalShotsFired}} Total Shots to be Fired
+        </div>
+      {{/if}}
+      {{#if attack.charges}}
+        <div>Charged to be Used: {{attack.autofire.totalShotsFired}} of {{attack.charges.value}}
+          left.
+        </div>
+      {{else}}
+        <div>Endurance to be Used: TBD of TBD left.</div>
+      {{/if}}      
+    {{/each}}
 
-      {{#if autofireAttackInfo.autofire}}
-    <div>Autofire OCV penalties: {{autofireAttackInfo.autofire.autofireOCV}}</div>
-    <div>{{autofireAttackInfo.targets.length}} Shots on Targets and {{autofireAttackInfo.autofire.totalShotsSkipped}} 
-      Skipped is {{autofireAttackInfo.autofire.totalShotsFired}} Total Shots to be Fired</div>
-  {{/if}}
-  {{#if autofireAttackInfo.charges}}
-    <div>Charged to be Used: {{autofireAttackInfo.autofire.totalShotsFired}} of {{autofireAttackInfo.charges.value}} left.</div>
-  {{else}}
-    <div>Endurance to be Used: TBD of TBD left.</div>
-  {{/if}}
-    
-    
     {{!-- Penalty skill levels --}}
     <div class="description" {{#unless PENALTY_SKILL_LEVELS}}style="display: none;"{{/unless}}>
       <b>{{PENALTY_SKILL_LEVELS.name}}
@@ -78,35 +108,39 @@
       <label>Use Penalty Skill Levels</label>
       <input class="item-toggle" name="usePsl" type="checkbox" {{checked usePsl}} data-dtype="Boolean" />
     </div>
-    
-    
+
+    {{#each @root/action.current.maneuver.attacks as |attack index|}}
     {{!-- autofire form --}}
-    {{#if autofireAttackInfo.autofire}}
-      <div class="attack-options-target-container">
-        <div class="target-info-header">
-          {{!-- could probably do this as an #each and pass it in if there are variations --}}
-          <div>Target</div>
-          <div>Range</div>
-          <div>OCV</div>
-          <div>Skip</div>
-          <div>Shots</div>
-        </div>
-        {{#each autofireAttackInfo.targets as |autofireAttackTargetInfo|}}
-          <div class="target-info-row">
+      {{#if attack.autofire}}
+        <div class="attack-options target-container">
+          <div class="target-info-header">
+            {{!-- could probably do this as an #each and pass it in if there are variations --}}
+            <div>Target</div>
+            <div>Range</div>
+            <div>OCV</div>
+            <div>Skip</div>
+            <div>Shots</div>
+          </div>
+          {{#each attack.targets as |autofireAttackTargetInfo|}}
+            <div class="target-info-row">
               <div class="ellipsis-text target-name">{{autofireAttackTargetInfo.target.name}}</div>
               <div>{{autofireAttackTargetInfo.range}}m</div>
               <div>{{math "+" autofireAttackTargetInfo.ocv autofireAttackTargetInfo.autofire.autofireOCV}}</div>
               <div>{{autofireAttackTargetInfo.skippedShots}}</div>
               {{!-- we need input if this is autofire on one target, or if they have Concentrated Sprayfire --}}
-              {{#if (or autofireAttackTargetInfo.autofire.singleTarget autofireAttackTargetInfo.autofire.autofireSkills.CONCENTRATED) }}
-                <div><input type="text" name="{{autofireAttackTargetInfo.shots_on_target_id}}" value={{autofireAttackTargetInfo.shotsOnTarget}} /></div>
+              {{#if
+                (or autofireAttackTargetInfo.autofire.singleTarget autofireAttackTargetInfo.autofire.autofireSkills.CONCENTRATED) }}
+                <div><input type="text" name="{{autofireAttackTargetInfo.shots_on_target_id}}"
+                            value={{autofireAttackTargetInfo.shotsOnTarget}} /></div>
               {{else}}
                 <div>{{autofireAttackTargetInfo.shotsOnTarget}}</div>
               {{/if}}
-          </div>
-        {{/each}}
-      </div>
-    {{/if}}
+            </div>
+          {{/each}}
+        </div>
+      {{/if}}
+    {{/each}}
+
     <div class="form-group">
       <label>{{localize "Items.Attack.OcvMod"}}</label>
       <input type="text" name="ocvMod" value="{{ocvMod}}" />
@@ -121,7 +155,7 @@
       <div class="form-group">
         <label>{{localize "Items.Attack.Velocity"}} ({{velocitySystemUnits}}/phase)</label>
         <input type="text" name="velocity" value="{{velocity}}"
-          title="Typically you assume a starting velocity of 0, accelerate up to half your full move, then decelerate back to a 0 velocity.  A character can accelerate at a rate of 5m per meter.  If the Drag Ruler module is enabled, combat has started, and token has moved on its phase, then a velocity estimate is provided.  A simplistic solution is to assume velocity is equal to the movement speed." />
+               title="Typically you assume a starting velocity of 0, accelerate up to half your full move, then decelerate back to a 0 velocity.  A character can accelerate at a rate of 5m per meter.  If the Drag Ruler module is enabled, combat has started, and token has moved on its phase, then a velocity estimate is provided.  A simplistic solution is to assume velocity is equal to the movement speed." />
       </div>
     {{/if}}
 
@@ -149,9 +183,9 @@
         <div class="form-fields combat-skill-levels">
           <ol>
             {{#each csl}}
-            <li>
-              {{radioBoxes this.name @root/cslChoices checked=this.value localize=true}}
-            </li>
+              <li>
+                {{radioBoxes this.name @root/cslChoices checked=this.value localize=true}}
+              </li>
             {{/each}}
           </ol>
 
@@ -159,6 +193,7 @@
       </div>
     {{/if}}
   </div>
+  {{/if}}
 
   {{!-- Conditional attack selection. DEADLY BLOW --}}
   <div class="form-fields  csl-attack-list">
@@ -177,32 +212,49 @@
     </div>
 
   <footer class="sheet-footer flexcol">
-      {{#if (and noTargets (not aoeText))}}
+    {{#if (and noTargets (not aoeText))}}
       <div>
-          <p class="hero-warning">
-              <i class="fas fa-exclamation-triangle"></i>
-              {{localize "Items.Attack.NoTargetsSelected"}}
-          </p>
-          <i>{{localize "Items.Attack.TargetingExplanation"}}</i>
+        <p class="hero-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          {{localize "Items.Attack.NoTargetsSelected"}}
+        </p>
+        <i>{{localize "Items.Attack.TargetingExplanation"}}</i>
       </div>
-      {{/if}}
-      {{#if cannotAttack}}
+    {{/if}}
+    {{#if cannotAttack}}
       <div>
-          <p class="hero-warning">
-              <i class="fas fa-exclamation-triangle"></i>
-              <i>{{cannotAttack}}</i>
-          </p>
+        <p class="hero-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          <i>{{cannotAttack}}</i>
+        </p>
       </div>
-      {{/if}}
-      {{#if aoeText}}
-          <button class="aoe-button" type="submit" name="aoe">
-              Place {{aoeText}} template
-          </button>
-      {{/if}}
-
-      <button type="submit" name="roll" {{#if rollHide}} disabled title="You must select at least 1 target token, preferably by using the AOE template." {{/if}} >
-          {{#if aoeText}}Roll Placement{{else}}Roll to Hit{{/if}}
-          {{#if cannotAttack}} Anyway{{/if}}
+    {{/if}}
+    {{#if aoeText}}
+      <button class="aoe-button" type="submit" name="aoe">
+        Place {{aoeText}} template
       </button>
+    {{/if}}
+
+    {{#if action.maneuver.isMultipleAttack}}
+      <button type="submit" name="executeMultiattack"  {{#unless action.maneuver.attack-1}}disabled
+              title="The Multiple Attack is not set up." {{/unless}}>      {{!-- TODO: this needs to be more rigorous --}}
+        {{#if action.current.maneuver.isMultipleAttack}}
+          Begin Multiple Attacks
+        {{else}}
+          Continue Multiple Attacks
+        {{/if}}
+      </button>
+      {{#if (ne action.maneuver.isMultipleAttack action.current.maneuver.isMultipleAttack)}}
+        <button type="submit" name="cancelMultiattack">
+          Cancel Remaining Multiple Attacks
+        </button>
+      {{/if}}
+    {{else}}
+      <button type="submit" name="roll" {{#if rollHide}}
+              disabled title="You must select at least 1 target token, preferably by using the AOE template." {{/if}} >
+        {{#if aoeText}}Roll Placement{{else}}Roll to Hit{{/if}}
+        {{#if cannotAttack}} Anyway{{/if}}
+      </button>
+    {{/if}}
   </footer>
 </form>t
