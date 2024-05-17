@@ -661,7 +661,7 @@ export async function AttackToHit(itemArg, options) {
 
     // Make attacks against all targets
     const colorArray = [
-        "#FF6633",
+        "blue",
         "#FFB399",
         "#FF33FF",
         "#FFFF99",
@@ -719,9 +719,7 @@ export async function AttackToHit(itemArg, options) {
         );
 
         const targetHeroRoller = aoeAlwaysHit ? heroRoller : heroRoller.clone();
-        let toHitRollTotal = 0;
         let by = 0;
-        let autoSuccess = false;
 
         targetHeroRoller._options = {
             appearance: { background: colorArray[diceColor] },

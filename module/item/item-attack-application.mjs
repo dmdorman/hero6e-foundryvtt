@@ -1,8 +1,5 @@
 import { CombatSkillLevelsForAttack } from "../utility/damage.mjs";
-import {
-    _processAttackOptions,
-    _processAttackAoeOptions,
-} from "../item/item-attack.mjs";
+import { _processAttackOptions } from "../item/item-attack.mjs";
 import {
     convertSystemUnitsToMetres,
     getSystemDisplayUnits,
