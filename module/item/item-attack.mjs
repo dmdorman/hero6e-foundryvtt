@@ -736,7 +736,6 @@ export async function AttackToHit(itemArg, options) {
             hit = "Hit";
             by = "AOE auto";
         } else {
-
             if (autoSuccess !== undefined) {
                 if (autoSuccess) {
                     hit = "Auto Hit";
@@ -1269,8 +1268,6 @@ export async function _onRollDamage(event) {
     // so we should have a list of damages, and then a list of targets that damage applies to
 
     // stick all the damages into an array (even if it's just one)
-    
-    
 
     // Hackey solution to look for 0DC (STRMINIMUM)
     if (
