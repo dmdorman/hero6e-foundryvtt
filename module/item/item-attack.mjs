@@ -23,6 +23,7 @@ import {
     calculateVelocityInSystemUnits,
     calculateRangePenaltyFromDistanceInMetres,
 } from "../ruler.mjs";
+import { Attack } from "../utility/attack.mjs";
 
 export async function chatListeners(html) {
     html.on("click", "button.roll-damage", this._onRollDamage.bind(this));
@@ -49,14 +50,15 @@ export async function onMessageRendered(html) {
     }
 }
 
-/// Dialog box for AttackOptions
+/*
+ * Dialog box for AttackOptions: only place things here that ought to be constant:
+ * the distance you moved
+ * the power used
+ *
+ */
 export async function AttackOptions(item) {
     const actor = item.actor;
     const token = actor.getActiveTokens()[0];
-
-    if (!actor.canAct(true)) {
-        return;
-    }
 
     const data = {
         item: item,
@@ -110,7 +112,8 @@ export async function AttackOptions(item) {
 
         // Penalty Skill Levels
         const PENALTY_SKILL_LEVELS = actor.items.find(
-            (o) => o.system.XMLID === "PENALTY_SKILL_LEVELS",
+            (penaltySkill) =>
+                penaltySkill.system.XMLID === "PENALTY_SKILL_LEVELS",
         );
         if (PENALTY_SKILL_LEVELS) {
             data.PENALTY_SKILL_LEVELS = PENALTY_SKILL_LEVELS;
@@ -118,9 +121,13 @@ export async function AttackOptions(item) {
     }
 
     await new ItemAttackFormApplication(data).render(true);
+    console.log("RWC ItemAttackFormApplication(data).render(true)");
 }
 
 export async function _processAttackOptions(item, formData) {
+    if (item.getAoeModifier()) {
+        return _processAttackAoeOptions(item, formData);
+    }
     await AttackToHit(item, formData);
 }
 
@@ -276,20 +283,29 @@ export async function AttackAoeToHit(item, options) {
 }
 
 /// ChatMessage showing Attack To Hit
-export async function AttackToHit(item, options) {
-    if (!item) {
+export async function AttackToHit(itemArg, options) {
+    if (!itemArg) {
         return ui.notifications.error(
             `Attack details are no longer available.`,
         );
     }
-
+    const targets = Array.from(game.user.targets);
+    const action = Attack.getAttackActionInfo(itemArg, targets, options);
+    console.log("RWC AttackToHit: ", action);
+    // TODO loop through these for combination items
+    const attack = action.current.maneuver.attacks[0];
+    const item = attack.item;
     const actor = item.actor;
     const itemData = item.system;
+    const targetsArray = attack.targets.map((tgt) => tgt.target);
+    const autofireAttackInfo = attack.autofire;
+
+    // TODO: with the options and the action we should have the item and the current target list
+    // action.stage.maneuver.item
+    // action.stage.maneuver.targets
 
     const hitCharacteristic = actor.system.characteristics[itemData.uses].value;
-
     const toHitChar = CONFIG.HERO.defendsWith[itemData.targets];
-
     const automation = game.settings.get(HEROSYS.module, "automation");
 
     const adjustment = getPowerInfo({
@@ -484,7 +500,7 @@ export async function AttackToHit(item, options) {
         if (itemData.usesStrength || itemData.usesTk) {
             let strEnd = Math.max(1, Math.round(options.effectiveStr / 10));
 
-            // TELIKENESIS is more expensive than normal STR
+            // TELEKINESIS is more expensive than normal STR
             if (itemData.usesTk) {
                 spentEnd = Math.ceil(
                     (spentEnd * options?.effectiveStr) / item.system.LEVELS,
@@ -516,8 +532,7 @@ export async function AttackToHit(item, options) {
                 newEnd = valueEnd;
             }
         }
-
-        if (newEnd < 0) {
+        if (spentEnd > 0 && newEnd < 0) {
             let stunDice = Math.ceil(Math.abs(newEnd) / 2);
 
             const stunForEndHeroRoller = new HeroRoller()
@@ -545,7 +560,7 @@ export async function AttackToHit(item, options) {
             await ui.notifications.warn(
                 `${actor.name} used STUN for ENDURANCE.`,
             );
-        } else {
+        } else if (spentEnd > 0) {
             enduranceText = "Spent " + spentEnd + " END";
 
             if (item.system.USE_END_RESERVE && enduranceReserve) {
@@ -589,8 +604,14 @@ export async function AttackToHit(item, options) {
             parseInt(options.boostableCharges) || 0,
             0,
             Math.min(charges - 1, 4),
-        ); // Maximum of 4
-        let spentCharges = 1 + options.boostableCharges;
+        ); // Maximum of 4 per rules
+        let spentCharges = 1;
+        if (autofireAttackInfo?.autofire) {
+            spentCharges = autofireAttackInfo.autofire.totalShotsFired;
+            spentCharges *= options.boostableCharges + 1;
+        } else {
+            spentCharges += options.boostableCharges;
+        }
         if (enduranceText === "") {
             enduranceText = `Spent ${spentCharges} charge${
                 spentCharges > 1 ? "s" : ""
@@ -624,7 +645,6 @@ export async function AttackToHit(item, options) {
 
     let targetData = [];
     const targetIds = [];
-    const targetsArray = Array.from(game.user.targets);
 
     // If AOE then sort by distance from center
     if (explosion) {
@@ -640,30 +660,82 @@ export async function AttackToHit(item, options) {
     }
 
     // Make attacks against all targets
+    const colorArray = [
+        "blue",
+        "#FFB399",
+        "#FF33FF",
+        "#FFFF99",
+        "#00B3E6",
+        "#E6B333",
+        "#3366E6",
+        "#999966",
+        "#99FF99",
+        "#B34D4D",
+        "#80B300",
+        "#809900",
+        "#E6B3B3",
+        "#6680B3",
+        "#66991A",
+        "#FF99E6",
+        "#CCFF1A",
+        "#FF1A66",
+        "#E6331A",
+        "#33FFCC",
+        "#66994D",
+        "#B366CC",
+        "#4D8000",
+        "#B33300",
+        "#CC80CC",
+        "#66664D",
+        "#991AFF",
+        "#E666FF",
+        "#4DB3FF",
+        "#1AB399",
+        "#E666B3",
+        "#33991A",
+        "#CC9999",
+        "#B3B31A",
+        "#00E680",
+        "#4D8066",
+        "#809980",
+        "#E6FF80",
+        "#1AFF33",
+        "#999933",
+        "#FF3380",
+        "#CCCC00",
+        "#66E64D",
+        "#4D80CC",
+        "#9900B3",
+        "#E64D66",
+        "#4DB380",
+        "#FF4D4D",
+        "#99E6E6",
+        "#6666FF",
+    ];
+    let diceColor = 0;
     for (const target of targetsArray) {
         let targetDefenseValue = RoundFavorPlayerUp(
             target.actor.system.characteristics[toHitChar.toLowerCase()].value,
         );
 
         const targetHeroRoller = aoeAlwaysHit ? heroRoller : heroRoller.clone();
-        let toHitRollTotal = 0;
         let by = 0;
-        let autoSuccess = false;
 
+        targetHeroRoller._options = {
+            appearance: { background: colorArray[diceColor] },
+        };
+        diceColor = (diceColor + 1) % colorArray.length;
+        // TODO: Fix multiple hits on one target for autofire
+        // TODO: add autofire ocv mod
+        await targetHeroRoller.makeSuccessRoll(true, targetDefenseValue).roll();
+        const autoSuccess = targetHeroRoller.getAutoSuccess();
+        const toHitRollTotal = targetHeroRoller.getSuccessTotal();
+        const margin = targetDefenseValue - toHitRollTotal;
         let hit = "Miss";
         if (aoeAlwaysHit) {
             hit = "Hit";
             by = "AOE auto";
         } else {
-            // TODO: Autofire against multiple targets should have increasing difficulty
-
-            await targetHeroRoller
-                .makeSuccessRoll(true, targetDefenseValue)
-                .roll();
-            autoSuccess = targetHeroRoller.getAutoSuccess();
-            toHitRollTotal = targetHeroRoller.getSuccessTotal();
-            const margin = targetDefenseValue - toHitRollTotal;
-
             if (autoSuccess !== undefined) {
                 if (autoSuccess) {
                     hit = "Auto Hit";
@@ -718,6 +790,34 @@ export async function AttackToHit(item, options) {
         ) {
             targetIds.push(target.id);
         }
+    }
+    const hitRollData = {};
+    if (autofireAttackInfo) {
+        autofireAttackInfo.targets.forEach((target) => {
+            hitRollData[target.target.id] = {
+                shotsOnTarget: target.shotsOnTarget,
+                results: [],
+            };
+            hitRollData[`shots_on_target_${target.target.id}`] =
+                target.shotsOnTarget;
+        });
+
+        targetData.forEach((target) => {
+            const result = {
+                id: target.id,
+                name: target.name,
+                aoeAlwaysHit: !!target.aoeAlwaysHit,
+                toHitChar: target.toHitChar,
+                toHitRollTotal: target.toHitRollTotal,
+                autoSuccess: !!target.autoSuccess,
+                hitRollText: target.hitRollText,
+                value: target.value,
+                hit: target.result.hit,
+                by: target.result.by,
+                sequence: hitRollData[target.id].results.length,
+            };
+            hitRollData[target.id].results.push(result);
+        });
     }
 
     // AUTOFIRE
@@ -847,7 +947,13 @@ export async function AttackToHit(item, options) {
         // misc
         tags: heroRoller.tags(),
         attackTags: getAttackTags(item),
+        targetTokens: game.user.targets,
+        attackerToken: actor.getActiveTokens()[0], // Educated guess for token
+        action,
     };
+    cardData.hitRollData = JSON.stringify(hitRollData);
+    console.log("attackerToken:", cardData.attackerToken);
+    console.log("targetTokens:", cardData.targetTokens);
 
     // render card
     const template =
@@ -856,8 +962,11 @@ export async function AttackToHit(item, options) {
             : `systems/${HEROSYS.module}/templates/chat/item-toHit-card.hbs`;
     const cardHtml = await renderTemplate(template, cardData);
 
-    const token = actor.token;
-    const speaker = ChatMessage.getSpeaker({ actor: actor, token });
+    // check API for this: why doesn't it use the token name
+    const speaker = ChatMessage.getSpeaker({
+        actor: actor,
+        token: cardData.attackerToken,
+    });
     speaker.alias = actor.name;
 
     const chatData = {
@@ -1017,9 +1126,12 @@ export async function _onRollAoeDamage(event) {
 // clicked on item-attack-card2.hbs
 // Notice the chatListeners function in this file.
 export async function _onRollDamage(event) {
+    console.log("RWC _onRollDamage");
+
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kluge to fix.
     const toHitData = { ...button.dataset };
+    const hitRollData = JSON.parse(toHitData.hitrolldata);
     const item = fromUuidSync(toHitData.itemid);
     const actor = item?.actor;
 
@@ -1028,6 +1140,13 @@ export async function _onRollDamage(event) {
             `Attack details are no longer available.`,
         );
     }
+
+    // const autofireAttackInfo =
+    Attack.getAutofireAttackInfoNew(
+        item,
+        Array.from(game.user.targets),
+        hitRollData,
+    );
 
     const adjustment = getPowerInfo({
         item: item,
@@ -1142,6 +1261,13 @@ export async function _onRollDamage(event) {
                 game.settings.get(HEROSYS.module, "hitLocTracking") === "all",
             toHitData.aim === "none" ? "none" : toHitData.aimSide, // Can't just select a side to hit as that doesn't have a penalty
         );
+
+    // autofire, multi-attack, move by rolls different damages for each target
+    // AoE, Explosion have multiple targets that all get the same damage
+    // autofire Aoe has multiple damages that are applied to groups of targets (implement last)
+    // so we should have a list of damages, and then a list of targets that damage applies to
+
+    // stick all the damages into an array (even if it's just one)
 
     // Hackey solution to look for 0DC (STRMINIMUM)
     if (

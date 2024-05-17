@@ -316,7 +316,7 @@ ul.left li {
     text-align: left;
 }
 
-.form-group div {
+.form-group div, label {
     display: flex;
     flex-direction: row;
 }

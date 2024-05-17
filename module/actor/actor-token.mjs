@@ -8,6 +8,8 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
     constructor(data, context) {
         super(data, context);
         //data.bars.bar3 = bars.addChild(new PIXI.Graphics());
+        console.warn("RWC TokenDocument data:", data);
+        console.log("RWC TokenDocument actor:", context);
     }
 
     getBarAttribute(barName, alternative) {
@@ -72,6 +74,7 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
 export class HeroSystem6eToken extends Token {
     constructor(document) {
         super(document);
+        console.warn("RWC HeroSystem6eToken document:", document);
     }
 
     getData() {
