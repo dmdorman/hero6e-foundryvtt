@@ -91,7 +91,7 @@ Hooks.once("init", async function () {
     CONFIG.ActiveEffect.documentClass = HeroSystem6eActorActiveEffects;
     CONFIG.ui.combat = HeroSystem6eCombatTracker;
 
-    HeroRuler.initialize();
+    CONFIG.Canvas.rulerClass = HeroRuler;
 
     SettingsHelpers.initLevelSettings();
 
