@@ -88,7 +88,10 @@ Hooks.once("init", async function () {
     CONFIG.ui.items = HeroSystem6eItemDirectory;
     CONFIG.ui.compendium = HeroSystem6eCompendiumDirectory;
 
-    HeroRuler.initialize();
+    CONFIG.ui.items = HeroSystem6eItemDirectory;
+    CONFIG.ui.compendium = HeroSystem6eCompendiumDirectory;
+
+    CONFIG.Canvas.rulerClass = HeroRuler;
 
     SettingsHelpers.initLevelSettings();
 
