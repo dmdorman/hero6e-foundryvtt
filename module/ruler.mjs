@@ -17,16 +17,16 @@ export class HeroRuler extends Ruler {
             const tokenControlButton = $(
                 ".scene-control[data-control='token']",
             );
-    
+
             const relevantToken = canvas.tokens.controlled[0];
-    
+
             if (!relevantToken) return;
             if (!relevantToken.actor) return;
-    
+
             const movementPowers = relevantToken.actor.system.is5e
                 ? CONFIG.HERO.movementPowers5e
                 : CONFIG.HERO.movementPowers;
-    
+
             let movementItems = [];
             for (const key of Object.keys(
                 relevantToken.actor.system.characteristics,
@@ -38,7 +38,7 @@ export class HeroRuler extends Ruler {
                     movementItems.push(char);
                 }
             }
-    
+
             const renderRadioOptions = () => {
                 const activeMovement =
                     movementItems.length === 0
@@ -48,7 +48,7 @@ export class HeroRuler extends Ruler {
                                   o._id ==
                                   relevantToken.actor.flags.activeMovement,
                           )?._id || movementItems[0]._id;
-    
+
                 const radioOptions = movementItems
                     .map(
                         (item, index) => `
@@ -65,28 +65,28 @@ export class HeroRuler extends Ruler {
                 `,
                     )
                     .join("");
-    
+
                 const radioSelect = $(
                     `<div class="radio-container">${radioOptions}</div>`,
                 );
-    
+
                 radioSelect.find("[data-tool]").click(async function () {
                     const tool = $(this).attr("data-tool");
-    
+
                     await relevantToken.actor.update({
                         "flags.activeMovement": tool,
                     });
-    
+
                     renderRadioOptions();
                 });
-    
+
                 if (tokenControlButton.find(".radio-container").length > 0) {
                     tokenControlButton.find(".radio-container").remove();
                 }
-    
+
                 tokenControlButton.append(radioSelect);
             };
-    
+
             renderRadioOptions();
         }
 
@@ -164,10 +164,12 @@ export class HeroRuler extends Ruler {
         totalDistanceInMetres, // NOTE: Assuming totalDistance is in metres. We could try to pull out the grid distance etc to be smarter.
     ) {
         //const relevantToken = canvas.tokens.controlled[0];
-        const relevantActor = this.token?.actor //relevantToken?.actor;
+        const relevantActor = this.token?.actor; //relevantToken?.actor;
 
         if (!relevantActor) {
-            console.error("HERO | Unable to determine actor for segment label.");
+            console.error(
+                "HERO | Unable to determine actor for segment label.",
+            );
             return;
         }
 
@@ -203,9 +205,8 @@ export class HeroRuler extends Ruler {
             movementItems.length === 0
                 ? "none"
                 : movementItems.find(
-                        (o) =>
-                            o._id == relevantActor.flags.activeMovement,
-                    )?._id || movementItems[0]._id;
+                      (o) => o._id == relevantActor.flags.activeMovement,
+                  )?._id || movementItems[0]._id;
 
         const activeMovementLabel =
             activeMovement === "none"
