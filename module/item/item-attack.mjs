@@ -1,5 +1,8 @@
 import { HEROSYS } from "../herosystem6e.mjs";
-import { getPowerInfo } from "../utility/util.mjs";
+import {
+    getPowerInfo,
+    getCharacteristicInfoArrayForActor,
+} from "../utility/util.mjs";
 import { determineDefense } from "../utility/defense.mjs";
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
 import { RoundFavorPlayerDown, RoundFavorPlayerUp } from "../utility/round.mjs";
@@ -30,12 +33,16 @@ export async function chatListeners(html) {
     html.on("click", "button.apply-damage", this._onApplyDamage.bind(this));
     html.on("click", "button.rollAoe-damage", this._onRollAoeDamage.bind(this));
     html.on("click", "button.roll-knockback", this._onRollKnockback.bind(this));
+    html.on("click", "button.roll-mindscan", this._onRollMindscan.bind(this));
 }
 
 export async function onMessageRendered(html) {
     //[data-visibility="gm"]
     if (!game.user.isGM) {
         html.find(`[data-visibility="gm"]`).remove();
+    }
+    if (game.user.isGM) {
+        html.find(`[data-visibility="notgm"]`).remove();
     }
 
     // visibility based on actor owner
@@ -59,6 +66,16 @@ export async function AttackOptions(item) {
     if (!actor.canAct(true)) {
         return;
     }
+
+    // if (
+    //     item?.system?.XMLID === "MINDSCAN" &&
+    //     !game.user.isGM &&
+    //     game.settings.get(game.system.id, "SecretMindScan")
+    // ) {
+    //     return ui.notifications.error(
+    //         `${item.name} has several secret components that the GM does not wish to reveal.  The Game Master is required to roll this attack on your behalf.  This "Secret Mind Scan" can be disabled in the settings by the GM.`,
+    //     );
+    // }
 
     const data = {
         item: item,
@@ -140,7 +157,9 @@ export async function AttackAoeToHit(item, options) {
 
     const token = actor.getActiveTokens()[0];
     if (!token) {
-        return ui.notifications.error(`Token was not found.`);
+        return ui.notifications.error(
+            `Unable to find a token on this scene associated with ${actor.name}.`,
+        );
     }
 
     const aoeTemplate =
@@ -185,9 +204,31 @@ export async function AttackAoeToHit(item, options) {
 
     // There are no range penalties if this is a line of sight power or it has been bought with
     // no range modifiers.
-    if (!(item.system.range === "los" || noRangeModifiers || normalRange)) {
-        const rangePenalty =
+    if (
+        !(
+            item.system.range === "los" ||
+            item.system.range === "special" ||
+            noRangeModifiers ||
+            normalRange
+        )
+    ) {
+        let rangePenalty =
             -calculateRangePenaltyFromDistanceInMetres(distanceToken);
+
+        // PENALTY_SKILL_LEVELS (range)
+        const pslRange = actor.items.find(
+            (o) =>
+                o.system.XMLID === "PENALTY_SKILL_LEVELS" &&
+                o.system.penalty === "range",
+        );
+        if (pslRange) {
+            const pslValue = Math.min(
+                parseInt(pslRange.system.LEVELS),
+                -rangePenalty,
+            );
+            attackHeroRoller.addNumber(pslValue, "Penalty Skill Levels");
+        }
+
         if (rangePenalty) {
             attackHeroRoller.addNumber(rangePenalty, "Range penalty");
         }
@@ -326,11 +367,30 @@ export async function AttackToHit(item, options) {
     const noRangeModifiers = !!item.findModsByXmlid("NORANGEMODIFIER");
     const normalRange = !!item.findModsByXmlid("NORMALRANGE");
 
+    // Mind Scan
+    if (parseInt(options.mindScanChoices)) {
+        heroRoller.addNumber(
+            parseInt(options.mindScanChoices),
+            "Number Of Minds",
+        );
+    }
+    if (parseInt(options.mindScanFamiliar)) {
+        heroRoller.addNumber(
+            parseInt(options.mindScanFamiliar),
+            "Mind Familarity",
+        );
+    }
+
     // There are no range penalties if this is a line of sight power or it has been bought with
     // no range modifiers.
     if (
         game.user.targets.size > 0 &&
-        !(item.system.range === "los" || noRangeModifiers || normalRange)
+        !(
+            item.system.range === "los" ||
+            item.system.range === "special" ||
+            noRangeModifiers ||
+            normalRange
+        )
     ) {
         // Educated guess for token
         let token = actor.getActiveTokens()[0];
@@ -351,6 +411,20 @@ export async function AttackToHit(item, options) {
         let rangePenalty = -Math.ceil(Math.log2(distance / factor)) * 2;
         rangePenalty = rangePenalty > 0 ? 0 : rangePenalty;
 
+        // PENALTY_SKILL_LEVELS (range)
+        const pslRange = actor.items.find(
+            (o) =>
+                o.system.XMLID === "PENALTY_SKILL_LEVELS" &&
+                o.system.penalty === "range",
+        );
+        if (pslRange) {
+            const pslValue = Math.min(
+                parseInt(pslRange.system.LEVELS),
+                -rangePenalty,
+            );
+            heroRoller.addNumber(pslValue, "Penalty Skill Levels");
+        }
+
         if (rangePenalty) {
             heroRoller.addNumber(rangePenalty, "Range penalty");
         }
@@ -368,14 +442,18 @@ export async function AttackToHit(item, options) {
         }
     }
 
-    // Combat Skill Levels
-    let csl = CombatSkillLevelsForAttack(item);
-    if (csl.ocv || csl.omcv > 0) {
-        heroRoller.addNumber(csl.ocv || csl.omcv, csl.item.name);
-    }
+    let dcv = parseInt(item.system.dcv || 0);
+    let dmcv = parseInt(item.system.dmcv || 0);
 
-    let dcv = parseInt(item.system.dcv || 0) + csl.dcv;
-    let dmcv = parseInt(item.system.dmcv || 0) + csl.dmcv;
+    // Combat Skill Levels
+
+    for (const csl of CombatSkillLevelsForAttack(item)) {
+        if (csl.ocv || csl.omcv > 0) {
+            heroRoller.addNumber(csl.ocv || csl.omcv, csl.item.name);
+        }
+        dcv += csl.dcv;
+        dmcv += csl.dmcv;
+    }
 
     // Haymaker -5 DCV
     const haymakerManeuver = item.actor.items.find(
@@ -633,21 +711,40 @@ export async function AttackToHit(item, options) {
     // If AOE then sort by distance from center
     if (explosion) {
         targetsArray.sort(function (a, b) {
-            let distanceA = canvas.grid.measureDistance(aoeTemplate, a, {
+            const distanceA = canvas.grid.measureDistance(aoeTemplate, a, {
                 gridSpaces: true,
             });
-            let distanceB = canvas.grid.measureDistance(aoeTemplate, b, {
+            const distanceB = canvas.grid.measureDistance(aoeTemplate, b, {
                 gridSpaces: true,
             });
             return distanceA - distanceB;
         });
     }
 
+    // At least one target (even if it is bogus)
+    if (targetsArray.length === 0) {
+        targetsArray.push({});
+    }
+
     // Make attacks against all targets
     for (const target of targetsArray) {
         let targetDefenseValue = RoundFavorPlayerUp(
-            target.actor.system.characteristics[toHitChar.toLowerCase()].value,
+            target.actor?.system.characteristics[toHitChar.toLowerCase()]
+                ?.value,
         );
+
+        // Bases have no DCV.  DCV=3; 0 if adjacent
+        // Mind Scan defers DMCV so use 3 for now
+        if (isNaN(targetDefenseValue) || target.actor.type === "base2") {
+            if (
+                !target.actor ||
+                canvas.grid.measureDistance(actor.token, target) > 2
+            ) {
+                targetDefenseValue = 3;
+            } else {
+                targetDefenseValue = 0;
+            }
+        }
 
         const targetHeroRoller = aoeAlwaysHit ? heroRoller : heroRoller.clone();
         let toHitRollTotal = 0;
@@ -698,7 +795,7 @@ export async function AttackToHit(item, options) {
 
         targetData.push({
             id: target.id,
-            name: target.name,
+            name: target.name || "undefined",
             aoeAlwaysHit: aoeAlwaysHit,
             explosion: explosion,
             toHitChar: toHitChar,
@@ -834,6 +931,7 @@ export async function AttackToHit(item, options) {
     const cardData = {
         // dice rolls
         velocity: options.velocity,
+        toHitRollTotal: targetData?.[0]?.toHitRollTotal,
 
         // data for damage card
         actor,
@@ -851,6 +949,9 @@ export async function AttackToHit(item, options) {
         // misc
         tags: heroRoller.tags(),
         attackTags: getAttackTags(item),
+        maxMinds: CONFIG.HERO.mindScanChoices
+            .find((o) => o.key === parseInt(options.mindScanChoices))
+            ?.label.match(/[\d,]+/)?.[0],
     };
 
     // render card
@@ -1003,6 +1104,14 @@ function getAttackTags(item) {
                     });
             }
         }
+    }
+
+    // MartialArts NND
+    if (item.system.EFFECT?.includes("NND")) {
+        attackTags.push({
+            name: `NND`,
+            title: `No Normal Defense`,
+        });
     }
 
     return attackTags;
@@ -1513,6 +1622,149 @@ export async function _onRollDamage(event) {
     return ChatMessage.create(chatData);
 }
 
+export async function _onRollMindscan(event) {
+    console.log(event);
+    const button = event.currentTarget;
+    button.blur(); // The button remains highlighted for some reason; kluge to fix.
+    const toHitData = { ...button.dataset };
+    const item = fromUuidSync(event.currentTarget.dataset.itemid);
+
+    // Determine targets based on which button they clicked on
+    let possibleTargets = [];
+    let selectedTargetIds = [];
+    switch (toHitData.target) {
+        case "controlled":
+            // Only tokens that have EGO
+            possibleTargets = canvas.tokens.controlled.filter(
+                (t) =>
+                    t.actor &&
+                    getCharacteristicInfoArrayForActor(t.actor).find(
+                        (o) => o.key === "EGO",
+                    ),
+            );
+            break;
+        case "scene":
+            // Only tokens that have EGO
+            possibleTargets = game.scenes.current.tokens.filter(
+                (t) =>
+                    t.actor &&
+                    getCharacteristicInfoArrayForActor(t.actor).find(
+                        (o) => o.key === "EGO",
+                    ),
+            );
+            break;
+        case "world":
+            // Only tokens that have EGO
+            possibleTargets = game.actors.filter((t) =>
+                getCharacteristicInfoArrayForActor(t.actor).find(
+                    (o) => o.key === "EGO",
+                ),
+            );
+            break;
+        default:
+            console.error("unhandled target");
+    }
+
+    if (possibleTargets.length === 0) {
+        return ui.notifications.warn(
+            `You must select at least one token before rolling Mind Scan.`,
+        );
+    }
+
+    possibleTargets.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Check if maxMinds is >= possibleTargets, if so check them all
+    const maxMinds = parseInt(toHitData.maxminds);
+    if (maxMinds >= possibleTargets.length) {
+        selectedTargetIds = possibleTargets.map((t) => t.id);
+    } else {
+        // If maxMinds is < possibleTargets then pick maxMind targets at random
+        // Use a for loop in an attempt to avoid infinte loop
+        for (let x = 0; x < possibleTargets.length * 10; x++) {
+            if (selectedTargetIds.length < maxMinds) {
+                const i = Math.floor(Math.random() * possibleTargets.length);
+                if (!selectedTargetIds.includes(possibleTargets[i].id)) {
+                    selectedTargetIds.push(possibleTargets[i].id);
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    // Show all these tokens/actors to the GM so they can confirm they are valid options based on mind type.
+    const toHitRollTotal = parseInt(toHitData.toHitRollTotal);
+    const cols = Math.clamp(Math.ceil(possibleTargets.length / 30), 1, 4);
+    let html = `<ol class="columns${cols}">`;
+    for (const target of possibleTargets) {
+        const actor = target.actor || actor;
+        const dmcv = parseInt(
+            (target.actor || target).system.characteristics.dmcv.value,
+        );
+
+        html += `<li title="DMCV=${dmcv}"><input type="checkbox" name="${
+            target.id
+        }" ${selectedTargetIds.includes(target.id) ? 'checked="true"' : ""} ${
+            toHitRollTotal >= dmcv ? "data-hit=true" : ""
+        } />`;
+        // bold targets we hit toHitRollTotal >= DMCV.  target is a token or an actor.
+        if (toHitRollTotal >= dmcv) {
+            html += `<b>${target.name}</b></li>`;
+        } else {
+            html += `${target.name}</li>`;
+        }
+    }
+    html += "</ol>";
+
+    await new Promise((resolve) => {
+        const data = {
+            title: `Confirm Valid Mind Scan targets`,
+            content: html,
+            item: item,
+            buttons: {
+                normal: {
+                    label: "Confirm",
+                    callback: async function (html) {
+                        const knownMindScanTargetsWeHit = Array.from(
+                            html
+                                .find(`input:checked[data-hit="true"]`)
+                                .map(function () {
+                                    return this.name;
+                                }),
+                        );
+                        console.log(knownMindScanTargetsWeHit);
+                        let content = `${item.actor.name} used Mind Scan and knows the presence and general location of following minds:<br>`;
+                        content += "<ol>";
+                        content += knownMindScanTargetsWeHit.reduce(
+                            (accumulator, currentValue) =>
+                                `${accumulator}<li>${
+                                    possibleTargets.find(
+                                        (p) => p.id === currentValue,
+                                    )?.name
+                                }</li>`,
+                            "",
+                        );
+                        content += "</ol>";
+                        const chatData = {
+                            user: game.user._id,
+                            type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+                            content,
+                        };
+
+                        await ChatMessage.create(chatData);
+                    },
+                },
+                cancel: {
+                    label: "Cancel",
+                },
+            },
+            default: "normal",
+            close: () => resolve({ cancelled: true }),
+        };
+        new Dialog(data, { width: "auto" }).render(true);
+    });
+}
+
 // Event handler for when the Apply Damage button is
 // clicked on item-damage-card.hbs
 // Notice the chatListeners function in this file.
@@ -1600,7 +1852,21 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
 
     const automation = game.settings.get(HEROSYS.module, "automation");
 
-    const avad = item.findModsByXmlid("AVAD");
+    // Attack Verses Alternate Defense (6e) or NND (5e)
+    let avad = item.findModsByXmlid("AVAD") || item.findModsByXmlid("NND");
+
+    // Martial Arts also have NND's which are special AVAD and always/usually PD
+    if (!avad && item.system.EFFECT?.includes("NND")) {
+        avad = {
+            INPUT: "PD",
+        };
+        item.system.INPUT = "PD";
+    }
+
+    // Try to make sure we have a PD/ED/MD type for AVAD
+    if (avad && !avad.INPUT && item.system.INPUT) {
+        avad.INPUT = item.system.INPUT;
+    }
 
     // Check for conditional defenses
     let ignoreDefenseIds = [];
@@ -1625,6 +1891,36 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
         conditionalDefenses.push(...lifeSupport);
     }
 
+    // AVAD characteristic defenses (PD/ED)
+    if (avad) {
+        const pd = parseInt(token.actor.system.characteristics.pd.value);
+        if (pd > 0 && item.system.INPUT === "PD") {
+            conditionalDefenses.push({
+                name: "PD",
+                id: "PD",
+                system: {
+                    XMLID: "PD",
+                    INPUT: "Physical",
+                    LEVELS: pd,
+                    description: `${pd} PD from characteristics`,
+                },
+            });
+        }
+        const ed = parseInt(token.actor.system.characteristics.pd.value);
+        if (ed > 0 && item.system.INPUT === "ED") {
+            conditionalDefenses.push({
+                name: "ED",
+                id: "ED",
+                system: {
+                    XMLID: "ED",
+                    INPUT: "Energy",
+                    LEVELS: ed,
+                    description: `${ed} ED from characteristics`,
+                },
+            });
+        }
+    }
+
     if (conditionalDefenses.length > 0) {
         const template2 = `systems/${HEROSYS.module}/templates/attack/item-conditional-defense-card.hbs`;
 
@@ -1637,43 +1933,44 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
                 conditions: "",
             };
 
-            // AVAD: Attempt to check likely defenses
-            if (avad) {
-                // PD, ED, MD
-                if (avad.INPUT.toUpperCase() === defense.system.XMLID)
-                    option.checked = true;
+            // Attempt to check likely defenses
 
+            // PD, ED, MD
+            if (avad.INPUT?.toUpperCase() === defense?.system?.XMLID)
+                option.checked = true;
+
+            if (defense instanceof HeroSystem6eItem) {
                 // Damage Reduction
                 if (
-                    avad.INPUT.toUpperCase() == "PD" &&
+                    avad.INPUT?.toUpperCase() == "PD" &&
                     defense.system.INPUT === "Physical"
                 )
                     option.checked = true;
                 if (
-                    avad.INPUT.toUpperCase() == "ED" &&
-                    defense.system.INPUT === "Energy"
+                    avad.INPUT?.toUpperCase() == "ED" &&
+                    defense.system?.INPUT === "Energy"
                 )
                     option.checked = true;
                 if (
                     avad.INPUT.replace("Mental Defense", "MD").toUpperCase() ==
                         "MD" &&
-                    defense.system.INPUT === "Mental"
+                    defense.system?.INPUT === "Mental"
                 )
                     option.checked = true;
 
                 // Damage Negation
                 if (
-                    avad.INPUT.toUpperCase() == "PD" &&
+                    avad.INPUT?.toUpperCase() == "PD" &&
                     defense.findModsByXmlid("PHYSICAL")
                 )
                     option.checked = true;
                 if (
-                    avad.INPUT.toUpperCase() == "ED" &&
-                    defense.findModsByXmlid("ENERGY")
+                    avad.INPUT?.toUpperCase() == "ED" &&
+                    defense?.findModsByXmlid("ENERGY")
                 )
                     option.checked = true;
                 if (
-                    avad.INPUT.replace("Mental Defense", "MD").toUpperCase() ==
+                    avad.INPUT?.replace("Mental Defense", "MD").toUpperCase() ==
                         "MD" &&
                     defense.findModsByXmlid("MENTAL")
                 )
@@ -1681,21 +1978,21 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
 
                 // Flash Defense
                 if (
-                    avad.INPUT.match(/flash/i) &&
+                    avad.INPUT?.match(/flash/i) &&
                     defense.system.XMLID === "FLASHDEFENSE"
                 )
                     option.checked = true;
 
                 // Power Defense
                 if (
-                    avad.INPUT.match(/power/i) &&
+                    avad.INPUT?.match(/power/i) &&
                     defense.system.XMLID === "POWERDEFENSE"
                 )
                     option.checked = true;
 
                 // Life Support
                 if (
-                    avad.INPUT.match(/life/i) &&
+                    avad.INPUT?.match(/life/i) &&
                     defense.system.XMLID === "LIFESUPPORT"
                 )
                     option.checked = true;
@@ -1722,23 +2019,23 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
 
                 // FORCEFIELD, RESISTANT PROTECTION
                 if (
-                    avad.INPUT.toUpperCase() == "PD" &&
+                    avad.INPUT?.toUpperCase() == "PD" &&
                     parseInt(defense.system.PDLEVELS || 0) > 0
                 )
                     option.checked = true;
                 if (
-                    avad.INPUT.toUpperCase() == "ED" &&
+                    avad.INPUT?.toUpperCase() == "ED" &&
                     parseInt(defense.system.EDLEVELS || 0) > 0
                 )
                     option.checked = true;
                 if (
-                    avad.INPUT.replace("Mental Defense", "MD").toUpperCase() ==
+                    avad.INPUT?.replace("Mental Defense", "MD").toUpperCase() ==
                         "MD" &&
                     parseInt(defense.system.MDLEVELS || 0) > 0
                 )
                     option.checked = true;
                 if (
-                    avad.INPUT.match(/power/i) &&
+                    avad.INPUT?.match(/power/i) &&
                     parseInt(defense.system.POWDLEVELS || 0) > 0
                 )
                     option.checked = true;
@@ -1769,7 +2066,7 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
                             },
                         },
                         cancel: {
-                            label: "cancel",
+                            label: "Cancel",
                             callback: () => {
                                 resolve(null);
                             },
@@ -1791,7 +2088,10 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
         for (let input of inputs) {
             if (!input.checked) {
                 ignoreDefenseIds.push(input.id);
-                defenses.push(token.actor.items.get(input.id));
+                defenses.push(
+                    token.actor.items.get(input.id) ||
+                        conditionalDefenses.find((o) => o.id === input.id),
+                );
             }
         }
 
@@ -1823,6 +2123,24 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
             };
 
             await ChatMessage.create(chatData);
+        }
+    }
+
+    // Some defenses requre a roll not just to active, but on each use.  6e EVERYPHASE.  5e ACTIVATIONROLL
+    const defenseEveryPhase = token.actor.items.filter(
+        (o) =>
+            (o.system.subType || o.system.type) === "defense" &&
+            o.system.active &&
+            (o.findModsByXmlid("EVERYPHASE") ||
+                o.findModsByXmlid("ACTIVATIONROLL")),
+    );
+
+    for (const defense of defenseEveryPhase) {
+        if (!ignoreDefenseIds.includes(defense.id)) {
+            const success = await RequiresASkillRollCheck(defense);
+            if (!success) {
+                ignoreDefenseIds.push(defense.id);
+            }
         }
     }
 
@@ -1867,7 +2185,7 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
 
     // AVAD All or Nothing
     if (avad) {
-        const nnd = avad.ADDER.find((o) => o.XMLID === "NND"); // Check for ALIAS="All Or Nothing" shouldn't be necessary
+        const nnd = avad.ADDER?.find((o) => o.XMLID === "NND"); // Check for ALIAS="All Or Nothing" shouldn't be necessary
         if (nnd && damageData.defenseAvad === 0) {
             // render card
             let speaker = ChatMessage.getSpeaker({ actor: item.actor });
@@ -1958,8 +2276,14 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
         damageDetail.stun = 0;
     }
 
-    // check if target is stunned
-    if (game.settings.get(HEROSYS.module, "stunned")) {
+    // See if token has CON.  Notice we check raw actor type from config, not current actor props as
+    // this token may have originally been a PC, and changed to a BASE.
+    const hasCON = getCharacteristicInfoArrayForActor(token.actor).find(
+        (o) => o.key === "CON",
+    );
+
+    // check if target is stunned.  Must have CON
+    if (game.settings.get(HEROSYS.module, "stunned") && hasCON) {
         // determine if target was Stunned
         if (
             damageDetail.stun > token.actor.system.characteristics.con.value &&
@@ -2041,6 +2365,7 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
 
         // misc
         tags: defenseTags,
+        attackTags: getAttackTags(item),
         targetToken: token,
     };
 
@@ -2064,13 +2389,22 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
         (automation === "npcOnly" && token.actor.type === "npc")
     ) {
         let changes = {
-            "system.characteristics.stun.value":
-                token.actor.system.characteristics.stun.value -
-                damageDetail.stun,
             "system.characteristics.body.value":
                 token.actor.system.characteristics.body.value -
                 damageDetail.body,
         };
+
+        // See if token has STUN.  Notice we check raw actor type from config, not current actor props as
+        // this token may have originally been a PC, and changed to a BASE.
+        const hasSTUN = getCharacteristicInfoArrayForActor(token.actor).find(
+            (o) => o.key === "STUN",
+        );
+
+        if (hasSTUN) {
+            changes["system.characteristics.stun.value"] =
+                token.actor.system.characteristics.stun?.value -
+                damageDetail.stun;
+        }
         await token.actor.update(changes);
     }
 
@@ -2544,7 +2878,14 @@ async function _calcKnockback(body, item, options, knockbackMultiplier) {
     let knockbackRoller = null;
     let knockbackResultTotal = null;
 
-    if (game.settings.get(HEROSYS.module, "knockback") && knockbackMultiplier) {
+    // BASEs do not experience KB
+    const isBase = options?.targetToken?.actor.type === "base2";
+
+    if (
+        game.settings.get(HEROSYS.module, "knockback") &&
+        knockbackMultiplier &&
+        !isBase
+    ) {
         useKnockback = true;
 
         let knockbackDice = 2;

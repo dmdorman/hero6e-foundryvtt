@@ -12,7 +12,7 @@ Star Hero © 2003, 2011 by DOJ, Inc. d/b/a Hero Games. All rights reserved.
 All DOJ trademarks and copyrights used with permission.
 For further information about Hero Games and the HERO System, visit [www.herogames.com](https://www.herogames.com).
 
-Support can be found by creating a [new issue](https://github.com/dmdorman/hero6e-foundryvtt/issues), starting a [new discussion](https://github.com/dmdorman/hero6e-foundryvtt/discussions) or on the Hero-Champions-RPG (unofficial) Foundry-vtt [Discord Channel](https://discord.gg/HcUJvJH).
+Support can be found by creating a [new issue](https://github.com/dmdorman/hero6e-foundryvtt/issues), starting a [new discussion](https://github.com/dmdorman/hero6e-foundryvtt/discussions) or on the Hero-Champions-RPG (unofficial) Foundry-vtt [Discord Channel](https://discord.com/channels/609528652878839828/770825017729482772).
 
 We have a [YouTube channel](https://www.youtube.com/channel/UCcmq0WFFNZNhRSGwuEHOgRg) with some how to videos.
 ​

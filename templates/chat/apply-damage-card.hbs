@@ -28,25 +28,9 @@
   {{/if}}
 
   <div class="tags">
-    <span class="tag">{{item.system.class}}</span>
-    {{#if item.system.killing}}
-    <span class="tag">killing</span>
-    {{/if}}
-    {{#if (and item.system.stunBodyDamage (ne item.system.stunBodyDamage 'stunbody'))}}
-    <span class="tag">{{item.system.stunBodyDamage}}</span>
-    {{/if}}
-    {{#if item.system.piercing}}
-    <span class="tag" title="Armor Piercing">APx{{item.system.piercing}}</span>
-    {{/if}}
-    {{#if item.system.penetrating}}
-    <span class="tag" title="Penetrating">PENx{{item.system.penetrating}}</span>
-    {{/if}}
-    {{#if (ne item.system.areaOfEffect.type 'none')}}
-    <span class="tag area-effect-tag" data-aoe-type="{{item.system.areaOfEffect.type}}"
-      data-aoe-value="{{item.system.areaOfEffect.value}}">
-      {{item.system.areaOfEffect.type}} ({{item.system.areaOfEffect.value}})
-    </span>
-    {{/if}}
+    {{#each attackTags as |tag id|}}
+        <span class="tag" {{#if tag.title}}title="{{tag.title}}" {{/if}}>{{tag.name}}</span>
+    {{/each}}
   </div>
 
   <hr>

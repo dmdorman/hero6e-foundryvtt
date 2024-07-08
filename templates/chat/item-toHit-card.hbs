@@ -14,18 +14,29 @@
             {{#each targetData as |target|}}
             <div class="target-dc">
 
-                <span>Target: {{target.name}}</span>
-                <span data-visibility="gm">
-                    ({{target.toHitChar}} {{target.value}})
-                </span>
-                <br />
-                <span>
-                    Result: <span class="{{target.result.hit}}">{{target.result.hit}}</span>
-                    {{#if target.aoeAlwaysHit}}
-                        due to AOE
-                    {{/if}}
-                    <span data-visibility="gm" class="resultBy">by {{target.result.by}}</span>
-                </span>
+                {{#if ../maxMinds}}
+                    Target: <span data-visibility="gm">{{target.name}}</span><span data-visibility="notgm"><i>redacted</i></span>
+                    <span data-visibility="gm">
+                        ({{target.toHitChar}} {{target.value}})
+                    </span>
+                    <br />
+                    Result: <span data-visibility="gm" class="{{target.result.hit}}">{{target.result.hit}}
+                    </span>
+                    <span data-visibility="notgm"><i>redacted</i></span>
+                {{else}}
+                    <span>Target: {{target.name}}</span>
+                    <span data-visibility="gm">
+                        ({{target.toHitChar}} {{target.value}})
+                    </span>
+                    <br />
+                    <span>
+                        Result: <span class="{{target.result.hit}}">{{target.result.hit}}</span>
+                        {{#if target.aoeAlwaysHit}}
+                            due to AOE
+                        {{/if}}
+                        <span data-visibility="gm" class="resultBy">by {{target.result.by}}</span>
+                    </span>
+                {{/if}}
             </div>
             {{/each}}
             {{#unless targetData}}
@@ -61,7 +72,12 @@
         {{#each targetData as |target|}}
             {{#unless target.aoeAlwaysHit}}
                 <div class="card-section">
+                   
+                    {{#if ../maxMinds}}
+                    <div class="description-tiny">{{../maxMinds}} mind(s)</div>
+                    {{else}}
                     <div class="description-tiny">Attack Roll<br>vs.<br>{{target.name}}</div>
+                    {{/if}}
                     <div class="hit-roll">{{{ target.renderedRoll }}}</div>
                     <div class="description-medium">
                         {{{ target.hitRollText }}}
@@ -73,17 +89,44 @@
             {{/unless}}
         {{/each}}
 
-        <div data-visibility="{{actor.id}}">
-            <button class="roll-damage" data-itemId="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
-                data-damageMod="{{damageMod}}" data-hitRollData="{{hitRollData}}"
-                data-effectiveStr="{{effectiveStr}}" data-targetIds="{{targetIds}}" data-velocity="{{velocity}}" 
-                data-boostable-Charges="{{boostableCharges}}">
-                {{#if (or adjustment senseAffecting)}}
-                    Roll {{item.system.XMLID}}
-                {{else}}
-                    Roll Damage
-                {{/if}}
-            </button>
-        </div>
+        {{#if maxMinds}}
+            <div>
+                <i>The Game Master is finding valid targets for Mind Scan.</i>
+            </div>
+            <div data-visibility="gm">
+                <button class="roll-mindscan" data-itemId="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
+                    data-damageMod="{{damageMod}}" data-hitRollData="{{hitRollData}}"
+                    data-effectiveStr="{{effectiveStr}}" data-targetIds="{{targetIds}}" data-velocity="{{velocity}}" 
+                    data-boostable-Charges="{{boostableCharges}}" data-maxMinds="{{maxMinds}}" data-to-hit-roll-total="{{toHitRollTotal}}" data-target="controlled" title="Select appropriate token(s) with mouse, drag box around or shift-click.">
+                    Roll Mind Scan
+                </button>
+                <button class="roll-mindscan" data-itemId="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
+                    data-damageMod="{{damageMod}}" data-hitRollData="{{hitRollData}}"
+                    data-effectiveStr="{{effectiveStr}}" data-targetIds="{{targetIds}}" data-velocity="{{velocity}}" 
+                    data-boostable-Charges="{{boostableCharges}}" data-maxMinds="{{maxMinds}}" data-to-hit-roll-total="{{toHitRollTotal}}" data-target="scene">
+                    All Tokens in Scene ({{maxMinds}} max)
+                </button>
+                <button class="roll-mindscan" data-itemId="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
+                    data-damageMod="{{damageMod}}" data-hitRollData="{{hitRollData}}"
+                    data-effectiveStr="{{effectiveStr}}" data-targetIds="{{targetIds}}" data-velocity="{{velocity}}" 
+                    data-boostable-Charges="{{boostableCharges}}" data-maxMinds="{{maxMinds}}" data-to-hit-roll-total="{{toHitRollTotal}}" data-target="world">
+                    All Tokens in World ({{maxMinds}} max)
+                </button>
+            </div>
+
+        {{else}}
+            <div data-visibility="{{actor.id}}">
+                <button class="roll-damage" data-itemId="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
+                    data-damageMod="{{damageMod}}" data-hitRollData="{{hitRollData}}"
+                    data-effectiveStr="{{effectiveStr}}" data-targetIds="{{targetIds}}" data-velocity="{{velocity}}" 
+                    data-boostable-Charges="{{boostableCharges}}">
+                    {{#if (or adjustment senseAffecting)}}
+                        Roll {{item.system.XMLID}}
+                    {{else}}
+                        Roll Damage
+                    {{/if}}
+                </button>
+            </div>
+        {{/if}}
     </div>
 </div>

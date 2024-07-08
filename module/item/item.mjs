@@ -9,7 +9,11 @@ import {
     determineMaxAdjustment,
 } from "../utility/adjustment.mjs";
 import { onActiveEffectToggle } from "../utility/effects.mjs";
-import { getPowerInfo, getModifierInfo } from "../utility/util.mjs";
+import {
+    getPowerInfo,
+    getModifierInfo,
+    whisperUserTargetsForActor,
+} from "../utility/util.mjs";
 import { RoundFavorPlayerDown, RoundFavorPlayerUp } from "../utility/round.mjs";
 import {
     convertToDcFromItem,
@@ -291,7 +295,7 @@ export class HeroSystem6eItem extends Item {
                         ui.notifications.warn(
                             `${this.system.XMLID} roll is not fully supported`,
                         );
-                        return Attack.AttackOptions(this);
+                        return Attack.AttackOptions(this, event);
                 }
 
             case "defense":
@@ -329,20 +333,27 @@ export class HeroSystem6eItem extends Item {
         let content = `<div class="item-chat">`;
 
         // Part of a framework (is there a PARENTID?)
-        if (this.system.PARENTID) {
-            const parent = this.actor.items.find(
-                (o) => o.system.ID == this.system.PARENTID,
-            );
-            if (parent) {
-                content += `<p><b>${parent.name}</b>`;
-                if (
-                    parent.system.description &&
-                    parent.system.description != parent.name
-                ) {
-                    content += ` ${parent.system.description}`;
-                }
-                content += ".</p>";
+        if (this.parentItem?.parentItem) {
+            const _parentItem = this.parentItem.parentItem;
+            content += `<p><b>${_parentItem.name}</b>`;
+            if (
+                _parentItem.system.description &&
+                _parentItem.system.description != parent.name
+            ) {
+                content += ` ${_parentItem.system.description}`;
             }
+            content += ".</p>";
+        }
+        if (this.parentItem) {
+            const _parentItem = this.parentItem;
+            content += `<p><b>${_parentItem.name}</b>`;
+            if (
+                _parentItem.system.description &&
+                _parentItem.system.description != parent.name
+            ) {
+                content += ` ${_parentItem.system.description}`;
+            }
+            content += ".</p>";
         }
         content += `<b>${this.name}`;
         if (
@@ -472,7 +483,7 @@ export class HeroSystem6eItem extends Item {
                     user: game.user._id,
                     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
                     content: `Spent ${end} END to activate ${item.name}`,
-                    whisper: ChatMessage.getWhisperRecipients("GM"),
+                    whisper: whisperUserTargetsForActor(item.actor),
                     speaker,
                 };
                 await ChatMessage.create(chatData);
@@ -483,7 +494,7 @@ export class HeroSystem6eItem extends Item {
                     user: game.user._id,
                     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
                     content: `Activated ${item.name}`,
-                    whisper: ChatMessage.getWhisperRecipients("GM"),
+                    whisper: whisperUserTargetsForActor(item.actor),
                     speaker,
                 };
                 await ChatMessage.create(chatData);
@@ -513,7 +524,7 @@ export class HeroSystem6eItem extends Item {
                 user: game.user._id,
                 type: CONST.CHAT_MESSAGE_TYPES.OTHER,
                 content: `Turned off ${item.name}`,
-                whisper: ChatMessage.getWhisperRecipients("GM"),
+                whisper: whisperUserTargetsForActor(item.actor),
                 speaker,
             };
             await ChatMessage.create(chatData);
@@ -583,6 +594,13 @@ export class HeroSystem6eItem extends Item {
             default:
                 ui.notifications.warn(`${this.name} toggle may be incomplete`);
                 break;
+        }
+
+        // If we have control of this token, reaquire to update movement types
+        const myToken = this.actor?.getActiveTokens()?.[0];
+        if (canvas.tokens.controlled.find((t) => t.id == myToken.id)) {
+            myToken.release();
+            myToken.control();
         }
     }
 
@@ -678,10 +696,19 @@ export class HeroSystem6eItem extends Item {
     ];
     static ItemXmlChildTags = ["ADDER", "MODIFIER", "POWER"];
 
+    static ItemXmlChildTagsUpload = [
+        "ADDER",
+        "MODIFIER",
+        "POWER",
+        "SKILL",
+        "PERK",
+        "TALENT",
+    ];
+
     findModsByXmlid(xmlid) {
         for (const key of HeroSystem6eItem.ItemXmlChildTags) {
             if (this.system?.[key]) {
-                const value = this.system[key].find((o) => o.XMLID === xmlid);
+                const value = this.system[key]?.find((o) => o.XMLID === xmlid);
                 if (value) {
                     return value;
                 }
@@ -712,12 +739,13 @@ export class HeroSystem6eItem extends Item {
         }
 
         // Power framework may include this modifier
-        if (this.system.PARENTID && this.actor?.items) {
-            const parent = this.actor.items.find(
-                (o) => o.system.ID == this.system.PARENTID,
-            );
-            if (parent) {
-                return parent.findModsByXmlid(xmlid);
+        if (
+            this.parentItem &&
+            !this.parentItem.XMLID === "COMPOUNDPOWER" &&
+            this.actor?.items
+        ) {
+            if (this.parentItem) {
+                return this.parentItem.findModsByXmlid(xmlid);
             }
         }
 
@@ -1115,23 +1143,30 @@ export class HeroSystem6eItem extends Item {
         // TODO: NOTE: This shouldn't just be for defense type. Should probably get rid of the subType approach.
         if (
             configPowerInfo &&
-            configPowerInfo.behaviors.includes("activatable")
+            (configPowerInfo.behaviors.includes("activatable") ||
+                configPowerInfo?.type?.includes("characteristic"))
         ) {
             const newDefenseValue = "defense";
-            if (this.system.subType !== newDefenseValue) {
+
+            if (
+                this.system.subType !== newDefenseValue &&
+                configPowerInfo.behaviors.includes("activatable")
+            ) {
                 this.system.subType = newDefenseValue;
                 this.system.showToggle = true;
                 changed = true;
+            }
 
-                if (
-                    this.system.charges?.value > 0 ||
-                    this.system.AFFECTS_TOTAL === false ||
-                    configPowerInfo.duration === "instant"
-                ) {
-                    this.system.active ??= false;
-                } else {
-                    this.system.active ??= true;
-                }
+            // Default toggles to ON unless they are instant, have charges, part of a MULTIPOWER, etc
+            if (
+                this.system.charges?.value > 0 ||
+                this.system.AFFECTS_TOTAL === false ||
+                configPowerInfo.duration === "instant" ||
+                this.parentItem?.system.XMLID === "MULTIPOWER"
+            ) {
+                this.system.active ??= false;
+            } else {
+                this.system.active ??= true;
             }
         }
 
@@ -1301,6 +1336,73 @@ export class HeroSystem6eItem extends Item {
                                     break;
                             }
                             break;
+                        case "PENALTY_SKILL_LEVELS":
+                            // Skip mental powers
+                            if (attackItem.baseInfo.type.includes("mental")) {
+                                continue;
+                            }
+                            switch (this.system.OPTIONID) {
+                                case "SINGLE":
+                                    if (count === 0) {
+                                        // Is this part of a framework/compound power/list?
+                                        if (this.parentItem) {
+                                            if (
+                                                this.parentItem.id ===
+                                                attackItem.parentItem?.id
+                                            ) {
+                                                addMe = true;
+                                            }
+                                        } else {
+                                            addMe = true;
+                                        }
+
+                                        // Assumed penalty type
+                                        if (
+                                            addMe &&
+                                            [
+                                                "limited range",
+                                                "standard",
+                                                "range based on str",
+                                            ].includes(attackItem.system.range)
+                                        ) {
+                                            this.system.penalty ??= "range";
+                                        }
+                                    }
+                                    break;
+                                case "THREE":
+                                    if (count < 3) {
+                                        addMe = true;
+
+                                        // Assumed penalty type
+                                        if (
+                                            addMe &&
+                                            [
+                                                "limited range",
+                                                "standard",
+                                                "range based on str",
+                                            ].includes(attackItem.system.range)
+                                        ) {
+                                            this.system.penalty ??= "range";
+                                        }
+                                    }
+                                    break;
+                                case "ALL":
+                                    addMe = true;
+
+                                    // Assumed penalty type
+                                    if (
+                                        addMe &&
+                                        [
+                                            "limited range",
+                                            "standard",
+                                            "range based on str",
+                                        ].includes(attackItem.system.range)
+                                    ) {
+                                        this.system.penalty ??= "range";
+                                    }
+                                    break;
+                            }
+                            break;
                         case "MENTAL_COMBAT_LEVELS":
                             // Skip non-mental powers
                             if (!attackItem.baseInfo.type.includes("mental")) {
@@ -1379,6 +1481,7 @@ export class HeroSystem6eItem extends Item {
                 },
             ];
             activeEffect.transfer = true;
+            activeEffect.disabled = !this.system.active;
 
             if (activeEffect.update) {
                 await activeEffect.update({
@@ -1416,6 +1519,7 @@ export class HeroSystem6eItem extends Item {
                 },
             ];
             activeEffect.transfer = true;
+            activeEffect.disabled = !this.system.active;
 
             if (activeEffect.update) {
                 const oldMax =
@@ -1471,6 +1575,7 @@ export class HeroSystem6eItem extends Item {
                 },
             ];
             activeEffect.transfer = true;
+            activeEffect.disabled = !this.system.active;
 
             if (activeEffect.update) {
                 await activeEffect.update({
@@ -1500,7 +1605,12 @@ export class HeroSystem6eItem extends Item {
         // Growth5e (+10 STR, +2 BODY, +2 STUN, -2" KB, 400 kg, +0 DCV, +0 PER Rolls to perceive character, 3 m tall, 2 m wide)
         // Growth6e (+15 STR, +5 CON, +5 PRE, +3 PD, +3 ED, +3 BODY, +6 STUN, +1m Reach, +12m Running, -6m KB, 101-800 kg, +2 to OCV to hit, +2 to PER Rolls to perceive character, 2-4m tall, 1-2m wide)
         // Growth6e is a static template.  LEVELS are ignored, instead use OPTIONID.
-        if (changed && this.id && this.system.XMLID === "GROWTH") {
+        if (
+            changed &&
+            this.id &&
+            this.system.XMLID === "GROWTH" &&
+            this.system.active
+        ) {
             const details = configPowerInfo?.details(this) || {};
             let activeEffect = Array.from(this.effects)?.[0] || {};
             activeEffect.name =
@@ -1589,7 +1699,12 @@ export class HeroSystem6eItem extends Item {
 
         // 6e Shrinking (1 m tall, 12.5 kg mass, -2 PER Rolls to perceive character, +2 DCV, takes +6m KB)
         // 5e Shrinking (1 m tall, 12.5 kg mass, -2 PER Rolls to perceive character, +2 DCV)
-        if (changed && this.id && this.system.XMLID === "SHRINKING") {
+        if (
+            changed &&
+            this.id &&
+            this.system.XMLID === "SHRINKING" &&
+            this.system.active
+        ) {
             const dcvAdd = Math.floor(this.system.value) * 2;
 
             let activeEffect = Array.from(this.effects)?.[0] || {};
@@ -2645,11 +2760,21 @@ export class HeroSystem6eItem extends Item {
 
             case "PENALTY_SKILL_LEVELS":
                 system.description =
-                    system.NAME +
+                    (system.NAME || system.ALIAS) +
                     ": +" +
                     system.value +
                     " " +
                     system.OPTION_ALIAS;
+
+                // Penalty details
+                switch (system.penalty) {
+                    case "range":
+                        system.description = system.description.replace(
+                            "a specific negative OCV modifier",
+                            "range OCV penalties",
+                        );
+                        break;
+                }
                 break;
 
             case "RKA":
@@ -2763,7 +2888,7 @@ export class HeroSystem6eItem extends Item {
             case "MENTAL_COMBAT_LEVELS":
             case "COMBAT_LEVELS":
                 // +1 with any single attack
-                system.description = `+${system.value} ${system.OPTION_ALIAS}`;
+                system.description = `${system.ALIAS}: +${system.value} ${system.OPTION_ALIAS}`;
                 break;
 
             case "WEAPON_MASTER":
@@ -3674,9 +3799,9 @@ export class HeroSystem6eItem extends Item {
     makeAttack() {
         // this.id will be null for temporary items (quench, defense left sidebar summary on actor sheet)
         // Keep this as it is handy for breakpoints
-        if (this.id) {
-            console.log("makeAttack", this);
-        }
+        // if (this.id) {
+        //     console.log("makeAttack", this);
+        // }
 
         const xmlid = this.system.XMLID;
 
@@ -3741,6 +3866,15 @@ export class HeroSystem6eItem extends Item {
             }
         }
 
+        // Fix CHOKE
+        if (this.system.EFFECT?.includes("NND")) {
+            const nndd6 = this.system.EFFECT.match(/NND (\d+)d6/);
+            const d6 = parseInt(nndd6?.[1]);
+            if (d6 > 0) {
+                this.system.DC = d6 * 2; // Were going to halve it later on in this function due to NND;
+            }
+        }
+
         this.system.subType = "attack";
         this.system.class = input === "ED" ? "energy" : "physical";
         this.system.dice = levels;
@@ -3757,7 +3891,7 @@ export class HeroSystem6eItem extends Item {
         this.system.dcv = dcv;
         this.system.stunBodyDamage = "stunbody";
 
-        // FLASHDC, BLOCK and DODGE do not use STR
+        // FLASHDC, BLOCK, DODGE do not use STR
         if (["maneuver", "martialart"].includes(this.type)) {
             if (
                 this.system.EFFECT &&
@@ -3767,6 +3901,22 @@ export class HeroSystem6eItem extends Item {
             ) {
                 this.system.usesStrength = false;
             }
+        }
+
+        // MAXSTR = 0 does not use STR (NNDs for example)
+        // BROKEN: Offensive Strike has MAXSTR = 0, which is wrong, so commenting this out for now.
+        // if (this.system.MAXSTR && parseInt(this.system.MAXSTR) === 0) {
+        //     this.system.usesStrength = false;
+        // }
+
+        // NND (the DC should be halved; suspect because of AVAD/NND implied limitation; Nerve Strike)
+        if (this.system.EFFECT?.includes("NND")) {
+            this.system.dice = Math.floor(parseInt(this.system.DC) / 2);
+            this.system.usesStrength = false;
+            this.system.EFFECT = this.system.EFFECT.replace(
+                `[NNDDC]`,
+                `${this.system.dice}d6 NND`,
+            );
         }
 
         // Specific power overrides
@@ -3813,6 +3963,7 @@ export class HeroSystem6eItem extends Item {
             this.system.noHitLocations = true;
         } else if (xmlid === "MINDSCAN") {
             this.system.class = "mindscan";
+            this.system.targets = "dmcv";
             this.system.usesStrength = false;
             this.system.noHitLocations = true;
         } else if (xmlid === "EGOATTACK") {
@@ -4383,7 +4534,7 @@ export class HeroSystem6eItem extends Item {
                 this.system.XMLID === "HEALING" ||
                 this.system.XMLID === "SUCCOR"
             ) {
-                enhances = this.system.INPUT;
+                enhances = this.system.INPUT || "undefined";
             } else {
                 reduces = this.system.INPUT;
             }
@@ -4522,7 +4673,7 @@ export function getItem(id) {
 
 export async function RequiresASkillRollCheck(item, event) {
     // Toggles don't need a roll to turn off
-    if (item.system?.active === true) return true;
+    //if (item.system?.active === true) return true;
 
     let rar = (item.system.MODIFIER || []).find(
         (o) => o.XMLID === "REQUIRESASKILLROLL" || o.XMLID === "ACTIVATIONROLL",
@@ -4647,10 +4798,9 @@ export async function RequiresASkillRollCheck(item, event) {
                         `${item.actor.name} has a power ${item.name}. ${OPTION_ALIAS} is not supported.`,
                         // { console: true, permanent: true },
                     );
+                    // Try to continue
+                    value = 11;
                 }
-
-                // Try to continue
-                value = 11;
         }
 
         const successValue = parseInt(value);

@@ -201,6 +201,12 @@ $sidebar-width: 136px;
     /* power description can be a bit too big; alternatives pct or flexbox */
 }
 
+/* Need this because .savuori.actor-sheet table tr td  is more specific and messes up padding for frameworks */
+.savuori.actor-sheet table tr td.item-framework-child-name {
+    padding-left: 27px;
+    text-indent: -17px;
+}
+
 .savuori.actor-sheet button {
     border-radius: 7px;
     border-color: rgb(236, 236, 236);
@@ -208,12 +214,12 @@ $sidebar-width: 136px;
     background-color: $sheet-highlight-background;
 }
 
-.savuori.actor-sheet .sidebar-actions button {
-    line-height: normal;
-    margin: 2px 0px;
-    padding: 4px 0;
-    width: calc($sidebar-width - 20%);
-}
+// .savuori.actor-sheet .sidebar-actions button {
+//     line-height: normal;
+//     margin: 2px 0px;
+//     padding: 4px 0;
+//     width: calc($sidebar-width - 20%);
+// }
 
 .savuori.actor-sheet .header-fields.flexrow {
     align-items: center;

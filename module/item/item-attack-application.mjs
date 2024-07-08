@@ -47,14 +47,14 @@ export class ItemAttackFormApplication extends FormApplication {
 
         Hooks.on(
             "targetToken",
-            function (...args) {
-                this.updateItem(...args);
+            async function (...args) {
+                await this.updateItem(...args);
             }.bind(this),
         );
     }
 
     async updateItem() {
-        this.render();
+        await this.render();
     }
 
     static get defaultOptions() {
@@ -103,6 +103,10 @@ export class ItemAttackFormApplication extends FormApplication {
             data.aoeText = null;
         }
 
+        if (game.user.targets.size > 0) {
+            data.targets = game.user.targets;
+        }
+
         // Initialize aim to the default option values
         this.data.aim ??= "none";
         this.data.aimSide ??= "none";
@@ -116,33 +120,66 @@ export class ItemAttackFormApplication extends FormApplication {
             data.boostableCharges = item.system.charges.value - 1;
         }
 
-        // Combat Skill Levels
-        const csl = CombatSkillLevelsForAttack(item);
-        if (csl && csl.skill) {
-            data.cslSkill = csl.skill;
-            let mental = csl.skill.system.XMLID === "MENTAL_COMBAT_LEVELS";
-            let _ocv = mental ? "omcv" : "ocv";
-            let _dcv = mental ? "dmcv" : "dcv";
-            data.cslChoices = { [_ocv]: _ocv };
-            if (csl.skill.system.OPTION != "SINGLE") {
-                data.cslChoices[_dcv] = _dcv;
-                data.cslChoices.dc = "dc";
-            }
+        // MINDSCAN
+        if (item.system.XMLID === "MINDSCAN") {
+            data.mindScanChoices = CONFIG.HERO.mindScanChoices;
 
-            // CSL radioBoxes names
-            data.csl = [];
-            for (let c = 0; c < parseInt(csl.skill.system.LEVELS || 0); c++) {
-                data.csl.push({
-                    name: `system.csl.${c}`,
-                    value: csl.skill.system.csl
-                        ? csl.skill.system.csl[c]
-                        : "undefined",
+            data.mindScanFamiliar = [];
+            data.mindScanFamiliar.push({
+                label: `+0`,
+                key: 0,
+            });
+            for (let i = 1; i <= 5; i++) {
+                data.mindScanFamiliar.push({
+                    label: `+${i} Familiar mind`,
+                    key: i,
                 });
             }
-        } else {
-            data.cslChoices = null;
-            data.csl = null;
-            data.cslSkill = null;
+            for (let i = 1; i <= 5; i++) {
+                data.mindScanFamiliar.push({
+                    label: `${-i} Unfamiliar mind`,
+                    key: -i,
+                });
+            }
+        }
+
+        // Combat Skill Levels
+        // data.cslChoices = null;
+        // data.csl = null;
+        // data.cslSkill = null;
+        const csls = CombatSkillLevelsForAttack(item);
+        data.csls = undefined;
+        for (const csl of csls) {
+            let entry = {};
+            if (csl && csl.skill) {
+                entry.cslSkill = csl.skill;
+                let mental = csl.skill.system.XMLID === "MENTAL_COMBAT_LEVELS";
+                let _ocv = mental ? "omcv" : "ocv";
+                let _dcv = mental ? "dmcv" : "dcv";
+                entry.cslChoices = { [_ocv]: _ocv };
+                if (csl.skill.system.OPTION != "SINGLE") {
+                    entry.cslChoices[_dcv] = _dcv;
+                    entry.cslChoices.dc = "dc";
+                }
+
+                // CSL radioBoxes names
+                entry.csl = [];
+                for (
+                    let c = 0;
+                    c < parseInt(csl.skill.system.LEVELS || 0);
+                    c++
+                ) {
+                    entry.csl.push({
+                        name: `${csl.skill.id}.system.csl.${c}`,
+                        value: csl.skill.system.csl
+                            ? csl.skill.system.csl[c]
+                            : "undefined",
+                    });
+                }
+
+                data.csls ??= [];
+                data.csls.push(entry);
+            }
         }
 
         // DEADLYBLOW
@@ -230,15 +267,25 @@ export class ItemAttackFormApplication extends FormApplication {
     async _updateCsl(event, formData) {
         const item = this.data.item;
         // Combat Skill Levels (update SKILL if changed)
-        const csl = CombatSkillLevelsForAttack(item);
+        const csls = CombatSkillLevelsForAttack(item);
         for (const key of Object.keys(formData).filter((o) =>
-            o.match(/\.(\w+)\.(\d+)/),
+            o.match(/([0-9A-Za-z]+)\.system\.csl\.(\d+)/),
         )) {
             const value = formData[key];
-            const idx = parseInt(key.match(/\d+$/));
-            if (csl.skill.system.csl[idx] != value) {
-                csl.skill.system.csl[idx] = value;
-                await csl.skill.update({ "system.csl": csl.skill.system.csl });
+            const itemId = key.match(/([0-9A-Za-z]+)\.system\.csl\.(\d+)/)[1];
+            const idx = parseInt(
+                key.match(/([0-9A-Za-z]+)\.system\.csl\.(\d+)/)[2],
+            );
+            for (const csl of csls) {
+                if (
+                    csl.skill.id === itemId &&
+                    csl.skill.system.csl[idx] != value
+                ) {
+                    csl.skill.system.csl[idx] = value;
+                    await csl.skill.update({
+                        "system.csl": csl.skill.system.csl,
+                    });
+                }
             }
         }
     }

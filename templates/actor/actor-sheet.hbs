@@ -9,6 +9,7 @@
             <section class="flexrow">
                 <ul class="attributes flexcol">
 
+                    {{#if hasEND}}
                     <li class="attribute health" data-ability="end">
                         <h4 class="attribute-name box-title">Endurance</h4>
                         <div class="attribute-value multiple characteristic">
@@ -21,6 +22,7 @@
                             </span>
                         </div>
                     </li>
+                    {{/if}}
 
                     <li class="attribute health" data-ability="body">
                         <h4 class="attribute-name box-title">Body</h4>
@@ -35,6 +37,7 @@
                         </div>
                     </li>
 
+                    {{#if hasSTUN}}
                     <li class="attribute health" data-ability="stun">
                         <h4 class="attribute-name box-title">Stun</h4>
                         <div class="attribute-value multiple characteristic">
@@ -47,6 +50,7 @@
                             </span>
                         </div>
                     </li>
+                    {{/if}}
 
                     {{#if useHAP }}
                     <li class="attribute heroic-action-points" data-ability="hap">
@@ -183,16 +187,16 @@
                                 <td class="left">
                                     {{{itemName item}}}
                                 </td>
-                                <td>
+                                <td title="{{{item.flags.tags.ocv}}}">
                                     {{item.system.ocvEstimated}}
                                 </td>
-                                <td>
+                                <td title="{{{item.flags.tags.dcv}}}">
                                     {{item.system.dcvEstimated}}
                                 </td>
                                 <td>
                                     {{item.system.uses}} vs {{item.system.targets}}
                                 </td>
-                                <td>
+                                 <td title="{{{item.flags.tags.dc}}}">
                                     {{item.system.damage}}
                                 </td>
                                 <td>
@@ -294,7 +298,7 @@
                         </th>
                     </tr>
                     {{#each items as |item id|}}
-                        {{#if (or (eq item.type "defense") (eq item.system.subType "defense")) }}
+                        {{#if (or (eq item.type "defense") (eq item.system.subType "defense") (includes item.baseInfo.type "defense")) }}
                             <tr class="item {{#if (gt item.system.value item.system.max)}} overMax{{/if}}{{#if (lt item.system.value item.system.max)}} underMax{{/if}}"
                                 data-item-id="{{item._id}}">
                                 <td style="min-width: 24px">
@@ -362,7 +366,7 @@
                                     {{#if (and (ne item.system.realCost 0) (ne item.system.XMLID "LIST"))}}
                                         {{item.system.realCost}}</td>
                                     {{/if}}
-                                <td class="left{{#if (eq item.parentItem.type "skill")}} item-framework-child-name{{/if}}">
+                                <td class="left{{#if (eq item.parentItem.type "skill")}} item-framework-child-name{{/if}}{{#if item.parentItem.parentItem}}2{{/if}}">
                                     {{#if item.system.childIdx}}
                                         {{#if (eq item.parentItem.type "skill")}}
                                             {{item.system.childIdx}})
@@ -540,8 +544,8 @@
                                                 height="24" /></div>
                                     </td>
                                     <td>{{item.system.realCost}}</td>
-                                    <td class="left{{#if item.parentItem.type}} item-framework-child-name{{/if}}">
-                                        {{#if (and item.system.childIdx item.system.parentItem)}}
+                                    <td class="left{{#if item.parentItem.type}} item-framework-child-name{{/if}}{{#if item.parentItem.parentItem}}2{{/if}}">
+                                        {{#if (and item.system.childIdx item.parentItem)}}
                                             {{item.system.childIdx}})
                                         {{/if}}
                                         {{{itemFullDescription item}}}
@@ -589,26 +593,31 @@
             {{!-- Equipment Tab --}}
             <div class="tab tab-body" data-group="primary" data-tab="equipment">
                 <table>
-                    {{#if (or weightTotal priceTotal)}}
-                        <tr class="sticky">
-                            <th>WEIGHT: {{weightTotal}}</th>
-                            <th>PRICE: {{priceTotal}}</th>
-                        </tr>
-                    {{/if}}
                     <tr class="sticky">
+                        <th colspan="1" class="right">Filter:</th>
+                        <th colspan="2">
+                        <input class="left" name="itemFilters.equipment" type="text"
+                            value="{{options.itemFilters.equipment}}">
+                        </th>
+                        <th colspan="2">WEIGHT: {{weightTotal}}</th>
+                        <th colspan="2">PRICE: {{priceTotal}}</th>
+                    </tr>
+                    <tr class="sticky2">
                         <th></th>
                         <th class="left">{{localize "ActorSheet.Description"}}</th>
                         <th>{{localize "ActorSheet.End"}}</th>
                         <th>{{localize "ActorSheet.Price"}}</th>
                         <th>{{localize "ActorSheet.Weight"}}</th>
                         <th>{{localize "ActorSheet.Carried"}}</th>
+                        <th>{{localize "ActorSheet.Active"}}</th>
                         <th>
                             <a class="item-control item-create" title="Create equipment" data-type="equipment">
                                 <i class="fas fa-plus"></i> Add Equipment</a>
                         </th>
                     </tr>
                     {{#each items as |item id|}}
-                        {{#if (or (eq item.type "equipment") (eq item.parentItem.type "equipment")) }}
+                        {{#if (and (or (eq item.type "equipment") (eq item.parentItem.type "equipment")) (filterItem item
+                        ../options.itemFilters.equipment))}}
                             <tr class="item {{#if (gt item.system.value item.system.max)}} overMax{{/if}}{{#if (lt item.system.value item.system.max)}} underMax{{/if}}"
                                 data-item-id="{{item._id}}">
                                 <td class="item-image-td" style="width:26px">
@@ -616,7 +625,7 @@
                                             height="24px" /></div>
                                 </td>
                                 
-                                <td class="left{{#if item.parentItem.type}} item-framework-child-name{{/if}}">
+                                <td class="left{{#if item.parentItem}} item-framework-child-name{{/if}}{{#if item.parentItem.parentItem}}2{{/if}}">
                                     {{#if item.system.childIdx}}
                                         {{item.system.childIdx}})
                                     {{/if}}
@@ -625,8 +634,8 @@
 
                                 {{#if item.system.childIdx}}
                                 <td>{{item.system.end}}</td>
-                                <td></td>
-                                <td></td>
+                                <td>{{item.system.PRICEtext}}</td>
+                                <td>{{item.system.WEIGHTtext}}</td>
                                 <td></td>
                                 {{else}}
                                 <td>{{item.system.end}}</td>
@@ -638,14 +647,39 @@
                                 </td>
                                 {{/if}}
                                 <td>
+                                    {{#if (ne item.system.subType "attack")}}
+                                        {{#if item.system.showToggle}}
+                                            <input class="item-toggle" type="checkbox" title="CTRL to force toggle"
+                                                Xname="item.system.active" {{checked item.system.active}} data-dtype="Boolean"
+                                                data-action="toggle" />
+                                        {{/if}}
+                                        {{#if item.system.roll}}
+                                            <button type="button" class="item-rollable" data-roll="{{item.system.roll}}"
+                                                data-label="{{item._id}}">{{numberFormat item.system.roll decimals=0
+                                                sign=false}}-</button>
+                                        {{/if}}
+                                    {{else}}
+                                        <a class="item-image item-rollable"><i class="fas fa-dice" title="{{item.name}}" width="24" height="24"></i></a>
+                                    {{/if}}
+                                </td>
+                                <td>
+                                    {{#unless (or (eq item.system.XMLID "LIST") (eq item.system.XMLID "MULTIPOWER"))}}
                                     <a class="item-control item-chat" title="{{localize "ActorSheet.SendToChat"}}"><i
                                             class="fas fa-comment-alt"></i></a>
                                     <a class="item-control item-edit" title="{{localize "ActorSheet.EditItem"}}"><i class="fas fa-edit"></i></a>
                                     <a class="item-control item-delete" title="{{localize "ActorSheet.DeleteItem"}}">
                                         <i class="fas fa-trash"></i>
                                     </a>
+                                    {{/unless}}
                                 </td>
+                                
                             </tr>
+                        {{else}}
+                            {{!-- <tr>
+                                <td>
+                                    __{{item.name}} {{item.parentItem.type}}
+                                </td>
+                            </tr> --}}
                         {{/if}}
                     {{/each}}
                 </table>
@@ -985,6 +1019,11 @@
                 </table>
 
                 <br />
+
+                <div class="form-group">
+                    <label for="system.CHARACTER.BASIC_CONFIGURATION.EXPERIENCE"><b>EXPERIENCE</b></label>
+                    <input name="system.CHARACTER.BASIC_CONFIGURATION.EXPERIENCE" value="{{actor.system.CHARACTER.BASIC_CONFIGURATION.EXPERIENCE}}" type="number">
+                </div>
 
                 <table>
 

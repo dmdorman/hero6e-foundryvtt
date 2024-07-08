@@ -4,8 +4,26 @@ function determineDefense(targetActor, attackItem, options) {
     if (!attackItem.findModsByXmlid) {
         console.error("Invalid attackItem", attackItem);
     }
-    const avad = attackItem.findModsByXmlid("AVAD");
-    const attackType = avad ? "avad" : attackItem.system.class;
+
+    //const avad = attackItem.findModsByXmlid("AVAD");
+    //const attackType = avad ? "avad" : attackItem.system.class;
+    let attackType = attackItem.system.class;
+    if (attackType === "avad") {
+        switch (attackItem.system.INPUT) {
+            case "PD":
+                attackType = "physical";
+                break;
+            case "ED":
+                attackType = "energy";
+                break;
+            case "MD":
+                attackType = "mental";
+                break;
+            default:
+                console.error("Unknown attackType");
+        }
+    }
+
     const piercing =
         parseInt(attackItem.system.piercing) ||
         attackItem.findModsByXmlid("ARMORPIERCING") ||
@@ -18,7 +36,9 @@ function determineDefense(targetActor, attackItem, options) {
     // The defenses that are active
     const activeDefenses = targetActor.items.filter(
         (o) =>
-            (o.system.subType === "defense" || o.type === "defense") &&
+            (o.system.subType === "defense" ||
+                o.type === "defense" ||
+                o.baseInfo?.type?.includes("defense")) &&
             (o.system.active ||
                 o.effects.find(() => true)?.disabled === false) &&
             !(options?.ignoreDefenseIds || []).includes(o.id),
@@ -39,6 +59,14 @@ function determineDefense(targetActor, attackItem, options) {
     let DNE = 0; // damage negation energy
     let DNM = 0; // damage negation mental
     let knockbackResistance = 0;
+
+    // Check if we are supposed to ignore PD/ED (eg AVAD)
+    if (options?.ignoreDefenseIds.includes("PD")) {
+        PD = 0;
+    }
+    if (options?.ignoreDefenseIds.includes("ED")) {
+        ED = 0;
+    }
 
     // DAMAGERESISTANCE (converts PD to rPD)
     for (const item of activeDefenses.filter(
@@ -87,6 +115,14 @@ function determineDefense(targetActor, attackItem, options) {
             ED -= targetActor.system.characteristics.ed.core;
             rED += targetActor.system.characteristics.ed.core;
         }
+    }
+
+    // Bases & Vehicles have resistant PD & ED
+    if (["base2", "vehicle"].includes(targetActor?.type)) {
+        rPD += PD;
+        PD = 0;
+        rED += ED;
+        ED = 0;
     }
 
     // Impenetrable (defense vs penetrating)

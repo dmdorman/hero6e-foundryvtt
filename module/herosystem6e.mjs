@@ -26,12 +26,15 @@ import { HeroSystem6eTokenHud } from "./bar3/tokenHud.mjs";
 import { extendTokenConfig } from "./bar3/extendTokenConfig.mjs";
 import { HeroRuler } from "./ruler.mjs";
 import { initializeHandlebarsHelpers } from "./handlebars-helpers.mjs";
-import { getPowerInfo } from "./utility/util.mjs";
 import {
-    performAdjustment,
-    renderAdjustmentChatCards,
-} from "./utility/adjustment.mjs";
+    // getPowerInfo,
+    expireEffects,
+    getCharacteristicInfoArrayForActor,
+} from "./utility/util.mjs";
 import { migrateWorld } from "./migration.mjs";
+import // performAdjustment,
+// renderAdjustmentChatCards,
+"./utility/adjustment.mjs";
 
 import "./utility/chat-dice.mjs";
 
@@ -144,6 +147,7 @@ Hooks.once("init", async function () {
         `systems/${HEROSYS.module}/templates/item/item-partial-active-points.hbs`,
         `systems/${HEROSYS.module}/templates/item/item-partial-adders-modifiers.hbs`,
         `systems/${HEROSYS.module}/templates/item/item-partial-common.hbs`,
+        `systems/${HEROSYS.module}/templates/actor/actor-sheet.hbs`,
     ];
     // Handlebars Templates and Partials
     loadTemplates(templatePaths);
@@ -603,131 +607,138 @@ Hooks.on("updateWorldTime", async (worldTime, options) => {
                 await actor.addActiveEffect(activeEffect);
             }
 
-            let adjustmentChatMessages = [];
+            //let adjustmentChatMessages = [];
 
             // Active Effects
-            for (const ae of actor.temporaryEffects) {
-                // Determine XMLID, ITEM, ACTOR
-                let origin = await fromUuid(ae.origin);
-                let item = origin instanceof HeroSystem6eItem ? origin : null;
-                let aeActor =
-                    origin instanceof HeroSystem6eActor
-                        ? origin
-                        : item?.actor || actor;
-                let XMLID = ae.flags.XMLID || item?.system?.XMLID;
-
-                let powerInfo = getPowerInfo({
-                    actor: aeActor,
-                    xmlid: XMLID,
-                    item: item,
-                });
-
-                if (
-                    !powerInfo &&
-                    ae.statuses.size === 0 &&
-                    game.settings.get(game.system.id, "alphaTesting") &&
-                    ae.duration?.seconds < 3.154e7 * 100
-                ) {
-                    return ui.notifications.warn(
-                        `Unable to determine XMLID for ${ae.name} active effect.`,
-                    );
-                }
-
-                // With Simple Calendar you can move time ahead in large steps.
-                // Need to loop as multiple fades may be required.
-                let d = ae._prepareDuration();
-                while (d.remaining != null && d.remaining <= 0) {
-                    // Add duration to startTime
-                    ae.duration.startTime += d.duration;
-                    d = ae._prepareDuration();
-                    await ae.update({ duration: ae.duration });
-
-                    // What is this effect related to?
-                    if (ae.flags.type === "adjustment") {
-                        // Fade by 5 Active Points
-                        let _fade;
-                        if (ae.flags.adjustmentActivePoints < 0) {
-                            _fade = Math.max(
-                                ae.flags.adjustmentActivePoints,
-                                -5,
-                            );
-                        } else {
-                            _fade = Math.min(
-                                ae.flags.adjustmentActivePoints,
-                                5,
-                            );
-                        }
-
-                        if (item) {
-                            adjustmentChatMessages.push(
-                                await performAdjustment(
-                                    item,
-                                    ae.flags.target[0],
-                                    -_fade,
-                                    "None - Effect Fade",
-                                    "",
-                                    true,
-                                    actor,
-                                ),
-                            );
-                        } else {
-                            // The item must have been deleted which makes it impossible to properly adjust the
-                            // adjustment power. Just delete it and soldier on.
-                            ui.notifications.warn(
-                                `The originating item ${ae.origin} of adjustment ${ae.name} appears to have been deleted. Deleting adjustment's active effect.`,
-                            );
-                            ae.delete();
-                            break;
-                        }
-
-                        // TODO: FIXME: Dirty hack. If the amount remaining in the active effect is 0 we know that
-                        // performAdjustment has deleted the active effect. In this case exit the loop so that
-                        // we don't keep operating on an old view of a deleted active effect.
-                        // Healing doesn't fade. The lockout just ends which guarantees a deleted effect.
-                        if (
-                            ae.flags.adjustmentActivePoints === 0 ||
-                            ae.flags.XMLID === "HEALING"
-                        ) {
-                            break;
-                        }
-                    } else if (ae.flags.XMLID === "naturalBodyHealing") {
-                        let bodyValue = parseInt(
-                            actor.system.characteristics.body.value,
-                        );
-                        let bodyMax = parseInt(
-                            actor.system.characteristics.body.max,
-                        );
-                        bodyValue = Math.min(bodyValue + 1, bodyMax);
-
-                        await actor.update({
-                            "system.characteristics.body.value": bodyValue,
-                        });
-
-                        if (bodyValue === bodyMax) {
-                            ae.delete();
-                            break;
-                        }
-                    } else {
-                        // Default is to delete the expired AE
-                        if (powerInfo) {
-                            await ae.delete();
-                            break;
-                        }
-                    }
-                }
+            if (!actor.inCombat) {
+                await expireEffects(actor);
             }
 
-            await renderAdjustmentChatCards(adjustmentChatMessages);
-            adjustmentChatMessages = [];
+            // for (const ae of actor.temporaryEffects) {
+            //     // Determine XMLID, ITEM, ACTOR
+            //     let origin = await fromUuid(ae.origin);
+            //     let item = origin instanceof HeroSystem6eItem ? origin : null;
+            //     let aeActor =
+            //         origin instanceof HeroSystem6eActor
+            //             ? origin
+            //             : item?.actor || actor;
+            //     let XMLID = ae.flags.XMLID || item?.system?.XMLID;
+
+            //     let powerInfo = getPowerInfo({
+            //         actor: aeActor,
+            //         xmlid: XMLID,
+            //         item: item,
+            //     });
+
+            //     if (
+            //         !powerInfo &&
+            //         ae.statuses.size === 0 &&
+            //         game.settings.get(game.system.id, "alphaTesting") &&
+            //         ae.duration?.seconds < 3.154e7 * 100
+            //     ) {
+            //         return ui.notifications.warn(
+            //             `Unable to determine XMLID for ${ae.name} active effect.`,
+            //         );
+            //     }
+
+            //     // With Simple Calendar you can move time ahead in large steps.
+            //     // Need to loop as multiple fades may be required.
+            //     let d = ae._prepareDuration();
+            //     while (d.remaining != null && d.remaining <= 0) {
+            //         // Add duration to startTime
+            //         ae.duration.startTime += d.duration;
+            //         d = ae._prepareDuration();
+            //         await ae.update({ duration: ae.duration });
+
+            //         // What is this effect related to?
+            //         if (ae.flags.type === "adjustment") {
+            //             // Fade by 5 Active Points
+            //             let _fade;
+            //             if (ae.flags.adjustmentActivePoints < 0) {
+            //                 _fade = Math.max(
+            //                     ae.flags.adjustmentActivePoints,
+            //                     -5,
+            //                 );
+            //             } else {
+            //                 _fade = Math.min(
+            //                     ae.flags.adjustmentActivePoints,
+            //                     5,
+            //                 );
+            //             }
+
+            //             if (item) {
+            //                 adjustmentChatMessages.push(
+            //                     await performAdjustment(
+            //                         item,
+            //                         ae.flags.target[0],
+            //                         -_fade,
+            //                         "None - Effect Fade",
+            //                         "",
+            //                         true,
+            //                         actor,
+            //                     ),
+            //                 );
+            //             } else {
+            //                 // The item must have been deleted which makes it impossible to properly adjust the
+            //                 // adjustment power. Just delete it and soldier on.
+            //                 ui.notifications.warn(
+            //                     `The originating item ${ae.origin} of adjustment ${ae.name} appears to have been deleted. Deleting adjustment's active effect.`,
+            //                 );
+            //                 ae.delete();
+            //                 break;
+            //             }
+
+            //             // TODO: FIXME: Dirty hack. If the amount remaining in the active effect is 0 we know that
+            //             // performAdjustment has deleted the active effect. In this case exit the loop so that
+            //             // we don't keep operating on an old view of a deleted active effect.
+            //             // Healing doesn't fade. The lockout just ends which guarantees a deleted effect.
+            //             if (
+            //                 ae.flags.adjustmentActivePoints === 0 ||
+            //                 ae.flags.XMLID === "HEALING"
+            //             ) {
+            //                 break;
+            //             }
+            //         } else if (ae.flags.XMLID === "naturalBodyHealing") {
+            //             let bodyValue = parseInt(
+            //                 actor.system.characteristics.body.value,
+            //             );
+            //             let bodyMax = parseInt(
+            //                 actor.system.characteristics.body.max,
+            //             );
+            //             bodyValue = Math.min(bodyValue + 1, bodyMax);
+
+            //             await actor.update({
+            //                 "system.characteristics.body.value": bodyValue,
+            //             });
+
+            //             if (bodyValue === bodyMax) {
+            //                 ae.delete();
+            //                 break;
+            //             }
+            //         } else {
+            //             // Default is to delete the expired AE
+            //             if (powerInfo) {
+            //                 await ae.delete();
+            //                 break;
+            //             }
+            //         }
+            //     }
+            // }
+
+            // await renderAdjustmentChatCards(adjustmentChatMessages);
+            // adjustmentChatMessages = [];
 
             // Out of combat recovery.  When SimpleCalendar is used to advance time.
             // This simple routine only handles increments of 12 seconds or more.
             const automation = game.settings.get(HEROSYS.module, "automation");
             if (
-                !game.combat?.active &&
+                !actor.inCombat &&
                 (automation === "all" ||
                     (automation === "npcOnly" && actor.type == "npc") ||
                     (automation === "pcEndOnly" && actor.type === "pc")) &&
+                getCharacteristicInfoArrayForActor(actor).find(
+                    (o) => o.key === "END",
+                ) &&
                 multiplier > 0
             ) {
                 if (

@@ -319,6 +319,9 @@ export class HeroSystem6eItemSheet extends ItemSheet {
             }
         }
 
+        // PENALTY_SKILL_LEVELS
+        data.penaltyChoices = item.baseInfo?.editOptions?.penaltyChoices;
+
         // ENDURANCERESERVE has a REC rate
         if (item.system.XMLID == "ENDURANCERESERVE") {
             const power = item.system.POWER.find(

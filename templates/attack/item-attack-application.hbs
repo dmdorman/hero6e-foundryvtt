@@ -84,26 +84,42 @@
       </div>
     {{/if}}
 
-    {{#if cslChoices}}
+    {{#if mindScanChoices}}
       <div class="form-group">
-          <label>
-            {{cslSkill.name}}
-            {{#if (ne cslSkill.name "Combat Skill Levels")}}
+        <label>Number of Minds</label>
+        <select name="mindScanChoices" data-dtype="text">
+          {{selectOptions mindScanChoices nameAttr="key" labelAttr="label"}}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Familiar Mind</label>
+        <select name="mindScanFamiliar" data-dtype="text">
+          {{selectOptions mindScanFamiliar nameAttr="key" labelAttr="label"}}
+        </select>
+      </div>
+    {{/if}}
+
+    {{#each csls}}
+       <div class="form-group">
+          <label title="{{{this.cslSkill.system.description}}}">
+            {{this.cslSkill.name}}
+            {{#if (ne this.cslSkill.name "Combat Skill Levels")}}
                 (CSL)
             {{/if}}
         </label>
         <div class="form-fields combat-skill-levels">
           <ol>
-            {{#each csl}}
+            {{#each this.csl}}
             <li>
-              {{radioBoxes this.name @root/cslChoices checked=this.value localize=true}}
+              {{radioBoxes this.name ../cslChoices checked=this.value localize=true}}
             </li>
             {{/each}}
           </ol>
 
         </div>
       </div>
-    {{/if}}
+    {{/each}}
 
   </div>
 
@@ -124,14 +140,42 @@
     </div>
 
   <footer class="sheet-footer flexcol">
-    {{#if (and noTargets (not aoeText))}}
+    {{#if (gt targets.size 0)}}
+      <div class="form-group">
+        <label >Targets</label>
+        <div>
+          <ul>
+            {{#each targets}}
+              <li>{{this.name}}</li>       
+            {{/each}}
+          </ul>
+        </div>
+      </div>
+    {{/if}}
+
+    {{#if (and (eq targets.size 0) (not aoeText) (not mindScanChoices))}}
       <div>
         <p class="hero-warning">
           <i class="fas fa-exclamation-triangle"></i>
           {{localize "Items.Attack.NoTargetsSelected"}}
         </p>
+
         <i>{{localize "Items.Attack.TargetingExplanation"}}</i>
       </div>
+    {{/if}}
+
+    {{#if (and (ne targets.size 1) (not aoeText) mindScanChoices)}}
+      <div>
+        <p class="hero-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+            You must select exactly 1 target.  The GM may have to make this attack for you. Make sure the GM knows your target area.  The GM may have to add the desired target into the scene so it can be targeted.
+        </p>
+        <i>{{localize "Items.Attack.TargetingExplanation"}}</i>
+      </div>
+    {{/if}}
+    
+
+    {{#if mindScanChoices}}
     {{/if}}
 
     {{#if aoeText}}
@@ -140,7 +184,7 @@
       </button>
     {{/if}}
 
-    <button type="submit" name="roll">
+    <button type="submit" name="roll" {{#if (and (ne targets.size 1) mindScanChoices)}}disabled title="You must select exactly 1 target.  The GM may have to make this attack for you."{{/if}}>
       {{#if aoeText}}
         Roll Placement
       {{else}}

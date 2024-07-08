@@ -145,6 +145,53 @@ HERO.hitLocationSide = {
     Right: "Right",
 };
 
+HERO.mindScanChoices = [
+    {
+        label: `1 mind; -0 OMCV`,
+        key: 0,
+    },
+    {
+        label: `10 minds; -2 OMCV`,
+        key: -2,
+    },
+    {
+        label: `100 minds (Theater); -4 OMCV`,
+        key: -4,
+    },
+    {
+        label: `1,000 minds (Apartment Building); -6 OMCV`,
+        key: -6,
+    },
+    {
+        label: `10,000 minds (Small Town); -8 OMCV`,
+        key: -8,
+    },
+    {
+        label: `100,000 minds (Large Town); -10 OMCV`,
+        key: -10,
+    },
+    {
+        label: `1,000,000 minds (Major City); -12 OMCV`,
+        key: -12,
+    },
+    {
+        label: `10,000,000 minds (Small Nation); -14 OMCV`,
+        key: -14,
+    },
+    {
+        label: `100,000,000 minds (Large Nation); -16 OMCV`,
+        key: -16,
+    },
+    {
+        label: `1,000,000,000 minds (Continent); -18 OMCV`,
+        key: -18,
+    },
+    {
+        label: `10,000,000,000 minds (Large Planet); -20 OMCV`,
+        key: -20,
+    },
+];
+
 // TODO: This could be created from powers.
 HERO.movementPowers = {
     extradimensionalmovement: "Extra Dimensional Movement",
@@ -664,7 +711,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             target: "self only",
             range: "self",
             costEnd: false,
-            ignoreFor: ["base2", "computer", "ai"],
+            ignoreFor: ["computer", "ai"],
             xml: `<BODY XMLID="BODY" ID="1712377268646" BASECOST="0.0" LEVELS="0" ALIAS="BODY" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes" ADD_MODIFIERS_TO_BASE="No">
             <NOTES />
             </BODY>`,
@@ -1946,7 +1993,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         {
             key: "COMBAT_LEVELS",
             type: ["skill"],
-            behaviors: [],
+            behaviors: ["activatable"],
             duration: "constant",
             target: "self only",
             costEnd: false,
@@ -2431,7 +2478,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         {
             key: "MENTAL_COMBAT_LEVELS",
             type: ["skill"],
-            behaviors: [],
+            behaviors: ["activatable"],
             duration: "constant",
             target: "self only",
             range: "self",
@@ -2591,6 +2638,47 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             target: "self only",
             range: "self",
             costEnd: false,
+            editOptions: {
+                showAttacks: true,
+                editableOption_ALIAS: true,
+                choices: [
+                    {
+                        OPTIONID: "SINGLE",
+                        OPTION: "SINGLE",
+                        OPTION_ALIAS:
+                            "to offset a specific negative OCV modifier with any single attack",
+                    },
+                    {
+                        OPTIONID: "THREE",
+                        OPTION: "THREE",
+                        OPTION_ALIAS:
+                            "to offset a specific negative OCV modifier with any three maneuvers or tight group",
+                    },
+                    {
+                        OPTIONID: "ALL",
+                        OPTION: "ALL",
+                        OPTION_ALIAS:
+                            "to offset a specific negative OCV modifier with all attacks",
+                    },
+                    {
+                        OPTIONID: "SINGLEDCV",
+                        OPTION: "SINGLEDCV",
+                        OPTION_ALIAS:
+                            "to offset a specific negative DCV modifier imposed by any single specific condition",
+                    },
+                    {
+                        OPTIONID: "GROUPDCV",
+                        OPTION: "GROUPDCV",
+                        OPTION_ALIAS:
+                            "to offset a specific negative DCV modifier imposed by a group of conditions",
+                    },
+                ],
+                penaltyChoices: {
+                    hitLocation: "Hit Location",
+                    other: "Other",
+                    range: "Range",
+                },
+            },
             costPerLevel: function (item) {
                 switch (item.system.OPTIONID) {
                     case "SINGLE":
@@ -4569,7 +4657,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         {
             key: "FORCEWALL",
             type: ["defense", "standard"],
-            behaviors: ["activatable"],
+            behaviors: ["attack"],
             duration: "instant",
             range: "standard",
             costEnd: true,

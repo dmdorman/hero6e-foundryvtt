@@ -80,6 +80,23 @@ export async function migrateWorld() {
     // Don't bother trying to migrate an world with no actors or items
     if (game.actors.size === 0 && game.items.size === 0) return;
 
+    // Chat Card for GM about new version
+    let content = `Version ${game.system.version} of ${game.system.name} has been installed. Details can be read at <a href="https://github.com/dmdorman/hero6e-foundryvtt/blob/main/CHANGELOG.md">Changelog</a>.<br /><br />If you find any problems, are missing things, or just would like a feature that is lacking, please report these <a href="https://github.com/dmdorman/hero6e-foundryvtt/issues">HERE</a>.<br /><br />There is also a <a href="https://discord.com/channels/609528652878839828/770825017729482772">discord channel</a> where you can interactively communicate with others using ${game.system.name}.`;
+
+    // if (installedVersion != "1") {
+    //     content += '<h2><b>Short Summery of update:</b></h2>';
+    //     content += '<ul>';
+    //     content += newfunctions;
+    //     content += '</ul>';
+    // }
+    const chatData = {
+        user: game.user._id,
+        type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+        content: content,
+    };
+
+    await ChatMessage.create(chatData);
+
     // Fix any invalid actor types
     for (let invalidId of game.actors.invalidDocumentIds) {
         let invalidActor = game.actors.getInvalid(invalidId);
@@ -261,6 +278,18 @@ export async function migrateWorld() {
         async (actor) => await migrate_actor_items_to_3_0_66(actor),
     );
 
+    // if lastMigration < 3.0.75
+    // The string "false" returns true.  Very confusing.
+    // Was causing issues with consuming END for INVISIBILTY each phase.
+    // Removed string "false" from template.json
+    await migrateToVersion(
+        "3.0.75",
+        lastMigration,
+        getAllActorsInGame(),
+        "actors' items' active/false",
+        async (actor) => await migrate_actor_items_to_3_0_75(actor),
+    );
+
     // FOR ALL VERSION MIGRATIONS
     // Reparse all items (description, cost, etc) on every migration
     await migrateToVersion(
@@ -307,6 +336,19 @@ async function migrateActorCostDescription(actor) {
             await ui.notifications.warn(
                 `Migration failed for ${actor?.name}. Recommend re-uploading from HDC.`,
             );
+        }
+    }
+}
+
+async function migrate_actor_items_to_3_0_75(actor) {
+    for (const item of actor.items) {
+        // The string "false" returns true.  Very confusing.
+        // Was causing issues with consuming END for INVISIBILTY each phase.
+        // Removed string "false" from template.json
+        if (item.system.active === "false") {
+            await item.update({
+                "item.system.active": true,
+            });
         }
     }
 }

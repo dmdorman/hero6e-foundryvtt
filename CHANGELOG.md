@@ -1,12 +1,57 @@
 # Releases
 
-## Version 3.0.72 (so far...) [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+## Version 3.0.77 [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+
+- PD/ED characteristics with resistant modifier are now actually resistant.  Previously the resistant modifier was ignored.  Also PD/ED purchased as characteristics now show in DEFENSES tab for easy reference. [#1063](https://github.com/dmdorman/hero6e-foundryvtt/issues/1063)
+- Fix where the CSL selections were duplciated during AOE template placement. [#1064](https://github.com/dmdorman/hero6e-foundryvtt/issues/1064)
+- Fix where DCV temporary bonuses from CSLs and other active effects were expiring on our segment instead of on our phase. [#1061](https://github.com/dmdorman/hero6e-foundryvtt/issues/1061)
+- ToHit dialog box now shows a list of all targets.
+- Fix for combat tracker where adding tokens to combat tracker sometimes resulted in error messages, preventing the token from being added. [#1072](https://github.com/dmdorman/hero6e-foundryvtt/issues/1072)
+
+
+## Version 3.0.76
+
+- Fix for AID and likely other adjustment powers. [#1058](https://github.com/dmdorman/hero6e-foundryvtt/issues/1058)
+- [Video: Aid and Drain - Basic](https://www.youtube.com/watch?v=z3I7SshLlyI)
+
+## Version 3.0.75
+
+- We recommend sticking with FoundryVTT v11.  Known v12 issues:
+  - [Drag Ruler](https://foundryvtt.com/packages/drag-ruler) module breaks several things.
+  - [Bar Brawl](https://foundryvtt.com/packages/barbrawl) mostly works. Oddities changing token images.
+- FoundryVTT 12.327 support.
+- Reworked Combat Tracker to more closely align to FoundryVTT v12.
+- Improved chat messages for power toggles to include GM & token owners.
+- Improved initial toggle states during HDC upload.  For example, items in a multipower default to off.
+- Improved BASE actor type support. PD and ED are now resistant.  BODY now shows in characteristics tab. Implied DCV=3 or 0 if adjacent.
+- [Barrier proof of concept](https://youtu.be/fINMDsyObK0).
+- Fix for compound powers within a list, where not all compound items were uploaded.  Also fixed issue where some compound power items were duplicating modifiers. [#964](https://github.com/dmdorman/hero6e-foundryvtt/issues/964)
+- You can now make attack rolls from equipment tab.
+- Added EXPERIENCE field to the OTHER tab.  Be careful as this gets overwritten when you upload an HDC file.
+
+## Version 3.0.74
+
+- We recommend sticking with FoundryVTT v11. The [Drag Ruler](https://foundryvtt.com/packages/drag-ruler) author [is working on v12 support](https://github.com/manuelVo/foundryvtt-drag-ruler/issues/326#issuecomment-2148372052).
+- Improvements to AVAD and NND attacks.
+- Fixed damage dice for Nerve Strike and similar martial NND attacks. [#885](https://github.com/dmdorman/hero6e-foundryvtt/issues/885)
+- Support for multiple Combat Skill Levels associated with an attack.
+- Combat Skill Levels purchased as powers can be toggled. [#995](https://github.com/dmdorman/hero6e-foundryvtt/issues/995)
+- Support for REQUIRESASKILLROLL and EVERYPHASE for defenses during Apply Damage. [#457](https://github.com/dmdorman/hero6e-foundryvtt/issues/457)
+- Improved Penalty Skill Level support. PSLs can have attack(s) specified and penalty type specified.  Only the range penalty is currently supported. [#863](https://github.com/dmdorman/hero6e-foundryvtt/issues/863)
+
+## Version 3.0.73
+
+- Fix for PC actor sheets failing to open when actor has frameworks or compound equipment. [#1036](https://github.com/dmdorman/hero6e-foundryvtt/issues/1036)
+- The alternate Savuori actor sheet logic now uses the default actor sheet. It still retains the simpler color scheme.
+
+## Version 3.0.72
+
 - FoundryVTT v12 limited support. We recommend sticking with v11 for now as some key modules do not support v12 yet. If you choose to proceed with v12 here is what we have tested:
   - You should disable the [Drag Ruler](https://foundryvtt.com/packages/drag-ruler) module as it currently breaks several things. You can CTRL+CLICK+DRAG a token to measure, then spacebar to move for now (default Foundry). [DR#319](https://github.com/manuelVo/foundryvtt-drag-ruler/issues/319) [DR#324](https://github.com/manuelVo/foundryvtt-drag-ruler/issues/324)
   - [Dice So Nice!](https://gitlab.com/riccisi/foundryvtt-dice-so-nice) seems to work just fine.
   - [Simple Calendar](https://github.com/vigoren/foundryvtt-simple-calendar) seems to work just fine.
   - [About Face](https://foundryvtt.com/packages/about-face) seems to work just fine.
-  - [Bar Brawl](https://foundryvtt.com/packages/barbrawl) seems to work just fine.  Had to delete some of the bars and recreate them, but it works. We plan to drop the built in 3rd bar support as Bar Brawl is superior.
+  - [Bar Brawl](https://foundryvtt.com/packages/barbrawl) seems to work well.  Had to delete some of the bars on older tokens and recreate them, but it works. We plan to drop the built in 3rd bar support as Bar Brawl is superior.
   - [Elevation Ruler](https://foundryvtt.com/packages/elevationruler) is not currently recommended, but we are looking into Drag Ruler alternatives. It overrides our custom labels that show movement type and range penalties.  Dropped tokens don't always center in hex.
   - We have more testing to do, this list is not comprehensive. Feel free to submit [bug/issues](https://github.com/dmdorman/hero6e-foundryvtt/issues) if you find any v12 bugs that we haven't mentioned.
 - Improved chat messages during combat for powers that use END each phase. Powers automatically turn off when there is insufficient END.  GM gets a message when any power is toggled.

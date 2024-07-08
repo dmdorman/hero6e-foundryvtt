@@ -239,7 +239,7 @@ export function determineCostPerActivePoint(
         defensivePowerAdjustmentMultiplier(
             targetCharacteristic.toUpperCase(),
             targetActor,
-            targetActor?.is5e || this.is5e,
+            targetActor?.is5e,
         )
     );
 }
@@ -767,6 +767,8 @@ function _generateAdjustmentChatCard(
             activePointEffectLostDueToMax,
             activePointEffectLostDueToNotExceeding,
             isFade,
+            targetActor: targetActor,
+            targetToken: targetActor?.getActiveTokens()?.[0],
         },
 
         isEffectFinished,
@@ -801,7 +803,6 @@ export async function renderAdjustmentChatCards(cardOrCards) {
         effectsDescription: cardOrCards[0].effectsDescription,
         isEffectFinished: cardOrCards[cardOrCards.length - 1].isEffectFinished,
         targetActor: cardOrCards[0].targetActor,
-
         adjustments: cardOrCards.map((card) => {
             return card.adjustment;
         }),

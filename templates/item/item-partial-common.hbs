@@ -98,6 +98,15 @@
 </div>
 {{/if}}
 
+{{#if penaltyChoices}}
+<div class="form-group">
+    <label>PENALTY</label>
+    <div class="form-fields">
+        {{ radioBoxes "system.penalty" penaltyChoices checked = system.penalty localize=true}}
+    </div>
+</div>
+{{/if}}
+
 {{! COMBAT SKILL LEVELS}}
 {{#if csl}}
  <div class="form-group">

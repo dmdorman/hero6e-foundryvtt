@@ -68,18 +68,23 @@ export function convertToDcFromItem(item, options) {
     }
 
     // Combat Skill Levels
-    const csl = CombatSkillLevelsForAttack(item);
-    if (csl && csl.dc > 0) {
-        // Simple +1 DC for now (checking on discord to found out rules for use AP ratio)
-        dc += csl.dc;
 
-        // Each DC should roughly be 5 active points
-        // let dcPerAp =  ((dc * 5) / (item.system.activePointsDc || item.system.activePoints)) || 1;
-        // let ratio = (dcPerAp || 5) / 5;  // Typically 1 to 1 radio
-        // dc += (csl.dc * dcPerAp);
-        // console.log(dcPerAp, dc, csl.dc)
+    for (const csl of CombatSkillLevelsForAttack(item)) {
+        if (csl && csl.dc > 0) {
+            // Simple +1 DC for now (checking on discord to found out rules for use AP ratio)
+            dc += csl.dc;
 
-        tags.push({ value: `${csl.dc.signedString()}DC`, name: csl.item.name });
+            // Each DC should roughly be 5 active points
+            // let dcPerAp =  ((dc * 5) / (item.system.activePointsDc || item.system.activePoints)) || 1;
+            // let ratio = (dcPerAp || 5) / 5;  // Typically 1 to 1 radio
+            // dc += (csl.dc * dcPerAp);
+            // console.log(dcPerAp, dc, csl.dc)
+
+            tags.push({
+                value: `${csl.dc.signedString()}DC`,
+                name: csl.item.name,
+            });
+        }
     }
 
     // Move By (add in velocity)
@@ -399,36 +404,49 @@ export function getDiceFormulaFromItemDC(item, DC) {
 }
 
 export function CombatSkillLevelsForAttack(item) {
-    let result = {
-        ocv: 0,
-        dcv: 0,
-        dmcv: 0,
-        omcv: 0,
-        dc: 0,
-    };
+    let results = [];
 
     // Guard
-    if (!item.actor) return result;
+    if (!item.actor) return results;
 
-    result.skill = item.actor.items.find(
+    const cslSkills = item.actor.items.filter(
         (o) =>
             ["MENTAL_COMBAT_LEVELS", "COMBAT_LEVELS"].includes(
                 o.system.XMLID,
             ) &&
             (o.system.ADDER || []).find(
                 (p) => p.ALIAS === item.system.ALIAS || p.ALIAS === item.name,
-            ),
+            ) &&
+            o.system.active != false,
     );
-    if (result.skill && result.skill.system.csl) {
-        for (let i = 0; i < parseInt(result.skill.system.LEVELS || 0); i++) {
-            result[result.skill.system.csl[i]] =
-                (result[result.skill.system.csl[i]] || 0) + 1;
+
+    for (const cslSkill of cslSkills) {
+        let result = {
+            ocv: 0,
+            dcv: 0,
+            dmcv: 0,
+            omcv: 0,
+            dc: 0,
+            skill: cslSkill,
+        };
+
+        if (result.skill && result.skill.system.csl) {
+            for (
+                let i = 0;
+                i < parseInt(result.skill.system.LEVELS || 0);
+                i++
+            ) {
+                result[result.skill.system.csl[i]] =
+                    (result[result.skill.system.csl[i]] || 0) + 1;
+            }
+            result.item = result.skill;
+
+            // Takes 2 CLS for +1 DC
+            result.dc = Math.floor(result.dc / 2);
+
+            results.push(result);
         }
-        result.item = result.skill;
     }
 
-    // Takes 2 CLS for +1 DC
-    result.dc = Math.floor(result.dc / 2);
-
-    return result;
+    return results;
 }

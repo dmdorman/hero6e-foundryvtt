@@ -1,4 +1,4 @@
-{{ log 'HEROSYS apply-aid-card' this }}
+{{ log 'HEROSYS apply-adjustment-card' this }}
 <div class="hero chat-card item-card toHit-card" data-actor-id="{{actor._id}}" data-item-id="{{item._id}}" {{#if
   tokenId}}data-token-id="{{tokenId}}" {{/if}}>
 
@@ -30,7 +30,7 @@
 
   {{#each adjustments as | adj |}}
     <div class="card-section">
-      {{../item.system.XMLID}} {{#if adj.isFade}}fade of{{/if}} {{abs adj.adjustmentDamageRaw}} Active Points.
+      {{#if targetToken}}{{targetToken.name}}: {{/if}}{{../item.system.XMLID}} {{#if adj.isFade}}fade of{{/if}} {{abs adj.adjustmentDamageRaw}} Active Points.
 
       {{#if (lt adj.adjustmentDamageThisApplication 0)}}
         {{abs adj.adjustmentDamageThisApplication}} {{adj.adjustmentTarget}} gained. 

@@ -431,8 +431,7 @@
             "roll": "6-"
         },
         "power": {
-            "templates": ["power"],
-            "active": "false"
+            "templates": ["power"]
         },
         "equipment": {
             "templates": ["power"],
@@ -465,8 +464,7 @@
         "defense": {
             "templates": ["base"],
             "defenseType": "pd",
-            "active": "false",
-            "resistant": "false",
+            "resistant": false,
             "hardened": 0,
             "impenetrable": 0,
             "value": 0
@@ -475,8 +473,7 @@
             "templates": ["base"],
             "phase": 0,
             "ocv": "+0",
-            "dcv": "+0",
-            "active": false
+            "dcv": "+0"
         },
         "movement": {
             "templates": ["base"],

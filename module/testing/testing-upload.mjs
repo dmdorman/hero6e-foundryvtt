@@ -160,7 +160,7 @@ export function registerUploadTests(quench) {
                 it("description", function () {
                     assert.equal(
                         item.system.description,
-                        "+2 with a group of Mental Powers",
+                        "Mental Combat Skill Levels: +2 with a group of Mental Powers",
                     );
                 });
 
@@ -1638,7 +1638,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with any single attack with one specific weapon",
+                                "Combat Skill Levels: +6 with any single attack with one specific weapon",
                             );
                         });
 
@@ -1691,7 +1691,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with any single Strike",
+                                "Combat Skill Levels: +6 with any single Strike",
                             );
                         });
 
@@ -1744,7 +1744,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with any Strike",
+                                "Combat Skill Levels: +6 with any Strike",
                             );
                         });
 
@@ -1797,7 +1797,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with Martial Maneuvers",
+                                "Combat Skill Levels: +6 with Martial Maneuvers",
                             );
                         });
 
@@ -1850,7 +1850,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with Magic",
+                                "Combat Skill Levels: +6 with Magic",
                             );
                         });
 
@@ -1903,7 +1903,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with a broadly-defined category of attacks",
+                                "Combat Skill Levels: +6 with a broadly-defined category of attacks",
                             );
                         });
 
@@ -1956,7 +1956,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 DCV with HTH or Ranged Combat",
+                                "Combat Skill Levels: +6 DCV with HTH or Ranged Combat",
                             );
                         });
 
@@ -2009,7 +2009,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 DECV versus all Mental Powers and attacks",
+                                "Combat Skill Levels: +6 DECV versus all Mental Powers and attacks",
                             );
                         });
 
@@ -2062,7 +2062,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with Mental Combat",
+                                "Combat Skill Levels: +6 with Mental Combat",
                             );
                         });
 
@@ -2115,7 +2115,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with Ranged Combat",
+                                "Combat Skill Levels: +6 with Ranged Combat",
                             );
                         });
 
@@ -2168,7 +2168,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 OCV with any two categories of combat",
+                                "Combat Skill Levels: +6 OCV with any two categories of combat",
                             );
                         });
 
@@ -2221,7 +2221,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 DCV with any two categories of combat",
+                                "Combat Skill Levels: +6 DCV with any two categories of combat",
                             );
                         });
 
@@ -2274,7 +2274,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with HTH and Ranged Combat",
+                                "Combat Skill Levels: +6 with HTH and Ranged Combat",
                             );
                         });
 
@@ -2327,7 +2327,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with HTH and Mental Combat",
+                                "Combat Skill Levels: +6 with HTH and Mental Combat",
                             );
                         });
 
@@ -2380,7 +2380,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                "+6 with Mental and Ranged Combat",
+                                "Combat Skill Levels: +6 with Mental and Ranged Combat",
                             );
                         });
 
@@ -2430,7 +2430,7 @@ export function registerUploadTests(quench) {
                     it("description", function () {
                         assert.equal(
                             item.system.description,
-                            "+1 with any single attack",
+                            "Combat Skill Levels: +1 with any single attack",
                         );
                     });
 
@@ -6514,6 +6514,62 @@ export function registerUploadTests(quench) {
                     it("end", function () {
                         assert.equal(item.system.end, 0);
                     });
+                });
+            });
+
+            describe("Nerve Strike", async function () {
+                const contents = `
+                    <MANEUVER XMLID="MANEUVER" ID="1717892734727" BASECOST="4.0" LEVELS="0" ALIAS="Nerve Strike" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Nerve Strike" OCV="-1" DCV="+1" DC="4" PHASE="1/2" EFFECT="[NNDDC]" ADDSTR="No" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[NNDDC]">
+                    <NOTES />
+                    </MANEUVER>
+                `;
+                let item;
+
+                before(async () => {
+                    const actor = new HeroSystem6eActor(
+                        {
+                            name: "Quench Actor",
+                            type: "pc",
+                        },
+                        { temporary: true },
+                    );
+                    actor.system.characteristics.dex.value = 15;
+                    item = await new HeroSystem6eItem(
+                        {
+                            ...HeroSystem6eItem.itemDataFromXml(
+                                contents,
+                                actor,
+                            ),
+                            type: "martialart", // TODO: Kludge to make itemDataFromXml match the uploading code.
+                        },
+                        { temporary: true, parent: actor },
+                    );
+                    await item._postUpload();
+                    actor.items.set(item.system.XMLID, item);
+                    item.skillRollUpdateValue();
+                });
+
+                it("description", function () {
+                    assert.equal(
+                        item.system.description,
+                        "1/2 Phase, -1 OCV, +1 DCV, 2d6 NND",
+                    );
+                });
+
+                it("realCost", function () {
+                    assert.equal(item.system.realCost, 4);
+                });
+
+                it("activePoints", function () {
+                    assert.equal(item.system.activePoints, 4);
+                });
+
+                it("dice", function () {
+                    assert.equal(item.system.dice, 2); // There are 4 raw dice, STR is added later
+                });
+
+                it("end", function () {
+                    assert.equal(item.system.end, 0);
                 });
             });
 

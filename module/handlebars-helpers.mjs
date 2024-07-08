@@ -9,6 +9,7 @@ export function initializeHandlebarsHelpers() {
     Handlebars.registerHelper("isdefined", function (value) {
         return value !== undefined;
     });
+    Handlebars.registerHelper("includes", includes);
 }
 
 function indexOf(str, searchTerm) {
@@ -29,4 +30,8 @@ function gameConfigValue(configSetting) {
 
 function getModulePath(templateDirectory) {
     return `systems/${HEROSYS.module}/templates/${templateDirectory}`;
+}
+
+function includes(str, searchTerm) {
+    return str.includes(searchTerm);
 }

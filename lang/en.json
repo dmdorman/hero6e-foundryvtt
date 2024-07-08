@@ -198,6 +198,10 @@
             "Name": "Optional Maneuvers",
             "Hint": "Add the optional maneuvers to the maneuvers tab."
         },
+        "SecretMindScan": {
+            "Name": "Secret Mind Scan",
+            "Hint": "Mind Scan has several components that the Game Master may wish to keep secret. When enabled players are unable to make Mind Scan rolls. Instead the GM is required to make Mind Scan rolls for the players. When disabled, players can select number of minds and familarity."
+        },
         "UseEndurance": 
         {
             "Name": "Use Endurance",

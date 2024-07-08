@@ -58,82 +58,70 @@ export class HeroSystem6eCombatTracker extends CombatTracker {
             context.segments[s] = [];
         }
 
-        if (context.combat?.turns) {
-            // Add segment to context.turns
-            let t = 0;
-            for (const combatant of context.combat.turns) {
-                if (!combatant.visible) continue;
+        // Looks like super.getData returns a minimal combatant, need to add flags.
+        // Handle segments while were at it (as it is stored in flags.segment)
+        let activeSegment = 12;
+        for (let t = 0; t < context.turns.length; t++) {
+            const turn = context.turns[t];
+            turn.flags = context.combat.combatants.find(
+                (c) => c.id === turn.id,
+            )?.flags;
 
-                // Shouldn't be needed but #736 seems to suggest otherwise
-                if (!context.turns[t]) {
-                    console.error("context.turns[t] is ", context.turns[t]);
-                    continue;
-                }
+            // Add combatant to proper segment
+            if (turn.flags?.segment) {
+                context.segments[turn.flags.segment].push(turn);
+            } else {
+                //context.segments[12].push(turn);
+                //console.error("Unknown segment");
+            }
 
-                // Sanity check that shouldn't be necessary
-                if (context.turns[t].name != combatant.name) {
-                    console.error(
-                        `${context.turns[t].name} != ${combatant.name}`,
-                    );
-                    continue;
-                }
+            // Active Segment
+            if (turn.active) {
+                activeSegment = turn.flags.segment;
+            }
 
-                if (context.alphaTesting) {
-                    context.turns[t].name += ` [${t}]`;
-                }
-
-                //Lightning Reflexes (kluge), run every time for now.
-                if (combatant.flags.lightningReflexesAlias) {
-                    const lightningReflexes = combatant.actor.items.find(
-                        (o) =>
-                            o.system.XMLID === "LIGHTNING_REFLEXES_ALL" ||
-                            o.system.XMLID === "LIGHTNING_REFLEXES_SINGLE",
-                    );
-                    if (lightningReflexes) {
-                        const levels =
-                            lightningReflexes.system.LEVELS?.value ||
-                            lightningReflexes.system.LEVELS ||
-                            lightningReflexes.system.levels ||
-                            lightningReflexes.system.other.levels ||
-                            0;
-                        const characteristic =
-                            combatant.actor.system?.initiativeCharacteristic ||
-                            "dex";
-                        const dexValue =
-                            combatant.actor.system.characteristics[
-                                characteristic
-                            ].value;
-                        const spdValue =
-                            combatant.actor.system.characteristics.spd.value;
-                        context.turns[t].initiative =
-                            dexValue +
-                            spdValue / 100 +
-                            combatant.initiative +
-                            parseInt(levels);
-                    }
-                }
-
-                context.turns[t].flags = combatant.flags;
-                const s = parseInt(context.turns[t].flags.segment) || 12;
-                context.segments[s].push(context.turns[t]);
-                t++;
+            // Alpha testing debugging
+            if (context.alphaTesting) {
+                turn.name += ` [${t}]`;
             }
         }
+        context.segments[activeSegment].active = true;
 
-        if (context.combat) {
-            // Active Segment is expanded, all others are collapsed
-            context.activeSegments = [];
-            for (let i = 1; i <= 12; i++) {
-                const active =
-                    i === context.combat.combatant?.flags?.segment ||
-                    (!context.combat.combatant && i === 12);
+        // for (const combatant of context.combat.turns) {
+        //     if (!combatant.visible) continue;
 
-                context.activeSegments[i] = active;
-                if (active) {
-                    context.combat.segment = i;
-                }
-            }
-        }
+        //     // Shouldn't be needed but #736 seems to suggest otherwise
+        //     if (!context.turns[t]) {
+        //         console.error("context.turns[t] is ", context.turns[t]);
+        //         continue;
+        //     }
+
+        //     // Sanity check that shouldn't be necessary
+        //     if (context.turns[t].name != combatant.name) {
+        //         console.error(`${context.turns[t].name} != ${combatant.name}`);
+        //         continue;
+        //     }
+
+        //     //context.turns[t].flags = combatant.flags;
+        //     const s = parseInt(context.turns[t].flags.segment) || 12;
+        //     context.segments[s].push(context.turns[t]);
+        //     t++;
+        // }
+
+        // if (context.combat) {
+        //     // Active Segment is expanded, all others are collapsed
+        //     context.activeSegments = [];
+        //     for (let i = 1; i <= 12; i++) {
+        //         const active =
+        //             i === context.combat.combatant?.flags?.segment ||
+        //             (!context.combat.combatant && i === 12);
+
+        //         context.activeSegments[i] = active;
+        //         if (active) {
+        //             context.combat.segment = i;
+        //         }
+        //     }
+        // }
 
         return context;
     }
