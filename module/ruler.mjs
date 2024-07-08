@@ -11,9 +11,7 @@ export class HeroRuler extends Ruler {
 
     initialize() {
         function movementRadioSelectRender() {
-            const tokenControlButton = $(
-                ".scene-control[data-control='token']",
-            );
+            const tokenControlButton = $(".scene-control[data-control='token']");
 
             const relevantToken = canvas.tokens.controlled[0];
 
@@ -25,9 +23,9 @@ export class HeroRuler extends Ruler {
                 : CONFIG.HERO.movementPowers;
 
             let movementItems = [];
-            for (const key of Object.keys(
-                relevantToken.actor.system.characteristics,
-            ).filter((o) => movementPowers[o])) {
+            for (const key of Object.keys(relevantToken.actor.system.characteristics).filter(
+                (o) => movementPowers[o],
+            )) {
                 const char = relevantToken.actor.system.characteristics[key];
                 if ((parseInt(char.value) || 0) > 0) {
                     char._id = key;
@@ -40,11 +38,8 @@ export class HeroRuler extends Ruler {
                 const activeMovement =
                     movementItems.length === 0
                         ? "none"
-                        : movementItems.find(
-                              (o) =>
-                                  o._id ==
-                                  relevantToken.actor.flags.activeMovement,
-                          )?._id || movementItems[0]._id;
+                        : movementItems.find((o) => o._id == relevantToken.actor.flags.activeMovement)?._id ||
+                          movementItems[0]._id;
 
                 const radioOptions = movementItems
                     .map(
@@ -55,17 +50,13 @@ export class HeroRuler extends Ruler {
                         }>
                         <label for="radio-${index}" class="radio-label">${
                             item.name
-                        } (${item.value}${getSystemDisplayUnits(
-                            relevantToken.actor.is5e,
-                        )})</label>
+                        } (${item.value}${getSystemDisplayUnits(relevantToken.actor.is5e)})</label>
                     </div>
                 `,
                     )
                     .join("");
 
-                const radioSelect = $(
-                    `<div class="radio-container">${radioOptions}</div>`,
-                );
+                const radioSelect = $(`<div class="radio-container">${radioOptions}</div>`);
 
                 radioSelect.find("[data-tool]").click(async function () {
                     const tool = $(this).attr("data-tool");
@@ -97,9 +88,7 @@ export class HeroRuler extends Ruler {
 
             if (tokensControlled !== 1) {
                 // remove movement radio buttons
-                $(".scene-control[data-control='token']")
-                    .find(".radio-container")
-                    .remove();
+                $(".scene-control[data-control='token']").find(".radio-container").remove();
                 return;
             }
 
@@ -130,10 +119,7 @@ export class HeroRuler extends Ruler {
                 return;
             }
 
-            if (
-                !args?.system?.characteristics &&
-                !args?.flags?.activeMovement
-            ) {
+            if (!args?.system?.characteristics && !args?.flags?.activeMovement) {
                 return;
             }
 
@@ -164,32 +150,21 @@ export class HeroRuler extends Ruler {
         const relevantActor = this.token?.actor; //relevantToken?.actor;
 
         if (!relevantActor) {
-            console.error(
-                "HERO | Unable to determine actor for segment label.",
-            );
+            console.error("HERO | Unable to determine actor for segment label.");
             return;
         }
 
-        const rangeMod = calculateRangePenaltyFromDistanceInMetres(
-            totalDistanceInMetres,
-            relevantActor,
-        );
+        const rangeMod = calculateRangePenaltyFromDistanceInMetres(totalDistanceInMetres, relevantActor);
 
         if (!relevantActor) {
-            console.error(
-                "HERO System | Unable to determine actor for segment label.",
-            );
+            console.error("HERO System | Unable to determine actor for segment label.");
             return;
         }
 
-        const movementPowers = relevantActor.system.is5e
-            ? CONFIG.HERO.movementPowers5e
-            : CONFIG.HERO.movementPowers;
+        const movementPowers = relevantActor.system.is5e ? CONFIG.HERO.movementPowers5e : CONFIG.HERO.movementPowers;
 
         const movementItems = [];
-        for (const key of Object.keys(
-            relevantActor.system.characteristics,
-        ).filter((o) => movementPowers[o])) {
+        for (const key of Object.keys(relevantActor.system.characteristics).filter((o) => movementPowers[o])) {
             const char = relevantActor.system.characteristics[key];
             if ((parseInt(char.value) || 0) > 0) {
                 char._id = key;
@@ -201,20 +176,13 @@ export class HeroRuler extends Ruler {
         const activeMovement =
             movementItems.length === 0
                 ? "none"
-                : movementItems.find(
-                      (o) => o._id == relevantActor.flags.activeMovement,
-                  )?._id || movementItems[0]._id;
+                : movementItems.find((o) => o._id == relevantActor.flags.activeMovement)?._id || movementItems[0]._id;
 
         const activeMovementLabel =
-            activeMovement === "none"
-                ? "Running"
-                : movementItems.find((e) => e._id === activeMovement)?.name;
+            activeMovement === "none" ? "Running" : movementItems.find((e) => e._id === activeMovement)?.name;
 
         const label = `[${Math.round(
-            getRoundedDownDistanceInSystemUnits(
-                segmentDistance.distance,
-                relevantActor,
-            ),
+            getRoundedDownDistanceInSystemUnits(segmentDistance.distance, relevantActor),
         )}${getSystemDisplayUnits(relevantActor?.is5e)}]${
             activeMovementLabel ? `\n${activeMovementLabel}` : ""
         }\n${rangeMod > 0 ? "-" : ""}${rangeMod} Range Modifier`;
@@ -226,10 +194,7 @@ export class HeroRuler extends Ruler {
         // Known compatibility issues with DragRuler and FoundryVTT V12
         // Don't even bother recommending it's use at this time.
         if (isGameV12OrLater()) {
-            if (
-                game.modules.get("drag-ruler")?.active &&
-                game.modules.get("drag-ruler").version === "1.13.8"
-            ) {
+            if (game.modules.get("drag-ruler")?.active && game.modules.get("drag-ruler").version === "1.13.8") {
                 ui.notifications.error(
                     "You may need to disable the DragRuler module as it may cause issues with FoundryVTT V12.",
                     { console: true, permanent: true },
