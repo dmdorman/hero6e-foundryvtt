@@ -10,9 +10,7 @@ export async function onManageActiveEffect(event, owner) {
         return;
     }
 
-    const effect = Array.from(owner.allApplicableEffects()).find(
-        (o) => o.id == li.dataset.effectId,
-    );
+    const effect = Array.from(owner.allApplicableEffects()).find((o) => o.id == li.dataset.effectId);
     const item = owner.items.get(li.dataset.effectId);
 
     switch (a.dataset.action) {
@@ -35,16 +33,8 @@ export async function onManageActiveEffect(event, owner) {
             }
 
             const confirmed = await Dialog.confirm({
-                title:
-                    game.i18n.localize(
-                        "HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title",
-                    ) +
-                    " [" +
-                    effect.name +
-                    "]",
-                content: game.i18n.localize(
-                    "HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Content",
-                ),
+                title: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title") + " [" + effect.name + "]",
+                content: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Content"),
             });
 
             if (confirmed) {
@@ -80,8 +70,7 @@ export async function onActiveEffectToggle(effect, newState) {
     // If this is an item update active state
     const origin = await fromUuid(effect.origin);
     const item = origin instanceof HeroSystem6eItem ? origin : effect.parent;
-    const actor =
-        item?.actor || (item instanceof HeroSystem6eActor ? item : null);
+    const actor = item?.actor || (item instanceof HeroSystem6eActor ? item : null);
     if (item) {
         await item.update({ "system.active": newState });
     }
@@ -92,12 +81,9 @@ export async function onActiveEffectToggle(effect, newState) {
         const charMatch = change.key.match(/characteristics\.(.+)\.max$/);
         if (charMatch) {
             const char = charMatch[1];
-            const value = newState
-                ? -parseInt(change.value)
-                : parseInt(change.value);
+            const value = newState ? -parseInt(change.value) : parseInt(change.value);
             await actor.update({
-                [`system.characteristics.${char}.value`]:
-                    parseInt(actor.system.characteristics[char].value) + value,
+                [`system.characteristics.${char}.value`]: parseInt(actor.system.characteristics[char].value) + value,
             });
         }
     }

@@ -1,8 +1,5 @@
 import { HEROSYS } from "./herosystem6e.mjs";
-import {
-    getRoundedDownDistanceInSystemUnits,
-    getSystemDisplayUnits,
-} from "./utility/units.mjs";
+import { getRoundedDownDistanceInSystemUnits, getSystemDisplayUnits } from "./utility/units.mjs";
 
 import { isGameV12OrLater } from "./utility/compatibility.mjs";
 
@@ -242,17 +239,13 @@ export class HeroRuler extends Ruler {
         } else {
             // We recommend using Drag Ruler
             if (!game.modules.get("drag-ruler")) {
-                ui.notifications.warn(
-                    game.i18n.localize("Warning.DragRuler.Install"),
-                );
+                ui.notifications.warn(game.i18n.localize("Warning.DragRuler.Install"));
                 return;
             }
 
             // We recommend using Drag Ruler
             if (!game.modules.get("drag-ruler")?.active) {
-                ui.notifications.warn(
-                    game.i18n.localize("Warning.DragRuler.Active"),
-                );
+                ui.notifications.warn(game.i18n.localize("Warning.DragRuler.Active"));
             }
 
             if (game.modules.get("drag-ruler")?.active) {
@@ -285,8 +278,7 @@ export class HeroRuler extends Ruler {
                 }
 
                 getRanges(token) {
-                    const baseSpeedInMetres =
-                        HeroSysSpeedProvider.getMovementSpeedInMetres(token);
+                    const baseSpeedInMetres = HeroSysSpeedProvider.getMovementSpeedInMetres(token);
 
                     // Convert metres into hexes using the standard 1" = 2m conversion with the
                     // assumption that the grid is set to 1 hex = 2m.
@@ -296,9 +288,7 @@ export class HeroRuler extends Ruler {
                             color: "half",
                         },
                         {
-                            range:
-                                Math.floor(baseSpeedInMetres / 2) +
-                                Math.ceil(baseSpeedInMetres / 2),
+                            range: Math.floor(baseSpeedInMetres / 2) + Math.ceil(baseSpeedInMetres / 2),
                             color: "full",
                         },
 
@@ -320,10 +310,7 @@ export class HeroRuler extends Ruler {
                 static getMovementSpeedInMetres(token) {
                     const key = token.actor.flags.activeMovement || "running";
                     const is5e = !!token.actor.system.is5e;
-                    const movementValue =
-                        parseInt(
-                            token.actor.system.characteristics[key].value,
-                        ) || 0;
+                    const movementValue = parseInt(token.actor.system.characteristics[key].value) || 0;
 
                     return is5e ? movementValue * 2 : movementValue;
                 }
@@ -331,10 +318,7 @@ export class HeroRuler extends Ruler {
                 async onMovementHistoryUpdate(tokens) {
                     await super.onMovementHistoryUpdate(tokens);
 
-                    const automation = game.settings.get(
-                        HEROSYS.module,
-                        "automation",
-                    );
+                    const automation = game.settings.get(HEROSYS.module, "automation");
 
                     for (const tokenObj of tokens) {
                         const token = tokenObj?.document;
@@ -347,17 +331,12 @@ export class HeroRuler extends Ruler {
                             (automation === "pcEndOnly" && actor.type === "pc")
                         ) {
                             // Only consume endurance on token's phase, allowing for Knockback movement (which does not consume END)
-                            if (game.combat?.combatant.actorId != actor.id)
-                                continue;
+                            if (game.combat?.combatant.actorId != actor.id) continue;
 
-                            const combatant = game.combat?.combatants.find(
-                                (o) => o.actorId === actor.id,
-                            );
+                            const combatant = game.combat?.combatants.find((o) => o.actorId === actor.id);
                             if (combatant) {
                                 // If no waypoints then we haven't spent any END in this phase yet.
-                                if (
-                                    !combatant.flags.dragRuler.passedWaypoints
-                                ) {
+                                if (!combatant.flags.dragRuler.passedWaypoints) {
                                     combatant.update({
                                         ["flags.dragRuler.spentEnd"]: 0,
                                     });
@@ -370,18 +349,13 @@ export class HeroRuler extends Ruler {
                                 //         .length - 1
                                 // ].activeMovement = actor.flags?.activeMovement;
 
-                                let spentEnd = parseInt(
-                                    combatant.flags.dragRuler.spentEnd || 0,
-                                );
+                                let spentEnd = parseInt(combatant.flags.dragRuler.spentEnd || 0);
 
                                 // TODO: We are using getMovedDistanceFromToken to get total distance,
                                 // however, we really should separate distances by activeMovement so
                                 // we can apply END modifications to specific movements.
                                 // This is only an issue with split movement types.
-                                let currentDistance =
-                                    dragRuler.getMovedDistanceFromToken(
-                                        tokenObj,
-                                    );
+                                let currentDistance = dragRuler.getMovedDistanceFromToken(tokenObj);
 
                                 // DistancePerEnd default is 10m costs 1 END
                                 let DistancePerEnd = 10;
@@ -393,14 +367,9 @@ export class HeroRuler extends Ruler {
                                 //  you only need to adjust when you exceed 12m.
                                 const movementPower = actor.items.find(
                                     (o) =>
-                                        o.system.XMLID ===
-                                            actor.flags.activeMovement?.toUpperCase() &&
-                                        o.system.active,
+                                        o.system.XMLID === actor.flags.activeMovement?.toUpperCase() && o.system.active,
                                 );
-                                const reducedEnd =
-                                    movementPower?.findModsByXmlid(
-                                        "REDUCEDEND",
-                                    );
+                                const reducedEnd = movementPower?.findModsByXmlid("REDUCEDEND");
                                 if (reducedEnd) {
                                     if (reducedEnd.OPTION === "HALFEND") {
                                         DistancePerEnd = DistancePerEnd * 2;
@@ -409,32 +378,18 @@ export class HeroRuler extends Ruler {
                                         return;
                                     }
                                 }
-                                const increasedEnd =
-                                    movementPower?.findModsByXmlid(
-                                        "INCREASEDEND",
-                                    );
+                                const increasedEnd = movementPower?.findModsByXmlid("INCREASEDEND");
                                 if (increasedEnd) {
-                                    DistancePerEnd /=
-                                        parseInt(
-                                            increasedEnd.OPTION.replace(
-                                                "x",
-                                                "",
-                                            ),
-                                        ) || 1;
+                                    DistancePerEnd /= parseInt(increasedEnd.OPTION.replace("x", "")) || 1;
                                 }
 
                                 // TODO: This is assuming every 10 costs 1 endurance
-                                let totalEnd = Math.ceil(
-                                    currentDistance / DistancePerEnd,
-                                );
+                                let totalEnd = Math.ceil(currentDistance / DistancePerEnd);
                                 let costEnd = totalEnd - spentEnd;
                                 if (costEnd > 0) {
                                     actor.update({
                                         ["system.characteristics.end.value"]:
-                                            parseInt(
-                                                actor.system.characteristics.end
-                                                    .value,
-                                            ) - costEnd,
+                                            parseInt(actor.system.characteristics.end.value) - costEnd,
                                     });
                                 }
                                 combatant.update({
@@ -484,9 +439,7 @@ export function calculateVelocityInSystemUnits(actor, token) {
     // Simplistic velocity calc using dragRuler based on a full phase move.
     else if (velocity === 0 && typeof dragRuler != "undefined" && token) {
         if (dragRuler.getRangesFromSpeedProvider(token).length > 1) {
-            velocity = parseInt(
-                dragRuler.getRangesFromSpeedProvider(token)[1].range || 0,
-            );
+            velocity = parseInt(dragRuler.getRangesFromSpeedProvider(token)[1].range || 0);
 
             if (actor.system.is5e) {
                 velocity = velocity / 2;
@@ -498,10 +451,7 @@ export function calculateVelocityInSystemUnits(actor, token) {
     // TODO: Should we not at least get the presently enabled movement type(s) to make a guess?
     else {
         velocity = parseInt(actor.system.characteristics.running.value || 0);
-        velocity = Math.max(
-            velocity,
-            parseInt(actor.system.characteristics.flight.value || 0),
-        );
+        velocity = Math.max(velocity, parseInt(actor.system.characteristics.flight.value || 0));
     }
 
     return velocity;
@@ -514,16 +464,10 @@ export function calculateVelocityInSystemUnits(actor, token) {
  * @param {number} distanceInMetres
  * @param {object} actor
  */
-export function calculateRangePenaltyFromDistanceInMetres(
-    distanceInMetres,
-    actor,
-) {
+export function calculateRangePenaltyFromDistanceInMetres(distanceInMetres, actor) {
     const is5e = actor?.system?.is5e;
-    const roundedDistanceInMetres =
-        getRoundedDownDistanceInSystemUnits(distanceInMetres, actor) *
-        (is5e ? 2 : 1);
-    const basicRangePenalty =
-        Math.ceil(Math.log2(roundedDistanceInMetres / 8)) * 2;
+    const roundedDistanceInMetres = getRoundedDownDistanceInSystemUnits(distanceInMetres, actor) * (is5e ? 2 : 1);
+    const basicRangePenalty = Math.ceil(Math.log2(roundedDistanceInMetres / 8)) * 2;
     const rangePenalty = Math.max(0, basicRangePenalty);
 
     return rangePenalty;

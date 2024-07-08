@@ -1949,11 +1949,7 @@ export function registerEverythingLadLass(quench) {
                 });
 
                 it("Absorption", async function () {
-                    assert.equal(
-                        actor.items.find((o) => o.system.XMLID === "ABSORPTION")
-                            .system.realCost,
-                        1,
-                    );
+                    assert.equal(actor.items.find((o) => o.system.XMLID === "ABSORPTION").system.realCost, 1);
                 });
             });
         },

@@ -1,0 +1,25 @@
+{{!-- {{log "document-partial.hbs" this}} --}}
+{{#if this.childItems}}
+    <div class="parentChild">
+{{/if}}
+    
+{{#unless this.parentItem}}
+    <li class="directory-item document {{#if this.childItems}} parentItem {{/if}}{{@root.documentCls}} flexrow" data-entry-id="{{this.id}}" data-document-id="{{this.id}}">
+    {{#if this.thumbnail}}
+    <img class="thumbnail" title="{{this.name}}" data-src="{{this.thumbnail}}"/>
+    {{/if}}
+    <h4 class="entry-name document-name"><a>{{this.name}}</a></h4>
+    </li>
+{{/unless}}
+
+{{#if this.childItems}}
+    {{#each this.childItems}}
+        <li class="directory-item document childItem {{@root.documentCls}} flexrow" data-entry-id="{{this.id}}" data-document-id="{{this.id}}">
+        {{#if this.thumbnail}}
+        <img class="thumbnail" title="{{this.name}}" data-src="{{this.thumbnail}}"/>
+        {{/if}}
+        <h4 class="entry-name document-name"><a>{{this.name}}</a></h4>
+        </li>
+    {{/each}}
+    </div>
+{{/if}}

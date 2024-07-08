@@ -1,39 +1,24 @@
 import { HEROSYS } from "../herosystem6e.mjs";
-import {
-    getPowerInfo,
-    getCharacteristicInfoArrayForActor,
-} from "../utility/util.mjs";
+import { getPowerInfo, getCharacteristicInfoArrayForActor } from "../utility/util.mjs";
 import { determineDefense } from "../utility/defense.mjs";
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
 import { RoundFavorPlayerDown, RoundFavorPlayerUp } from "../utility/round.mjs";
-import {
-    calculateDiceFormulaParts,
-    CombatSkillLevelsForAttack,
-    convertToDcFromItem,
-} from "../utility/damage.mjs";
-import {
-    performAdjustment,
-    renderAdjustmentChatCards,
-} from "../utility/adjustment.mjs";
-import {
-    getRoundedDownDistanceInSystemUnits,
-    getSystemDisplayUnits,
-} from "../utility/units.mjs";
+import { calculateDiceFormulaParts, CombatSkillLevelsForAttack, convertToDcFromItem } from "../utility/damage.mjs";
+import { performAdjustment, renderAdjustmentChatCards } from "../utility/adjustment.mjs";
+import { getRoundedDownDistanceInSystemUnits, getSystemDisplayUnits } from "../utility/units.mjs";
 import { HeroSystem6eItem, RequiresASkillRollCheck } from "../item/item.mjs";
 import { ItemAttackFormApplication } from "../item/item-attack-application.mjs";
 import { HeroRoller } from "../utility/dice.mjs";
 import { clamp } from "../utility/compatibility.mjs";
-import {
-    calculateVelocityInSystemUnits,
-    calculateRangePenaltyFromDistanceInMetres,
-} from "../ruler.mjs";
+import { calculateVelocityInSystemUnits, calculateRangePenaltyFromDistanceInMetres } from "../ruler.mjs";
 
 export async function chatListeners(html) {
     html.on("click", "button.roll-damage", this._onRollDamage.bind(this));
     html.on("click", "button.apply-damage", this._onApplyDamage.bind(this));
     html.on("click", "button.rollAoe-damage", this._onRollAoeDamage.bind(this));
     html.on("click", "button.roll-knockback", this._onRollKnockback.bind(this));
-    html.on("click", "button.roll-mindscan", this._onRollMindscan.bind(this));
+    html.on("click", "button.roll-mindscan", this._onRollMindScan.bind(this));
+    html.on("click", "button.roll-mindscanEgo", this._onRollMindScanEffectRoll.bind(this));
 }
 
 export async function onMessageRendered(html) {
@@ -42,7 +27,7 @@ export async function onMessageRendered(html) {
         html.find(`[data-visibility="gm"]`).remove();
     }
     if (game.user.isGM) {
-        html.find(`[data-visibility="notgm"]`).remove();
+        html.find(`[data-visibility="redacted"]`).remove();
     }
 
     // visibility based on actor owner
@@ -86,9 +71,7 @@ export async function AttackOptions(item) {
     };
 
     // Uses Tk
-    let tkItems = item.actor.items.filter(
-        (o) => o.system.XMLID == "TELEKINESIS",
-    );
+    let tkItems = item.actor.items.filter((o) => o.system.XMLID == "TELEKINESIS");
     let tkStr = 0;
     for (const item of tkItems) {
         tkStr += parseInt(item.system.LEVELS) || 0;
@@ -115,22 +98,14 @@ export async function AttackOptions(item) {
     const aoe = item.getAoeModifier();
 
     // TODO: This needs to be considered. AOE does not preclude hit locations.
-    if (
-        game.settings.get(HEROSYS.module, "hit locations") &&
-        !item.system.noHitLocations &&
-        !aoe
-    ) {
+    if (game.settings.get(HEROSYS.module, "hit locations") && !item.system.noHitLocations && !aoe) {
         data.useHitLoc = true;
         data.hitLoc = CONFIG.HERO.hitLocations;
         data.hitLocSide =
-            game.settings.get(HEROSYS.module, "hitLocTracking") === "all"
-                ? CONFIG.HERO.hitLocationSide
-                : null;
+            game.settings.get(HEROSYS.module, "hitLocTracking") === "all" ? CONFIG.HERO.hitLocationSide : null;
 
         // Penalty Skill Levels
-        const PENALTY_SKILL_LEVELS = actor.items.find(
-            (o) => o.system.XMLID === "PENALTY_SKILL_LEVELS",
-        );
+        const PENALTY_SKILL_LEVELS = actor.items.find((o) => o.system.XMLID === "PENALTY_SKILL_LEVELS");
         if (PENALTY_SKILL_LEVELS) {
             data.PENALTY_SKILL_LEVELS = PENALTY_SKILL_LEVELS;
         }
@@ -150,16 +125,12 @@ export async function _processAttackAoeOptions(item, formData) {
 export async function AttackAoeToHit(item, options) {
     const actor = item.actor;
     if (!actor) {
-        return ui.notifications.error(
-            `Attack details are no longer available.`,
-        );
+        return ui.notifications.error(`Attack details are no longer available.`);
     }
 
     const token = actor.getActiveTokens()[0];
     if (!token) {
-        return ui.notifications.error(
-            `Unable to find a token on this scene associated with ${actor.name}.`,
-        );
+        return ui.notifications.error(`Unable to find a token on this scene associated with ${actor.name}.`);
     }
 
     const aoeTemplate =
@@ -179,10 +150,7 @@ export async function AttackAoeToHit(item, options) {
 
     const hitCharacteristic = actor.system.characteristics.ocv.value;
     const setManeuver = item.actor.items.find(
-        (item) =>
-            item.type == "maneuver" &&
-            item.name === "Set" &&
-            item.system.active,
+        (item) => item.type == "maneuver" && item.name === "Set" && item.system.active,
     );
 
     const attackHeroRoller = new HeroRoller()
@@ -204,28 +172,15 @@ export async function AttackAoeToHit(item, options) {
 
     // There are no range penalties if this is a line of sight power or it has been bought with
     // no range modifiers.
-    if (
-        !(
-            item.system.range === "los" ||
-            item.system.range === "special" ||
-            noRangeModifiers ||
-            normalRange
-        )
-    ) {
-        let rangePenalty =
-            -calculateRangePenaltyFromDistanceInMetres(distanceToken);
+    if (!(item.system.range === "los" || item.system.range === "special" || noRangeModifiers || normalRange)) {
+        const rangePenalty = -calculateRangePenaltyFromDistanceInMetres(distanceToken);
 
         // PENALTY_SKILL_LEVELS (range)
         const pslRange = actor.items.find(
-            (o) =>
-                o.system.XMLID === "PENALTY_SKILL_LEVELS" &&
-                o.system.penalty === "range",
+            (o) => o.system.XMLID === "PENALTY_SKILL_LEVELS" && o.system.penalty === "range",
         );
         if (pslRange) {
-            const pslValue = Math.min(
-                parseInt(pslRange.system.LEVELS),
-                -rangePenalty,
-            );
+            const pslValue = Math.min(parseInt(pslRange.system.LEVELS), -rangePenalty);
             attackHeroRoller.addNumber(pslValue, "Penalty Skill Levels");
         }
 
@@ -235,10 +190,7 @@ export async function AttackAoeToHit(item, options) {
 
         // Brace (+2 OCV only to offset the Range Modifier)
         const braceManeuver = item.actor.items.find(
-            (item) =>
-                item.type == "maneuver" &&
-                item.name === "Brace" &&
-                item.system.active,
+            (item) => item.type == "maneuver" && item.name === "Brace" && item.system.active,
         );
         if (braceManeuver) {
             let brace = Math.min(-rangePenalty, braceManeuver.system.ocv);
@@ -271,10 +223,7 @@ export async function AttackAoeToHit(item, options) {
         const facingRollResult = facingHeroRoller.getBasicTotal();
 
         const moveDistance = RoundFavorPlayerDown(
-            Math.min(
-                distanceToken / 2,
-                item.actor.system.is5e ? missBy : missBy * 2,
-            ),
+            Math.min(distanceToken / 2, item.actor.system.is5e ? missBy : missBy * 2),
         );
         hitRollText = `AOE origin MISSED by ${missBy}. Move AOE origin ${
             moveDistance + getSystemDisplayUnits(item.actor.is5e)
@@ -298,8 +247,7 @@ export async function AttackAoeToHit(item, options) {
         attackTags: getAttackTags(item),
         formData: JSON.stringify(options),
         dcvTargetNumber,
-        buttonText:
-            "Confirm AOE placement<br>and selected targets (SHIFT-T to unselect)",
+        buttonText: "Confirm AOE placement<br>and selected targets (SHIFT-T to unselect)",
     };
 
     const template = `systems/${HEROSYS.module}/templates/chat/item-toHitAoe-card.hbs`;
@@ -321,12 +269,23 @@ export async function AttackAoeToHit(item, options) {
 /// ChatMessage showing Attack To Hit
 export async function AttackToHit(item, options) {
     if (!item) {
-        return ui.notifications.error(
-            `Attack details are no longer available.`,
-        );
+        return ui.notifications.error(`Attack details are no longer available.`);
     }
 
     const actor = item.actor;
+    let effectiveItem = item;
+
+    // Create a temporary item based on effectiveLevels
+    if (options?.effectiveLevels && parseInt(item.system.LEVELS) > 0) {
+        options.effectiveLevels = parseInt(options.effectiveLevels) || 0;
+        if (options.effectiveLevels > 0 && options.effectiveLevels !== parseInt(item.system.LEVELS)) {
+            const effectiveItemData = item.toObject();
+            effectiveItemData.system.LEVELS = options.effectiveLevels;
+            effectiveItem = await HeroSystem6eItem.create(effectiveItemData, { temporary: true });
+            await effectiveItem._postUpload();
+        }
+    }
+
     const itemData = item.system;
 
     const hitCharacteristic = actor.system.characteristics[itemData.uses].value;
@@ -346,15 +305,14 @@ export async function AttackToHit(item, options) {
     // -------------------------------------------------
     // attack roll
     // -------------------------------------------------
-    const setManeuver = item.actor.items.find(
-        (o) => o.type == "maneuver" && o.name === "Set" && o.system.active,
-    );
+    const setManeuver = actor.items.find((o) => o.type == "maneuver" && o.name === "Set" && o.system.active);
 
     const heroRoller = new HeroRoller()
         .makeSuccessRoll()
         .addNumber(11, "Base to hit")
         .addNumber(hitCharacteristic, itemData.uses)
         .addNumber(parseInt(options.ocvMod), "OCV modifier")
+        .addNumber(parseInt(options.omcvMod), "OMCV modifier")
         .addNumber(parseInt(setManeuver?.system.ocv) || 0, "Maneuver OCV");
 
     if (item.system.range === "self") {
@@ -369,59 +327,39 @@ export async function AttackToHit(item, options) {
 
     // Mind Scan
     if (parseInt(options.mindScanChoices)) {
-        heroRoller.addNumber(
-            parseInt(options.mindScanChoices),
-            "Number Of Minds",
-        );
+        heroRoller.addNumber(parseInt(options.mindScanChoices), "Number Of Minds");
     }
     if (parseInt(options.mindScanFamiliar)) {
-        heroRoller.addNumber(
-            parseInt(options.mindScanFamiliar),
-            "Mind Familarity",
-        );
+        heroRoller.addNumber(parseInt(options.mindScanFamiliar), "Mind Familiarity");
     }
 
     // There are no range penalties if this is a line of sight power or it has been bought with
     // no range modifiers.
     if (
         game.user.targets.size > 0 &&
-        !(
-            item.system.range === "los" ||
-            item.system.range === "special" ||
-            noRangeModifiers ||
-            normalRange
-        )
+        !(item.system.range === "los" || item.system.range === "special" || noRangeModifiers || normalRange)
     ) {
         // Educated guess for token
-        let token = actor.getActiveTokens()[0];
+        const token = actor.getActiveTokens()[0];
         if (!token) {
             // We can still proceed without a token for our actor.  We just don't know the range to our potential target.
-            ui.notifications.warn(
-                `${actor.name} has no token in this scene.  Range penalties will be ignored.`,
-            );
+            ui.notifications.warn(`${actor.name} has no token in this scene.  Range penalties will be ignored.`);
         }
 
-        let target = game.user.targets.first();
-        let distance = token
+        const target = game.user.targets.first();
+        const distance = token
             ? canvas.grid.measureDistance(token, target, {
                   gridSpaces: true,
               })
             : 0;
-        let factor = actor.system.is5e ? 4 : 8;
-        let rangePenalty = -Math.ceil(Math.log2(distance / factor)) * 2;
-        rangePenalty = rangePenalty > 0 ? 0 : rangePenalty;
+        const rangePenalty = calculateRangePenaltyFromDistanceInMetres(distance);
 
         // PENALTY_SKILL_LEVELS (range)
         const pslRange = actor.items.find(
-            (o) =>
-                o.system.XMLID === "PENALTY_SKILL_LEVELS" &&
-                o.system.penalty === "range",
+            (o) => o.system.XMLID === "PENALTY_SKILL_LEVELS" && o.system.penalty === "range",
         );
         if (pslRange) {
-            const pslValue = Math.min(
-                parseInt(pslRange.system.LEVELS),
-                -rangePenalty,
-            );
+            const pslValue = Math.min(parseInt(pslRange.system.LEVELS), -rangePenalty);
             heroRoller.addNumber(pslValue, "Penalty Skill Levels");
         }
 
@@ -431,8 +369,7 @@ export async function AttackToHit(item, options) {
 
         // Brace (+2 OCV only to offset the Range Modifier)
         const braceManeuver = item.actor.items.find(
-            (o) =>
-                o.type == "maneuver" && o.name === "Brace" && o.system.active,
+            (o) => o.type == "maneuver" && o.name === "Brace" && o.system.active,
         );
         if (braceManeuver) {
             let brace = Math.min(-rangePenalty, braceManeuver.system.ocv);
@@ -456,24 +393,18 @@ export async function AttackToHit(item, options) {
     }
 
     // Haymaker -5 DCV
-    const haymakerManeuver = item.actor.items.find(
-        (o) => o.type == "maneuver" && o.name === "Haymaker" && o.system.active,
-    );
+    const haymakerManeuver = actor.items.find((o) => o.type == "maneuver" && o.name === "Haymaker" && o.system.active);
     if (haymakerManeuver) {
         dcv -= 4;
     }
 
     if (dcv != 0 || dmcv != 0) {
         // Make sure we don't already have this activeEffect
-        let prevActiveEffect = Array.from(
-            item.actor.allApplicableEffects(),
-        ).find((o) => o.origin === item.uuid);
+        let prevActiveEffect = Array.from(item.actor.allApplicableEffects()).find((o) => o.origin === item.uuid);
         if (!prevActiveEffect) {
             // Estimate of how many seconds the DCV penalty lasts (until next phase).
             // In combat.js#_onStartTurn we remove this AE for exact timing.
-            let seconds = Math.ceil(
-                12 / parseInt(item.actor.system.characteristics.spd.value),
-            );
+            let seconds = Math.ceil(12 / parseInt(item.actor.system.characteristics.spd.value));
 
             let _dcvText = "DCV";
             let _dcvValue = dcv;
@@ -485,10 +416,7 @@ export async function AttackToHit(item, options) {
 
             let activeEffect = {
                 label: `${item.name} ${_dcvValue.signedString()} ${_dcvText}`,
-                icon:
-                    dcv < 0
-                        ? "icons/svg/downgrade.svg"
-                        : "icons/svg/upgrade.svg",
+                icon: dcv < 0 ? "icons/svg/downgrade.svg" : "icons/svg/upgrade.svg",
                 changes: [
                     {
                         key: `system.characteristics.${_dcvText.toLowerCase()}.value`,
@@ -505,9 +433,7 @@ export async function AttackToHit(item, options) {
                 },
             };
             //await item.addActiveEffect(activeEffect);
-            await item.actor.createEmbeddedDocuments("ActiveEffect", [
-                activeEffect,
-            ]);
+            await item.actor.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
         }
     }
 
@@ -520,20 +446,14 @@ export async function AttackToHit(item, options) {
         !noHitLocationsPower
     ) {
         const aimTargetLocation =
-            game.settings.get(HEROSYS.module, "hitLocTracking") === "all" &&
-            options.aimSide !== "none"
+            game.settings.get(HEROSYS.module, "hitLocTracking") === "all" && options.aimSide !== "none"
                 ? `${options.aimSide} ${options.aim}`
                 : options.aim;
-        heroRoller.addNumber(
-            CONFIG.HERO.hitLocations[options.aim][3],
-            aimTargetLocation,
-        );
+        heroRoller.addNumber(CONFIG.HERO.hitLocations[options.aim][3], aimTargetLocation);
 
         // Penalty Skill Levels
         if (options.usePsl) {
-            const PENALTY_SKILL_LEVELS = actor.items.find(
-                (o) => o.system.XMLID === "PENALTY_SKILL_LEVELS",
-            );
+            const PENALTY_SKILL_LEVELS = actor.items.find((o) => o.system.XMLID === "PENALTY_SKILL_LEVELS");
             if (PENALTY_SKILL_LEVELS) {
                 let pslValue = Math.min(
                     PENALTY_SKILL_LEVELS.system.LEVELS,
@@ -547,37 +467,54 @@ export async function AttackToHit(item, options) {
     heroRoller.addDice(-3);
 
     const autofire = item.findModsByXmlid("AUTOFIRE");
-    const autoFireShots = autofire
-        ? parseInt(autofire.OPTION_ALIAS.match(/\d+/))
-        : 0;
+    const autoFireShots = autofire ? parseInt(autofire.OPTION_ALIAS.match(/\d+/)) : 0;
 
     let useEnd = false;
     let enduranceText = "";
     if (game.settings.get(HEROSYS.module, "use endurance")) {
         useEnd = true;
         let valueEnd = actor.system.characteristics.end.value;
-        let itemEnd = (parseInt(item.system.end) || 0) * (autoFireShots || 1);
-        let newEnd = valueEnd - itemEnd;
+        let itemEnd = (parseInt(effectiveItem.system.end) || 0) * (autoFireShots || 1);
+        let newEnd = valueEnd; // - itemEnd;
         let spentEnd = itemEnd;
         options.effectiveStr = options.effectiveStr || 0; // May want to get rid of this so we can support HKA with 0 STR (wierd but possible?)
 
         if (itemData.usesStrength || itemData.usesTk) {
-            let strEnd = Math.max(1, Math.round(options.effectiveStr / 10));
+            const StrPerEnd =
+                item.actor.system.isHeroic && game.settings.get(HEROSYS.module, "StrEnd") === "five" ? 5 : 10;
+            let strEnd = Math.max(1, Math.round(options.effectiveStr / StrPerEnd));
+
+            // But wait, may have purchased STR with reduced endurance
+            const strPower = item.actor.items.find((o) => o.type === "power" && o.system.XMLID === "STR");
+            if (strPower) {
+                const strPowerLevels = parseInt(strPower.system.LEVELS);
+                const strREDUCEDEND = strPower.findModsByXmlid("REDUCEDEND");
+                if (strREDUCEDEND) {
+                    if (strREDUCEDEND.OPTIONID === "ZERO") {
+                        strEnd = 0;
+                    } else {
+                        strEnd = Math.max(
+                            1,
+                            Math.round(Math.min(options.effectiveStr, strPowerLevels) / (StrPerEnd * 2)),
+                        );
+                    }
+                    // Add back in STR that isn't part of strPower
+                    if (options.effectiveStr > strPowerLevels) {
+                        strEnd += Math.max(1, Math.round((options.effectiveStr - strPowerLevels) / StrPerEnd));
+                    }
+                }
+            }
 
             // TELIKENESIS is more expensive than normal STR
             if (itemData.usesTk) {
-                spentEnd = Math.ceil(
-                    (spentEnd * options?.effectiveStr) / item.system.LEVELS,
-                );
+                spentEnd = Math.ceil((spentEnd * options?.effectiveStr) / item.system.LEVELS);
             } else {
                 spentEnd = parseInt(spentEnd) + parseInt(strEnd);
             }
             //item.system.endEstimate += strEnd;=            newEnd = parseInt(newEnd) - parseInt(strEnd);
         }
 
-        const enduranceReserve = item.actor.items.find(
-            (o) => o.system.XMLID === "ENDURANCERESERVE",
-        );
+        const enduranceReserve = actor.items.find((o) => o.system.XMLID === "ENDURANCERESERVE");
         if (item.system.USE_END_RESERVE) {
             if (enduranceReserve) {
                 let erValue = parseInt(enduranceReserve.system.value);
@@ -602,17 +539,25 @@ export async function AttackToHit(item, options) {
         if (newEnd < 0) {
             let stunDice = Math.ceil(Math.abs(newEnd) / 2);
 
-            const stunForEndHeroRoller = new HeroRoller()
-                .makeBasicRoll()
-                .addDice(stunDice);
+            const confirmed = await Dialog.confirm({
+                title: "USING STUN FOR ENDURANCE",
+                content: `<p><b>${item.name}</b> requires ${spentEnd} END. 
+                <b>${actor.name}</b> has ${valueEnd} END. 
+                Do you want to take ${stunDice}d6 STUN to make up for the lack of END?</p>`,
+            });
+
+            if (!confirmed) {
+                return;
+            }
+
+            const stunForEndHeroRoller = new HeroRoller().makeBasicRoll().addDice(stunDice);
             await stunForEndHeroRoller.roll();
             const stunRenderedResult = await stunForEndHeroRoller.render();
             const stunDamageTotal = stunForEndHeroRoller.getBasicTotal();
 
             newEnd = -stunDamageTotal;
 
-            enduranceText =
-                "Spent " + valueEnd + " END and " + Math.abs(newEnd) + " STUN";
+            enduranceText = "Spent " + valueEnd + " END and " + Math.abs(newEnd) + " STUN";
 
             enduranceText +=
                 ` <i class="fal fa-circle-info" data-tooltip="` +
@@ -624,9 +569,7 @@ export async function AttackToHit(item, options) {
                 `"></i> `;
             enduranceText += stunRenderedResult;
 
-            await ui.notifications.warn(
-                `${actor.name} used STUN for ENDURANCE.`,
-            );
+            await ui.notifications.warn(`${actor.name} used STUN for ENDURANCE.`);
         } else {
             enduranceText = "Spent " + spentEnd + " END";
 
@@ -649,8 +592,7 @@ export async function AttackToHit(item, options) {
                 changes = {
                     "system.characteristics.end.value": 0,
                     "system.characteristics.stun.value":
-                        parseInt(actor.system.characteristics.stun.value) +
-                        parseInt(newEnd),
+                        parseInt(actor.system.characteristics.stun.value) + parseInt(newEnd),
                 };
             } else {
                 changes = {
@@ -667,46 +609,35 @@ export async function AttackToHit(item, options) {
         if (charges <= 0) {
             return ui.notifications.error(`${item.name} has no more charges.`);
         }
-        options.boostableCharges = clamp(
-            parseInt(options.boostableCharges) || 0,
-            0,
-            Math.min(charges - 1, 4),
-        ); // Maximum of 4
+        options.boostableCharges = clamp(parseInt(options.boostableCharges) || 0, 0, Math.min(charges - 1, 4)); // Maximum of 4
         let spentCharges = 1 + options.boostableCharges;
         if (enduranceText === "") {
-            enduranceText = `Spent ${spentCharges} charge${
-                spentCharges > 1 ? "s" : ""
-            }`;
+            enduranceText = `Spent ${spentCharges} charge${spentCharges > 1 ? "s" : ""}`;
         } else {
-            enduranceText += ` and ${spentCharges} charge${
-                spentCharges > 1 ? "s" : ""
-            }`;
+            enduranceText += ` and ${spentCharges} charge${spentCharges > 1 ? "s" : ""}`;
         }
         item.update({ "system.charges.value": charges - spentCharges });
     }
 
     const aoeModifier = item.getAoeModifier();
     const aoeTemplate =
-        game.scenes.current.templates.find(
-            (template) => template.flags.itemId === item.id,
-        ) ||
-        game.scenes.current.templates.find(
-            (template) => template.user.id === game.user.id,
-        );
+        game.scenes.current.templates.find((template) => template.flags.itemId === item.id) ||
+        game.scenes.current.templates.find((template) => template.user.id === game.user.id);
     const explosion = item.hasExplosionAdvantage();
-    const SELECTIVETARGET = aoeModifier?.ADDER
-        ? aoeModifier.ADDER.find((o) => o.XMLID === "SELECTIVETARGET")
-        : null;
+    const SELECTIVETARGET = aoeModifier?.ADDER ? aoeModifier.ADDER.find((o) => o.XMLID === "SELECTIVETARGET") : null;
     const NONSELECTIVETARGET = aoeModifier?.ADDER
         ? aoeModifier.ADDER.find((o) => o.XMLID === "NONSELECTIVETARGET")
         : null;
 
-    const aoeAlwaysHit =
-        aoeModifier && !(SELECTIVETARGET || NONSELECTIVETARGET);
+    const aoeAlwaysHit = aoeModifier && !(SELECTIVETARGET || NONSELECTIVETARGET);
 
     let targetData = [];
     const targetIds = [];
-    const targetsArray = Array.from(game.user.targets);
+    let targetsArray = Array.from(game.user.targets);
+
+    if (targetsArray.length === 0 && item?.system.XMLID === "MINDSCAN") {
+        targetsArray = canvas.tokens.controlled;
+    }
 
     // If AOE then sort by distance from center
     if (explosion) {
@@ -721,7 +652,7 @@ export async function AttackToHit(item, options) {
         });
     }
 
-    // At least one target (even if it is bogus)
+    // At least one target (even if it is bogus) so we get the dice roll
     if (targetsArray.length === 0) {
         targetsArray.push({});
     }
@@ -729,24 +660,21 @@ export async function AttackToHit(item, options) {
     // Make attacks against all targets
     for (const target of targetsArray) {
         let targetDefenseValue = RoundFavorPlayerUp(
-            target.actor?.system.characteristics[toHitChar.toLowerCase()]
-                ?.value,
+            target.actor?.system.characteristics[toHitChar.toLowerCase()]?.value,
         );
 
         // Bases have no DCV.  DCV=3; 0 if adjacent
         // Mind Scan defers DMCV so use 3 for now
         if (isNaN(targetDefenseValue) || target.actor.type === "base2") {
-            if (
-                !target.actor ||
-                canvas.grid.measureDistance(actor.token, target) > 2
-            ) {
+            if (!target.actor || canvas.grid.measureDistance(actor.token, target) > 2) {
                 targetDefenseValue = 3;
             } else {
                 targetDefenseValue = 0;
             }
         }
 
-        const targetHeroRoller = aoeAlwaysHit ? heroRoller : heroRoller.clone();
+        // Mind scan typically has just 1 target, but could have more. Use same roll for all targets.
+        const targetHeroRoller = aoeAlwaysHit || options.mindScanChoices ? heroRoller : heroRoller.clone();
         let toHitRollTotal = 0;
         let by = 0;
         let autoSuccess = false;
@@ -758,9 +686,11 @@ export async function AttackToHit(item, options) {
         } else {
             // TODO: Autofire against multiple targets should have increasing difficulty
 
-            await targetHeroRoller
-                .makeSuccessRoll(true, targetDefenseValue)
-                .roll();
+            // TODO: FIXME: This should not be looking at internals. When mind scan can only affect 1 target, remove.
+            if (typeof targetHeroRoller._successRolledValue === "undefined") {
+                //TODO: add a methods to check if roll has been made.
+                await targetHeroRoller.makeSuccessRoll(true, targetDefenseValue).roll();
+            }
             autoSuccess = targetHeroRoller.getAutoSuccess();
             toHitRollTotal = targetHeroRoller.getSuccessTotal();
             const margin = targetDefenseValue - toHitRollTotal;
@@ -781,43 +711,45 @@ export async function AttackToHit(item, options) {
         if (aoeModifier) {
             // Distance from center
             if (aoeTemplate) {
-                const distanceInMetres = canvas.grid.measureDistance(
-                    aoeTemplate,
-                    target.center,
-                    { gridSpaces: true },
-                );
-                by += ` (${getRoundedDownDistanceInSystemUnits(
-                    distanceInMetres,
-                    item.actor,
-                )}${getSystemDisplayUnits(item.actor.is5e)} from center)`;
+                const distanceInMetres = canvas.grid.measureDistance(aoeTemplate, target.center, { gridSpaces: true });
+                by += ` (${getRoundedDownDistanceInSystemUnits(distanceInMetres, item.actor)}${getSystemDisplayUnits(
+                    item.actor.is5e,
+                )} from center)`;
             }
         }
 
-        targetData.push({
-            id: target.id,
-            name: target.name || "undefined",
-            aoeAlwaysHit: aoeAlwaysHit,
-            explosion: explosion,
-            toHitChar: toHitChar,
-            toHitRollTotal: toHitRollTotal,
-            autoSuccess: autoSuccess,
-            hitRollText: `${hit} a ${toHitChar} of ${toHitRollTotal}`,
-            value: targetDefenseValue,
-            result: { hit: hit, by: by.toString() },
-            roller: targetHeroRoller,
-            renderedRoll: await targetHeroRoller.render(),
-        });
+        if (target.id) {
+            // Dont' bother to track a bogus target created so we get dice no nice rolls when no target selected.
+            targetData.push({
+                id: target.id,
+                name: target.name || "No Target Selected",
+                aoeAlwaysHit: aoeAlwaysHit,
+                explosion: explosion,
+                toHitChar: toHitChar,
+                toHitRollTotal: toHitRollTotal,
+                autoSuccess: autoSuccess,
+                hitRollText: `${hit} a ${toHitChar} of ${toHitRollTotal}`,
+                value: targetDefenseValue,
+                result: { hit: hit, by: by.toString() },
+                roller: options.mindScanChoices
+                    ? targetsArray[0].id === target.id
+                        ? targetHeroRoller
+                        : null
+                    : targetHeroRoller,
+                renderedRoll: await targetHeroRoller.render(),
+            });
 
-        // Keep track of which tokens were hit so we can apply damage later,
-        // Assume beneficial adjustment powers always hits
-        if (
-            hit === "Hit" ||
-            hit === "Auto Hit" ||
-            item.system.XMLID == "AID" ||
-            item.system.XMLID === "HEALING" ||
-            item.system.XMLID === "SUCCOR"
-        ) {
-            targetIds.push(target.id);
+            // Keep track of which tokens were hit so we can apply damage later,
+            // Assume beneficial adjustment powers always hits
+            if (
+                hit === "Hit" ||
+                hit === "Auto Hit" ||
+                item.system.XMLID == "AID" ||
+                item.system.XMLID === "HEALING" ||
+                item.system.XMLID === "SUCCOR"
+            ) {
+                targetIds.push(target.id);
+            }
         }
     }
 
@@ -843,10 +775,7 @@ export async function AttackToHit(item, options) {
                 }/${autofire.OPTION_ALIAS.toLowerCase()}<br>${firstShotResult} a ${toHitChar} of ${autofireShotRollTotal}`;
 
                 let hit = "Miss";
-                const value =
-                    singleTarget.actor.system.characteristics[
-                        toHitChar.toLowerCase()
-                    ].value;
+                const value = singleTarget.actor.system.characteristics[toHitChar.toLowerCase()].value;
 
                 if (autoSuccess !== undefined) {
                     if (autoSuccess) {
@@ -925,7 +854,8 @@ export async function AttackToHit(item, options) {
             content: `${item.name} ${dcv.signedString()} DCV`,
             speaker,
         };
-        return ChatMessage.create(chatData);
+        await ChatMessage.create(chatData);
+        return;
     }
 
     const cardData = {
@@ -966,9 +896,7 @@ export async function AttackToHit(item, options) {
     speaker.alias = actor.name;
 
     const chatData = {
-        type: aoeAlwaysHit
-            ? CONST.CHAT_MESSAGE_TYPES.OTHER
-            : CONST.CHAT_MESSAGE_TYPES.ROLL, // most AOEs are auto hit
+        type: aoeAlwaysHit ? CONST.CHAT_MESSAGE_TYPES.OTHER : CONST.CHAT_MESSAGE_TYPES.ROLL, // most AOEs are auto hit
         rolls: targetData
             .map((target) => target.roller?.rawRolls())
             .flat()
@@ -978,7 +906,8 @@ export async function AttackToHit(item, options) {
         speaker: speaker,
     };
 
-    return ChatMessage.create(chatData);
+    await ChatMessage.create(chatData);
+    return;
 }
 
 function getAttackTags(item) {
@@ -1043,9 +972,7 @@ function getAttackTags(item) {
         switch (mod.XMLID) {
             case "AUTOFIRE":
                 {
-                    const autoFireShots = parseInt(
-                        mod.OPTION_ALIAS.match(/\d+/),
-                    );
+                    const autoFireShots = parseInt(mod.OPTION_ALIAS.match(/\d+/));
                     attackTags.push({
                         name: `${mod.ALIAS || mod.XMLID}(${autoFireShots})`,
                         title: `${mod.OPTION_ALIAS || ""}`,
@@ -1071,9 +998,7 @@ function getAttackTags(item) {
                 break;
 
             case "STRMINIMUM": {
-                const strMinimum = parseInt(
-                    mod.OPTION_ALIAS.match(/\d+/)?.[0] || 0,
-                );
+                const strMinimum = parseInt(mod.OPTION_ALIAS.match(/\d+/)?.[0] || 0);
                 attackTags.push({
                     name: `${strMinimum} ${mod.ALIAS || mod.XMLID}`,
                     title: `${mod.XMLID}`,
@@ -1152,16 +1077,12 @@ export async function _onRollKnockback(event) {
             A character takes 1d6 damage for every ${getRoundedDownDistanceInSystemUnits(
                 2,
                 item.actor,
-            )}${getSystemDisplayUnits(
-                item.actor.system.is5e,
-            )} they are knocked into a solid object, 
+            )}${getSystemDisplayUnits(item.actor.system.is5e)} they are knocked into a solid object, 
             to a maximum of the PD + BODY of the object hit.  
             A character takes 1d6 damage for every ${getRoundedDownDistanceInSystemUnits(
                 4,
                 item.actor,
-            )}${getSystemDisplayUnits(
-                item.actor.system.is5e,
-            )} knocked back if no object intervenes.
+            )}${getSystemDisplayUnits(item.actor.system.is5e)} knocked back if no object intervenes.
             The character typically winds up prone.
         </p>
         
@@ -1211,9 +1132,7 @@ export async function _onRollKnockback(event) {
 async function _rollApplyKnockback(token, knockbackDice) {
     const actor = token.actor;
 
-    const damageRoller = new HeroRoller()
-        .addDice(parseInt(knockbackDice), "Knockback")
-        .makeNormalRoll();
+    const damageRoller = new HeroRoller().addDice(parseInt(knockbackDice), "Knockback").makeNormalRoll();
     await damageRoller.roll();
 
     const damageRenderedResult = await damageRoller.render();
@@ -1224,10 +1143,9 @@ async function _rollApplyKnockback(token, knockbackDice) {
             <MODIFIER XMLID="NOKB" ID="1716671836182" BASECOST="-0.25" LEVELS="0" ALIAS="No Knockback" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
             </POWER>
         `;
-    const pdAttack = await new HeroSystem6eItem(
-        HeroSystem6eItem.itemDataFromXml(pdContentsAttack, actor),
-        { temporary: true },
-    );
+    const pdAttack = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(pdContentsAttack, actor), {
+        temporary: true,
+    });
     await pdAttack._postUpload();
     pdAttack.name ??= "KNOCKBACK";
 
@@ -1248,8 +1166,7 @@ async function _rollApplyKnockback(token, knockbackDice) {
         defense += "Damage Negation " + damageNegationValue + "DC(s); ";
     }
 
-    defense =
-        defense + defenseValue + " normal; " + resistantValue + " resistant";
+    defense = defense + defenseValue + " normal; " + resistantValue + " resistant";
 
     if (damageReductionValue > 0) {
         defense += "; damage reduction " + damageReductionValue + "%";
@@ -1341,20 +1258,15 @@ async function _rollApplyKnockback(token, knockbackDice) {
     // pcEndOnly: "PCs (end) and NPCs (end, stun, body)",
     // all: "PCs and NPCs (end, stun, body)"
     const automation = game.settings.get(HEROSYS.module, "automation");
-    if (
-        automation === "all" ||
-        (automation === "npcOnly" && token.actor.type === "npc")
-    ) {
+    if (automation === "all" || (automation === "npcOnly" && token.actor.type === "npc")) {
         let changes = {};
         if (damageDetail.stun != 0) {
             changes["system.characteristics.stun.value"] =
-                token.actor.system.characteristics.stun.value -
-                damageDetail.stun;
+                token.actor.system.characteristics.stun.value - damageDetail.stun;
         }
         if (damageDetail.body != 0) {
             changes["system.characteristics.body.value"] =
-                token.actor.system.characteristics.body.value -
-                damageDetail.body;
+                token.actor.system.characteristics.body.value - damageDetail.body;
         }
         await token.actor.update(changes);
     }
@@ -1374,9 +1286,20 @@ export async function _onRollDamage(event) {
     const actor = item?.actor;
 
     if (!actor) {
-        return ui.notifications.error(
-            `Attack details are no longer available.`,
-        );
+        return ui.notifications.error(`Attack details are no longer available.`);
+    }
+
+    let effectiveItem = item;
+
+    // Create a temporary item based on effectiveLevels
+    if (toHitData?.effectiveLevels && parseInt(item.system.LEVELS) > 0) {
+        toHitData.effectiveLevels = parseInt(toHitData.effectiveLevels) || 0;
+        if (toHitData.effectiveLevels > 0 && toHitData.effectiveLevels !== parseInt(item.system.LEVELS)) {
+            const effectiveItemData = item.toObject();
+            effectiveItemData.system.LEVELS = toHitData.effectiveLevels;
+            effectiveItem = await HeroSystem6eItem.create(effectiveItemData, { temporary: true });
+            await effectiveItem._postUpload();
+        }
     }
 
     const adjustment = getPowerInfo({
@@ -1387,115 +1310,37 @@ export async function _onRollDamage(event) {
     })?.type?.includes("sense-affecting");
     const entangle = item.system.XMLID === "ENTANGLE";
 
-    const increasedMultiplierLevels = parseInt(
-        item.findModsByXmlid("INCREASEDSTUNMULTIPLIER")?.LEVELS || 0,
-    );
-    const decreasedMultiplierLevels = parseInt(
-        item.findModsByXmlid("DECREASEDSTUNMULTIPLIER")?.LEVELS || 0,
-    );
+    const increasedMultiplierLevels = parseInt(item.findModsByXmlid("INCREASEDSTUNMULTIPLIER")?.LEVELS || 0);
+    const decreasedMultiplierLevels = parseInt(item.findModsByXmlid("DECREASEDSTUNMULTIPLIER")?.LEVELS || 0);
 
     const useStandardEffect = item.system.USESTANDARDEFFECT || false;
 
-    // DEADLYBLOW
-    // TODO: Consider moving this into the convertToDcFromItem function.
-    // You would need to make it async and check for isAction.
-    // const DEADLYBLOW = item.actor.items.find(
-    //     (o) => o.system.XMLID === "DEADLYBLOW",
-    // );
-    // if (DEADLYBLOW) {
-    //     const templateDeadlyBlow = `systems/${HEROSYS.module}/templates/attack/item-conditional-attack-card.hbs`;
-    //     let data = {
-    //         token: actor.getActiveTokens()[0],
-    //         item,
-    //         conditionalAttacks: [
-    //             { ...DEADLYBLOW, id: DEADLYBLOW.id, checked: true },
-    //         ],
-    //     };
-
-    //     const html = await renderTemplate(templateDeadlyBlow, data);
-    //     async function getDialogOutput() {
-    //         return new Promise((resolve) => {
-    //             const dataConditionalDefenses = {
-    //                 title: item.actor.name + " conditional attacks",
-    //                 content: html,
-    //                 buttons: {
-    //                     normal: {
-    //                         label: "Roll Damage",
-    //                         callback: (html) => {
-    //                             resolve(html.find("form input"));
-    //                         },
-    //                     },
-    //                     cancel: {
-    //                         label: "cancel",
-    //                         callback: () => {
-    //                             resolve(null);
-    //                         },
-    //                     },
-    //                 },
-    //                 default: "normal",
-    //                 close: () => {
-    //                     resolve(null);
-    //                 },
-    //             };
-    //             new Dialog(dataConditionalDefenses).render(true);
-    //         });
-    //     }
-
-    //     const inputs = await getDialogOutput();
-    //     if (inputs === null) return;
-
-    //     toHitData.ignoreAttackAbilities = [];
-    //     for (let input of inputs) {
-    //         if (!input.checked) {
-    //             toHitData.ignoreAttackAbilities.push(input.id);
-    //         }
-    //     }
-    // }
-
-    const { dc, tags } = convertToDcFromItem(item, {
+    const { dc, tags } = convertToDcFromItem(effectiveItem, {
         isAction: true,
         ...toHitData,
     });
-    const formulaParts = calculateDiceFormulaParts(item, dc);
+    const formulaParts = calculateDiceFormulaParts(effectiveItem, dc);
 
-    const includeHitLocation =
-        game.settings.get(HEROSYS.module, "hit locations") &&
-        !item.system.noHitLocations;
+    const includeHitLocation = game.settings.get(HEROSYS.module, "hit locations") && !item.system.noHitLocations;
 
     const damageRoller = new HeroRoller()
         .modifyTo5e(actor.system.is5e)
-        .makeNormalRoll(
-            !senseAffecting && !adjustment && !formulaParts.isKilling,
-        )
-        .makeKillingRoll(
-            !senseAffecting && !adjustment && formulaParts.isKilling,
-        )
+        .makeNormalRoll(!senseAffecting && !adjustment && !formulaParts.isKilling)
+        .makeKillingRoll(!senseAffecting && !adjustment && formulaParts.isKilling)
         .makeAdjustmentRoll(!!adjustment)
         .makeFlashRoll(!!senseAffecting)
         .makeEntangleRoll(entangle)
-        .addStunMultiplier(
-            increasedMultiplierLevels - decreasedMultiplierLevels,
-        )
+        .addStunMultiplier(increasedMultiplierLevels - decreasedMultiplierLevels)
         .addDice(formulaParts.d6Count >= 1 ? formulaParts.d6Count : 0)
-        .addHalfDice(
-            formulaParts.halfDieCount >= 1 ? formulaParts.halfDieCount : 0,
-        )
-        .addDiceMinus1(
-            formulaParts.d6Less1DieCount >= 1
-                ? formulaParts.d6Less1DieCount
-                : 0,
-        )
+        .addHalfDice(formulaParts.halfDieCount >= 1 ? formulaParts.halfDieCount : 0)
+        .addDiceMinus1(formulaParts.d6Less1DieCount >= 1 ? formulaParts.d6Less1DieCount : 0)
         .addNumber(formulaParts.constant)
         .modifyToStandardEffect(useStandardEffect)
-        .modifyToNoBody(
-            item.system.stunBodyDamage === "stunonly" ||
-                item.system.stunBodyDamage === "effectonly",
-        )
+        .modifyToNoBody(item.system.stunBodyDamage === "stunonly" || item.system.stunBodyDamage === "effectonly")
         .addToHitLocation(
             includeHitLocation,
             toHitData.aim,
-            includeHitLocation &&
-                game.settings.get(HEROSYS.module, "hitLocTracking") === "all",
+            includeHitLocation && game.settings.get(HEROSYS.module, "hitLocTracking") === "all",
             toHitData.aim === "none" ? "none" : toHitData.aimSide, // Can't just select a side to hit as that doesn't have a penalty
         );
 
@@ -1503,7 +1348,7 @@ export async function _onRollDamage(event) {
 
     const damageRenderedResult = await damageRoller.render();
 
-    const damageDetail = await _calcDamage(damageRoller, item, toHitData);
+    const damageDetail = await _calcDamage(damageRoller, effectiveItem, toHitData);
 
     const aoeTemplate =
         game.scenes.current.templates.find((o) => o.flags.itemId === item.id) ||
@@ -1530,19 +1375,15 @@ export async function _onRollDamage(event) {
                     // but that isn't always the case.
 
                     // Remove highest terms based on distance
-                    const distance = canvas.grid.measureDistance(
-                        aoeTemplate,
-                        token.object.center,
-                        { gridSpaces: true },
-                    );
+                    const distance = canvas.grid.measureDistance(aoeTemplate, token.object.center, {
+                        gridSpaces: true,
+                    });
                     const pct = distance / aoeTemplate.distance;
 
                     // TODO: This assumes that the number of terms equals the DC/5 AP. This is
                     //       true for normal attacks but not always.
                     //       This ignores explosion modifiers for DC falloff.
-                    const termsToRemove = Math.floor(
-                        pct * (damageRoller.getBaseTerms().length - 1),
-                    );
+                    const termsToRemove = Math.floor(pct * (damageRoller.getBaseTerms().length - 1));
 
                     const heroRollerClone = damageRoller.clone();
                     heroRollerClone.removeNHighestRankTerms(termsToRemove);
@@ -1559,7 +1400,7 @@ export async function _onRollDamage(event) {
     }
 
     // PERSONALIMMUNITY
-    // NOTE: We may want to reintorduce this code (CHANGE ENVIRONMENT or large scale MENTAL) at some point.
+    // NOTE: We may want to reintroduce this code (CHANGE ENVIRONMENT or large scale MENTAL) at some point.
     // However at the moment AOE is the primary mechanism to target multiple tokens.
     // const PERSONALIMMUNITY = item.findModsByXmlid("PERSONALIMMUNITY");
     // if (PERSONALIMMUNITY && targetTokens) {
@@ -1622,147 +1463,224 @@ export async function _onRollDamage(event) {
     return ChatMessage.create(chatData);
 }
 
-export async function _onRollMindscan(event) {
+export async function _onRollMindScan(event) {
     console.log(event);
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kluge to fix.
     const toHitData = { ...button.dataset };
     const item = fromUuidSync(event.currentTarget.dataset.itemid);
 
-    // Determine targets based on which button they clicked on
-    let possibleTargets = [];
-    let selectedTargetIds = [];
-    switch (toHitData.target) {
-        case "controlled":
-            // Only tokens that have EGO
-            possibleTargets = canvas.tokens.controlled.filter(
-                (t) =>
-                    t.actor &&
-                    getCharacteristicInfoArrayForActor(t.actor).find(
-                        (o) => o.key === "EGO",
-                    ),
-            );
-            break;
-        case "scene":
-            // Only tokens that have EGO
-            possibleTargets = game.scenes.current.tokens.filter(
-                (t) =>
-                    t.actor &&
-                    getCharacteristicInfoArrayForActor(t.actor).find(
-                        (o) => o.key === "EGO",
-                    ),
-            );
-            break;
-        case "world":
-            // Only tokens that have EGO
-            possibleTargets = game.actors.filter((t) =>
-                getCharacteristicInfoArrayForActor(t.actor).find(
-                    (o) => o.key === "EGO",
-                ),
-            );
-            break;
-        default:
-            console.error("unhandled target");
+    const template2 = `systems/${HEROSYS.module}/templates/attack/item-mindscan-target-card.hbs`;
+
+    // We may need to use selected token
+    if (toHitData.target === "Selected") {
+        if (canvas.tokens.controlled.length === 0) {
+            return ui.notifications.error(`You must select a valid token for ${item.name}.`);
+        }
+
+        if (canvas.tokens.controlled.length > 1) {
+            return ui.notifications.error(`You must select exactly 1 token for ${item.name}.`);
+        }
+
+        toHitData.target = canvas.tokens.controlled[0].id;
     }
 
-    if (possibleTargets.length === 0) {
-        return ui.notifications.warn(
-            `You must select at least one token before rolling Mind Scan.`,
+    // Look thru all the scenes to find this token
+    const token = game.scenes
+        .find((s) => s.tokens.find((t) => t.id === toHitData.target))
+        ?.tokens.find((t) => t.id === toHitData.target);
+    if (!token && toHitData.target) {
+        await ui.notifications.error(`Token details are no longer available.`);
+        return;
+    }
+    if (token?.actor.id === item.actor.id) {
+        await ui.notifications.error(
+            `${token.name} is not a valid target for ${item.name}.  You can't MINDSCAN yourself.`,
         );
+        return;
     }
 
-    possibleTargets.sort((a, b) => a.name.localeCompare(b.name));
+    let data = {
+        targetTokenId: toHitData.target,
+        targetName: token?.name,
+        effectiveLevels: toHitData.effectiveLevels,
+        item,
+    };
 
-    // Check if maxMinds is >= possibleTargets, if so check them all
-    const maxMinds = parseInt(toHitData.maxminds);
-    if (maxMinds >= possibleTargets.length) {
-        selectedTargetIds = possibleTargets.map((t) => t.id);
-    } else {
-        // If maxMinds is < possibleTargets then pick maxMind targets at random
-        // Use a for loop in an attempt to avoid infinte loop
-        for (let x = 0; x < possibleTargets.length * 10; x++) {
-            if (selectedTargetIds.length < maxMinds) {
-                const i = Math.floor(Math.random() * possibleTargets.length);
-                if (!selectedTargetIds.includes(possibleTargets[i].id)) {
-                    selectedTargetIds.push(possibleTargets[i].id);
-                }
-            } else {
-                break;
-            }
+    const content = await renderTemplate(template2, data);
+    const chatData = {
+        user: game.user._id,
+        type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+        content,
+        speaker: ChatMessage.getSpeaker({ actor: item.actor }),
+    };
+
+    await ChatMessage.create(chatData);
+}
+
+export async function _onRollMindScanEffectRoll(event) {
+    const button = event.currentTarget;
+    button.blur(); // The button remains highlighted for some reason; kluge to fix.
+    const toHitData = { ...button.dataset };
+    const item = fromUuidSync(event.currentTarget.dataset.itemid);
+    const actor = item?.actor;
+
+    if (!actor) {
+        return ui.notifications.error(`Attack details are no longer available.`);
+    }
+
+    let effectiveItem = item;
+
+    // Create a temporary item based on effectiveLevels
+    if (toHitData?.effectiveLevels && parseInt(item.system.LEVELS) > 0) {
+        toHitData.effectiveLevels = parseInt(toHitData.effectiveLevels) || 0;
+        if (toHitData.effectiveLevels > 0 && toHitData.effectiveLevels !== parseInt(item.system.LEVELS)) {
+            const effectiveItemData = item.toObject();
+            effectiveItemData.system.LEVELS = toHitData.effectiveLevels;
+            effectiveItem = await HeroSystem6eItem.create(effectiveItemData, { temporary: true });
+            await effectiveItem._postUpload();
         }
     }
 
-    // Show all these tokens/actors to the GM so they can confirm they are valid options based on mind type.
-    const toHitRollTotal = parseInt(toHitData.toHitRollTotal);
-    const cols = Math.clamp(Math.ceil(possibleTargets.length / 30), 1, 4);
-    let html = `<ol class="columns${cols}">`;
-    for (const target of possibleTargets) {
-        const actor = target.actor || actor;
-        const dmcv = parseInt(
-            (target.actor || target).system.characteristics.dmcv.value,
-        );
-
-        html += `<li title="DMCV=${dmcv}"><input type="checkbox" name="${
-            target.id
-        }" ${selectedTargetIds.includes(target.id) ? 'checked="true"' : ""} ${
-            toHitRollTotal >= dmcv ? "data-hit=true" : ""
-        } />`;
-        // bold targets we hit toHitRollTotal >= DMCV.  target is a token or an actor.
-        if (toHitRollTotal >= dmcv) {
-            html += `<b>${target.name}</b></li>`;
-        } else {
-            html += `${target.name}</li>`;
-        }
+    // Look through all the scenes to find this token
+    const token = game.scenes
+        .find((s) => s.tokens.find((t) => t.id === toHitData.target))
+        ?.tokens.find((t) => t.id === toHitData.target);
+    if (!token) {
+        return ui.notifications.error(`Token details are no longer available.`);
     }
-    html += "</ol>";
 
-    await new Promise((resolve) => {
-        const data = {
-            title: `Confirm Valid Mind Scan targets`,
-            content: html,
-            item: item,
-            buttons: {
-                normal: {
-                    label: "Confirm",
-                    callback: async function (html) {
-                        const knownMindScanTargetsWeHit = Array.from(
-                            html
-                                .find(`input:checked[data-hit="true"]`)
-                                .map(function () {
-                                    return this.name;
-                                }),
-                        );
-                        console.log(knownMindScanTargetsWeHit);
-                        let content = `${item.actor.name} used Mind Scan and knows the presence and general location of following minds:<br>`;
-                        content += "<ol>";
-                        content += knownMindScanTargetsWeHit.reduce(
-                            (accumulator, currentValue) =>
-                                `${accumulator}<li>${
-                                    possibleTargets.find(
-                                        (p) => p.id === currentValue,
-                                    )?.name
-                                }</li>`,
-                            "",
-                        );
-                        content += "</ol>";
-                        const chatData = {
-                            user: game.user._id,
-                            type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-                            content,
-                        };
+    const targetsEgo = parseInt(token.actor.system.characteristics.ego?.value);
+    const egoAdder = parseInt(button.innerHTML.match(/\d+/)) || 0;
+    const targetEgo = targetsEgo + egoAdder;
 
-                        await ChatMessage.create(chatData);
-                    },
-                },
-                cancel: {
-                    label: "Cancel",
-                },
-            },
-            default: "normal",
-            close: () => resolve({ cancelled: true }),
-        };
-        new Dialog(data, { width: "auto" }).render(true);
+    const adjustment = item.baseInfo?.type?.includes("adjustment");
+    const senseAffecting = item.baseInfo?.type?.includes("sense-affecting");
+
+    const useStandardEffect = item.system.USESTANDARDEFFECT || false;
+
+    const { dc, tags } = convertToDcFromItem(effectiveItem, {
+        isAction: true,
+        ...toHitData,
     });
+
+    const formulaParts = calculateDiceFormulaParts(effectiveItem, dc);
+
+    const damageRoller = new HeroRoller()
+        .modifyTo5e(actor.system.is5e)
+        .makeEffectRoll()
+        .addDice(formulaParts.d6Count >= 1 ? formulaParts.d6Count : 0)
+        .addHalfDice(formulaParts.halfDieCount >= 1 ? formulaParts.halfDieCount : 0)
+        .addDiceMinus1(formulaParts.d6Less1DieCount >= 1 ? formulaParts.d6Less1DieCount : 0)
+        .addNumber(formulaParts.constant)
+        .modifyToStandardEffect(useStandardEffect);
+
+    await damageRoller.roll();
+
+    const damageRenderedResult = await damageRoller.render();
+
+    // Conditional defense not implemented yet
+    const ignoreDefenseIds = [];
+
+    // -------------------------------------------------
+    // determine active defenses
+    // -------------------------------------------------
+    let defense = "";
+    const [
+        defenseValue,
+        resistantValue,
+        impenetrableValue,
+        damageReductionValue,
+        damageNegationValue,
+        knockbackResistance,
+        defenseTags,
+    ] = determineDefense(token.actor, item, { ignoreDefenseIds });
+    if (damageNegationValue > 0) {
+        defense += "Damage Negation " + damageNegationValue + "DC(s); ";
+    }
+
+    defense = defense + defenseValue + " normal; " + resistantValue + " resistant";
+
+    if (damageReductionValue > 0) {
+        defense += "; damage reduction " + damageReductionValue + "%";
+    }
+
+    const damageData = {};
+    damageData.defenseValue = defenseValue;
+    damageData.resistantValue = resistantValue;
+    damageData.impenetrableValue = impenetrableValue;
+    damageData.damageReductionValue = damageReductionValue;
+    damageData.damageNegationValue = damageNegationValue;
+    damageData.knockbackResistance = knockbackResistance;
+    damageData.defenseAvad =
+        defenseValue +
+        resistantValue +
+        impenetrableValue +
+        damageReductionValue +
+        damageNegationValue +
+        knockbackResistance;
+    damageData.targetToken = token;
+
+    const damageDetail = await _calcDamage(damageRoller, item, damageData);
+
+    const cardData = {
+        item: item,
+        adjustment,
+        senseAffecting,
+        targetsEgo,
+        egoAdder,
+        targetEgo,
+        success: damageDetail.stun >= targetEgo,
+        buttonText: button.innerHTML.trim(),
+        buttonTitle: button.title.replace(/\n/g, " ").trim(),
+        defense,
+        defenseTags,
+
+        // dice rolls
+        renderedDamageRoll: damageRenderedResult,
+        renderedStunMultiplierRoll: damageDetail.renderedStunMultiplierRoll,
+
+        // hit locations
+        useHitLoc: damageDetail.useHitLoc,
+        hitLocText: damageDetail.hitLocText,
+        hitLocation: damageDetail.hitLocation,
+
+        // body
+        bodyDamage: damageDetail.bodyDamage,
+        bodyDamageEffective: damageDetail.body,
+
+        // stun
+        stunDamage: damageDetail.stunDamage,
+        stunDamageEffective: damageDetail.stun,
+        hasRenderedDamageRoll: true,
+        stunMultiplier: damageDetail.stunMultiplier,
+        hasStunMultiplierRoll: damageDetail.hasStunMultiplierRoll,
+
+        roller: damageRoller.toJSON(),
+
+        // misc
+        targetIds: toHitData.targetids,
+        tags: tags,
+
+        attackTags: getAttackTags(item),
+        targetToken: token,
+        user: game.user,
+    };
+
+    // render card
+    const template = `systems/${HEROSYS.module}/templates/attack/item-mindscan-damage-card.hbs`;
+    const cardHtml = await renderTemplate(template, cardData);
+    const speaker = ChatMessage.getSpeaker({ actor: item.actor });
+    const chatData = {
+        type: CONST.CHAT_MESSAGE_TYPES.ROLL,
+        rolls: damageRoller.rawRolls(),
+        user: game.user._id,
+        content: cardHtml,
+        speaker: speaker,
+    };
+
+    await ChatMessage.create(chatData);
+    return;
 }
 
 // Event handler for when the Apply Damage button is
@@ -1786,24 +1704,16 @@ export async function _onApplyDamage(event) {
         // If AOE then sort by distance from center
         if (item.hasExplosionAdvantage()) {
             const aoeTemplate =
-                game.scenes.current.templates.find(
-                    (o) => o.flags.itemId === item.id,
-                ) ||
-                game.scenes.current.templates.find(
-                    (o) => o.user.id === game.user.id,
-                );
+                game.scenes.current.templates.find((o) => o.flags.itemId === item.id) ||
+                game.scenes.current.templates.find((o) => o.user.id === game.user.id);
 
             targetsArray.sort(function (a, b) {
-                let distanceA = canvas.grid.measureDistance(
-                    aoeTemplate,
-                    game.scenes.current.tokens.get(a).object,
-                    { gridSpaces: true },
-                );
-                let distanceB = canvas.grid.measureDistance(
-                    aoeTemplate,
-                    game.scenes.current.tokens.get(b).object,
-                    { gridSpaces: true },
-                );
+                let distanceA = canvas.grid.measureDistance(aoeTemplate, game.scenes.current.tokens.get(a).object, {
+                    gridSpaces: true,
+                });
+                let distanceB = canvas.grid.measureDistance(aoeTemplate, game.scenes.current.tokens.get(b).object, {
+                    gridSpaces: true,
+                });
                 return distanceA - distanceB;
             });
         }
@@ -1817,9 +1727,7 @@ export async function _onApplyDamage(event) {
 
     // Check to make sure we have a selected token
     if (canvas.tokens.controlled.length == 0) {
-        return ui.notifications.warn(
-            `You must select at least one token before applying damage.`,
-        );
+        return ui.notifications.warn(`You must select at least one token before applying damage.`);
     }
 
     for (const token of canvas.tokens.controlled) {
@@ -1835,16 +1743,12 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
         // This typically happens when the attack id stored in the damage card no longer exists on the actor.
         // For example if the attack item was deleted or the HDC was uploaded again.
         console.warn(damageData.itemid);
-        return ui.notifications.error(
-            `Attack details are no longer available.`,
-        );
+        return ui.notifications.error(`Attack details are no longer available.`);
     }
 
     const token = canvas.tokens.get(tokenId);
     if (!token) {
-        return ui.notifications.warn(
-            `You must select at least one token before applying damage.`,
-        );
+        return ui.notifications.warn(`You must select at least one token before applying damage.`);
     }
 
     const heroRoller = HeroRoller.fromJSON(damageData.roller);
@@ -1873,21 +1777,14 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
     const conditionalDefenses = token.actor.items.filter(
         (o) =>
             (o.system.subType || o.system.type) === "defense" &&
-            (o.system.active ||
-                o.effects.find(() => true)?.disabled === false) &&
-            ((o.system.MODIFIER || []).find((p) =>
-                ["ONLYAGAINSTLIMITEDTYPE", "CONDITIONALPOWER"].includes(
-                    p.XMLID,
-                ),
-            ) ||
+            (o.system.active || o.effects.find(() => true)?.disabled === false) &&
+            ((o.system.MODIFIER || []).find((p) => ["ONLYAGAINSTLIMITEDTYPE", "CONDITIONALPOWER"].includes(p.XMLID)) ||
                 avad),
     );
 
     // AVAD Life Support
     if (avad) {
-        const lifeSupport = token.actor.items.filter(
-            (o) => o.system.XMLID === "LIFESUPPORT",
-        );
+        const lifeSupport = token.actor.items.filter((o) => o.system.XMLID === "LIFESUPPORT");
         conditionalDefenses.push(...lifeSupport);
     }
 
@@ -1936,109 +1833,67 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
             // Attempt to check likely defenses
 
             // PD, ED, MD
-            if (avad.INPUT?.toUpperCase() === defense?.system?.XMLID)
-                option.checked = true;
+            if (avad?.INPUT?.toUpperCase() === defense?.system?.XMLID) option.checked = true;
 
             if (defense instanceof HeroSystem6eItem) {
                 // Damage Reduction
+                if (avad?.INPUT?.toUpperCase() == "PD" && defense.system.INPUT === "Physical") option.checked = true;
+                if (avad?.INPUT?.toUpperCase() == "ED" && defense.system?.INPUT === "Energy") option.checked = true;
                 if (
-                    avad.INPUT?.toUpperCase() == "PD" &&
-                    defense.system.INPUT === "Physical"
-                )
-                    option.checked = true;
-                if (
-                    avad.INPUT?.toUpperCase() == "ED" &&
-                    defense.system?.INPUT === "Energy"
-                )
-                    option.checked = true;
-                if (
-                    avad.INPUT.replace("Mental Defense", "MD").toUpperCase() ==
-                        "MD" &&
+                    avad?.INPUT.replace("Mental Defense", "MD").toUpperCase() == "MD" &&
                     defense.system?.INPUT === "Mental"
                 )
                     option.checked = true;
 
                 // Damage Negation
+                if (avad?.INPUT?.toUpperCase() == "PD" && defense.findModsByXmlid("PHYSICAL")) option.checked = true;
+                if (avad?.INPUT?.toUpperCase() == "ED" && defense?.findModsByXmlid("ENERGY")) option.checked = true;
                 if (
-                    avad.INPUT?.toUpperCase() == "PD" &&
-                    defense.findModsByXmlid("PHYSICAL")
-                )
-                    option.checked = true;
-                if (
-                    avad.INPUT?.toUpperCase() == "ED" &&
-                    defense?.findModsByXmlid("ENERGY")
-                )
-                    option.checked = true;
-                if (
-                    avad.INPUT?.replace("Mental Defense", "MD").toUpperCase() ==
-                        "MD" &&
+                    avad?.INPUT?.replace("Mental Defense", "MD").toUpperCase() == "MD" &&
                     defense.findModsByXmlid("MENTAL")
                 )
                     option.checked = true;
 
                 // Flash Defense
-                if (
-                    avad.INPUT?.match(/flash/i) &&
-                    defense.system.XMLID === "FLASHDEFENSE"
-                )
-                    option.checked = true;
+                if (avad?.INPUT?.match(/flash/i) && defense.system.XMLID === "FLASHDEFENSE") option.checked = true;
 
                 // Power Defense
-                if (
-                    avad.INPUT?.match(/power/i) &&
-                    defense.system.XMLID === "POWERDEFENSE"
-                )
-                    option.checked = true;
+                if (avad?.INPUT?.match(/power/i) && defense.system.XMLID === "POWERDEFENSE") option.checked = true;
 
                 // Life Support
-                if (
-                    avad.INPUT?.match(/life/i) &&
-                    defense.system.XMLID === "LIFESUPPORT"
-                )
-                    option.checked = true;
+                if (avad?.INPUT?.match(/life/i) && defense.system.XMLID === "LIFESUPPORT") option.checked = true;
 
                 // Resistant Damage Reduction
                 if (
-                    avad.INPUT == "Resistant PD" &&
+                    avad?.INPUT == "Resistant PD" &&
                     defense.system.INPUT === "Physical" &&
                     defense.system.OPTION.match(/RESISTANT/i)
                 )
                     option.checked = true;
                 if (
-                    avad.INPUT == "Resistant ED" &&
+                    avad?.INPUT == "Resistant ED" &&
                     defense.system.INPUT === "Energy" &&
                     defense.system.OPTION.match(/RESISTANT/i)
                 )
                     option.checked = true;
                 if (
-                    avad.INPUT == "Resistant MD" &&
+                    avad?.INPUT == "Resistant MD" &&
                     defense.system.INPUT === "Mental" &&
                     defense.system.OPTION.match(/RESISTANT/i)
                 )
                     option.checked = true;
 
                 // FORCEFIELD, RESISTANT PROTECTION
-                if (
-                    avad.INPUT?.toUpperCase() == "PD" &&
-                    parseInt(defense.system.PDLEVELS || 0) > 0
-                )
+                if (avad?.INPUT?.toUpperCase() == "PD" && parseInt(defense.system.PDLEVELS || 0) > 0)
+                    option.checked = true;
+                if (avad?.INPUT?.toUpperCase() == "ED" && parseInt(defense.system.EDLEVELS || 0) > 0)
                     option.checked = true;
                 if (
-                    avad.INPUT?.toUpperCase() == "ED" &&
-                    parseInt(defense.system.EDLEVELS || 0) > 0
-                )
-                    option.checked = true;
-                if (
-                    avad.INPUT?.replace("Mental Defense", "MD").toUpperCase() ==
-                        "MD" &&
+                    avad?.INPUT?.replace("Mental Defense", "MD").toUpperCase() == "MD" &&
                     parseInt(defense.system.MDLEVELS || 0) > 0
                 )
                     option.checked = true;
-                if (
-                    avad.INPUT?.match(/power/i) &&
-                    parseInt(defense.system.POWDLEVELS || 0) > 0
-                )
-                    option.checked = true;
+                if (avad?.INPUT?.match(/power/i) && parseInt(defense.system.POWDLEVELS || 0) > 0) option.checked = true;
             }
 
             option.description = defense.system.description;
@@ -2088,10 +1943,7 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
         for (let input of inputs) {
             if (!input.checked) {
                 ignoreDefenseIds.push(input.id);
-                defenses.push(
-                    token.actor.items.get(input.id) ||
-                        conditionalDefenses.find((o) => o.id === input.id),
-                );
+                defenses.push(token.actor.items.get(input.id) || conditionalDefenses.find((o) => o.id === input.id));
             }
         }
 
@@ -2099,14 +1951,9 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
             let content = `The following defenses were not applied vs <span title="${item.name.replace(
                 /"/g,
                 "",
-            )}: ${item.system.description.replace(/"/g, "")}">${
-                item.name
-            }</span>:<ul>`;
+            )}: ${item.system.description.replace(/"/g, "")}">${item.name}</span>:<ul>`;
             for (let def of defenses) {
-                content += `<li title="${def.name.replace(
-                    /"/g,
-                    "",
-                )}: ${def.system.description.replace(/"/g, "")}">${
+                content += `<li title="${def.name.replace(/"/g, "")}: ${def.system.description.replace(/"/g, "")}">${
                     def.name
                 }</li>`;
             }
@@ -2131,8 +1978,7 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
         (o) =>
             (o.system.subType || o.system.type) === "defense" &&
             o.system.active &&
-            (o.findModsByXmlid("EVERYPHASE") ||
-                o.findModsByXmlid("ACTIVATIONROLL")),
+            (o.findModsByXmlid("EVERYPHASE") || o.findModsByXmlid("ACTIVATIONROLL")),
     );
 
     for (const defense of defenseEveryPhase) {
@@ -2161,8 +2007,7 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
         defense += "Damage Negation " + damageNegationValue + "DC(s); ";
     }
 
-    defense =
-        defense + defenseValue + " normal; " + resistantValue + " resistant";
+    defense = defense + defenseValue + " normal; " + resistantValue + " resistant";
 
     if (damageReductionValue > 0) {
         defense += "; damage reduction " + damageReductionValue + "%";
@@ -2196,7 +2041,8 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
                 speaker: speaker,
             };
 
-            return ChatMessage.create(chatData);
+            await ChatMessage.create(chatData);
+            return;
         }
     }
 
@@ -2210,23 +2056,13 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
         item: item,
     })?.type?.includes("adjustment");
     if (adjustment) {
-        return _onApplyAdjustmentToSpecificToken(
-            item,
-            token,
-            damageDetail,
-            defense,
-        );
+        return _onApplyAdjustmentToSpecificToken(item, token, damageDetail, defense, defenseTags);
     }
     const senseAffecting = getPowerInfo({
         item: item,
     })?.type?.includes("sense-affecting");
     if (senseAffecting) {
-        return _onApplySenseAffectingToSpecificToken(
-            item,
-            token,
-            damageDetail,
-            defense,
-        );
+        return _onApplySenseAffectingToSpecificToken(item, token, damageDetail, defense);
     }
 
     // AUTOMATION immune to mental powers
@@ -2243,16 +2079,10 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
 
     // AUTOMATION powers related to STUN
     const CANNOTBESTUNNED = token.actor.items.find(
-        (o) =>
-            o.system.XMLID === "AUTOMATON" &&
-            o.system.OPTION === "CANNOTBESTUNNED",
+        (o) => o.system.XMLID === "AUTOMATON" && o.system.OPTION === "CANNOTBESTUNNED",
     );
-    const NOSTUN1 = token.actor.items.find(
-        (o) => o.system.XMLID === "AUTOMATON" && o.system.OPTION === "NOSTUN1",
-    ); // AUTOMATION Takes No STUN (loses abilities when takes BODY)
-    const NOSTUN2 = token.actor.items.find(
-        (o) => o.system.XMLID === "AUTOMATON" && o.system.OPTION === "NOSTUN2",
-    ); //Takes No STUN
+    const NOSTUN1 = token.actor.items.find((o) => o.system.XMLID === "AUTOMATON" && o.system.OPTION === "NOSTUN1"); // AUTOMATION Takes No STUN (loses abilities when takes BODY)
+    const NOSTUN2 = token.actor.items.find((o) => o.system.XMLID === "AUTOMATON" && o.system.OPTION === "NOSTUN2"); //Takes No STUN
     if (NOSTUN1 && damageDetail.stun > 0) {
         defenseTags.push({
             name: "TAKES NO STUN",
@@ -2260,9 +2090,7 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
             resistant: false,
             title: "Ignore the STUN damage from any attack; loses abilities when takes BODY",
         });
-        damageDetail.effects =
-            damageDetail.effects +
-            "Takes No STUN (loses abilities when takes BODY); ";
+        damageDetail.effects = damageDetail.effects + "Takes No STUN (loses abilities when takes BODY); ";
         damageDetail.stun = 0;
     }
     if (NOSTUN2 && damageDetail.stun > 0) {
@@ -2278,30 +2106,20 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
 
     // See if token has CON.  Notice we check raw actor type from config, not current actor props as
     // this token may have originally been a PC, and changed to a BASE.
-    const hasCON = getCharacteristicInfoArrayForActor(token.actor).find(
-        (o) => o.key === "CON",
-    );
+    const hasCON = getCharacteristicInfoArrayForActor(token.actor).find((o) => o.key === "CON");
 
     // check if target is stunned.  Must have CON
     if (game.settings.get(HEROSYS.module, "stunned") && hasCON) {
         // determine if target was Stunned
-        if (
-            damageDetail.stun > token.actor.system.characteristics.con.value &&
-            !CANNOTBESTUNNED
-        ) {
+        if (damageDetail.stun > token.actor.system.characteristics.con.value && !CANNOTBESTUNNED) {
             damageDetail.effects = damageDetail.effects + "inflicts Stunned; ";
 
             // none: "No Automation",
             // npcOnly: "NPCs Only (end, stun, body)",
             // pcEndOnly: "PCs (end) and NPCs (end, stun, body)",
             // all: "PCs and NPCs (end, stun, body)"
-            if (
-                automation === "all" ||
-                (automation === "npcOnly" && token.actor.type === "npc")
-            ) {
-                token.actor.addActiveEffect(
-                    HeroSystem6eActorActiveEffects.stunEffect,
-                );
+            if (automation === "all" || (automation === "npcOnly" && token.actor.type === "npc")) {
+                token.actor.addActiveEffect(HeroSystem6eActorActiveEffects.stunEffect);
             }
         }
     }
@@ -2384,26 +2202,18 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
     // npcOnly: "NPCs Only (end, stun, body)",
     // pcEndOnly: "PCs (end) and NPCs (end, stun, body)",
     // all: "PCs and NPCs (end, stun, body)"
-    if (
-        automation === "all" ||
-        (automation === "npcOnly" && token.actor.type === "npc")
-    ) {
+    if (automation === "all" || (automation === "npcOnly" && token.actor.type === "npc")) {
         let changes = {
-            "system.characteristics.body.value":
-                token.actor.system.characteristics.body.value -
-                damageDetail.body,
+            "system.characteristics.body.value": token.actor.system.characteristics.body.value - damageDetail.body,
         };
 
         // See if token has STUN.  Notice we check raw actor type from config, not current actor props as
         // this token may have originally been a PC, and changed to a BASE.
-        const hasSTUN = getCharacteristicInfoArrayForActor(token.actor).find(
-            (o) => o.key === "STUN",
-        );
+        const hasSTUN = getCharacteristicInfoArrayForActor(token.actor).find((o) => o.key === "STUN");
 
         if (hasSTUN) {
             changes["system.characteristics.stun.value"] =
-                token.actor.system.characteristics.stun?.value -
-                damageDetail.stun;
+                token.actor.system.characteristics.stun?.value - damageDetail.stun;
         }
         await token.actor.update(changes);
     }
@@ -2411,35 +2221,20 @@ export async function _onApplyDamageToSpecificToken(event, tokenId) {
     const damageChatMessage = ChatMessage.create(chatData);
 
     // Absorption happens after damage is taken unless the GM allows it.
-    const absorptionItems = token.actor.items.filter(
-        (item) => item.system.XMLID === "ABSORPTION",
-    );
+    const absorptionItems = token.actor.items.filter((item) => item.system.XMLID === "ABSORPTION");
     if (absorptionItems) {
-        await _performAbsorptionForToken(
-            token,
-            absorptionItems,
-            damageDetail,
-            item,
-        );
+        await _performAbsorptionForToken(token, absorptionItems, damageDetail, item);
     }
 
     return damageChatMessage;
 }
 
-async function _performAbsorptionForToken(
-    token,
-    absorptionItems,
-    damageDetail,
-    damageItem,
-) {
+async function _performAbsorptionForToken(token, absorptionItems, damageDetail, damageItem) {
     const attackType = damageItem.system.class; // TODO: avad?
 
     // Match attack against absorption type. If we match we can do some absorption.
     for (const absorptionItem of absorptionItems) {
-        if (
-            absorptionItem.system.OPTION === attackType.toUpperCase() &&
-            absorptionItem.system.active
-        ) {
+        if (absorptionItem.system.OPTION === attackType.toUpperCase() && absorptionItem.system.active) {
             const actor = absorptionItem.actor;
             let maxAbsorption;
             if (actor.system.is5e) {
@@ -2462,9 +2257,7 @@ async function _performAbsorptionForToken(
                 }
 
                 // Present the roll.
-                const cardHtml = await absorptionRoller.render(
-                    `${attackType} attack vs ${absorptionItem.name}`,
-                );
+                const cardHtml = await absorptionRoller.render(`${attackType} attack vs ${absorptionItem.name}`);
 
                 const speaker = ChatMessage.getSpeaker({
                     actor: actor,
@@ -2487,10 +2280,7 @@ async function _performAbsorptionForToken(
 
             console.warn("TODO: Not tracking per segment absorption max");
 
-            const activePointsAbsorbing = Math.min(
-                maxAbsorption,
-                damageDetail.bodyDamage,
-            );
+            const activePointsAbsorbing = Math.min(maxAbsorption, damageDetail.bodyDamage);
 
             // Apply the absorption
             await _onApplyAdjustmentToSpecificToken(
@@ -2506,17 +2296,10 @@ async function _performAbsorptionForToken(
     }
 }
 
-async function _onApplyAdjustmentToSpecificToken(
-    adjustmentItem,
-    token,
-    damageDetail,
-    defense,
-) {
+async function _onApplyAdjustmentToSpecificToken(adjustmentItem, token, damageDetail, defense, defenseTags) {
     if (
         adjustmentItem.actor.id === token.actor.id &&
-        ["DISPEL", "DRAIN", "SUPPRESS", "TRANSFER"].includes(
-            adjustmentItem.system.XMLID,
-        )
+        ["DISPEL", "DRAIN", "SUPPRESS", "TRANSFER"].includes(adjustmentItem.system.XMLID)
     ) {
         await ui.notifications.warn(
             `${adjustmentItem.system.XMLID} attacker/source (${adjustmentItem.actor.name}) and defender/target (${token.actor.name}) are the same.`,
@@ -2527,18 +2310,17 @@ async function _onApplyAdjustmentToSpecificToken(
     const activePointsDamageAfterDefense = damageDetail.stun;
 
     // Where is the adjustment taking from/giving to?
-    const { valid, reducesArray, enhancesArray } =
-        adjustmentItem.splitAdjustmentSourceAndTarget();
+    const { valid, reducesArray, enhancesArray } = adjustmentItem.splitAdjustmentSourceAndTarget();
     if (!valid) {
         return ui.notifications.error(
-            `${
-                adjustmentItem.actor.name
-            } has an invalid adjustment sources/targets provided for ${
+            `${adjustmentItem.actor.name} has an invalid adjustment sources/targets provided for ${
                 adjustmentItem.system.ALIAS || adjustmentItem.name
             }. Compute effects manually.`,
             { permanent: true },
         );
     }
+
+    const adjustmentItemTags = getAttackTags(adjustmentItem);
 
     const reductionChatMessages = [];
     const reductionTargetActor = token.actor;
@@ -2556,14 +2338,11 @@ async function _onApplyAdjustmentToSpecificToken(
         );
     }
     if (reductionChatMessages.length > 0) {
-        await renderAdjustmentChatCards(reductionChatMessages);
+        await renderAdjustmentChatCards(reductionChatMessages, adjustmentItemTags, defenseTags);
     }
 
     const enhancementChatMessages = [];
-    const enhancementTargetActor =
-        adjustmentItem.system.XMLID === "TRANSFER"
-            ? adjustmentItem.actor
-            : token.actor;
+    const enhancementTargetActor = adjustmentItem.system.XMLID === "TRANSFER" ? adjustmentItem.actor : token.actor;
     for (const enhance of enhancesArray) {
         enhancementChatMessages.push(
             await performAdjustment(
@@ -2580,20 +2359,17 @@ async function _onApplyAdjustmentToSpecificToken(
         );
     }
     if (enhancementChatMessages.length > 0) {
-        await renderAdjustmentChatCards(enhancementChatMessages);
+        await renderAdjustmentChatCards(
+            enhancementChatMessages,
+            adjustmentItemTags,
+            [], // don't show any defense tags as this is an enhancement adjustment
+        );
     }
 }
 
-async function _onApplySenseAffectingToSpecificToken(
-    senseAffectingItem,
-    token,
-    damageData,
-    defense,
-) {
+async function _onApplySenseAffectingToSpecificToken(senseAffectingItem, token, damageData, defense) {
     // FLASHDEFENSE
-    const flashDefense = senseAffectingItem.actor.items.find(
-        (o) => o.system.XMLID === "FLASHDEFENSE",
-    );
+    const flashDefense = senseAffectingItem.actor.items.find((o) => o.system.XMLID === "FLASHDEFENSE");
     if (flashDefense) {
         const value = parseInt(flashDefense.system.LEVELS || 0);
         damageData.bodyDamage = Math.max(0, damageData.bodyDamage - value);
@@ -2642,7 +2418,8 @@ async function _onApplySenseAffectingToSpecificToken(
         speaker: speaker,
     };
 
-    return ChatMessage.create(chatData);
+    await ChatMessage.create(chatData);
+    return;
 }
 
 /**
@@ -2663,6 +2440,7 @@ async function _calcDamage(heroRoller, item, options) {
         item: item,
     })?.type?.includes("sense-affecting");
     const entangle = item.system.XMLID === "ENTANGLE";
+    const mindScan = item.system.XMLID === "MINDSCAN"; // TODO: Effect roll should be expanded to many other mental powers
 
     let body;
     let stun;
@@ -2671,11 +2449,7 @@ async function _calcDamage(heroRoller, item, options) {
     if (adjustmentPower) {
         body = 0;
         stun = heroRoller.getAdjustmentTotal();
-        bodyForPenetrating = (
-            await heroRoller.cloneWhileModifyingType(
-                HeroRoller.ROLL_TYPE.NORMAL,
-            )
-        ).getBodyTotal();
+        bodyForPenetrating = (await heroRoller.cloneWhileModifyingType(HeroRoller.ROLL_TYPE.NORMAL)).getBodyTotal();
     } else if (senseAffectingPower) {
         body = heroRoller.getFlashTotal();
         stun = 0;
@@ -2684,31 +2458,27 @@ async function _calcDamage(heroRoller, item, options) {
         body = heroRoller.getEntangleTotal();
         stun = 0;
         bodyForPenetrating = 0;
+    } else if (mindScan) {
+        body = 0;
+        stun = heroRoller.getEffectTotal();
+        bodyForPenetrating = 0;
     } else {
         body = heroRoller.getBodyTotal();
         stun = heroRoller.getStunTotal();
 
         // TODO: Doesn't handle a 1 point killing attack which is explicitly called out as doing 1 penetrating BODY.
         if (itemData.killing) {
-            bodyForPenetrating = (
-                await heroRoller.cloneWhileModifyingType(
-                    HeroRoller.ROLL_TYPE.NORMAL,
-                )
-            ).getBodyTotal();
+            bodyForPenetrating = (await heroRoller.cloneWhileModifyingType(HeroRoller.ROLL_TYPE.NORMAL)).getBodyTotal();
         } else {
             bodyForPenetrating = body;
         }
     }
 
     const noHitLocationsPower = !!item.system.noHitLocations;
-    const useHitLocations =
-        game.settings.get(HEROSYS.module, "hit locations") &&
-        !noHitLocationsPower;
+    const useHitLocations = game.settings.get(HEROSYS.module, "hit locations") && !noHitLocationsPower;
     const hasStunMultiplierRoll = itemData.killing && !useHitLocations;
 
-    const stunMultiplier = hasStunMultiplierRoll
-        ? heroRoller.getStunMultiplier()
-        : 1;
+    const stunMultiplier = hasStunMultiplierRoll ? heroRoller.getStunMultiplier() : 1;
 
     // TODO: FIXME: This calculation is buggy as it doesn't consider:
     //       multiple levels of penetrating vs hardened/impenetrable
@@ -2762,25 +2532,17 @@ async function _calcDamage(heroRoller, item, options) {
         knockbackTags,
         knockbackRoller,
         knockbackResultTotal,
-    } = await _calcKnockback(
-        body,
-        item,
-        options,
-        parseInt(itemData.knockbackMultiplier),
-    );
+    } = await _calcKnockback(body, item, options, parseInt(itemData.knockbackMultiplier));
 
     // -------------------------------------------------
     // determine effective damage
     // -------------------------------------------------
     if (itemData.killing) {
-        stun =
-            stun - (options.defenseValue || 0) - (options.resistantValue || 0);
+        stun = stun - (options.defenseValue || 0) - (options.resistantValue || 0);
         body = body - (options.resistantValue || 0);
     } else {
-        stun =
-            stun - (options.defenseValue || 0) - (options.resistantValue || 0);
-        body =
-            body - (options.defenseValue || 0) - (options.resistantValue || 0);
+        stun = stun - (options.defenseValue || 0) - (options.resistantValue || 0);
+        body = body - (options.defenseValue || 0) - (options.resistantValue || 0);
     }
 
     stun = RoundFavorPlayerDown(stun < 0 ? 0 : stun);
@@ -2788,10 +2550,8 @@ async function _calcDamage(heroRoller, item, options) {
 
     let hitLocText = "";
     if (useHitLocations) {
-        const hitLocationBodyMultiplier =
-            heroRoller.getHitLocation().bodyMultiplier;
-        const hitLocationStunMultiplier =
-            heroRoller.getHitLocation().stunMultiplier;
+        const hitLocationBodyMultiplier = heroRoller.getHitLocation().bodyMultiplier;
+        const hitLocationStunMultiplier = heroRoller.getHitLocation().stunMultiplier;
 
         if (itemData.killing) {
             // Killing attacks apply hit location multiplier after resistant damage protection has been subtracted
@@ -2808,12 +2568,8 @@ async function _calcDamage(heroRoller, item, options) {
 
     // apply damage reduction
     if (options.damageReductionValue > 0) {
-        stun = RoundFavorPlayerDown(
-            stun * (1 - options.damageReductionValue / 100),
-        );
-        body = RoundFavorPlayerDown(
-            body * (1 - options.damageReductionValue / 100),
-        );
+        stun = RoundFavorPlayerDown(stun * (1 - options.damageReductionValue / 100));
+        body = RoundFavorPlayerDown(body * (1 - options.damageReductionValue / 100));
     }
 
     // Penetrating attack minimum damage
@@ -2881,11 +2637,7 @@ async function _calcKnockback(body, item, options, knockbackMultiplier) {
     // BASEs do not experience KB
     const isBase = options?.targetToken?.actor.type === "base2";
 
-    if (
-        game.settings.get(HEROSYS.module, "knockback") &&
-        knockbackMultiplier &&
-        !isBase
-    ) {
+    if (game.settings.get(HEROSYS.module, "knockback") && knockbackMultiplier && !isBase) {
         useKnockback = true;
 
         let knockbackDice = 2;
@@ -2943,10 +2695,7 @@ async function _calcKnockback(body, item, options, knockbackMultiplier) {
                 body * (knockbackMultiplier > 1 ? knockbackMultiplier : 1), // TODO: Consider supporting multiplication in HeroRoller
                 "Max potential knockback",
             )
-            .addNumber(
-                -parseInt(options.knockbackResistance || 0),
-                "Knockback resistance",
-            )
+            .addNumber(-parseInt(options.knockbackResistance || 0), "Knockback resistance")
             .addDice(-Math.max(0, knockbackDice));
         await knockbackRoller.roll();
 
@@ -2961,8 +2710,8 @@ async function _calcKnockback(body, item, options, knockbackMultiplier) {
         } else {
             // If the result is positive, the target is Knocked Back 1" or 2m times the result
             knockbackMessage = `Knocked Back ${
-                knockbackResultTotal * (item.actor.system.is5e ? 1 : 2)
-            }${getSystemDisplayUnits(item.actor.is5e)}`;
+                knockbackResultTotal * (item.actor?.system.is5e || item.system.is5e ? 1 : 2)
+            }${getSystemDisplayUnits(item.actor?.is5e || item.system.is5e)}`;
         }
     }
 

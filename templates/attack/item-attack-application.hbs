@@ -46,22 +46,43 @@
       <input class="item-toggle" name="usePsl" type="checkbox" {{checked usePsl}} data-dtype="Boolean" />
     </div>
 
+    {{#if mindScanChoices}}
+          <div class="form-group">
+        <label>{{localize "Items.Attack.OmcvMod"}}</label>
+        <input type="text" name="omcvMod" value="{{omcvMod}}" />
+      </div>
 
-    <div class="form-group">
-      <label>{{localize "Items.Attack.OcvMod"}}</label>
-      <input type="text" name="ocvMod" value="{{ocvMod}}" />
-    </div>
+      <div class="form-group">
+        <label>{{localize "Items.Attack.DmcvMod"}}</label>
+        <input type="text" name="dmcvMod" value="{{dmcvMod}}" />
+      </div>
+    {{else}}
+      <div class="form-group">
+        <label>{{localize "Items.Attack.OcvMod"}}</label>
+        <input type="text" name="ocvMod" value="{{ocvMod}}" />
+      </div>
 
-    <div class="form-group">
-      <label>{{localize "Items.Attack.DcvMod"}}</label>
-      <input type="text" name="dcvMod" value="{{dcvMod}}" />
-    </div>
+      <div class="form-group">
+        <label>{{localize "Items.Attack.DcvMod"}}</label>
+        <input type="text" name="dcvMod" value="{{dcvMod}}" />
+      </div>
+    {{/if}}
 
     {{#if showVelocity}}
       <div class="form-group">
         <label>{{localize "Items.Attack.Velocity"}} ({{velocitySystemUnits}}/phase)</label>
         <input type="text" name="velocity" value="{{velocity}}"
           title="Typically you assume a starting velocity of 0, accelerate up to half your full move, then decelerate back to a 0 velocity.  A character can accelerate at a rate of 5m per meter.  If the Drag Ruler module is enabled, combat has started, and token has moved on its phase, then a velocity estimate is provided.  A simplistic solution is to assume velocity is equal to the movement speed." />
+      </div>
+    {{/if}}
+
+    {{#if (gt item.system.LEVELS 1)}}
+        <div class="form-group">
+        <label>Effective Levels</label>
+        <div class="noflexwrap">
+        <input type="text" name="effectiveLevels" value="{{effectiveLevels}}" />
+        <label>/ {{item.system.LEVELS}}</label>
+        </div>
       </div>
     {{/if}}
 
@@ -140,7 +161,7 @@
     </div>
 
   <footer class="sheet-footer flexcol">
-    {{#if (gt targets.size 0)}}
+    {{#if (gt targets.length 0)}}
       <div class="form-group">
         <label >Targets</label>
         <div>
@@ -153,7 +174,7 @@
       </div>
     {{/if}}
 
-    {{#if (and (eq targets.size 0) (not aoeText) (not mindScanChoices))}}
+    {{#if (and (eq targets.length 0) (not aoeText) (not mindScanChoices))}}
       <div>
         <p class="hero-warning">
           <i class="fas fa-exclamation-triangle"></i>
@@ -164,16 +185,15 @@
       </div>
     {{/if}}
 
-    {{#if (and (ne targets.size 1) (not aoeText) mindScanChoices)}}
+    {{#if (and (eq targets.length 0) (not aoeText) mindScanChoices)}}
       <div>
         <p class="hero-warning">
           <i class="fas fa-exclamation-triangle"></i>
-            You must select exactly 1 target.  The GM may have to make this attack for you. Make sure the GM knows your target area.  The GM may have to add the desired target into the scene so it can be targeted.
+            You have no target.  The GM may have to initiate this attack for you. Make sure the GM knows your target area.  The GM may have to add the desired target into the scene so it can be targeted.  The GM can also select target token(s) with the mouse.
         </p>
         <i>{{localize "Items.Attack.TargetingExplanation"}}</i>
       </div>
     {{/if}}
-    
 
     {{#if mindScanChoices}}
     {{/if}}
@@ -184,7 +204,7 @@
       </button>
     {{/if}}
 
-    <button type="submit" name="roll" {{#if (and (ne targets.size 1) mindScanChoices)}}disabled title="You must select exactly 1 target.  The GM may have to make this attack for you."{{/if}}>
+    <button type="submit" name="roll" >
       {{#if aoeText}}
         Roll Placement
       {{else}}

@@ -106,7 +106,9 @@
 
 
             {{#if actor.system.is5e}}
-            <div class="fifthEd flex0" title="5th edition character">5e</div>
+                <div class="fifthEd flex0" title="5th edition {{#if actor.system.isHeroic}}Heroic{{else}}Superheroic{{/if}} {{actor.type}}">5{{#if actor.system.isHeroic}}h{{else}}s{{/if}}</div>
+            {{else}}
+                <div class="sixthEd flex0" title="6th edition {{#if actor.system.isHeroic}}Heroic{{else}}Superheroic{{/if}} {{actor.type}}">6{{#if actor.system.isHeroic}}h{{else}}s{{/if}}</div>
             {{/if}}
 
             {{#if actor.system.points}}
@@ -185,6 +187,9 @@
                                             height="24" /></div>
                                 </td>
                                 <td class="left">
+                                    {{#if (eq item.parentItem.system.XMLID "COMPOUNDPOWER")}}
+                                        {{item.parentItem.name}}: 
+                                    {{/if}}
                                     {{{itemName item}}}
                                 </td>
                                 <td title="{{{item.flags.tags.ocv}}}">

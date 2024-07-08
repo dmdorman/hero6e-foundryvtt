@@ -33,5 +33,5 @@ function getModulePath(templateDirectory) {
 }
 
 function includes(str, searchTerm) {
-    return str.includes(searchTerm);
+    return str?.includes(searchTerm);
 }

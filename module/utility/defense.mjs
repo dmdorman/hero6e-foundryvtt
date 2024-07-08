@@ -24,23 +24,18 @@ function determineDefense(targetActor, attackItem, options) {
         }
     }
 
-    const piercing =
-        parseInt(attackItem.system.piercing) ||
-        attackItem.findModsByXmlid("ARMORPIERCING") ||
-        0;
-    const penetrating =
-        parseInt(attackItem.system.penetrating) ||
-        attackItem.findModsByXmlid("PENETRATING") ||
-        0;
+    if (!["physical", "energy", "mental"].includes(attackType) && attackItem.baseInfo?.type.includes("mental")) {
+        attackType = "mental";
+    }
+
+    const piercing = parseInt(attackItem.system.piercing) || attackItem.findModsByXmlid("ARMORPIERCING") || 0;
+    const penetrating = parseInt(attackItem.system.penetrating) || attackItem.findModsByXmlid("PENETRATING") || 0;
 
     // The defenses that are active
     const activeDefenses = targetActor.items.filter(
         (o) =>
-            (o.system.subType === "defense" ||
-                o.type === "defense" ||
-                o.baseInfo?.type?.includes("defense")) &&
-            (o.system.active ||
-                o.effects.find(() => true)?.disabled === false) &&
+            (o.system.subType === "defense" || o.type === "defense" || o.baseInfo?.type?.includes("defense")) &&
+            (o.system.active || o.effects.find(() => true)?.disabled === false) &&
             !(options?.ignoreDefenseIds || []).includes(o.id),
     );
 
@@ -69,9 +64,7 @@ function determineDefense(targetActor, attackItem, options) {
     }
 
     // DAMAGERESISTANCE (converts PD to rPD)
-    for (const item of activeDefenses.filter(
-        (o) => o.system.XMLID == "DAMAGERESISTANCE",
-    )) {
+    for (const item of activeDefenses.filter((o) => o.system.XMLID == "DAMAGERESISTANCE")) {
         const pdLevels = Math.min(PD, parseInt(item.system.PDLEVELS) || 0);
         PD -= pdLevels;
         rPD += pdLevels;
@@ -185,9 +178,7 @@ function determineDefense(targetActor, attackItem, options) {
 
         // Hardened
         let hardened = parseInt(
-            activeDefense.system.hardened ||
-                activeDefense.findModsByXmlid("HARDENED")?.LEVELS ||
-                0,
+            activeDefense.system.hardened || activeDefense.findModsByXmlid("HARDENED")?.LEVELS || 0,
         );
         let tagXmlids = [];
         if (hardened > 0) {
@@ -196,9 +187,7 @@ function determineDefense(targetActor, attackItem, options) {
 
         // Impenetrable
         let impenetrable = parseInt(
-            activeDefense.system.impenetrable ||
-                activeDefense.findModsByXmlid("IMPENETRABLE")?.LEVELS ||
-                0,
+            activeDefense.system.impenetrable || activeDefense.findModsByXmlid("IMPENETRABLE")?.LEVELS || 0,
         );
         if (impenetrable > 0) {
             tagXmlids.push(`i${impenetrable}`);
@@ -249,14 +238,9 @@ function determineDefense(targetActor, attackItem, options) {
             }
         }
 
-        if (
-            !value &&
-            ["DAMAGEREDUCTION"].includes(xmlid) &&
-            activeDefense.system.INPUT.toLowerCase() == attackType
-        ) {
+        if (!value && ["DAMAGEREDUCTION"].includes(xmlid) && activeDefense.system.INPUT.toLowerCase() == attackType) {
             value = parseInt(activeDefense.system.OPTIONID.match(/\d+/)) || 0;
-            activeDefense.system.resistant =
-                activeDefense.system.OPTIONID.match(/RESISTANT/) ? true : false;
+            activeDefense.system.resistant = activeDefense.system.OPTIONID.match(/RESISTANT/) ? true : false;
             switch (attackType) {
                 case "physical":
                     activeDefense.system.defenseType = "drp";
@@ -276,32 +260,17 @@ function determineDefense(targetActor, attackItem, options) {
             switch (attackType) {
                 case "physical":
                     activeDefense.system.defenseType = "dnp";
-                    value =
-                        parseInt(
-                            activeDefense.system.ADDER.find(
-                                (o) => o.XMLID == "PHYSICAL",
-                            )?.LEVELS,
-                        ) || 0;
+                    value = parseInt(activeDefense.system.ADDER.find((o) => o.XMLID == "PHYSICAL")?.LEVELS) || 0;
                     break;
 
                 case "energy":
                     activeDefense.system.defenseType = "dne";
-                    value =
-                        parseInt(
-                            activeDefense.system.ADDER.find(
-                                (o) => o.XMLID == "ENERGY",
-                            )?.LEVELS,
-                        ) || 0;
+                    value = parseInt(activeDefense.system.ADDER.find((o) => o.XMLID == "ENERGY")?.LEVELS) || 0;
                     break;
 
                 case "mental":
                     activeDefense.system.defenseType = "dnm";
-                    value =
-                        parseInt(
-                            activeDefense.system.ADDER.find(
-                                (o) => o.XMLID == "MENTAL",
-                            )?.LEVELS,
-                        ) || 0;
+                    value = parseInt(activeDefense.system.ADDER.find((o) => o.XMLID == "MENTAL")?.LEVELS) || 0;
                     break;
             }
         }
@@ -323,10 +292,7 @@ function determineDefense(targetActor, attackItem, options) {
         }
 
         // Knockback Resistance
-        if (
-            game.settings.get(HEROSYS.module, "knockback") &&
-            attackItem.system.knockbackMultiplier
-        ) {
+        if (game.settings.get(HEROSYS.module, "knockback") && attackItem.system.knockbackMultiplier) {
             if (["KBRESISTANCE", "DENSITYINCREASE"].includes(xmlid)) {
                 let _value = value * (targetActor.system.is5e ? 1 : 2);
                 knockbackResistance += _value;
@@ -373,9 +339,7 @@ function determineDefense(targetActor, attackItem, options) {
             valueImp = valueAp;
         }
 
-        const protectionType =
-            (activeDefense.system.resistant ? "r" : "") +
-            activeDefense.system.defenseType;
+        const protectionType = (activeDefense.system.resistant ? "r" : "") + activeDefense.system.defenseType;
         switch (protectionType) {
             case "pd": // Physical Defense
                 PD += valueAp;
@@ -421,10 +385,7 @@ function determineDefense(targetActor, attackItem, options) {
 
             case "powd": // Power Defense
                 POWD += valueAp;
-                if (
-                    ["adjustment"].includes(attackType) ||
-                    attackType === "avad"
-                ) {
+                if (["adjustment"].includes(attackType) || attackType === "avad") {
                     if (valueAp > 0)
                         defenseTags.push({
                             name: "POWD" + tagXmlids,
@@ -480,10 +441,7 @@ function determineDefense(targetActor, attackItem, options) {
 
             case "rpowd": // Resistant Power Defense
                 rPOWD += valueAp;
-                if (
-                    ["adjustment"].includes(attackType) ||
-                    attackType === "avad"
-                ) {
+                if (["adjustment"].includes(attackType) || attackType === "avad") {
                     if (valueAp > 0)
                         defenseTags.push({
                             name: "rPOWD" + tagXmlids,
@@ -500,9 +458,7 @@ function determineDefense(targetActor, attackItem, options) {
                 if (value > 0)
                     defenseTags.push({
                         name: "drp" + tagXmlids,
-                        value: `${
-                            activeDefense.system.resistant ? "r" : ""
-                        }${value}%`,
+                        value: `${activeDefense.system.resistant ? "r" : ""}${value}%`,
                         resistant: activeDefense.system.resistant,
                         title: activeDefense.name,
                     });
@@ -514,9 +470,7 @@ function determineDefense(targetActor, attackItem, options) {
                 if (value > 0)
                     defenseTags.push({
                         name: "dre" + tagXmlids,
-                        value: `${
-                            activeDefense.system.resistant ? "r" : ""
-                        }${value}%`,
+                        value: `${activeDefense.system.resistant ? "r" : ""}${value}%`,
                         resistant: activeDefense.system.resistant,
                         title: activeDefense.name,
                     });
@@ -528,9 +482,7 @@ function determineDefense(targetActor, attackItem, options) {
                 if (value > 0)
                     defenseTags.push({
                         name: "drm" + tagXmlids,
-                        value: `${
-                            activeDefense.system.resistant ? "r" : ""
-                        }${value}%`,
+                        value: `${activeDefense.system.resistant ? "r" : ""}${value}%`,
                         resistant: activeDefense.system.resistant,
                         title: activeDefense.name,
                     });
@@ -572,10 +524,7 @@ function determineDefense(targetActor, attackItem, options) {
 
             case "kbr": // Knockback Resistance
                 knockbackResistance += value;
-                if (
-                    attackType != "mental" &&
-                    game.settings.get(HEROSYS.module, "knockback")
-                ) {
+                if (attackType != "mental" && game.settings.get(HEROSYS.module, "knockback")) {
                     defenseTags.push({
                         name: "KB Resistance" + tagXmlids,
                         value: value,

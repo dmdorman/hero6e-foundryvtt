@@ -16,11 +16,9 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
             .filter((effectKey) => effectKey.includes("Effect"))
             .sort()
             .map((effectKey) => {
-                let heroIcon =
-                    HeroSystem6eActorActiveEffects[effectKey].heroIcon;
+                let heroIcon = HeroSystem6eActorActiveEffects[effectKey].heroIcon;
                 if (heroIcon) {
-                    HeroSystem6eActorActiveEffects[effectKey].icon =
-                        `systems/${module}/${heroIcon}`;
+                    HeroSystem6eActorActiveEffects[effectKey].icon = `systems/${module}/${heroIcon}`;
                 }
                 return HeroSystem6eActorActiveEffects[effectKey];
             });

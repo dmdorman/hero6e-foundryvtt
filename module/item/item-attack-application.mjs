@@ -1,12 +1,6 @@
 import { CombatSkillLevelsForAttack } from "../utility/damage.mjs";
-import {
-    _processAttackOptions,
-    _processAttackAoeOptions,
-} from "../item/item-attack.mjs";
-import {
-    convertSystemUnitsToMetres,
-    getSystemDisplayUnits,
-} from "../utility/units.mjs";
+import { _processAttackOptions, _processAttackAoeOptions } from "../item/item-attack.mjs";
+import { convertSystemUnitsToMetres, getSystemDisplayUnits } from "../utility/units.mjs";
 import { HEROSYS } from "../herosystem6e.mjs";
 
 const heroAoeTypeToFoundryAoeTypeConversions = {
@@ -33,9 +27,7 @@ export class ItemAttackFormApplication extends FormApplication {
                     this.updateItem(item, changes, options, userId);
                 }
 
-                const cslSkill = CombatSkillLevelsForAttack(
-                    this.data.item,
-                ).skill;
+                const cslSkill = CombatSkillLevelsForAttack(this.data.item).skill;
                 if (cslSkill && item.id === cslSkill.id) {
                     this.updateItem(item, changes, options, userId);
                 }
@@ -48,7 +40,16 @@ export class ItemAttackFormApplication extends FormApplication {
         Hooks.on(
             "targetToken",
             async function (...args) {
-                await this.updateItem(...args);
+                window.setTimeout(() => this.updateItem(...args), 1);
+                // await this.updateItem(...args);
+            }.bind(this),
+        );
+
+        Hooks.on(
+            "controlToken",
+            async function (...args) {
+                window.setTimeout(() => this.updateItem(...args), 1);
+                // await this.updateItem(...args);
             }.bind(this),
         );
     }
@@ -76,21 +77,48 @@ export class ItemAttackFormApplication extends FormApplication {
         const data = this.data;
         const item = data.item;
 
-        const aoe = item.getAoeModifier();
+        data.targets = game.user.targets;
+        data.targets = Array.from(game.user.targets);
+
+        if (data.targets.length === 0 && item.system.XMLID === "MINDSCAN" && game.user.isGM) {
+            data.targets = foundry.utils
+                .deepClone(canvas.tokens.controlled)
+                .filter((t) => t.actor?.id != item.actor?.id);
+        }
+
+        // Initialize aim to the default option values
+        this.data.aim ??= "none";
+        this.data.aimSide ??= "none";
+
+        data.ocvMod ??= item.system.ocv;
+        data.dcvMod ??= item.system.dcv;
+        data.omcvMod ??= item.system.ocv; //TODO: May need to make a distincsion between OCV/OMCV
+        data.dmcvMod ??= item.system.dcv;
+        data.effectiveStr ??= data.str;
+        data.effectiveLevels ??= data.item.system.LEVELS;
+
+        // let effectiveItem = item;
+
+        // // Create a temporary item based on effectiveLevels
+        // if (data.effectiveLevels && parseInt(item.system.LEVELS) > 0) {
+        //     data.effectiveLevels = parseInt(data.effectiveLevels) || 0;
+        //     if (data.effectiveLevels > 0 && data.effectiveLevels !== parseInt(item.system.LEVELS)) {
+        //         const effectiveItemData = item.toObject();
+        //         effectiveItemData.system.LEVELS = data.effectiveLevels;
+        //         effectiveItem = await HeroSystem6eItem.create(effectiveItemData, { temporary: true });
+        //         await effectiveItem._postUpload();
+        //     }
+        // }
+
+        const aoe = item.AoeAttackParameters({ levels: data.effectiveLevels }); //  getAoeModifier();
         if (aoe) {
             data.aoeText = aoe.OPTION_ALIAS;
-            if (!item.system.areaOfEffect) {
-                ui.notifications.error(
-                    `${
-                        item.system.ALIAS || item.name
-                    } has invalid AOE definition.`,
-                );
-            }
-            const levels = item.system.areaOfEffect.value; //parseInt(aoe.LEVELS) || parseInt(aoe.levels);
+            // if (!item.system.areaOfEffect) {
+            //     ui.notifications.error(`${item.system.ALIAS || item.name} has invalid AOE definition.`);
+            // }
+            const levels = aoe.value; //item.system.areaOfEffect.value; //parseInt(aoe.LEVELS) || parseInt(aoe.levels);
             if (levels) {
-                data.aoeText += ` (${levels}${getSystemDisplayUnits(
-                    item.actor.is5e,
-                )})`;
+                data.aoeText += ` (${levels}${getSystemDisplayUnits(item.actor.is5e)})`;
             }
 
             if (this.getAoeTemplate() || game.user.targets.size > 0) {
@@ -102,18 +130,6 @@ export class ItemAttackFormApplication extends FormApplication {
             data.noTargets = game.user.targets.size === 0;
             data.aoeText = null;
         }
-
-        if (game.user.targets.size > 0) {
-            data.targets = game.user.targets;
-        }
-
-        // Initialize aim to the default option values
-        this.data.aim ??= "none";
-        this.data.aimSide ??= "none";
-
-        data.ocvMod ??= item.system.ocv;
-        data.dcvMod ??= item.system.dcv;
-        data.effectiveStr ??= data.str;
 
         // Boostable Charges
         if (item.system.charges?.value > 1) {
@@ -164,16 +180,10 @@ export class ItemAttackFormApplication extends FormApplication {
 
                 // CSL radioBoxes names
                 entry.csl = [];
-                for (
-                    let c = 0;
-                    c < parseInt(csl.skill.system.LEVELS || 0);
-                    c++
-                ) {
+                for (let c = 0; c < parseInt(csl.skill.system.LEVELS || 0); c++) {
                     entry.csl.push({
                         name: `${csl.skill.id}.system.csl.${c}`,
-                        value: csl.skill.system.csl
-                            ? csl.skill.system.csl[c]
-                            : "undefined",
+                        value: csl.skill.system.csl ? csl.skill.system.csl[c] : "undefined",
                     });
                 }
 
@@ -183,9 +193,7 @@ export class ItemAttackFormApplication extends FormApplication {
         }
 
         // DEADLYBLOW
-        const DEADLYBLOW = item.actor.items.find(
-            (o) => o.system.XMLID === "DEADLYBLOW",
-        );
+        const DEADLYBLOW = item.actor.items.find((o) => o.system.XMLID === "DEADLYBLOW");
         if (DEADLYBLOW) {
             item.system.conditionalAttacks ??= {};
             item.system.conditionalAttacks[DEADLYBLOW.id] ??= {
@@ -237,50 +245,60 @@ export class ItemAttackFormApplication extends FormApplication {
         this.data.dcvMod = formData.dcvMod;
 
         this.data.effectiveStr = formData.effectiveStr;
+        this.data.effectiveLevels = formData.effectiveLevels;
 
         this.data.boostableCharges = Math.max(
             0,
-            Math.min(
-                parseInt(formData.boostableCharges),
-                this.data.item.charges?.value - 1,
-            ),
+            Math.min(parseInt(formData.boostableCharges), this.data.item.charges?.value - 1),
         );
 
         this.data.velocity = parseInt(formData.velocity || 0);
+
+        // const aoe = this.data.item.AoeAttackParameters({ levels: this.data.effectiveLevels }); //  getAoeModifier();
+        // if (aoe) {
+        //     this.data.aoeText = aoe.OPTION_ALIAS;
+        //     // if (!item.system.areaOfEffect) {
+        //     //     ui.notifications.error(`${item.system.ALIAS || item.name} has invalid AOE definition.`);
+        //     // }
+        //     const levels = aoe.value; //item.system.areaOfEffect.value; //parseInt(aoe.LEVELS) || parseInt(aoe.levels);
+        //     if (levels) {
+        //         this.data.aoeText += ` (${levels}${getSystemDisplayUnits(this.data.item.actor.is5e)})`;
+        //     }
+
+        //     if (this.getAoeTemplate() || game.user.targets.size > 0) {
+        //         this.data.noTargets = false;
+        //     } else {
+        //         this.data.noTargets = true;
+        //     }
+        // } else {
+        //     this.data.noTargets = game.user.targets.size === 0;
+        //     this.data.aoeText = null;
+        // }
 
         // Save conditionalAttack check
         const expandedData = foundry.utils.expandObject(formData);
         for (const ca in expandedData?.system?.conditionalAttacks) {
             console.log(ca);
-            this.data.item.system.conditionalAttacks[ca].checked =
-                expandedData.system.conditionalAttacks[ca].checked;
+            this.data.item.system.conditionalAttacks[ca].checked = expandedData.system.conditionalAttacks[ca].checked;
             await this.data.item.update({
-                [`system.conditionalAttacks`]:
-                    this.data.item.system.conditionalAttacks,
+                [`system.conditionalAttacks`]: this.data.item.system.conditionalAttacks,
             });
         }
 
         // Show any changes
-        //this.render();
+        this.render();
     }
 
     async _updateCsl(event, formData) {
         const item = this.data.item;
         // Combat Skill Levels (update SKILL if changed)
         const csls = CombatSkillLevelsForAttack(item);
-        for (const key of Object.keys(formData).filter((o) =>
-            o.match(/([0-9A-Za-z]+)\.system\.csl\.(\d+)/),
-        )) {
+        for (const key of Object.keys(formData).filter((o) => o.match(/([0-9A-Za-z]+)\.system\.csl\.(\d+)/))) {
             const value = formData[key];
             const itemId = key.match(/([0-9A-Za-z]+)\.system\.csl\.(\d+)/)[1];
-            const idx = parseInt(
-                key.match(/([0-9A-Za-z]+)\.system\.csl\.(\d+)/)[2],
-            );
+            const idx = parseInt(key.match(/([0-9A-Za-z]+)\.system\.csl\.(\d+)/)[2]);
             for (const csl of csls) {
-                if (
-                    csl.skill.id === itemId &&
-                    csl.skill.system.csl[idx] != value
-                ) {
+                if (csl.skill.id === itemId && csl.skill.system.csl[idx] != value) {
                     csl.skill.system.csl[idx] = value;
                     await csl.skill.update({
                         "system.csl": csl.skill.system.csl,
@@ -298,19 +316,19 @@ export class ItemAttackFormApplication extends FormApplication {
      */
     async _spawnAreaOfEffect() {
         const item = this.data.item;
-        const aoeModifier = item.getAoeModifier();
-        const areaOfEffect = item.system.areaOfEffect;
-        if (!aoeModifier || !areaOfEffect) return;
+        // const aoeModifier = item.getAoeModifier();
+        // const areaOfEffect = item.system.areaOfEffect;
 
-        const aoeType = aoeModifier.OPTION.toLowerCase();
+        const areaOfEffect = item.AoeAttackParameters({ levels: this.data.effectiveLevels });
+        if (!areaOfEffect) return;
+
+        const aoeType = areaOfEffect.OPTION.toLowerCase();
         const aoeValue = areaOfEffect.value;
 
         const actor = item.actor;
         const token = actor.getActiveTokens()[0] || canvas.tokens.controlled[0];
         if (!token) {
-            return ui.notifications.error(
-                `${actor.name} has no token in this scene.  Unable to place AOE template.`,
-            );
+            return ui.notifications.error(`${actor.name} has no token in this scene.  Unable to place AOE template.`);
         }
         const is5e = actor.system.is5e;
 
@@ -352,11 +370,7 @@ export class ItemAttackFormApplication extends FormApplication {
 
             case "cone":
                 {
-                    if (
-                        (aoeModifier.adders || []).find(
-                            (adder) => adder.XMLID === "THINCONE",
-                        )
-                    ) {
+                    if ((areaOfEffect.ADDER || []).find((adder) => adder.XMLID === "THINCONE")) {
                         // TODO: The extra 0.1 degree helps with approximating the correct hex counts when not
                         //       not oriented in one of the prime 6 directions. This is because we're not
                         //       hex counting. The extra degree is more incorrect the larger the cone is.
@@ -373,17 +387,14 @@ export class ItemAttackFormApplication extends FormApplication {
 
             case "ray":
                 {
-                    templateData.width =
-                        sizeConversionToMeters * areaOfEffect.width;
+                    templateData.width = sizeConversionToMeters * areaOfEffect.width;
                     templateData.flags.width = areaOfEffect.width;
                     templateData.flags.height = areaOfEffect.height;
                 }
                 break;
 
             case "rect": {
-                const warningMessage = game.i18n.localize(
-                    "Warning.AreaOfEffectUnsupported",
-                );
+                const warningMessage = game.i18n.localize("Warning.AreaOfEffectUnsupported");
 
                 ui.notifications.warn(warningMessage);
 
@@ -406,9 +417,7 @@ export class ItemAttackFormApplication extends FormApplication {
                 y: templateData.y,
             });
         } else {
-            canvas.scene.createEmbeddedDocuments("MeasuredTemplate", [
-                templateData,
-            ]);
+            canvas.scene.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
         }
 
         canvas.templates.activate({ tool: templateType });
@@ -423,9 +432,7 @@ export class ItemAttackFormApplication extends FormApplication {
 
     getAoeTemplate() {
         return Array.from(canvas.templates.getDocuments()).find(
-            (o) =>
-                o.user.id === game.user.id &&
-                o.flags.itemId === this.data.item.id,
+            (o) => o.user.id === game.user.id && o.flags.itemId === this.data.item.id,
         );
     }
 }

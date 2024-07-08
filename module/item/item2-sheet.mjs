@@ -47,9 +47,7 @@ export class HeroSystem6eItem2Sheet extends ItemSheet {
             actor: item?.actor,
         });
         data.sheet = { ...(configPowerInfo?.sheet || {}) };
-        data.totalingOptions = configPowerInfo
-            ? configPowerInfo.type.includes("characteristic")
-            : null;
+        data.totalingOptions = configPowerInfo ? configPowerInfo.type.includes("characteristic") : null;
 
         // OPTIONID
         if (item.system.OPTIONID && !data.sheet.OPTIONID?.label) {

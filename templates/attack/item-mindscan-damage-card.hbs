@@ -1,0 +1,66 @@
+{{ log 'HEROSYS item-mindscan-damage-card' this }}
+<div class="hero chat-card item-card item-mindscan-target-card" data-actor-id="{{actor._id}}" data-item-id="{{item._id}}" {{#if
+    tokenId}}data-token-id="{{tokenId}}" {{/if}}>
+
+    <span class="flavor-text">
+        {{!-- Attack Name --}}
+        <header class="card-header attack flexrow">
+            <img src="{{item.img}}" title="{{item.name}}" width="36" height="36" />
+            <h3 class="item-name">{{{itemName item}}}</h3>
+        </header>
+    </span>
+
+    <div>
+        Attacker: <span class="item-name">{{item.actor.name}}</span>
+    </div>
+    <div>
+        {{!-- {{#if (gte stunDamage targetEgo)}}
+            Target: {{targetToken.name}} <span class="item-name" data-visibility="gm">(EGO {{targetsEgo}} + {{egoAdder}} = {{targetEgo}})</span>
+        {{else}} --}}
+            Target: <span class="item-name" data-visibility="gm">{{targetToken.name}} (EGO {{targetsEgo}} + {{egoAdder}} = {{targetEgo}})</span>
+        <span class="item-name" data-visibility="redacted">redacted</span>
+        {{!-- {{/if}} --}}
+    </div>
+
+    <div class="tags">
+        {{#each attackTags as |tag id|}}
+            <span class="tag" {{#if tag.title}}title="{{tag.title}}" {{/if}}>{{tag.name}}</span>
+        {{/each}}
+    </div>
+    <hr>
+    <div class="tags">
+        {{#each tags as |tag id|}}
+        <span class="tag tag_transparent" title="{{tag.title}}">{{tag.name}} {{tag.value}}</span>
+        {{/each}}
+    </div>
+
+    <div class="card-section">
+        <div class="damage-roll">{{{ renderedDamageRoll }}}</div>
+    </div>
+
+    <div class="card-section" data-visibility="gm">
+        <div class="tags">
+        {{#each defenseTags as |tag id|}}
+            <span class="tag tag_transparent" title="{{tag.title}}">{{tag.name}} {{tag.value}}</span>
+        {{/each}}
+        </div>
+        <div class="description-tiny">Defense: {{ defense }}</div>
+    </div>
+
+    <div class="card-section" data-visibility="gm">
+        <div class="description-tiny">Mind Scan Effect After Defenses</div>
+        <div class="description-medium" >{{ stunDamageEffective }} Effect</div>
+        <div class="description-tiny">{{{ effects }}}</div>
+    </div>
+
+    {{#if (gte stunDamage targetEgo)}}
+        <div>
+            <span class="Hit">SUCCESS</span> vs {{buttonText}}. {{buttonTitle}}
+        </div>
+    {{else}}
+        <div>
+            <span class="Miss">FAIL</span> vs {{buttonText}}. You know nothing more about the target.
+        </div>
+    {{/if}}
+        
+</div>

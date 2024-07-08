@@ -26,9 +26,7 @@ export function convertSystemUnitsToMetres(distanceInSystemUnits, actor) {
 export function getRoundedDownDistanceInSystemUnits(distanceInMetres, actor) {
     const is5e = actor?.system?.is5e;
 
-    const roundedDistanceInMetres = is5e
-        ? Math.floor(distanceInMetres / 2)
-        : Math.floor(distanceInMetres);
+    const roundedDistanceInMetres = is5e ? Math.floor(distanceInMetres / 2) : Math.floor(distanceInMetres);
 
     return roundedDistanceInMetres;
 }
@@ -45,9 +43,7 @@ export function getRoundedDownDistanceInSystemUnits(distanceInMetres, actor) {
 export function getRoundedUpDistanceInSystemUnits(distanceInMetres, actor) {
     const is5e = actor?.system?.is5e;
 
-    const roundedDistanceInMetres = is5e
-        ? Math.ceil(distanceInMetres / 2)
-        : Math.ceil(distanceInMetres);
+    const roundedDistanceInMetres = is5e ? Math.ceil(distanceInMetres / 2) : Math.ceil(distanceInMetres);
 
     return roundedDistanceInMetres;
 }

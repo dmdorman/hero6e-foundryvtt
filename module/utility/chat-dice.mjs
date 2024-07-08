@@ -31,12 +31,10 @@ Hooks.on("chatMessage", function (_this, message /*, _chatData*/) {
 
 async function doRollAndGenerateChatMessage(chatMessageCmd) {
     const useHitLocations = !!chatMessageCmd.groups.hitLoc;
-    const useHitLocationsSide =
-        game.settings.get(HEROSYS.module, "hitLocTracking") === "all";
+    const useHitLocationsSide = game.settings.get(HEROSYS.module, "hitLocTracking") === "all";
 
     let numericTerm = parseFloat(chatMessageCmd.groups.numTerm || 0);
-    const negativeTermWithDice =
-        chatMessageCmd.groups.numDice && numericTerm < 0; // e.g. 1d6-1
+    const negativeTermWithDice = chatMessageCmd.groups.numDice && numericTerm < 0; // e.g. 1d6-1
     if (negativeTermWithDice) {
         numericTerm = 0;
     }

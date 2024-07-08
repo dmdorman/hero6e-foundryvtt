@@ -29,10 +29,7 @@ async function createItem(itemData, folder) {
 //////////////////////////////////////////////////////////////////////////////
 // POWERS
 
-for (const packName of [
-    "hero6efoundryvttv2packs.hero6ePowers",
-    "hero6efoundryvttv2packs.hero5ePowers",
-]) {
+for (const packName of ["hero6efoundryvttv2packs.hero6ePowers", "hero6efoundryvttv2packs.hero5ePowers"]) {
     console.log(packName);
 
     const myPack = game.packs.get(packName);
@@ -71,12 +68,9 @@ for (const packName of [
     };
 
     if (debug.power) {
-        const folderPower = await Folder.createDocuments(
-            [{ name: "Power", type: "Item", color: "#ff0000" }],
-            {
-                pack: packName,
-            },
-        );
+        const folderPower = await Folder.createDocuments([{ name: "Power", type: "Item", color: "#ff0000" }], {
+            pack: packName,
+        });
 
         const folderPowerCharacteristic = await Folder.createDocuments(
             [
@@ -134,10 +128,7 @@ for (const packName of [
             },
         );
 
-        for (const power of (bogusActor.system.is5e
-            ? CONFIG.HERO.powers5e
-            : CONFIG.HERO.powers6e
-        ).filter(
+        for (const power of (bogusActor.system.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e).filter(
             (o) =>
                 o.type != undefined &&
                 !o.type.includes("martial") &&
@@ -149,10 +140,7 @@ for (const packName of [
                 o.xml,
         )) {
             // Only include powers where XML is defined
-            const itemData = HeroSystem6eItem.itemDataFromXml(
-                power.xml,
-                bogusActor,
-            );
+            const itemData = HeroSystem6eItem.itemDataFromXml(power.xml, bogusActor);
             console.log(power, itemData, bogusActor);
             if (power.type.includes("characteristic")) {
                 await createItem(itemData, folderPowerCharacteristic);
@@ -173,22 +161,15 @@ for (const packName of [
     //////////////////////////////////////////////////////////////////////////////
     // PERKS
     if (debug.perk) {
-        const folderPerk = await Folder.createDocuments(
-            [{ name: "Perk", type: "Item", color: "#0000aa" }],
-            {
-                pack: packName,
-            },
-        );
+        const folderPerk = await Folder.createDocuments([{ name: "Perk", type: "Item", color: "#0000aa" }], {
+            pack: packName,
+        });
 
-        for (const power of (bogusActor.system.is5e
-            ? CONFIG.HERO.powers5e
-            : CONFIG.HERO.powers6e
-        ).filter((o) => o.type.includes("perk") && o.xml)) {
+        for (const power of (bogusActor.system.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e).filter(
+            (o) => o.type.includes("perk") && o.xml,
+        )) {
             // Only include powers where XML is defined
-            const itemData = HeroSystem6eItem.itemDataFromXml(
-                power.xml,
-                bogusActor,
-            );
+            const itemData = HeroSystem6eItem.itemDataFromXml(power.xml, bogusActor);
             await createItem(itemData, folderPerk);
         }
     }
@@ -196,22 +177,15 @@ for (const packName of [
     //////////////////////////////////////////////////////////////////////////////
     // SKILLS
     if (debug.skill) {
-        const folderSkill = await Folder.createDocuments(
-            [{ name: "Skill", type: "Item", color: "#00aa00" }],
-            {
-                pack: packName,
-            },
-        );
+        const folderSkill = await Folder.createDocuments([{ name: "Skill", type: "Item", color: "#00aa00" }], {
+            pack: packName,
+        });
 
-        for (const power of (bogusActor.system.is5e
-            ? CONFIG.HERO.powers5e
-            : CONFIG.HERO.powers6e
-        ).filter((o) => o.type.includes("skill") && o.xml)) {
+        for (const power of (bogusActor.system.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e).filter(
+            (o) => o.type.includes("skill") && o.xml,
+        )) {
             // Only include powers where XML is defined
-            const itemData = HeroSystem6eItem.itemDataFromXml(
-                power.xml,
-                bogusActor,
-            );
+            const itemData = HeroSystem6eItem.itemDataFromXml(power.xml, bogusActor);
             await createItem(itemData, folderSkill);
         }
     }
@@ -219,22 +193,15 @@ for (const packName of [
     //////////////////////////////////////////////////////////////////////////////
     // TALENT
     if (debug.talent) {
-        const folderTalent = await Folder.createDocuments(
-            [{ name: "Talent", type: "Item", color: "#00aaaa" }],
-            {
-                pack: packName,
-            },
-        );
+        const folderTalent = await Folder.createDocuments([{ name: "Talent", type: "Item", color: "#00aaaa" }], {
+            pack: packName,
+        });
 
-        for (const power of (bogusActor.system.is5e
-            ? CONFIG.HERO.powers5e
-            : CONFIG.HERO.powers6e
-        ).filter((o) => o.type.includes("talent") && o.xml)) {
+        for (const power of (bogusActor.system.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e).filter(
+            (o) => o.type.includes("talent") && o.xml,
+        )) {
             // Only include powers where XML is defined
-            const itemData = HeroSystem6eItem.itemDataFromXml(
-                power.xml,
-                bogusActor,
-            );
+            const itemData = HeroSystem6eItem.itemDataFromXml(power.xml, bogusActor);
             await createItem(itemData, folderTalent);
         }
     }

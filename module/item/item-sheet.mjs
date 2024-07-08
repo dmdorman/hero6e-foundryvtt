@@ -1,10 +1,7 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { HeroSystem6eItem } from "./item.mjs";
 import { editSubItem, deleteSubItem } from "../powers/powers.mjs";
-import {
-    adjustmentSourcesPermissive,
-    adjustmentSourcesStrict,
-} from "../utility/adjustment.mjs";
+import { adjustmentSourcesPermissive, adjustmentSourcesStrict } from "../utility/adjustment.mjs";
 import { ItemModifierFormApplication } from "../item/item-modifier-application.mjs";
 
 /**
@@ -27,24 +24,15 @@ export class HeroSystem6eItemSheet extends ItemSheet {
         const path = `systems/${HEROSYS.module}/templates/item`;
 
         if (
-            [
-                "ABSORPTION",
-                "AID",
-                "DISPEL",
-                "DRAIN",
-                "HEALING",
-                "SUCCOR",
-                "SUPPRESS",
-                "TRANSFER",
-            ].includes(this.item.system.XMLID)
+            ["ABSORPTION", "AID", "DISPEL", "DRAIN", "HEALING", "SUCCOR", "SUPPRESS", "TRANSFER"].includes(
+                this.item.system.XMLID,
+            )
         ) {
             return `${path}/item-${this.item.type}-adjustment-sheet.hbs`;
         }
 
         if (["ENDURANCERESERVE"].includes(this.item.system.XMLID)) {
-            return `${path}/item-${
-                this.item.type
-            }-${this.item.system.XMLID.toLowerCase()}-sheet.hbs`;
+            return `${path}/item-${this.item.type}-${this.item.system.XMLID.toLowerCase()}-sheet.hbs`;
         }
 
         // if (
@@ -88,25 +76,17 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
         // Easy reference to ActiveEffects with an origin of this item
         if (this.actor) {
-            data.effects = this.actor.effects.filter(
-                (o) => o.origin === item.uuid,
-            );
+            data.effects = this.actor.effects.filter((o) => o.origin === item.uuid);
         } else {
             data.effects = this.document.effects;
         }
 
         // Signed OCV and DCV
         if (data.system.ocv != undefined) {
-            data.system.ocv = ("+" + parseInt(data.system.ocv)).replace(
-                "+-",
-                "-",
-            );
+            data.system.ocv = ("+" + parseInt(data.system.ocv)).replace("+-", "-");
         }
         if (data.system.dcv != undefined) {
-            data.system.dcv = ("+" + parseInt(data.system.dcv)).replace(
-                "+-",
-                "-",
-            );
+            data.system.dcv = ("+" + parseInt(data.system.dcv)).replace("+-", "-");
         }
 
         const configPowerInfo = item.baseInfo;
@@ -193,33 +173,15 @@ export class HeroSystem6eItemSheet extends ItemSheet {
                     ? adjustmentSourcesStrict
                     : adjustmentSourcesPermissive;
 
-            data.possibleEnhances = enhancesValidator(
-                this.actor,
-                this.item.is5e,
-            );
-            data.possibleReduces = adjustmentSourcesPermissive(
-                this.actor,
-                this.item.is5e,
-            );
+            data.possibleEnhances = enhancesValidator(this.actor, this.item.is5e);
+            data.possibleReduces = adjustmentSourcesPermissive(this.actor, this.item.is5e);
 
-            data.enhances = enhances
-                ? enhances
-                      .split(",")
-                      .map((target) => target.toUpperCase().trim())
-                : [];
-            data.reduces = reduces
-                ? reduces
-                      .split(",")
-                      .map((target) => target.toUpperCase().trim())
-                : [];
+            data.enhances = enhances ? enhances.split(",").map((target) => target.toUpperCase().trim()) : [];
+            data.reduces = reduces ? reduces.split(",").map((target) => target.toUpperCase().trim()) : [];
         }
 
         // Combat Skill Levels & Mental Combat Levels
-        if (
-            ["MENTAL_COMBAT_LEVELS", "COMBAT_LEVELS"].includes(
-                this.item.system.XMLID,
-            )
-        ) {
+        if (["MENTAL_COMBAT_LEVELS", "COMBAT_LEVELS"].includes(this.item.system.XMLID)) {
             let _ocv = "ocv";
             let _dcv = "dcv";
             if (this.item.system.XMLID === "MENTAL_COMBAT_LEVELS") {
@@ -275,19 +237,13 @@ export class HeroSystem6eItemSheet extends ItemSheet {
             if (item.actor) {
                 for (const attack of item.actor.items.filter(
                     (o) =>
-                        (o.type === "attack" ||
-                            o.system.subType === "attack") &&
+                        (o.type === "attack" || o.system.subType === "attack") &&
                         (!o.baseInfo.behaviors.includes("optional-maneuver") ||
-                            game.settings.get(
-                                HEROSYS.module,
-                                "optionalManeuvers",
-                            )),
+                            game.settings.get(HEROSYS.module, "optionalManeuvers")),
                 )) {
                     // Check if there is an adder (if so attack is checked)
                     const adder = (this.item.system.ADDER || []).find(
-                        (o) =>
-                            o.ALIAS === attack.system.ALIAS ||
-                            o.ALIAS == attack.name,
+                        (o) => o.ALIAS === attack.system.ALIAS || o.ALIAS == attack.name,
                     );
 
                     data.attacks.push({
@@ -295,14 +251,8 @@ export class HeroSystem6eItemSheet extends ItemSheet {
                         name: attack.system.NAME || attack.name,
                         checked: adder ? true : false,
                         title: `${
-                            attack.system.XMLID +
-                            (attack.system.DISPLAY
-                                ? " (" + attack.system.DISPLAY + ")"
-                                : "")
-                        }: ${attack.system.description.replace(
-                            /"/g,
-                            "&quot;",
-                        )}`,
+                            attack.system.XMLID + (attack.system.DISPLAY ? " (" + attack.system.DISPLAY + ")" : "")
+                        }: ${attack.system.description.replace(/"/g, "&quot;")}`,
                     });
                 }
 
@@ -324,9 +274,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
         // ENDURANCERESERVE has a REC rate
         if (item.system.XMLID == "ENDURANCERESERVE") {
-            const power = item.system.POWER.find(
-                (o) => o.XMLID === "ENDURANCERESERVEREC",
-            );
+            const power = item.system.POWER.find((o) => o.XMLID === "ENDURANCERESERVEREC");
             data.rec = parseInt(power?.LEVELS) || 0;
         }
 
@@ -366,31 +314,23 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
     async _onModifierCreate(event) {
         event.preventDefault();
-        const action = $(event.currentTarget)
-            .closest(".modifier-create")
-            .data().action;
+        const action = $(event.currentTarget).closest(".modifier-create").data().action;
 
         if (!action) {
             return ui.notifications.error(`Unable to add adder/modifier.`);
         }
 
         // Options associated with TYPE (excluding enhancers for now)
-        const powers = this.item.actor.system.is5e
-            ? CONFIG.HERO.powers5e
-            : CONFIG.HERO.powers6e;
+        const powers = this.item.actor.system.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
 
         const adderOrModifier = action.replace("create", "").toLowerCase();
         const item = this.item;
 
-        const powersOfType = powers.filter(
-            (o) => o.behaviors.includes(adderOrModifier) && o.xml,
-        );
+        const powersOfType = powers.filter((o) => o.behaviors.includes(adderOrModifier) && o.xml);
 
         // Make sure we have options
         if (powersOfType.length === 0) {
-            ui.notifications.warn(
-                `Creating a new ${adderOrModifier.toUpperCase()} is currently unsupported`,
-            );
+            ui.notifications.warn(`Creating a new ${adderOrModifier.toUpperCase()} is currently unsupported`);
             return;
         }
 
@@ -444,9 +384,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
             </form>`;
 
         const d = new Dialog({
-            title: `Create ${adderOrModifier.toUpperCase()} for ${
-                this.item.system.XMLID
-            }`,
+            title: `Create ${adderOrModifier.toUpperCase()} for ${this.item.system.XMLID}`,
             content: form,
             buttons: {
                 create: {
@@ -458,13 +396,9 @@ export class HeroSystem6eItemSheet extends ItemSheet {
                         const formDataObject = formData.object;
                         if (formDataObject.xmlid === "none") return;
 
-                        const power = powers.find(
-                            (o) => o.key == formDataObject.xmlid,
-                        );
+                        const power = powers.find((o) => o.key == formDataObject.xmlid);
                         if (!power) {
-                            ui.notifications.error(
-                                `Creating new ${adderOrModifier.toUpperCase()} failed`,
-                            );
+                            ui.notifications.error(`Creating new ${adderOrModifier.toUpperCase()} failed`);
                             return;
                         }
 
@@ -479,10 +413,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
                         // Using a simplied version of HeroSystemItem6e.itemDataFromXml for now.
                         let modifierData = {};
                         const parser = new DOMParser();
-                        const xmlDoc = parser.parseFromString(
-                            power.xml,
-                            "text/xml",
-                        );
+                        const xmlDoc = parser.parseFromString(power.xml, "text/xml");
                         for (const attribute of xmlDoc.children[0].attributes) {
                             switch (attribute.value) {
                                 case "Yes":
@@ -498,23 +429,19 @@ export class HeroSystem6eItemSheet extends ItemSheet {
                                 //     modifierData.tagName.toUpperCase(); // e.g. MULTIPOWER
                                 //     break;
                                 default:
-                                    modifierData[attribute.name] =
-                                        attribute.value.trim();
+                                    modifierData[attribute.name] = attribute.value.trim();
                             }
                         }
 
                         // Track when added manually for diagnostic purposes
-                        modifierData.versionHeroSystem6eManuallyCreated =
-                            game.system.version;
+                        modifierData.versionHeroSystem6eManuallyCreated = game.system.version;
 
                         // Create a unique ID
                         modifierData.ID = new Date().getTime().toString();
 
                         // Add the modifer (create array if necessary)
                         item.system[adderOrModifier.toUpperCase()] ??= [];
-                        item.system[adderOrModifier.toUpperCase()].push(
-                            modifierData,
-                        );
+                        item.system[adderOrModifier.toUpperCase()].push(modifierData);
 
                         await item._postUpload();
                         await item.actor.CalcActorRealAndActivePoints();
@@ -524,10 +451,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
                 cancel: {
                     icon: '<i class="fas fa-times"></i>',
                     label: "Cancel",
-                    callback: () =>
-                        console.log(
-                            `Cancel ${adderOrModifier.capitalize()} ${adderOrModifier} create`,
-                        ),
+                    callback: () => console.log(`Cancel ${adderOrModifier.capitalize()} ${adderOrModifier} create`),
                 },
             },
         });
@@ -536,15 +460,9 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
     async _onModifierEdit(event) {
         event.preventDefault();
-        const xmlid = $(event.currentTarget)
-            .closest("[data-xmlid]")
-            .data().xmlid;
-        const adderId = $(event.currentTarget)
-            .closest("[data-adder]")
-            ?.data()?.adder;
-        const modifierId = $(event.currentTarget)
-            .closest("[data-modifier]")
-            ?.data()?.modifier;
+        const xmlid = $(event.currentTarget).closest("[data-xmlid]").data().xmlid;
+        const adderId = $(event.currentTarget).closest("[data-adder]")?.data()?.adder;
+        const modifierId = $(event.currentTarget).closest("[data-modifier]")?.data()?.modifier;
         const id = adderId || modifierId;
         if (!xmlid || !id) {
             return ui.notifications.error(`Unable to edit adder/modifier.`);
@@ -559,27 +477,17 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
     async _onModifierDelete(event) {
         event.preventDefault();
-        const xmlid = $(event.currentTarget)
-            .closest("[data-xmlid]")
-            .data().xmlid;
-        const adderId = $(event.currentTarget)
-            .closest("[data-adder]")
-            ?.data()?.adder;
-        const modifierId = $(event.currentTarget)
-            .closest("[data-modifier]")
-            ?.data()?.modifier;
+        const xmlid = $(event.currentTarget).closest("[data-xmlid]").data().xmlid;
+        const adderId = $(event.currentTarget).closest("[data-adder]")?.data()?.adder;
+        const modifierId = $(event.currentTarget).closest("[data-modifier]")?.data()?.modifier;
         const id = adderId || modifierId;
         if (!id) {
             return ui.notifications.error(`Unable to delete modifier/adder.`);
         }
 
         const confirmed = await Dialog.confirm({
-            title: game.i18n.localize(
-                "HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title",
-            ),
-            content: game.i18n.localize(
-                "HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Content",
-            ),
+            title: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title"),
+            content: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Content"),
         });
 
         if (confirmed) {
@@ -609,9 +517,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
             case "hit-roll":
                 return Dialog.confirm({
                     title: `${game.i18n.localize("DND5E.CurrencyConvert")}`,
-                    content: `<p>${game.i18n.localize(
-                        "DND5E.CurrencyConvertHint",
-                    )}</p>`,
+                    content: `<p>${game.i18n.localize("DND5E.CurrencyConvertHint")}</p>`,
                     yes: () => this.actor.convertCurrency(),
                 });
             case "rollDeathSave":
@@ -644,22 +550,16 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
         // OPTION_ALIAS may need updating
         let clearAdderAttacks = false; // Clear all attacks and infer new attacks when OPTIONID is changed
-        if (
-            this.item.getBaseInfo()?.editOptions?.choices &&
-            expandedData.system.OPTIONID
-        ) {
+        if (this.item.getBaseInfo()?.editOptions?.choices && expandedData.system.OPTIONID) {
             const choiceSelected = this.item
                 .getBaseInfo()
-                .editOptions.choices.find(
-                    (o) => o.OPTIONID === expandedData.system.OPTIONID,
-                );
+                .editOptions.choices.find((o) => o.OPTIONID === expandedData.system.OPTIONID);
             // only update OPTION and OPTION_ALIAS when OPTION has changed.
             // This allows for custom OPTION_ALIAS text for things like DEADLYBLOW.
             if (this.item.system.OPTION != choiceSelected.OPTION) {
                 this.item.system.OPTION = choiceSelected.OPTION;
                 this.item.system.OPTION_ALIAS = choiceSelected.OPTION_ALIAS;
-                this.item.system.BASECOST =
-                    choiceSelected.BASECOST || this.item.system.BASECOST;
+                this.item.system.BASECOST = choiceSelected.BASECOST || this.item.system.BASECOST;
                 clearAdderAttacks = true;
             }
         }
@@ -669,9 +569,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
         // Endurance Reserve
         if (expandedData.rec) {
-            const ENDURANCERESERVEREC = this.item.findModsByXmlid(
-                "ENDURANCERESERVEREC",
-            );
+            const ENDURANCERESERVEREC = this.item.findModsByXmlid("ENDURANCERESERVEREC");
             if (ENDURANCERESERVEREC) {
                 this.item.system.value = parseInt(expandedData.rec) || 1;
                 await this.item.update({
@@ -695,13 +593,11 @@ export class HeroSystem6eItemSheet extends ItemSheet {
             let newInputStr;
 
             if (this.item.system.XMLID === "TRANSFER") {
-                newInputStr = `${Object.values(expandedData.reduces).join(
-                    ", ",
-                )} -> ${Object.values(expandedData.enhances).join(", ")}`;
+                newInputStr = `${Object.values(expandedData.reduces).join(", ")} -> ${Object.values(
+                    expandedData.enhances,
+                ).join(", ")}`;
             } else {
-                newInputStr = Object.values(
-                    expandedData.reduces || expandedData.enhances,
-                ).join(", ");
+                newInputStr = Object.values(expandedData.reduces || expandedData.enhances).join(", ");
             }
 
             await this.item.update({ "system.INPUT": newInputStr });
@@ -709,17 +605,10 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
         // Turn attack toggles into adders
         if (expandedData.attacks) {
-            for (const [attackId, checked] of Object.entries(
-                expandedData.attacks,
-            )) {
-                const attackItem = this.actor.items.find(
-                    (o) => o.id === attackId,
-                );
+            for (const [attackId, checked] of Object.entries(expandedData.attacks)) {
+                const attackItem = this.actor.items.find((o) => o.id === attackId);
                 const adder = (this.item.system.ADDER || []).find(
-                    (adder) =>
-                        adder.XMLID === "ADDER" &&
-                        adder.ALIAS ===
-                            (attackItem.system.ALIAS || attackItem.name),
+                    (adder) => adder.XMLID === "ADDER" && adder.ALIAS === (attackItem.system.ALIAS || attackItem.name),
                 );
 
                 // Create a custom adders that matches attack name
@@ -742,9 +631,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
                 // Delete custom adders that matches attack name
                 if (adder && !checked) {
                     this.item.system.ADDER = this.item.system.ADDER.filter(
-                        (o) =>
-                            o.ALIAS !=
-                            (attackItem.system.ALIAS || attackItem.name),
+                        (o) => o.ALIAS != (attackItem.system.ALIAS || attackItem.name),
                     );
                 }
             }
@@ -784,9 +671,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
         if (type === "effect") {
             if (!this.actor) {
-                return ui.notifications.warn(
-                    `Active Effects not handled on items not associated with an actor.`,
-                );
+                return ui.notifications.warn(`Active Effects not handled on items not associated with an actor.`);
             }
 
             // Active Effects are quirky.
@@ -804,9 +689,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
             activeEffect.label = "New Effect";
             activeEffect.origin = this.item.uuid;
 
-            await this.actor.createEmbeddedDocuments("ActiveEffect", [
-                activeEffect,
-            ]);
+            await this.actor.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
 
             // This will update the AE effects on an Item that is attached to an actor
             // but since the updated AEs don't transfer to the actor automatically, seems pointless.
@@ -829,8 +712,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
         };
         const newItem = new HeroSystem6eItem(itemData);
 
-        const id =
-            Date.now().toString(32) + Math.random().toString(16).substring(2);
+        const id = Date.now().toString(32) + Math.random().toString(16).substring(2);
         const changes = {};
         changes[`system.subItems.${type}.${id}.system`] = newItem.system;
         changes[`system.subItems.${type}.${id}.img`] = this.item.img;
@@ -863,20 +745,14 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
     async _onEffectDelete(event) {
         event.preventDefault();
-        const effectId = $(event.currentTarget)
-            .closest("[data-effect-id]")
-            .data().effectId;
+        const effectId = $(event.currentTarget).closest("[data-effect-id]").data().effectId;
         const effect = this.item.effects.get(effectId);
 
         if (!effect) return;
 
         const confirmed = await Dialog.confirm({
-            title: game.i18n.localize(
-                "HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title",
-            ),
-            content: game.i18n.localize(
-                "HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Content",
-            ),
+            title: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title"),
+            content: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Content"),
         });
 
         if (confirmed) {
@@ -891,9 +767,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
     async _onEffectEdit(event) {
         event.preventDefault();
-        const effectId = $(event.currentTarget)
-            .closest("[data-effect-id]")
-            .data().effectId;
+        const effectId = $(event.currentTarget).closest("[data-effect-id]").data().effectId;
         let effect = this.document.effects.get(effectId);
         if (!effect && this.document.actor) {
             effect = this.document.actor.effects.get(effectId);

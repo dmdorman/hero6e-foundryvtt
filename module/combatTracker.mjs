@@ -13,22 +13,13 @@ export class HeroSystem6eCombatTracker extends CombatTracker {
 
     activateListeners(html) {
         super.activateListeners(html);
-        html.find(".segment-hasItems").click((ev) =>
-            this._onSegmentToggleContent(ev),
-        );
+        html.find(".segment-hasItems").click((ev) => this._onSegmentToggleContent(ev));
     }
 
     async _onCombatControl(event) {
         const target = event.target;
-        if (
-            ["fas fa-step-backward", "fas fa-step-forward"].includes(
-                target.className,
-            ) &&
-            !event.shiftKey
-        ) {
-            return await ui.notifications.warn(
-                `Changing turns is unusual. Hold SHIFT to change turn.`,
-            );
+        if (["fas fa-step-backward", "fas fa-step-forward"].includes(target.className) && !event.shiftKey) {
+            return await ui.notifications.warn(`Changing turns is unusual. Hold SHIFT to change turn.`);
         }
 
         await super._onCombatControl(event);
@@ -40,17 +31,13 @@ export class HeroSystem6eCombatTracker extends CombatTracker {
         const header = event.currentTarget;
         const segment = header.closest(".segment-container");
         const content = segment.querySelector(".segment-content");
-        content.style.display =
-            content.style.display === "none" ? "block" : "none";
+        content.style.display = content.style.display === "none" ? "block" : "none";
     }
 
     async getData(options) {
         const context = await super.getData(options);
 
-        context.alphaTesting = game.settings.get(
-            game.system.id,
-            "alphaTesting",
-        );
+        context.alphaTesting = game.settings.get(game.system.id, "alphaTesting");
 
         // Initialize segments
         context.segments = [];
@@ -63,9 +50,7 @@ export class HeroSystem6eCombatTracker extends CombatTracker {
         let activeSegment = 12;
         for (let t = 0; t < context.turns.length; t++) {
             const turn = context.turns[t];
-            turn.flags = context.combat.combatants.find(
-                (c) => c.id === turn.id,
-            )?.flags;
+            turn.flags = context.combat.combatants.find((c) => c.id === turn.id)?.flags;
 
             // Add combatant to proper segment
             if (turn.flags?.segment) {

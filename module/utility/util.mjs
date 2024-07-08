@@ -38,10 +38,7 @@ export function getPowerInfo(options) {
     }
     if (is5e === undefined) {
         // This has a problem if we're passed in an XMLID for a power as we don't know the actor so we don't know if it's 5e or 6e
-        const DefaultEdition = game.settings.get(
-            HEROSYS.module,
-            "DefaultEdition",
-        );
+        const DefaultEdition = game.settings.get(HEROSYS.module, "DefaultEdition");
         if (DefaultEdition === "five") {
             is5e = true;
         } else {
@@ -60,29 +57,25 @@ export function getPowerInfo(options) {
 
     // LowerCase
     // TODO: Make powers correct and remove this
-    if (powerInfo?.duration)
-        powerInfo.duration = powerInfo.duration.toLowerCase();
+    if (powerInfo?.duration) powerInfo.duration = powerInfo.duration.toLowerCase();
 
     return powerInfo;
 }
 
 export function getModifierInfo(options) {
     const xmlid =
-        options.xmlid ||
-        options.item?.system?.XMLID ||
-        options.item?.system?.xmlid ||
-        options.item?.system?.id;
+        options.xmlid || options.item?.system?.XMLID || options.item?.system?.xmlid || options.item?.system?.id;
 
     const actor = options?.actor || options?.item?.actor;
-    if (!actor) {
+    const is5e = actor?.system?.is5e || options.item?.system?.is5e;
+
+    if (typeof is5e === "undefined") {
         // This has a problem if we're passed in an XMLID for a power as we don't know the actor so we don't know if it's 5e or 6e
-        console.warn(
-            `${xmlid} for ${options.item?.name} has no actor provided. Assuming 6e.`,
-        );
+        console.warn(`Unable to determine edition of ${xmlid} for ${options.item?.name}. Assuming 6e.`);
     }
 
     let modifierOverrideInfo = CONFIG.HERO.ModifierOverride[xmlid];
-    if (!modifierOverrideInfo || actor?.system?.is5e) {
+    if (!modifierOverrideInfo || is5e) {
         modifierOverrideInfo = {
             ...modifierOverrideInfo,
             ...CONFIG.HERO.ModifierOverride5e[xmlid],
@@ -100,19 +93,15 @@ export function getModifierInfo(options) {
 
 function _isNonIgnoredCharacteristicsAndMovementPowerForActor(actor) {
     return (power) =>
-        (power.type?.includes("characteristic") ||
-            power.type?.includes("movement")) &&
+        (power.type?.includes("characteristic") || power.type?.includes("movement")) &&
         !power.ignoreFor?.includes(actor?.type) &&
         (!power.onlyFor || power.onlyFor.includes(actor?.type)) &&
         !power.key.match(/^CUSTOM[0-9]+.*/); // Ignore CUSTOM characteristics until supported.
 }
 
 export function getCharacteristicInfoArrayForActor(actor) {
-    const isCharOrMovePowerForActor =
-        _isNonIgnoredCharacteristicsAndMovementPowerForActor(actor);
-    const powerList = actor?.system?.is5e
-        ? CONFIG.HERO.powers5e
-        : CONFIG.HERO.powers6e;
+    const isCharOrMovePowerForActor = _isNonIgnoredCharacteristicsAndMovementPowerForActor(actor);
+    const powerList = actor?.system?.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
 
     const powers = powerList.filter(isCharOrMovePowerForActor);
 
@@ -149,12 +138,7 @@ export async function getTemporaryEffectsOwnedByActorInCombat(actor) {
             if (item) {
                 const aeActor = item?.actor?.id === actor?.id;
                 // There are likely multiple combatants with the same actor based on SPD, only add once
-                if (
-                    aeActor &&
-                    !effects.find(
-                        (o) => o.id === ae.id && o.target === ae.target,
-                    )
-                ) {
+                if (aeActor && !effects.find((o) => o.id === ae.id && o.target === ae.target)) {
                     effects.push(ae);
                 }
             } else {
@@ -185,8 +169,7 @@ export async function expireEffects(actor) {
         // Determine XMLID, ITEM, ACTOR
         let origin = await fromUuid(ae.origin);
         let item = origin instanceof HeroSystem6eItem ? origin : null;
-        let aeActor =
-            origin instanceof HeroSystem6eActor ? origin : item?.actor || actor;
+        let aeActor = origin instanceof HeroSystem6eActor ? origin : item?.actor || actor;
         let XMLID = ae.flags.XMLID || item?.system?.XMLID;
 
         let powerInfo = getPowerInfo({
@@ -201,9 +184,7 @@ export async function expireEffects(actor) {
             game.settings.get(game.system.id, "alphaTesting") &&
             ae.duration?.seconds < 3.154e7 * 100
         ) {
-            return ui.notifications.warn(
-                `Unable to determine XMLID for ${ae.name} active effect.`,
-            );
+            return ui.notifications.warn(`Unable to determine XMLID for ${ae.name} active effect.`);
         }
 
         // With Simple Calendar you can move time ahead in large steps.
@@ -251,19 +232,12 @@ export async function expireEffects(actor) {
                 // performAdjustment has deleted the active effect. In this case exit the loop so that
                 // we don't keep operating on an old view of a deleted active effect.
                 // Healing doesn't fade. The lockout just ends which guarantees a deleted effect.
-                if (
-                    ae.flags.adjustmentActivePoints === 0 ||
-                    ae.flags.XMLID === "HEALING"
-                ) {
+                if (ae.flags.adjustmentActivePoints === 0 || ae.flags.XMLID === "HEALING") {
                     break;
                 }
             } else if (ae.flags.XMLID === "naturalBodyHealing") {
-                let bodyValue = parseInt(
-                    (ae.target || actor).system.characteristics.body.value,
-                );
-                let bodyMax = parseInt(
-                    (ae.target || actor).system.characteristics.body.max,
-                );
+                let bodyValue = parseInt((ae.target || actor).system.characteristics.body.value);
+                let bodyMax = parseInt((ae.target || actor).system.characteristics.body.max);
                 bodyValue = Math.min(bodyValue + 1, bodyMax);
 
                 await (ae.target || actor).update({

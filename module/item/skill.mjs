@@ -5,25 +5,17 @@ async function _renderSkillForm(item, actor, stateData) {
     const token = actor.token;
 
     // Skill Levels (in most cases it will apply so check it)
-    let skillLevels = Array.from(
-        actor.items.filter((o) => o.system.XMLID === "SKILL_LEVELS"),
-    );
+    let skillLevels = Array.from(actor.items.filter((o) => o.system.XMLID === "SKILL_LEVELS"));
     for (let s of skillLevels) {
         s.system.checked = false;
 
         // OPTION_ALIAS has name of skill
-        if (
-            s.system.OPTION_ALIAS.toUpperCase().indexOf(
-                item.name.toUpperCase(),
-            ) > -1
-        ) {
+        if (s.system.OPTION_ALIAS.toUpperCase().indexOf(item.name.toUpperCase()) > -1) {
             s.system.checked = true;
         }
 
         // OPTION_ALIAS has XMLID of skill
-        if (
-            s.system.OPTION_ALIAS.toUpperCase().indexOf(item.system.XMLID) > -1
-        ) {
+        if (s.system.OPTION_ALIAS.toUpperCase().indexOf(item.system.XMLID) > -1) {
             s.system.checked = true;
         }
 
@@ -33,10 +25,7 @@ async function _renderSkillForm(item, actor, stateData) {
         }
 
         // INTERACTION match (really PRE match)
-        if (
-            s.name.toUpperCase().indexOf("INTERACTION") > -1 &&
-            item.system.CHARACTERISTIC === "PRE"
-        ) {
+        if (s.name.toUpperCase().indexOf("INTERACTION") > -1 && item.system.CHARACTERISTIC === "PRE") {
             s.system.checked = true;
         }
     }
@@ -88,10 +77,7 @@ async function skillRoll(item, actor, html) {
     // Charges?
     const charges = item.findModsByXmlid("CHARGES");
     if (charges) {
-        if (
-            !item.system.charges?.value ||
-            parseInt(item.system.charges?.value) <= 0
-        ) {
+        if (!item.system.charges?.value || parseInt(item.system.charges?.value) <= 0) {
             const chatData = {
                 user: game.user._id,
                 content: `${item.name} has no charges remaining.`,
@@ -107,8 +93,7 @@ async function skillRoll(item, actor, html) {
     const endUse = parseInt(item.system.end);
     const costEnd = item.findModsByXmlid("COSTSEND");
     if (costEnd && endUse && item.actor) {
-        const newEnd =
-            parseInt(item.actor.system.characteristics.end.value) - endUse;
+        const newEnd = parseInt(item.actor.system.characteristics.end.value) - endUse;
 
         if (newEnd >= 0) {
             await item.actor.update({
@@ -165,9 +150,7 @@ async function skillRoll(item, actor, html) {
     const total = skillRoller.getSuccessTotal();
     const margin = successValue - total;
 
-    const flavor = `${item.name.toUpperCase()} (${successValue}-) roll ${
-        succeeded ? "succeeded" : "failed"
-    } by ${
+    const flavor = `${item.name.toUpperCase()} (${successValue}-) roll ${succeeded ? "succeeded" : "failed"} by ${
         autoSuccess === undefined ? `${Math.abs(margin)}` : `rolling ${total}`
     }`;
     let rollHtml = await skillRoller.render(flavor);

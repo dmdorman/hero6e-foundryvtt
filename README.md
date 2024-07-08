@@ -138,12 +138,12 @@ Prefacing the the flavour with an `h` will give you a roll with hit locations. S
 
 The following modules have been successfully tested for compatibility. They are also recommended.
 
-- [Hero System 6e (Unofficial) v2 Compendium](https://github.com/dmdorman/hero6e-foundryvtt-packs).  Useful for adding powers to actors ingame.
 - [Dice So Nice!](https://gitlab.com/riccisi/foundryvtt-dice-so-nice)
 - [Drag Ruler](https://foundryvtt.com/packages/drag-ruler). NOTE: This module requires [socketlib](https://foundryvtt.com/packages/socketlib).
 - [Simple Calendar](https://github.com/vigoren/foundryvtt-simple-calendar)
 - [About Face](https://foundryvtt.com/packages/about-face)
 - [Bar Brawl](https://foundryvtt.com/packages/barbrawl)
+- [Tokenizer](https://foundryvtt.com/packages/vtta-tokenizer/)
 
 ## 5th Edition Support
 

@@ -175,7 +175,7 @@ Our support ratings:
 | MENTAL ILLUSIONS | D |  |
 | MIND CONTROL | D |  |
 | MIND LINK | D |  |
-| MIND SCAN | D |  |
+| MIND SCAN | B |  |
 | MULTIFORM | F | You will have to create a separate HDC file and import that for each duplicate. No injury or activation support. |
 | NO HIT LOCATIONS | D |  |
 | POWER DEFENSE | D |  |

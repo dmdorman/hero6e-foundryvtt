@@ -6,15 +6,8 @@ import { HeroSystem6eItem } from "../item/item.mjs";
 import { determineDefense } from "../utility/defense.mjs";
 import { presenceAttackPopOut } from "../utility/presence-attack.mjs";
 import { onManageActiveEffect } from "../utility/effects.mjs";
-import {
-    getPowerInfo,
-    getCharacteristicInfoArrayForActor,
-} from "../utility/util.mjs";
-import {
-    CombatSkillLevelsForAttack,
-    convertToDcFromItem,
-    getDiceFormulaFromItemDC,
-} from "../utility/damage.mjs";
+import { getPowerInfo, getCharacteristicInfoArrayForActor } from "../utility/util.mjs";
+import { CombatSkillLevelsForAttack, convertToDcFromItem, getDiceFormulaFromItemDC } from "../utility/damage.mjs";
 import { HeroRoller } from "../utility/dice.mjs";
 import { getSystemDisplayUnits } from "../utility/units.mjs";
 import { calculateVelocityInSystemUnits } from "../ruler.mjs";
@@ -50,10 +43,7 @@ export class HeroSystemActorSheet extends ActorSheet {
             //    probably should have been introduced at the same time we introduced the upload check).
             if (
                 !data.actor.system.versionHeroSystem6eUpload &&
-                !foundry.utils.isNewerVersion(
-                    data.actor.system.versionHeroSystem6eCreated,
-                    "3.0.63",
-                ) &&
+                !foundry.utils.isNewerVersion(data.actor.system.versionHeroSystem6eCreated, "3.0.63") &&
                 this._priorState <= 0
             ) {
                 ui.notifications.warn(
@@ -62,18 +52,10 @@ export class HeroSystemActorSheet extends ActorSheet {
             }
 
             const equipmentWeightPercentage =
-                parseInt(
-                    game.settings.get(
-                        game.system.id,
-                        "equipmentWeightPercentage",
-                    ),
-                ) / 100.0;
+                parseInt(game.settings.get(game.system.id, "equipmentWeightPercentage")) / 100.0;
 
             // Alpha Testing (use to show/hide effects)
-            data.alphaTesting = game.settings.get(
-                game.system.id,
-                "alphaTesting",
-            );
+            data.alphaTesting = game.settings.get(game.system.id, "alphaTesting");
 
             // Equipment & MartialArts are uncommon.  If there isn't any, then don't show the navigation tab.
             data.hasEquipment = false;
@@ -104,19 +86,12 @@ export class HeroSystemActorSheet extends ActorSheet {
             data.pointsTitle = "";
             data.activePointsTitle = "";
             if (data.actor.system.pointsDetail) {
-                for (let [key, value] of Object.entries(
-                    data.actor.system.pointsDetail,
-                )) {
-                    data.pointsTitle += `${key.replace(
-                        "equipment",
-                        "[equipment]",
-                    )}: ${value}\n`;
+                for (let [key, value] of Object.entries(data.actor.system.pointsDetail)) {
+                    data.pointsTitle += `${key.replace("equipment", "[equipment]")}: ${value}\n`;
                 }
             }
             if (data.actor.system.activePointsDetail) {
-                for (let [key, value] of Object.entries(
-                    data.actor.system.activePointsDetail,
-                )) {
+                for (let [key, value] of Object.entries(data.actor.system.activePointsDetail)) {
                     data.activePointsTitle += `${key}: ${value}\n`;
                 }
             } else {
@@ -133,9 +108,7 @@ export class HeroSystemActorSheet extends ActorSheet {
                     item.system.active = !itemEffects.disabled;
                 }
 
-                const actorEffects = data.actor.effects.find(
-                    (o) => o.origin === this.actor.items.get(item._id).uuid,
-                );
+                const actorEffects = data.actor.effects.find((o) => o.origin === this.actor.items.get(item._id).uuid);
                 {
                     if (actorEffects) {
                         item.system.showToggle = true;
@@ -148,13 +121,13 @@ export class HeroSystemActorSheet extends ActorSheet {
 
                 // Item in a Framework?
                 if (item.parentItem) {
-                    const parentPosition =
-                        item.parentItem.system.XMLID === "COMPOUNDPOWER"
-                            ? -1 // Compound power starts at a random position. Sub powers start at 0.
-                            : parseInt(item.parentItem.system.POSITION);
-                    item.system.childIdx =
-                        parseInt(item.system.POSITION) -
-                        parseInt(parentPosition);
+                    // const parentPosition =
+                    //     item.parentItem.system.XMLID === "COMPOUNDPOWER"
+                    //         ? -1 // Compound power starts at a random position. Sub powers start at 0.
+                    //         : parseInt(item.parentItem.system.POSITION);
+                    //item.system.childIdx = parseInt(item.system.POSITION) - parseInt(parentPosition);
+                    item.system.childIdx = item.parentItem.childItems.findIndex((o) => o.id === item.id) + 1;
+
                     if (item.parentItem?.parentItem) {
                         item.system.childIdx = `${item.parentItem.system.childIdx}.${item.system.childIdx}`;
                     }
@@ -177,15 +150,8 @@ export class HeroSystemActorSheet extends ActorSheet {
                     let cslSummary = {};
 
                     for (const csl of csls) {
-                        for (const prop of [
-                            "ocv",
-                            "omcv",
-                            "dcv",
-                            "dmcv",
-                            "dc",
-                        ]) {
-                            cslSummary[prop] =
-                                csl[prop] + parseInt(cslSummary[prop] || 0);
+                        for (const prop of ["ocv", "omcv", "dcv", "dmcv", "dc"]) {
+                            cslSummary[prop] = csl[prop] + parseInt(cslSummary[prop] || 0);
 
                             if (csl[prop] != 0) {
                                 if (item.flags.tags[prop]) {
@@ -193,19 +159,14 @@ export class HeroSystemActorSheet extends ActorSheet {
                                 } else {
                                     item.flags.tags[prop] = "";
                                 }
-                                item.flags.tags[prop] = `${
-                                    item.flags.tags[prop]
-                                }${csl[prop].signedString()} ${
+                                item.flags.tags[prop] = `${item.flags.tags[prop]}${csl[prop].signedString()} ${
                                     prop === "dc" ? "DC " : ""
                                 }${csl.item.name}`;
                             }
                         }
                     }
                     let { dc, end } = convertToDcFromItem(item);
-                    item.system.endEstimate = Math.max(
-                        item.system.endEstimate,
-                        end,
-                    );
+                    item.system.endEstimate = Math.max(item.system.endEstimate, end);
 
                     // text description of damage
                     item.system.damage = getDiceFormulaFromItemDC(item, dc);
@@ -232,7 +193,7 @@ export class HeroSystemActorSheet extends ActorSheet {
                     }
 
                     // Signed OCV and DCV
-                    if (item.system.ocv != undefined) {
+                    if (item.system.ocv != undefined && item.system.uses === "ocv") {
                         switch (item.system.ocv) {
                             case "--":
                                 item.system.ocvEstimated = "";
@@ -240,21 +201,14 @@ export class HeroSystemActorSheet extends ActorSheet {
 
                             case "-v/10":
                                 {
-                                    item.system.ocv = (
-                                        "+" + parseInt(item.system.ocv)
-                                    ).replace("+-", "-");
+                                    item.system.ocv = ("+" + parseInt(item.system.ocv)).replace("+-", "-");
 
                                     const tokens = item.actor.getActiveTokens();
                                     const token = tokens[0];
-                                    const velocity =
-                                        calculateVelocityInSystemUnits(
-                                            item.actor,
-                                            token,
-                                        );
+                                    const velocity = calculateVelocityInSystemUnits(item.actor, token);
 
                                     item.system.ocvEstimated = (
-                                        parseInt(cslSummary.ocv) +
-                                        parseInt(velocity / 10)
+                                        parseInt(cslSummary.ocv) + parseInt(velocity / 10)
                                     ).signedString();
 
                                     if (parseInt(velocity / 10) != 0) {
@@ -263,9 +217,7 @@ export class HeroSystemActorSheet extends ActorSheet {
                                         } else {
                                             item.flags.tags.ocv = "";
                                         }
-                                        item.flags.tags.ocv = `${
-                                            item.flags.tags.ocv
-                                        }${parseInt(
+                                        item.flags.tags.ocv = `${item.flags.tags.ocv}${parseInt(
                                             velocity / 10,
                                         ).signedString()} Velocity`;
                                     }
@@ -273,14 +225,9 @@ export class HeroSystemActorSheet extends ActorSheet {
                                 break;
 
                             default:
-                                item.system.ocv = parseInt(
-                                    item.system.ocv,
-                                ).signedString();
+                                item.system.ocv = parseInt(item.system.ocv).signedString();
                                 item.system.ocvEstimated = (
-                                    parseInt(item.system.ocv) +
-                                    parseInt(
-                                        cslSummary.ocv || cslSummary.omcv || 0,
-                                    )
+                                    parseInt(item.system.ocv) + parseInt(cslSummary.ocv || cslSummary.omcv || 0)
                                 ).signedString();
 
                                 if (parseInt(item.system.ocv) != 0) {
@@ -293,13 +240,11 @@ export class HeroSystemActorSheet extends ActorSheet {
                                 }
                         }
                     }
-                    if (item.system.dcv != undefined) {
-                        item.system.dcv = parseInt(
-                            item.system.dcv,
-                        ).signedString();
+
+                    if (item.system.dcv != undefined && item.system.uses === "ocv") {
+                        item.system.dcv = parseInt(item.system.dcv).signedString();
                         item.system.dcvEstimated = (
-                            parseInt(item.system.dcv) +
-                            parseInt(cslSummary.dcv || cslSummary.dmcv || 0)
+                            parseInt(item.system.dcv) + parseInt(cslSummary.dcv || cslSummary.dmcv || 0)
                         ).signedString();
 
                         if (parseInt(item.system.dcv) != 0) {
@@ -312,17 +257,36 @@ export class HeroSystemActorSheet extends ActorSheet {
                         }
                     }
 
+                    if (item.system.uses === "omcv") {
+                        const omcv = parseInt(item.actor?.system.characteristics.omcv?.value || 0);
+                        item.system.ocvEstimated = (omcv + parseInt(cslSummary.omcv || 0)).signedString();
+                        if (omcv != 0) {
+                            if (item.flags.tags.omcv) {
+                                item.flags.tags.omcv += "\n";
+                            } else {
+                                item.flags.tags.omcv = "";
+                            }
+                            item.flags.tags.omcv = `${item.flags.tags.omcv}${omcv.signedString()} OMCV`;
+                        }
+
+                        const dmcv = parseInt(item.actor?.system.characteristics.dmcv?.value || 0);
+                        item.system.dcvEstimated = (dmcv + parseInt(cslSummary.dmcv || 0)).signedString();
+                        if (dmcv != 0) {
+                            if (item.flags.tags.dmcv) {
+                                item.flags.tags.dmcv += "\n";
+                            } else {
+                                item.flags.tags.dmcv = "";
+                            }
+                            item.flags.tags.dmcv = `${item.flags.tags.dmcv}${dmcv.signedString()} DMCV`;
+                        }
+                    }
+
                     // Set +1 OCV
                     const setManeuver = item.actor.items.find(
-                        (o) =>
-                            o.type == "maneuver" &&
-                            o.name === "Set" &&
-                            o.system.active,
+                        (o) => o.type == "maneuver" && o.name === "Set" && o.system.active,
                     );
                     if (setManeuver) {
-                        item.system.ocvEstimated = (
-                            parseInt(item.system.ocvEstimated) + 1
-                        ).signedString();
+                        item.system.ocvEstimated = (parseInt(item.system.ocvEstimated) + 1).signedString();
 
                         if (item.flags.tags.ocv) {
                             item.flags.tags.ocv += "\n";
@@ -334,15 +298,10 @@ export class HeroSystemActorSheet extends ActorSheet {
 
                     // Haymaker -5 DCV
                     const haymakerManeuver = item.actor.items.find(
-                        (o) =>
-                            o.type == "maneuver" &&
-                            o.name === "Haymaker" &&
-                            o.system.active,
+                        (o) => o.type == "maneuver" && o.name === "Haymaker" && o.system.active,
                     );
                     if (haymakerManeuver) {
-                        item.system.dcvEstimated = (
-                            parseInt(item.system.dcvEstimated) - 4
-                        ).signedString();
+                        item.system.dcvEstimated = (parseInt(item.system.dcvEstimated) - 4).signedString();
 
                         if (item.flags.tags.dcv) {
                             item.flags.tags.dcv += "\n";
@@ -369,46 +328,46 @@ export class HeroSystemActorSheet extends ActorSheet {
                 if (item.type == "equipment") {
                     data.hasEquipment = true;
 
-                    item.system.weight = (
-                        parseFloat(item.system.WEIGHT || 0) *
-                        equipmentWeightPercentage
-                    ).toFixed(1);
+                    item.system.weight = (parseFloat(item.system.WEIGHT || 0) * equipmentWeightPercentage).toFixed(1);
 
                     if (item.system.active) {
                         weightTotal += parseFloat(item.system.weight || 0);
                     }
                     if (parseFloat(item.system.weight || 0) > 0) {
-                        item.system.WEIGHTtext =
-                            parseFloat(item.system.weight) + "kg";
+                        item.system.WEIGHTtext = parseFloat(item.system.weight) + "kg";
                     } else {
                         item.system.WEIGHTtext = "";
                     }
 
                     priceTotal += parseFloat(item.system.PRICE || 0);
                     if (parseFloat(item.system.PRICE || 0) > 0) {
-                        item.system.PRICEtext =
-                            "$" + Math.round(parseFloat(item.system.PRICE));
+                        item.system.PRICEtext = "$" + Math.round(parseFloat(item.system.PRICE));
                     } else {
                         item.system.PRICEtext = "";
                     }
                 }
 
-                item.skillRollUpdateValue();
+                item.updateRoll();
 
                 // Charges
                 if (parseInt(item.system.charges?.max || 0) > 0) {
                     const costsEnd = item.findModsByXmlid("COSTSEND");
-                    if (item.system.endEstimate === 0 || !costsEnd)
-                        item.system.endEstimate = "";
-                    item.system.endEstimate += ` [${parseInt(
-                        item.system.charges?.value || 0,
-                    )}${item.system.charges?.recoverable ? "rc" : ""}]`;
+                    if (item.system.endEstimate === 0 || !costsEnd) item.system.endEstimate = "";
+                    item.system.endEstimate += ` [${parseInt(item.system.charges?.value || 0)}${
+                        item.system.charges?.recoverable ? "rc" : ""
+                    }]`;
                     item.system.endEstimate = item.system.endEstimate.trim();
                 }
 
                 // 0 END
                 if (!item.system.endEstimate) {
                     item.system.endEstimate = "";
+                }
+
+                // Mental
+                if (item?.flags?.tags?.omcv) {
+                    item.flags.tags.ocv ??= item.flags.tags.omcv;
+                    item.flags.tags.dcv ??= item.flags.tags.dmcv;
                 }
 
                 items.push(foundry.utils.deepClone(item));
@@ -424,12 +383,8 @@ export class HeroSystemActorSheet extends ActorSheet {
             data.items = items;
 
             if (data.hasEquipment) {
-                if (
-                    parseFloat(weightTotal).toFixed(1) > 0 ||
-                    parseFloat(priceTotal).toFixed(2) > 0
-                ) {
-                    data.weightTotal =
-                        parseFloat(weightTotal).toFixed(1) + "kg";
+                if (parseFloat(weightTotal).toFixed(1) > 0 || parseFloat(priceTotal).toFixed(2) > 0) {
+                    data.weightTotal = parseFloat(weightTotal).toFixed(1) + "kg";
                     data.priceTotal = "$" + parseFloat(priceTotal).toFixed(2);
                 }
             }
@@ -443,21 +398,16 @@ export class HeroSystemActorSheet extends ActorSheet {
                 this.actor.updateRollable(powerInfo.key.toLowerCase());
 
                 let characteristic = {
-                    ...data.actor.system.characteristics[
-                        powerInfo.key.toLowerCase()
-                    ],
+                    ...data.actor.system.characteristics[powerInfo.key.toLowerCase()],
                 };
 
                 characteristic.key = powerInfo.key.toLowerCase();
                 characteristic.value = parseInt(characteristic.value) || 0;
                 characteristic.max = parseInt(characteristic.max) || 0;
 
-                characteristic.base = this.actor.getCharacteristicBase(
-                    powerInfo.key.toUpperCase(),
-                );
+                characteristic.base = this.actor.getCharacteristicBase(powerInfo.key.toUpperCase());
 
-                characteristic.name =
-                    powerInfo.name || powerInfo.key.toUpperCase();
+                characteristic.name = powerInfo.name || powerInfo.key.toUpperCase();
                 characteristic.costTitle = powerInfo.cost
                     ? `${powerInfo.cost} * (${characteristic.core} - ${characteristic.base})`
                     : null;
@@ -465,23 +415,17 @@ export class HeroSystemActorSheet extends ActorSheet {
                 // Notes
                 if (powerInfo.key === "STR") {
                     const strDetails = this.actor.strDetails();
-                    characteristic.notes = `lift ${
-                        strDetails.strLiftText
-                    }, running throw ${
+                    characteristic.notes = `lift ${strDetails.strLiftText}, running throw ${
                         strDetails.strThrow
                     }${getSystemDisplayUnits(data.actor.is5e)}`;
                 }
 
                 if (powerInfo.key === "LEAPING")
-                    characteristic.notes = `${Math.max(
-                        0,
-                        characteristic.value,
-                    )}${getSystemDisplayUnits(
+                    characteristic.notes = `${Math.max(0, characteristic.value)}${getSystemDisplayUnits(
                         data.actor.system.is5e,
-                    )} forward, ${Math.max(
-                        0,
-                        Math.round(characteristic.value / 2),
-                    )}${getSystemDisplayUnits(data.actor.system.is5e)} upward`;
+                    )} forward, ${Math.max(0, Math.round(characteristic.value / 2))}${getSystemDisplayUnits(
+                        data.actor.system.is5e,
+                    )} upward`;
 
                 characteristic.delta = 0;
                 if (data.actor.system.is5e) {
@@ -511,82 +455,57 @@ export class HeroSystemActorSheet extends ActorSheet {
 
                     if (["ocv", "dcv"].includes(powerInfo.key.toLowerCase())) {
                         characteristic.notes = "5e figured DEX/3";
-                        characteristic.delta =
-                            characteristic.max - characteristic.base;
+                        characteristic.delta = characteristic.max - characteristic.base;
                     }
 
-                    if (
-                        ["omcv", "dmcv"].includes(powerInfo.key.toLowerCase())
-                    ) {
+                    if (["omcv", "dmcv"].includes(powerInfo.key.toLowerCase())) {
                         characteristic.notes = "5e figured EGO/3";
-                        characteristic.delta =
-                            characteristic.max - characteristic.base;
+                        characteristic.delta = characteristic.max - characteristic.base;
                     }
                 }
 
                 // Active Effects may be blocking updates
                 let ary = [];
-                let activeEffects = Array.from(
-                    this.actor.allApplicableEffects(),
-                ).filter((ae) =>
-                    ae.changes.find(
-                        (p) =>
-                            p.key ===
-                            `system.characteristics.${powerInfo.key.toLowerCase()}.value`,
-                    ),
+                let activeEffects = Array.from(this.actor.allApplicableEffects()).filter((ae) =>
+                    ae.changes.find((p) => p.key === `system.characteristics.${powerInfo.key.toLowerCase()}.value`),
                 );
                 for (const ae of activeEffects) {
                     ary.push(`<li>${ae.name}</li>`);
                 }
                 if (ary.length > 0) {
-                    characteristic.valueTitle =
-                        "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
+                    characteristic.valueTitle = "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
                     characteristic.valueTitle += ary.join("\n ");
                     characteristic.valueTitle += "</ul>";
-                    characteristic.valueTitle +=
-                        "<small><i>Click to unblock</i></small>";
+                    characteristic.valueTitle += "<small><i>Click to unblock</i></small>";
                 }
 
                 ary = [];
-                activeEffects = Array.from(
-                    this.actor.allApplicableEffects(),
-                ).filter(
+                activeEffects = Array.from(this.actor.allApplicableEffects()).filter(
                     (o) =>
-                        o.changes.find(
-                            (p) =>
-                                p.key ===
-                                `system.characteristics.${powerInfo.key.toLowerCase()}.max`,
-                        ) && !o.disabled,
+                        o.changes.find((p) => p.key === `system.characteristics.${powerInfo.key.toLowerCase()}.max`) &&
+                        !o.disabled,
                 );
 
                 for (const ae of activeEffects) {
                     ary.push(`<li>${ae.name}</li>`);
                     if (ae._prepareDuration().duration) {
                         const change = ae.changes.find(
-                            (o) =>
-                                o.key ===
-                                `system.characteristics.${powerInfo.key.toLowerCase()}.max`,
+                            (o) => o.key === `system.characteristics.${powerInfo.key.toLowerCase()}.max`,
                         );
                         if (change.mode === CONST.ACTIVE_EFFECT_MODES.ADD) {
                             characteristic.delta += parseInt(change.value);
                         }
-                        if (
-                            change.mode === CONST.ACTIVE_EFFECT_MODES.MULTIPLY
-                        ) {
+                        if (change.mode === CONST.ACTIVE_EFFECT_MODES.MULTIPLY) {
                             characteristic.delta +=
-                                parseInt(characteristic.max) *
-                                    parseInt(change.value) -
-                                parseInt(characteristic.max);
+                                parseInt(characteristic.max) * parseInt(change.value) - parseInt(characteristic.max);
                         }
                     }
                 }
                 if (ary.length > 0) {
-                    characteristic.maxTitle =
-                        "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
+                    characteristic.maxTitle = "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
                     characteristic.maxTitle += ary.join("\n ");
                     characteristic.maxTitle += "</ul>";
-                    characteristic.maxTitle +=
-                        "<small><i>Click to unblock</i></small>";
+                    characteristic.maxTitle += "<small><i>Click to unblock</i></small>";
                 }
 
                 characteristicSet.push(characteristic);
@@ -614,10 +533,7 @@ export class HeroSystemActorSheet extends ActorSheet {
             </POWER>
         `;
             const pdAttack = await new HeroSystem6eItem(
-                HeroSystem6eItem.itemDataFromXml(
-                    pdContentsAttack,
-                    defenseCalculationActor,
-                ),
+                HeroSystem6eItem.itemDataFromXml(pdContentsAttack, defenseCalculationActor),
                 { temporary: true, parent: defenseCalculationActor },
             );
             await pdAttack._postUpload();
@@ -663,10 +579,7 @@ export class HeroSystemActorSheet extends ActorSheet {
             </POWER>
         `;
             const edAttack = await new HeroSystem6eItem(
-                HeroSystem6eItem.itemDataFromXml(
-                    edContentsAttack,
-                    defenseCalculationActor,
-                ),
+                HeroSystem6eItem.itemDataFromXml(edContentsAttack, defenseCalculationActor),
                 { temporary: true, parent: defenseCalculationActor },
             );
             await edAttack._postUpload();
@@ -713,10 +626,7 @@ export class HeroSystemActorSheet extends ActorSheet {
             </POWER>
         `;
             const mdAttack = await new HeroSystem6eItem(
-                HeroSystem6eItem.itemDataFromXml(
-                    mdContentsAttack,
-                    defenseCalculationActor,
-                ),
+                HeroSystem6eItem.itemDataFromXml(mdContentsAttack, defenseCalculationActor),
                 { temporary: true, parent: defenseCalculationActor },
             );
             await mdAttack._postUpload();
@@ -763,10 +673,7 @@ export class HeroSystemActorSheet extends ActorSheet {
             </POWER>
         `;
             const drainAttack = await new HeroSystem6eItem(
-                HeroSystem6eItem.itemDataFromXml(
-                    drainContentsAttack,
-                    defenseCalculationActor,
-                ),
+                HeroSystem6eItem.itemDataFromXml(drainContentsAttack, defenseCalculationActor),
                 { temporary: true, parent: defenseCalculationActor },
             );
             await drainAttack._postUpload();
@@ -784,9 +691,7 @@ export class HeroSystemActorSheet extends ActorSheet {
             defense.rPOWD = resistantValuePOWD;
             defense.POWDtags = "POWER DEFENSE\n";
             defense.rPOWDtags = "POWER DEFENSE (RESISTANT)\n";
-            for (let tag of defenseTagsPOWD.filter((o) =>
-                o.name.match(/powd$/i),
-            )) {
+            for (let tag of defenseTagsPOWD.filter((o) => o.name.match(/powd$/i))) {
                 if (tag.resistant) {
                     defense.rPOWDtags += `${tag.value} ${tag.title}\n`;
                 } else if (tag.resistant != undefined) {
@@ -797,9 +702,7 @@ export class HeroSystemActorSheet extends ActorSheet {
             data.defense = defense;
 
             // Get all applicable effects (from actor and all items)
-            data.allTemporaryEffects = Array.from(
-                this.actor.allApplicableEffects(),
-            )
+            data.allTemporaryEffects = Array.from(this.actor.allApplicableEffects())
                 .filter((o) => o.duration.duration > 0 || o.statuses.size)
                 .sort((a, b) => a.name.localeCompare(b.name));
             data.allConstantEffects = this.actor.getConstantEffects();
@@ -809,16 +712,11 @@ export class HeroSystemActorSheet extends ActorSheet {
             // This provides a nice way to see ALL powers that are effecting
             // the actor regardless of how they are implemented.
             const defensePowers = data.actor.items.filter(
-                (o) =>
-                    (o.system.subType || o.type) === "defense" &&
-                    !o.effects.size,
+                (o) => (o.system.subType || o.type) === "defense" && !o.effects.size,
             );
             for (let d of defensePowers) {
                 d.disabled = !d.system.active;
-                switch (
-                    getPowerInfo({ xmlid: d.system.XMLID, actor: this.actor })
-                        ?.duration
-                ) {
+                switch (getPowerInfo({ xmlid: d.system.XMLID, actor: this.actor })?.duration) {
                     case "instant":
                         // Might Vary
                         switch (d.system.XMLID) {
@@ -840,15 +738,15 @@ export class HeroSystemActorSheet extends ActorSheet {
                         data.allConstantEffects.push(d);
 
                         if (game.settings.get(game.system.id, "alphaTesting")) {
-                            console.log(
-                                getPowerInfo({
-                                    xmlid: d.system.XMLID,
-                                    actor: this.actor,
-                                }),
-                            );
-                            ui.notifications.warn(
-                                `${d.system.XMLID} has no duration specified.`,
-                            );
+                            const powerInfo = getPowerInfo({
+                                xmlid: d.system.XMLID,
+                                actor: this.actor,
+                            });
+                            if (!powerInfo) {
+                                ui.notifications.warn(`${d.system.XMLID} has no powerInfo/config.`);
+                            } else {
+                                ui.notifications.warn(`${d.system.XMLID} has no duration specified.`);
+                            }
                         }
                 }
             }
@@ -871,33 +769,22 @@ export class HeroSystemActorSheet extends ActorSheet {
                 }
             }
 
-            for (const item of this.actor.items.filter(
-                (o) => o.type !== "maneuver",
-            )) {
+            for (const item of this.actor.items.filter((o) => o.type !== "maneuver")) {
                 if (!item.baseInfo) {
-                    console.warn(
-                        `${item?.system?.XMLID} (${item?.name}) has no powerInfo`,
-                    );
+                    console.warn(`${item?.system?.XMLID} (${item?.name}) has no powerInfo`);
                     continue;
                 }
 
                 let activePoints = item.system.activePoints;
 
-                if (
-                    item.type == "attack" ||
-                    item.system.subType === "attack" ||
-                    item.system.XMLID === "martialart"
-                ) {
+                if (item.type == "attack" || item.system.subType === "attack" || item.system.XMLID === "martialart") {
                     const csl = CombatSkillLevelsForAttack(item);
                     let { dc } = convertToDcFromItem(item);
 
                     if (dc > 0) {
                         let costPerDice =
-                            Math.max(
-                                Math.floor(
-                                    (item.system.activePoints || 0) / dc,
-                                ) || item.baseInfo.costPerLevel,
-                            ) || (item.system.targets === "dcv" ? 5 : 10);
+                            Math.max(Math.floor((item.system.activePoints || 0) / dc) || item.baseInfo.costPerLevel) ||
+                            (item.system.targets === "dcv" ? 5 : 10);
                         dc += csl.dc + Math.floor((csl.ocv + csl.dcv) / 2); // Assume CSL are converted to DCs
                         let ap = dc * costPerDice;
 
@@ -912,9 +799,7 @@ export class HeroSystemActorSheet extends ActorSheet {
 
                 if (activePoints > 0) {
                     let name = item.name;
-                    if (
-                        item.name.toUpperCase().indexOf(item.system.XMLID) == -1
-                    ) {
+                    if (item.name.toUpperCase().indexOf(item.system.XMLID) == -1) {
                         name += ` (${item.system.XMLID})`;
                     }
 
@@ -925,13 +810,9 @@ export class HeroSystemActorSheet extends ActorSheet {
                 }
             }
             powers;
-            data.activePointSummary.sort(
-                (a, b) => b.activePoints - a.activePoints,
-            );
+            data.activePointSummary.sort((a, b) => b.activePoints - a.activePoints);
             let topActivePoints = data.activePointSummary?.[0]?.activePoints;
-            data.activePointSummary = data.activePointSummary.filter(
-                (o) => o.activePoints >= topActivePoints * 0.5,
-            );
+            data.activePointSummary = data.activePointSummary.filter((o) => o.activePoints >= topActivePoints * 0.5);
 
             // Display Heroic Action Points
             data.useHAP = game.settings.get(game.system.id, "HAP");
@@ -946,36 +827,153 @@ export class HeroSystemActorSheet extends ActorSheet {
         return data;
     }
 
+    async _onDragStart(...args) {
+        return await super._onDragStart(...args);
+    }
+
+    async _onDropFolder(event, data) {
+        // The default super doesn't add the items in the correct order.
+        // Perhaps we can use the super in the future as we improve editing, manual item sorting, etc.
+
+        // Add parent items first (there should be only one, but I suppose there could be more, which we may not handle perfectly)
+        // Also note that we are largely using the folder structure to determine parent/child relationship.
+
+        const folder = await fromUuid(data.uuid);
+
+        await this.dropFrameworkFolder(folder);
+    }
+
+    async dropFrameworkFolder(folder, parentId) {
+        // Start with folders within folders
+        // for (const subFolder of folder.children) {
+        //     await this.dropFrameworkFolder(subFolder.folder);
+        // }
+
+        let itemsToAdd = folder.contents;
+
+        // Compendiums only have the index entry, so need to get the whole item
+        if (folder.pack || !itemsToAdd?.[0].id) {
+            itemsToAdd = await game.packs.get(folder.pack).getDocuments({ folder: folder.id });
+        }
+
+        if (itemsToAdd.length === 0 && folder.children) {
+            for (const childFolder of folder.children) {
+                await this.dropFrameworkFolder(childFolder.folder, null);
+            }
+        }
+
+        const parentData = itemsToAdd.find(
+            (i) => i.baseInfo.type.includes("framework") || i.baseInfo.type.includes("compound"),
+        );
+        if (parentData) {
+            if (parentData.system.is5e !== this.actor.system.is5e) {
+                ui.notifications.warn(
+                    `${parentData.name} is a ${parentData.system.is5e ? "5e" : "6e"} item.  ${this.actor.name} is a ${
+                        this.actor.system.is5e ? "5e" : "6e"
+                    } actor.  Mixing 5e/6e may have unpredictable results.`,
+                );
+            }
+            await this.dropFrameworkItem(
+                parentData,
+                parentId,
+                itemsToAdd.filter((o) => o.id != parentData?.id),
+            );
+        } else {
+            for (const itemData of itemsToAdd) {
+                if (itemData.system.is5e !== this.actor.system.is5e) {
+                    ui.notifications.warn(
+                        `${itemData.name} is a ${itemData.system.is5e ? "5e" : "6e"} item.  ${this.actor.name} is a ${
+                            this.actor.system.is5e ? "5e" : "6e"
+                        } actor.  Mixing 5e/6e may have unpredictable results.`,
+                    );
+                }
+                await this.dropFrameworkItem(itemData);
+            }
+        }
+    }
+
+    async dropFrameworkItem(item, parentId, children) {
+        // Make sure we get new system.ID's
+        const itemData = item.toObject();
+        itemData.system.ID = new Date().getTime().toString();
+        delete itemData.system.PARENTID;
+        if (parentId) {
+            itemData.system.PARENTID = parentId;
+        }
+        delete itemData.system.childIdx;
+        if (children) {
+            await this._onDropItemCreate(itemData);
+            for (const subFolder of item.folder.children) {
+                await this.dropFrameworkFolder(subFolder.folder, itemData.system.ID);
+            }
+            for (const childItem of children) {
+                await this.dropFrameworkItem(childItem, itemData.system.ID, null);
+            }
+        } else {
+            await this._onDropItemCreate(itemData);
+        }
+    }
+
     /** @override */
     async _onDropItem(event, data) {
-        //super._onDropItem(event, data);
+        // return super._onDropItem(event, data);
         if (!this.actor.isOwner) return false;
         const item = await Item.implementation.fromDropData(data);
+
+        await this.DropItemFramework(item);
+    }
+
+    async DropItemFramework(item, parentId) {
         const itemData = item.toObject();
 
         // Create new system.ID
-        // TODO: Perhaps we could drop system.ID and rely on builtin itemData.id
         itemData.system.ID = new Date().getTime().toString();
 
         // Remove system.PARENTID
         delete itemData.system.PARENTID;
+        if (parentId) {
+            itemData.system.PARENTID = parentId;
+        }
         delete itemData.system.childIdx;
 
         // Handle item sorting within the same Actor
-        if (this.actor.uuid === item.parent?.uuid)
-            return this._onSortItem(event, itemData);
+        // TODO: Allow drag/drop to change order
+        if (this.actor.uuid === item.parent?.uuid) return this._onSortItem(event, itemData);
+
+        if (itemData.system.is5e !== this.actor.system.is5e) {
+            ui.notifications.warn(
+                `${itemData.name} is a ${itemData.system.is5e ? "5e" : "6e"} item.  ${this.actor.name} is a ${
+                    this.actor.system.is5e ? "5e" : "6e"
+                } actor.  Mixing 5e/6e may have unpredictable results.`,
+            );
+        }
 
         // Create the owned item
-        return this._onDropItemCreate(itemData);
+        await this._onDropItemCreate(itemData, itemData.system.PARENTID);
+
+        // Is this a parent item with children?
+        for (const child of item.childItems || []) {
+            await this.DropItemFramework(child, itemData.system.ID);
+            // const childItemData = childItem.toObject();
+            // childItemData.system.ID = new Date().getTime().toString();
+            // childItemData.system.PARENTID = itemData.system.ID;
+            // await this._onDropItemCreate(childItemData);
+        }
     }
 
     /** @override */
-    async _onDropItemCreate(itemData) {
+    // eslint-disable-next-line no-unused-vars
+    async _onDropItemCreate(itemData, event) {
         itemData = itemData instanceof Array ? itemData : [itemData];
-        const newItems = await this.actor.createEmbeddedDocuments(
-            "Item",
-            itemData,
-        );
+        for (const i of itemData) {
+            // Make sure newly dropped items are not active
+            if (i.system.active) {
+                i.system.active = false;
+            }
+            // Remove all active effects, _postUpload will recreate them if necessary
+            i.effects = [];
+        }
+        const newItems = await this.actor.createEmbeddedDocuments("Item", itemData);
         for (const newItem of newItems) {
             await newItem._postUpload();
         }
@@ -991,9 +989,7 @@ export class HeroSystemActorSheet extends ActorSheet {
         html.find(".item-rollable").click(this._onItemRoll.bind(this));
 
         // Rollable characteristic
-        html.find(".characteristic-roll").click(
-            this._onCharacteristicRoll.bind(this),
-        );
+        html.find(".characteristic-roll").click(this._onCharacteristicRoll.bind(this));
 
         // Toggle items
         html.find(".item-toggle").click(this._onItemToggle.bind(this));
@@ -1008,16 +1004,12 @@ export class HeroSystemActorSheet extends ActorSheet {
         html.find(".item-create").click(this._onItemCreate.bind(this));
 
         // Upload HDC file
-        html.find(".upload-button").change(
-            this._uploadCharacterSheet.bind(this),
-        );
+        html.find(".upload-button").change(this._uploadCharacterSheet.bind(this));
 
         html.find(".recovery-button").click(this._onRecovery.bind(this));
         html.find(".presence-button").click(this._onPresenceAttack.bind(this));
         html.find(".full-health-button").click(this._onFullHealth.bind(this));
-        html.find(".actor-description-button").click(
-            this._onActorDescription.bind(this),
-        );
+        html.find(".actor-description-button").click(this._onActorDescription.bind(this));
 
         // Active Effects
         html.find(".effect-create").click(this._onEffectCreate.bind(this));
@@ -1027,9 +1019,7 @@ export class HeroSystemActorSheet extends ActorSheet {
 
         html.find(".item-chat").click(this._onItemChat.bind(this));
 
-        html.find("td.characteristic-locked").click(
-            this._onUnlockCharacteristic.bind(this),
-        );
+        html.find("td.characteristic-locked").click(this._onUnlockCharacteristic.bind(this));
 
         // Drag events for macros.
         if (this.actor.isOwner) {
@@ -1046,9 +1036,9 @@ export class HeroSystemActorSheet extends ActorSheet {
     async _updateObject(_event, formData) {
         let expandedData = foundry.utils.expandObject(formData);
 
-        const characteristics = getCharacteristicInfoArrayForActor(
-            this.actor,
-        ).filter((o) => ["BODY", "STUN", "END"].includes(o.key));
+        const characteristics = getCharacteristicInfoArrayForActor(this.actor).filter((o) =>
+            ["BODY", "STUN", "END"].includes(o.key),
+        );
         for (const _char of characteristics) {
             const characteristic = _char.key.toLowerCase();
             if (
@@ -1077,18 +1067,14 @@ export class HeroSystemActorSheet extends ActorSheet {
 
     async _onItemRoll(event) {
         event.preventDefault();
-        const itemId = $(event.currentTarget)
-            .closest("[data-item-id]")
-            .data().itemId;
+        const itemId = $(event.currentTarget).closest("[data-item-id]").data().itemId;
         const item = this.actor.items.get(itemId);
         item.roll(event);
     }
 
     async _onItemChat(event) {
         event.preventDefault();
-        const itemId = $(event.currentTarget)
-            .closest("[data-item-id]")
-            .data().itemId;
+        const itemId = $(event.currentTarget).closest("[data-item-id]").data().itemId;
         const item = this.actor.items.get(itemId);
         item.chat();
     }
@@ -1107,12 +1093,8 @@ export class HeroSystemActorSheet extends ActorSheet {
         const useAutoSuccess = autoSuccess !== undefined;
         const success = useAutoSuccess ? autoSuccess : margin >= 0;
 
-        const flavor = `${dataset.label.toUpperCase()} (${charRoll}-) roll ${
-            success ? "succeeded" : "failed"
-        } ${
-            useAutoSuccess
-                ? `due to automatic ${autoSuccess ? "success" : "failure"}`
-                : `by ${Math.abs(margin)}`
+        const flavor = `${dataset.label.toUpperCase()} (${charRoll}-) roll ${success ? "succeeded" : "failed"} ${
+            useAutoSuccess ? `due to automatic ${autoSuccess ? "success" : "failure"}` : `by ${Math.abs(margin)}`
         }`;
 
         const cardHtml = await heroRoller.render(flavor);
@@ -1135,33 +1117,23 @@ export class HeroSystemActorSheet extends ActorSheet {
 
     async _onItemToggle(event) {
         event.preventDefault();
-        const itemId = $(event.currentTarget)
-            .closest("[data-item-id]")
-            .data().itemId;
+        const itemId = $(event.currentTarget).closest("[data-item-id]").data().itemId;
         const item = this.actor.items.get(itemId);
         item.toggle(event);
     }
 
     async _onItemEdit(event) {
-        const itemId = $(event.currentTarget)
-            .closest("[data-item-id]")
-            .data().itemId;
+        const itemId = $(event.currentTarget).closest("[data-item-id]").data().itemId;
         const item = this.actor.items.get(itemId);
         item.sheet.render(true);
     }
 
     async _onItemDelete(event) {
-        const itemId = $(event.currentTarget)
-            .closest("[data-item-id]")
-            .data().itemId;
+        const itemId = $(event.currentTarget).closest("[data-item-id]").data().itemId;
         const item = this.actor.items.get(itemId);
         const confirmed = await Dialog.confirm({
-            title: game.i18n.localize(
-                "HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title",
-            ),
-            content: game.i18n.localize(
-                "HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Content",
-            ),
+            title: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title"),
+            content: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Content"),
         });
 
         if (confirmed) {
@@ -1184,9 +1156,7 @@ export class HeroSystemActorSheet extends ActorSheet {
         const name = `New ${type.capitalize()}`;
 
         // Options associated with TYPE (excluding enhancers for now)
-        const powers = actor.system.is5e
-            ? CONFIG.HERO.powers5e
-            : CONFIG.HERO.powers6e;
+        const powers = actor.system.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
 
         // TYPE is really an ACTOR SHEET TAB (or section) name, which is loosely associated with item.type
         // If type = power or equipment then we should show ALL powers we know except for disadvantages, maneuvers, and martialArts.
@@ -1201,18 +1171,11 @@ export class HeroSystemActorSheet extends ActorSheet {
                       !o.behaviors.includes("adder") &&
                       o.xml,
               )
-            : powers.filter(
-                  (o) =>
-                      o.type.includes(type) &&
-                      !o.type.includes("enhancer") &&
-                      o.xml,
-              );
+            : powers.filter((o) => o.type.includes(type) && !o.type.includes("enhancer") && o.xml);
 
         // Make sure we have options
         if (powersOfType.length === 0) {
-            ui.notifications.warn(
-                `Creating a new ${type.toUpperCase()} is currently unsupported`,
-            );
+            ui.notifications.warn(`Creating a new ${type.toUpperCase()} is currently unsupported`);
             return;
         }
 
@@ -1273,13 +1236,9 @@ export class HeroSystemActorSheet extends ActorSheet {
                         const formDataObject = formData.object;
                         if (formDataObject.xmlid === "none") return;
 
-                        const power = powers.find(
-                            (o) => o.key == formDataObject.xmlid,
-                        );
+                        const power = powers.find((o) => o.key == formDataObject.xmlid);
                         if (!power) {
-                            ui.notifications.error(
-                                `Creating new ${type.toUpperCase()} failed`,
-                            );
+                            ui.notifications.error(`Creating new ${type.toUpperCase()} failed`);
                             return;
                         }
 
@@ -1297,10 +1256,7 @@ export class HeroSystemActorSheet extends ActorSheet {
                                   name: power.name || power.key,
                                   system: {
                                       XMLID: power.key.toUpperCase(),
-                                      ALIAS:
-                                          power.ALIAS ||
-                                          power.name ||
-                                          power.key,
+                                      ALIAS: power.ALIAS || power.name || power.key,
                                   },
                               };
 
@@ -1309,26 +1265,20 @@ export class HeroSystemActorSheet extends ActorSheet {
 
                         // Make sure we have a system object
                         if (!itemData.system) {
-                            ui.notifications.error(
-                                `Creating new ${type.toUpperCase()} failed`,
-                            );
+                            ui.notifications.error(`Creating new ${type.toUpperCase()} failed`);
                             return;
                         }
 
                         // Track when added manually for diagnostic purposes
-                        itemData.system.versionHeroSystem6eManuallyCreated =
-                            game.system.version;
+                        itemData.system.versionHeroSystem6eManuallyCreated = game.system.version;
 
                         // Create a unique ID
                         itemData.system.ID = new Date().getTime().toString();
 
                         // Finally, create the item!
-                        const newItem = await HeroSystem6eItem.create(
-                            itemData,
-                            {
-                                parent: actor,
-                            },
-                        );
+                        const newItem = await HeroSystem6eItem.create(itemData, {
+                            parent: actor,
+                        });
                         await newItem._postUpload();
                         return;
                     },
@@ -1336,8 +1286,7 @@ export class HeroSystemActorSheet extends ActorSheet {
                 cancel: {
                     icon: '<i class="fas fa-times"></i>',
                     label: "Cancel",
-                    callback: () =>
-                        console.log(`Cancel ${type.capitalize()} itemCreate`),
+                    callback: () => console.log(`Cancel ${type.capitalize()} itemCreate`),
                 },
             },
         });
@@ -1370,13 +1319,8 @@ export class HeroSystemActorSheet extends ActorSheet {
 
     async _onFullHealth() {
         const confirmed = await Dialog.confirm({
-            title:
-                game.i18n.localize(
-                    "HERO6EFOUNDRYVTTV2.confirms.fullHealthConfirm.Title",
-                ) + ` [${this.actor.name}]`,
-            content: game.i18n.localize(
-                "HERO6EFOUNDRYVTTV2.confirms.fullHealthConfirm.Content",
-            ),
+            title: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.fullHealthConfirm.Title") + ` [${this.actor.name}]`,
+            content: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.fullHealthConfirm.Content"),
         });
         if (!confirmed) return;
         return this.actor.FullHealth();
@@ -1387,9 +1331,7 @@ export class HeroSystemActorSheet extends ActorSheet {
         const perceivable = [];
         for (let item of this.actor.items) {
             if (item.isPerceivable(true)) {
-                perceivable.push(
-                    `<b>${item.name}</b> ${item.system.description}`,
-                );
+                perceivable.push(`<b>${item.name}</b> ${item.system.description}`);
             }
         }
         if (perceivable.length > 0) {
@@ -1437,36 +1379,28 @@ export class HeroSystemActorSheet extends ActorSheet {
         const input = event.target.querySelector("input");
 
         // Find all associated Active Effects
-        const activeEffects = Array.from(
-            this.actor.allApplicableEffects(),
-        ).filter((o) => o.changes.find((p) => p.key === input.name));
+        const activeEffects = Array.from(this.actor.allApplicableEffects()).filter((o) =>
+            o.changes.find((p) => p.key === input.name),
+        );
         for (const ae of activeEffects) {
             // Delete status
             if (ae.statuses) {
                 const confirmed = await Dialog.confirm({
-                    title: game.i18n.localize(
-                        "HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title",
-                    ),
+                    title: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title"),
                     content: `Remove ${ae.name}?`,
                 });
 
                 if (confirmed) {
                     const actionsToAwait = [];
 
-                    if (
-                        ae.flags?.type === "adjustment" &&
-                        ae.flags.version >= 3
-                    ) {
+                    if (ae.flags?.type === "adjustment" && ae.flags.version >= 3) {
                         const parent = ae.parent;
                         for (const target of ae.flags.target) {
                             if (parent.system.characteristics[target]) {
                                 // Target is a characteristic or movement
                                 const actor = parent;
-                                const newMax =
-                                    actor.system.characteristics[target].max +
-                                    ae.flags.affectedPoints;
-                                const presentValue =
-                                    actor.system.characteristics[target].value;
+                                const newMax = actor.system.characteristics[target].max + ae.flags.affectedPoints;
+                                const presentValue = actor.system.characteristics[target].value;
 
                                 let newValue = 0;
                                 if (ae.flags.affectedPoints < 0) {
@@ -1476,15 +1410,12 @@ export class HeroSystemActorSheet extends ActorSheet {
                                 } else {
                                     // This is a negative adjustment. When it goes away
                                     // the points come back.
-                                    newValue =
-                                        presentValue + ae.flags.affectedPoints;
+                                    newValue = presentValue + ae.flags.affectedPoints;
                                 }
 
                                 if (newValue !== presentValue) {
                                     const change = {};
-                                    change[
-                                        `system.characteristics.${target}.value`
-                                    ] = newValue;
+                                    change[`system.characteristics.${target}.value`] = newValue;
                                     actionsToAwait.push(actor.update(change));
                                 }
                             }
@@ -1501,9 +1432,7 @@ export class HeroSystemActorSheet extends ActorSheet {
             // Delete Temporary Effects
             if (parseInt(ae.duration?.seconds || 0) > 0) {
                 let confirmed = await Dialog.confirm({
-                    title: game.i18n.localize(
-                        "HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title",
-                    ),
+                    title: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title"),
                     content: `Delete ${ae.name}?`,
                 });
 

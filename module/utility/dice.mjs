@@ -45,9 +45,7 @@ const NumericTerm = CONFIG.Dice.termTypes.NumericTerm;
 const OperatorTerm = CONFIG.Dice.termTypes.OperatorTerm;
 
 // foundry.dice.terms.RollTerm is the v12 way of finding the class
-const RollTermClass = foundry.dice?.terms.RollTerm
-    ? foundry.dice.terms.RollTerm
-    : RollTerm;
+const RollTermClass = foundry.dice?.terms.RollTerm ? foundry.dice.terms.RollTerm : RollTerm;
 
 /**
  * Add colour sets into Dice So Nice! This allows users to see what the colour set is for each function.
@@ -134,6 +132,7 @@ export class HeroRoller {
         ADJUSTMENT: "adjustment",
         ENTANGLE: "entangle",
         FLASH: "flash",
+        EFFECT: "effect",
     };
 
     static QUALIFIER = {
@@ -272,6 +271,13 @@ export class HeroRoller {
         return this;
     }
 
+    makeEffectRoll(apply = true) {
+        if (apply) {
+            this._type = HeroRoller.ROLL_TYPE.EFFECT;
+        }
+        return this;
+    }
+
     modifyToStandardEffect(apply = true) {
         if (apply) {
             this._standardEffect = true;
@@ -292,9 +298,7 @@ export class HeroRoller {
             if (this._type === HeroRoller.ROLL_TYPE.NORMAL) {
                 this._noBody = true;
             } else {
-                console.error(
-                    `Doesn't make sense to make non normal attack STUN only`,
-                );
+                console.error(`Doesn't make sense to make non normal attack STUN only`);
             }
         }
         return this;
@@ -318,6 +322,38 @@ export class HeroRoller {
         return this;
     }
 
+    /**
+     * V11 and V12 (or later) behave differently. V11 can have a operatorTerm to start
+     * terms but it cannot have negative dice terms. V12, on the other hand, cannot handle
+     * starting with an operatorTerm and cannot handle negative dice terms.
+     *
+     * @returns {Number} numDice
+     */
+    static WORK_AROUND_STRING = "v12+ work around";
+    #prefixFormula(numDice) {
+        if (isGameV12OrLater() && this._formulaTerms.length === 0) {
+            if (numDice < 0) {
+                this._formulaTerms.push(
+                    new NumericTerm({
+                        number: 0,
+                        options: {
+                            _hrQualifier: HeroRoller.QUALIFIER.NUMBER,
+                            _hrTag: {
+                                name: HeroRoller.WORK_AROUND_STRING,
+                                value: 0,
+                            },
+                        },
+                    }),
+                );
+                this._formulaTerms.push(new OperatorTerm({ operator: "-" }));
+            }
+        } else {
+            this.#addOperatorTerm(numDice >= 0 ? "+" : "-");
+        }
+
+        return Math.abs(numDice);
+    }
+
     #addOperatorTerm(operator) {
         this._formulaTerms.push(new OperatorTerm({ operator: operator }));
     }
@@ -327,11 +363,8 @@ export class HeroRoller {
             return this;
         }
 
-        if (this._formulaTerms.length > 0) {
-            this.#addOperatorTerm(numDice > 0 ? "+" : "-");
-        }
+        numDice = this.#prefixFormula(numDice);
 
-        numDice = this._formulaTerms.length > 0 ? Math.abs(numDice) : numDice;
         this._formulaTerms.push(
             new Die({
                 faces: 6,
@@ -357,11 +390,8 @@ export class HeroRoller {
             return this;
         }
 
-        if (this._formulaTerms.length > 0) {
-            this.#addOperatorTerm(numDice > 0 ? "+" : "-");
-        }
+        numDice = this.#prefixFormula(numDice);
 
-        numDice = this._formulaTerms.length > 0 ? Math.abs(numDice) : numDice;
         this._formulaTerms.push(
             new Die({
                 faces: 6,
@@ -387,11 +417,8 @@ export class HeroRoller {
             return this;
         }
 
-        if (this._formulaTerms.length > 0) {
-            this.#addOperatorTerm(numDice > 0 ? "+" : "-");
-        }
+        numDice = this.#prefixFormula(numDice);
 
-        numDice = this._formulaTerms.length > 0 ? Math.abs(numDice) : numDice;
         this._formulaTerms.push(
             new Die({
                 faces: 6,
@@ -417,18 +444,14 @@ export class HeroRoller {
             return this;
         }
 
-        if (this._formulaTerms.length > 0) {
-            this.#addOperatorTerm(numDice > 0 ? "+" : "-");
-        }
+        numDice = this.#prefixFormula(numDice);
 
-        numDice = this._formulaTerms.length > 0 ? Math.abs(numDice) : numDice;
         this._formulaTerms.push(
             new Die({
                 faces: 6,
                 number: numDice,
                 options: {
-                    _hrQualifier:
-                        HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE_MIN_ONE,
+                    _hrQualifier: HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE_MIN_ONE,
                     flavor: description,
                     _hrTag: !description
                         ? undefined
@@ -524,12 +547,8 @@ export class HeroRoller {
     rawRolls() {
         return [
             HeroRoller.#addDiceSoNiceSkinning(this._rollObj),
-            HeroRoller.#addDiceSoNiceSkinning(
-                this._killingStunMultiplierHeroRoller?.rawRolls(),
-            ),
-            HeroRoller.#addDiceSoNiceSkinning(
-                this._hitLocationRoller?.rawRolls(),
-            ),
+            HeroRoller.#addDiceSoNiceSkinning(this._killingStunMultiplierHeroRoller?.rawRolls()),
+            HeroRoller.#addDiceSoNiceSkinning(this._hitLocationRoller?.rawRolls()),
             HeroRoller.#addDiceSoNiceSkinning(this._hitSideRoller?.rawRolls()),
         ]
             .flat()
@@ -569,18 +588,14 @@ export class HeroRoller {
             return this.getBaseTerms();
         }
 
-        throw new Error(
-            `asking for basic from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for basic from type ${this._type} doesn't make sense`);
     }
     getBasicTotal() {
         if (this._type === HeroRoller.ROLL_TYPE.BASIC) {
             return this.getBaseTotal();
         }
 
-        throw new Error(
-            `asking for basic from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for basic from type ${this._type} doesn't make sense`);
     }
 
     getSuccessTerms() {
@@ -588,24 +603,17 @@ export class HeroRoller {
             return this.getBaseTerms();
         }
 
-        throw new Error(
-            `asking for success from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for success from type ${this._type} doesn't make sense`);
     }
     getSuccessTotal() {
         if (this._type === HeroRoller.ROLL_TYPE.SUCCESS) {
             return this.getBaseTotal();
         }
 
-        throw new Error(
-            `asking for success from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for success from type ${this._type} doesn't make sense`);
     }
     getSuccess() {
-        if (
-            this._type === HeroRoller.ROLL_TYPE.SUCCESS &&
-            this._successValue !== undefined
-        ) {
+        if (this._type === HeroRoller.ROLL_TYPE.SUCCESS && this._successValue !== undefined) {
             const autoSuccess = this.getAutoSuccess();
 
             if (autoSuccess !== undefined) {
@@ -615,9 +623,7 @@ export class HeroRoller {
             }
         }
 
-        throw new Error(
-            `asking for success from type ${this._type}/${this._successValue} doesn't make sense`,
-        );
+        throw new Error(`asking for success from type ${this._type}/${this._successValue} doesn't make sense`);
     }
     getAutoSuccess() {
         if (this._type === HeroRoller.ROLL_TYPE.SUCCESS) {
@@ -630,9 +636,7 @@ export class HeroRoller {
             return undefined;
         }
 
-        throw new Error(
-            `asking for auto success from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for auto success from type ${this._type} doesn't make sense`);
     }
 
     getStunTerms() {
@@ -642,9 +646,7 @@ export class HeroRoller {
             return this.getCalculatedTerms();
         }
 
-        throw new Error(
-            `asking for stun from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for stun from type ${this._type} doesn't make sense`);
     }
     getStunTotal() {
         if (this._type === HeroRoller.ROLL_TYPE.NORMAL) {
@@ -653,15 +655,10 @@ export class HeroRoller {
             return this.getCalculatedTotal();
         }
 
-        throw new Error(
-            `asking for stun from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for stun from type ${this._type} doesn't make sense`);
     }
     getStunMultiplier() {
-        if (
-            this._type === HeroRoller.ROLL_TYPE.KILLING &&
-            !this._useHitLocation
-        ) {
+        if (this._type === HeroRoller.ROLL_TYPE.KILLING && !this._useHitLocation) {
             return this.getBaseMultiplier();
         }
 
@@ -677,9 +674,7 @@ export class HeroRoller {
             return this.getBaseTerms();
         }
 
-        throw new Error(
-            `asking for body from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for body from type ${this._type} doesn't make sense`);
     }
     getBodyTotal() {
         if (this._type === HeroRoller.ROLL_TYPE.NORMAL) {
@@ -688,9 +683,7 @@ export class HeroRoller {
             return this.getBaseTotal();
         }
 
-        throw new Error(
-            `asking for body from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for body from type ${this._type} doesn't make sense`);
     }
 
     getAnnotatedTermsSummary() {
@@ -749,18 +742,14 @@ export class HeroRoller {
             return this.getCalculatedTerms();
         }
 
-        throw new Error(
-            `asking for entangle from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for entangle from type ${this._type} doesn't make sense`);
     }
     getEntangleTotal() {
         if (this._type === HeroRoller.ROLL_TYPE.ENTANGLE) {
             return this.getCalculatedTotal();
         }
 
-        throw new Error(
-            `asking for entangle from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for entangle from type ${this._type} doesn't make sense`);
     }
 
     getAdjustmentTerms() {
@@ -768,18 +757,14 @@ export class HeroRoller {
             return this.getBaseTerms();
         }
 
-        throw new Error(
-            `asking for adjustment from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for adjustment from type ${this._type} doesn't make sense`);
     }
     getAdjustmentTotal() {
         if (this._type === HeroRoller.ROLL_TYPE.ADJUSTMENT) {
             return this.getBaseTotal();
         }
 
-        throw new Error(
-            `asking for adjustment from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for adjustment from type ${this._type} doesn't make sense`);
     }
 
     getFlashTerms() {
@@ -787,34 +772,37 @@ export class HeroRoller {
             return this.getCalculatedTerms();
         }
 
-        throw new Error(
-            `asking for flash from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for flash from type ${this._type} doesn't make sense`);
     }
     getFlashTotal() {
         if (this._type === HeroRoller.ROLL_TYPE.FLASH) {
             return this.getCalculatedTotal();
         }
 
-        throw new Error(
-            `asking for flash from type ${this._type} doesn't make sense`,
-        );
+        throw new Error(`asking for flash from type ${this._type} doesn't make sense`);
+    }
+
+    getEffectTerms() {
+        if (this._type === HeroRoller.ROLL_TYPE.EFFECT) {
+            return this.getBaseTerms();
+        }
+
+        throw new Error(`asking for effect from type ${this._type} doesn't make sense`);
+    }
+    getEffectTotal() {
+        if (this._type === HeroRoller.ROLL_TYPE.EFFECT) {
+            return this.getBaseTotal();
+        }
+
+        throw new Error(`asking for effect from type ${this._type} doesn't make sense`);
     }
 
     getBaseTerms() {
-        if (
-            this._type === HeroRoller.ROLL_TYPE.FLASH ||
-            this._type === HeroRoller.ROLL_TYPE.ENTANGLE
-        ) {
-            console.error(
-                `attempting to get baseTerms for roll type ${this._type}`,
-            );
+        if (this._type === HeroRoller.ROLL_TYPE.FLASH || this._type === HeroRoller.ROLL_TYPE.ENTANGLE) {
+            console.error(`attempting to get baseTerms for roll type ${this._type}`);
         }
 
-        return HeroRoller.#extractPropertyFromTermsCluster(
-            this._termsCluster,
-            "base",
-        );
+        return HeroRoller.#extractPropertyFromTermsCluster(this._termsCluster, "base");
     }
     getBaseTotal() {
         return HeroRoller.#sum(this.getBaseTerms());
@@ -823,39 +811,25 @@ export class HeroRoller {
     // TODO: Is there a better way of doing this?
     getFullBaseTerms() {
         return {
-            base: HeroRoller.#extractPropertyFromTermsCluster(
-                this._termsCluster,
-                "base",
-            ),
-            baseMetadata: HeroRoller.#extractPropertyFromTermsCluster(
-                this._termsCluster,
-                "baseMetadata",
-            ),
+            base: HeroRoller.#extractPropertyFromTermsCluster(this._termsCluster, "base"),
+            baseMetadata: HeroRoller.#extractPropertyFromTermsCluster(this._termsCluster, "baseMetadata"),
         };
     }
 
     getBaseMultiplier() {
-        return Math.max(
-            this._killingBaseStunMultiplier +
-                this._killingAdditionalStunMultiplier,
-            1,
-        );
+        return Math.max(this._killingBaseStunMultiplier + this._killingAdditionalStunMultiplier, 1);
     }
 
     getCalculatedTerms() {
         if (
             this._type === HeroRoller.ROLL_TYPE.BASIC ||
-            this._type === HeroRoller.ROLL_TYPE.SUCCESS
+            this._type === HeroRoller.ROLL_TYPE.SUCCESS ||
+            this._type === HeroRoller.ROLL_TYPE.EFFECT
         ) {
-            console.error(
-                `attempting to get calculatedTerms for roll type ${this._type}`,
-            );
+            console.error(`attempting to get calculatedTerms for roll type ${this._type}`);
         }
 
-        return HeroRoller.#extractPropertyFromTermsCluster(
-            this._termsCluster,
-            "calculated",
-        );
+        return HeroRoller.#extractPropertyFromTermsCluster(this._termsCluster, "calculated");
     }
 
     getCalculatedTotal() {
@@ -870,10 +844,23 @@ export class HeroRoller {
         return this._hitLocation;
     }
 
+    /**
+     * Make a copy of this existing roller that can be modified without affecting the original.
+     *
+     * @returns HeroRoller
+     */
     clone() {
         return HeroRoller.fromJSON(this.toJSON());
     }
 
+    /**
+     * Make a copy of this existing roller that can be modified without affecting the original however
+     * change the type of roll to the newType (e.g. normal, killing, etc)
+     *
+     * @param {HeroRoller.ROLL_TYPE} newType
+     *
+     * @returns {HeroRoller}
+     */
     async cloneWhileModifyingType(newType) {
         const data = this.toData();
         data._type = newType;
@@ -896,11 +883,9 @@ export class HeroRoller {
 
             _termsCluster: this._termsCluster,
 
-            _killingStunMultiplierHeroRoller:
-                this._killingStunMultiplierHeroRoller?.toData(),
+            _killingStunMultiplierHeroRoller: this._killingStunMultiplierHeroRoller?.toData(),
             _killingBaseStunMultiplier: this._killingBaseStunMultiplier,
-            _killingAdditionalStunMultiplier:
-                this._killingAdditionalStunMultiplier,
+            _killingAdditionalStunMultiplier: this._killingAdditionalStunMultiplier,
 
             _standardEffect: this._standardEffect,
 
@@ -929,9 +914,7 @@ export class HeroRoller {
         // TODO: I suspect that will only be able to support Roll class.
         const heroRoller = new HeroRoller(dataObj.options, Roll);
 
-        heroRoller._rollObj = dataObj._rollObj
-            ? Roll.fromData(dataObj._rollObj)
-            : undefined;
+        heroRoller._rollObj = dataObj._rollObj ? Roll.fromData(dataObj._rollObj) : undefined;
         heroRoller._formulaTerms = dataObj._formulaTerms.map((_term, index) =>
             RollTermClass.fromData(dataObj._formulaTerms[index]),
         );
@@ -940,14 +923,11 @@ export class HeroRoller {
 
         heroRoller._termsCluster = dataObj._termsCluster;
 
-        heroRoller._killingStunMultiplierHeroRoller =
-            dataObj._killingStunMultiplierHeroRoller
-                ? HeroRoller.fromData(dataObj._killingStunMultiplierHeroRoller)
-                : undefined;
-        heroRoller._killingBaseStunMultiplier =
-            dataObj._killingBaseStunMultiplier;
-        heroRoller._killingAdditionalStunMultiplier =
-            dataObj._killingAdditionalStunMultiplier;
+        heroRoller._killingStunMultiplierHeroRoller = dataObj._killingStunMultiplierHeroRoller
+            ? HeroRoller.fromData(dataObj._killingStunMultiplierHeroRoller)
+            : undefined;
+        heroRoller._killingBaseStunMultiplier = dataObj._killingBaseStunMultiplier;
+        heroRoller._killingAdditionalStunMultiplier = dataObj._killingAdditionalStunMultiplier;
 
         heroRoller._standardEffect = dataObj._standardEffect;
 
@@ -959,9 +939,7 @@ export class HeroRoller {
         heroRoller._hitLocationRoller = dataObj._hitLocationRoller
             ? HeroRoller.fromData(dataObj._hitLocationRoller)
             : undefined;
-        heroRoller._hitSideRoller = dataObj._hitSideRoller
-            ? HeroRoller.fromData(dataObj._hitSideRoller)
-            : undefined;
+        heroRoller._hitSideRoller = dataObj._hitSideRoller ? HeroRoller.fromData(dataObj._hitSideRoller) : undefined;
 
         heroRoller._noBody = dataObj._noBody;
 
@@ -972,52 +950,39 @@ export class HeroRoller {
     #calculateAutoSuccessOrFailureIfAppropriate() {
         if (this._type === HeroRoller.ROLL_TYPE.SUCCESS) {
             // Pull out the result of the 3d6 roll somewhere in the terms and use that total
-            this._successRolledValue =
-                HeroRoller.#extractPropertyFromTermsCluster(
-                    this._termsCluster,
-                    "baseMetadata",
-                ).reduce((total, termMetadata) => {
-                    if (
-                        termMetadata.qualifier ===
-                            HeroRoller.QUALIFIER.FULL_DIE &&
-                        termMetadata.termCardinality === 3
-                    ) {
-                        return total + termMetadata.originalValue;
-                    }
-                    return total;
-                }, 0);
+            this._successRolledValue = HeroRoller.#extractPropertyFromTermsCluster(
+                this._termsCluster,
+                "baseMetadata",
+            ).reduce((total, termMetadata) => {
+                if (termMetadata.qualifier === HeroRoller.QUALIFIER.FULL_DIE && termMetadata.termCardinality === 3) {
+                    return total + termMetadata.originalValue;
+                }
+                return total;
+            }, 0);
         }
     }
 
     async #calculateStunMultiplierIfAppropriate() {
-        if (
-            this._type === HeroRoller.ROLL_TYPE.KILLING &&
-            !this._useHitLocation
-        ) {
+        if (this._type === HeroRoller.ROLL_TYPE.KILLING && !this._useHitLocation) {
             // NOTE: It appears there is no standard effect for the STUNx per APG p 53
             //       although there don't appear to be any mention of this in other books.
             this._killingStunMultiplierHeroRoller = new HeroRoller(
                 game.settings.get(game.system.id, "alphaTesting")
                     ? {
-                          appearance: foundry.utils.deepClone(
-                              DICE_SO_NICE_CUSTOM_SETS.STUNx,
-                          ),
+                          appearance: foundry.utils.deepClone(DICE_SO_NICE_CUSTOM_SETS.STUNx),
                       }
                     : {},
                 this._buildRollClass,
             )
                 .makeBasicRoll()
-                .addDieMinus1Min1(
-                    this._killingStunMultiplier === "1d6-1" ? 1 : 0,
-                )
+                .addDieMinus1Min1(this._killingStunMultiplier === "1d6-1" ? 1 : 0)
                 .addHalfDice(this._killingStunMultiplier === "1d3" ? 1 : 0);
 
             // V12 doesn't have async as an option anymore - it is the default.
             const evaluateOptions = isGameV12OrLater() ? {} : { async: true };
             await this._killingStunMultiplierHeroRoller.roll(evaluateOptions);
 
-            this._killingBaseStunMultiplier =
-                this._killingStunMultiplierHeroRoller.getBasicTotal();
+            this._killingBaseStunMultiplier = this._killingStunMultiplierHeroRoller.getBasicTotal();
         }
     }
 
@@ -1027,8 +992,7 @@ export class HeroRoller {
     async #calculateHitLocationIfAppropriate() {
         if (
             this._useHitLocation &&
-            (this._type === HeroRoller.ROLL_TYPE.NORMAL ||
-                this._type === HeroRoller.ROLL_TYPE.KILLING)
+            (this._type === HeroRoller.ROLL_TYPE.NORMAL || this._type === HeroRoller.ROLL_TYPE.KILLING)
         ) {
             let locationName;
 
@@ -1036,9 +1000,7 @@ export class HeroRoller {
                 this._hitLocationRoller = new HeroRoller(
                     game.settings.get(game.system.id, "alphaTesting")
                         ? {
-                              appearance: foundry.utils.deepClone(
-                                  DICE_SO_NICE_CUSTOM_SETS.HIT_LOC,
-                              ),
+                              appearance: foundry.utils.deepClone(DICE_SO_NICE_CUSTOM_SETS.HIT_LOC),
                           }
                         : {},
                     this._buildRollClass,
@@ -1046,8 +1008,7 @@ export class HeroRoller {
                     .makeBasicRoll()
                     .addDice(3);
                 await this._hitLocationRoller.roll();
-                const locationRollTotal =
-                    this._hitLocationRoller.getBasicTotal();
+                const locationRollTotal = this._hitLocationRoller.getBasicTotal();
 
                 locationName = CONFIG.HERO.hitLocationsToHit[locationRollTotal];
             } else {
@@ -1063,9 +1024,7 @@ export class HeroRoller {
                 this._hitSideRoller = new HeroRoller(
                     game.settings.get(game.system.id, "alphaTesting")
                         ? {
-                              appearance: foundry.utils.deepClone(
-                                  DICE_SO_NICE_CUSTOM_SETS.HIT_LOC_SIDE,
-                              ),
+                              appearance: foundry.utils.deepClone(DICE_SO_NICE_CUSTOM_SETS.HIT_LOC_SIDE),
                           }
                         : {},
                     this._buildRollClass,
@@ -1074,8 +1033,7 @@ export class HeroRoller {
                     .addDice(1);
                 await this._hitSideRoller.roll();
 
-                const locationSideRollTotal =
-                    this._hitSideRoller.getBasicTotal();
+                const locationSideRollTotal = this._hitSideRoller.getBasicTotal();
 
                 locationSide = locationSideRollTotal >= 4 ? "Right" : "Left";
             } else {
@@ -1086,16 +1044,14 @@ export class HeroRoller {
                 name: locationName,
                 side: locationSide,
                 fullName:
-                    CONFIG.HERO.sidedLocations.has(locationName) &&
-                    this._useHitLocationSide
+                    CONFIG.HERO.sidedLocations.has(locationName) && this._useHitLocationSide
                         ? `${locationSide} ${locationName}`
                         : locationName,
                 stunMultiplier: Math.max(
                     1,
                     (this._type === HeroRoller.ROLL_TYPE.KILLING
                         ? CONFIG.HERO.hitLocations[locationName][0]
-                        : CONFIG.HERO.hitLocations[locationName][1]) +
-                        this._killingAdditionalStunMultiplier,
+                        : CONFIG.HERO.hitLocations[locationName][1]) + this._killingAdditionalStunMultiplier,
                 ),
                 bodyMultiplier: CONFIG.HERO.hitLocations[locationName][2],
             };
@@ -1103,10 +1059,13 @@ export class HeroRoller {
     }
 
     #calculateValue(originalResult, adjustedResult, termQualifier) {
+        const adjustedResultSign = adjustedResult < 0 ? -1 : 1;
+
         switch (this._type) {
             case HeroRoller.ROLL_TYPE.BASIC:
             case HeroRoller.ROLL_TYPE.SUCCESS:
             case HeroRoller.ROLL_TYPE.ADJUSTMENT:
+            case HeroRoller.ROLL_TYPE.EFFECT:
                 // Do nothing as there are no calculated values
                 break;
 
@@ -1118,10 +1077,7 @@ export class HeroRoller {
                 }
 
                 // constants for entangle are straight body
-                if (
-                    this._type === HeroRoller.ROLL_TYPE.ENTANGLE &&
-                    termQualifier === HeroRoller.QUALIFIER.NUMBER
-                ) {
+                if (this._type === HeroRoller.ROLL_TYPE.ENTANGLE && termQualifier === HeroRoller.QUALIFIER.NUMBER) {
                     return originalResult;
                 }
 
@@ -1132,10 +1088,7 @@ export class HeroRoller {
                     } else {
                         if (originalResult >= 4) {
                             // 5e pg. 176 rule that doesn't exist in 6e
-                            if (
-                                this._type === HeroRoller.ROLL_TYPE.FLASH &&
-                                this._is5eRoll
-                            ) {
+                            if (this._type === HeroRoller.ROLL_TYPE.FLASH && this._is5eRoll) {
                                 if (originalResult === 6) {
                                     return 1;
                                 } else {
@@ -1149,13 +1102,13 @@ export class HeroRoller {
                         }
                     }
                 } else {
-                    if (adjustedResult <= 1) {
+                    if (Math.abs(adjustedResult) <= 1) {
                         return 0;
-                    } else if (adjustedResult === 6) {
-                        return 2;
+                    } else if (Math.abs(adjustedResult) === 6) {
+                        return 2 * adjustedResultSign;
                     }
 
-                    return 1;
+                    return 1 * adjustedResultSign;
                 }
 
             case HeroRoller.ROLL_TYPE.KILLING:
@@ -1172,42 +1125,40 @@ export class HeroRoller {
     }
 
     #buildMetadataForDiceTerm(hrExtra, result, lastOperatorMultiplier) {
-        let adjustedValue = lastOperatorMultiplier * result;
+        let adjustedValue;
 
         if (hrExtra.qualifier === HeroRoller.QUALIFIER.HALF_DIE) {
             if (this._standardEffect) {
-                adjustedValue = HeroRoller.STANDARD_EFFECT_HALF_DIE_ROLL;
+                adjustedValue = lastOperatorMultiplier * HeroRoller.STANDARD_EFFECT_HALF_DIE_ROLL;
             } else {
-                adjustedValue = Math.ceil(result / 2);
+                adjustedValue = lastOperatorMultiplier * Math.ceil(result / 2);
             }
 
             hrExtra.min = 1;
             hrExtra.max = 3;
-        } else if (
-            hrExtra.qualifier === HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE
-        ) {
+        } else if (hrExtra.qualifier === HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE) {
             if (this._standardEffect) {
-                adjustedValue = HeroRoller.STANDARD_EFFECT_DIE_ROLL;
+                adjustedValue = lastOperatorMultiplier * HeroRoller.STANDARD_EFFECT_DIE_ROLL;
             } else {
-                adjustedValue = result - 1;
+                adjustedValue = lastOperatorMultiplier * (result - 1);
             }
 
             hrExtra.min = 0;
             hrExtra.max = 5;
-        } else if (
-            hrExtra.qualifier === HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE_MIN_ONE
-        ) {
+        } else if (hrExtra.qualifier === HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE_MIN_ONE) {
             if (this._standardEffect) {
-                adjustedValue = HeroRoller.STANDARD_EFFECT_DIE_ROLL;
+                adjustedValue = lastOperatorMultiplier * HeroRoller.STANDARD_EFFECT_DIE_ROLL;
             } else {
-                adjustedValue = Math.max(1, result - 1);
+                adjustedValue = lastOperatorMultiplier * Math.max(1, result - 1);
             }
 
             hrExtra.min = 1;
             hrExtra.max = 5;
         } else {
             if (this._standardEffect) {
-                adjustedValue = HeroRoller.STANDARD_EFFECT_DIE_ROLL;
+                adjustedValue = lastOperatorMultiplier * HeroRoller.STANDARD_EFFECT_DIE_ROLL;
+            } else {
+                adjustedValue = lastOperatorMultiplier * result;
             }
 
             hrExtra.min = 1;
@@ -1215,10 +1166,7 @@ export class HeroRoller {
         }
 
         hrExtra.originalValue = result;
-        hrExtra.classDecorators = HeroRoller.#buildMinMaxClassForValue(
-            hrExtra,
-            adjustedValue,
-        );
+        hrExtra.classDecorators = HeroRoller.#buildMinMaxClassForValue(hrExtra, adjustedValue);
 
         return adjustedValue;
     }
@@ -1233,6 +1181,12 @@ export class HeroRoller {
         const _baseTerms = this._rollObj.terms
             .map((term, index) => {
                 if (term instanceof NumericTerm) {
+                    // Filter out the work around start 0 NumericTerm we need to add at the beginning of all terms to handle a
+                    // negative dice term. It is only needed to make the roll's evaluation work correctly.
+                    if (term.options._hrTag?.name === HeroRoller.WORK_AROUND_STRING) {
+                        return undefined;
+                    }
+
                     const number = lastOperatorMultiplier * term.number;
                     const hrExtra = {
                         term: "Numeric",
@@ -1251,13 +1205,7 @@ export class HeroRoller {
                     _baseTermsMetadata.push([hrExtra]);
                     _calculatedTermsMetadata.push([hrExtra]);
 
-                    const newCalculatedTerm = [
-                        this.#calculateValue(
-                            number,
-                            number,
-                            term.options._hrQualifier,
-                        ),
-                    ];
+                    const newCalculatedTerm = [this.#calculateValue(number, number, term.options._hrQualifier)];
                     _calculatedTerms.push(newCalculatedTerm);
 
                     const newBaseTerm = [number];
@@ -1292,29 +1240,19 @@ export class HeroRoller {
                         );
                         hrExtra.originalResultIndex = index;
 
-                        thisTermBaseTermsMetadata.push(
-                            foundry.utils.deepClone(hrExtra),
-                        );
+                        thisTermBaseTermsMetadata.push(foundry.utils.deepClone(hrExtra));
 
                         calculatedTerms.push(
-                            this.#calculateValue(
-                                result.result,
-                                adjustedValue,
-                                term.options._hrQualifier,
-                            ),
+                            this.#calculateValue(result.result, adjustedValue, term.options._hrQualifier),
                         );
 
-                        thisTermCalculatedTermsMetadata.push(
-                            foundry.utils.deepClone(hrExtra),
-                        );
+                        thisTermCalculatedTermsMetadata.push(foundry.utils.deepClone(hrExtra));
 
                         return adjustedValue;
                     });
 
                     _baseTermsMetadata.push(thisTermBaseTermsMetadata);
-                    _calculatedTermsMetadata.push(
-                        thisTermCalculatedTermsMetadata,
-                    );
+                    _calculatedTermsMetadata.push(thisTermCalculatedTermsMetadata);
                     _calculatedTerms.push(calculatedTerms);
 
                     return termResults;
@@ -1343,10 +1281,7 @@ export class HeroRoller {
 
     #buildFormula() {
         const baseMetadata = foundry.utils.deepClone(
-            HeroRoller.#extractPropertyFromTermsCluster(
-                this._termsCluster,
-                "baseMetadata",
-            ),
+            HeroRoller.#extractPropertyFromTermsCluster(this._termsCluster, "baseMetadata"),
         );
 
         // Sort the metadata by original term - lowest index to highest
@@ -1365,10 +1300,7 @@ export class HeroRoller {
                 return !found;
             })
             .reduce((formulaSoFar, metadataTerm, index) => {
-                return (
-                    formulaSoFar +
-                    this.#buildFormulaForTerm(metadataTerm, !!index)
-                );
+                return formulaSoFar + this.#buildFormulaForTerm(metadataTerm, !!index);
             }, "");
 
         return formula.trim();
@@ -1387,16 +1319,10 @@ export class HeroRoller {
 
         // Show the stun multiplier only if this is a killing attack and there is no
         // hit location.
-        if (
-            this._type === HeroRoller.ROLL_TYPE.KILLING &&
-            !this._useHitLocation
-        ) {
-            const stunMultiplier =
-                this._killingStunMultiplierHeroRoller.getBasicTotal();
-            const stunMultiplierFormula =
-                this._killingStunMultiplierHeroRoller.getFormula();
-            const fullBaseTerms =
-                this._killingStunMultiplierHeroRoller.getFullBaseTerms();
+        if (this._type === HeroRoller.ROLL_TYPE.KILLING && !this._useHitLocation) {
+            const stunMultiplier = this._killingStunMultiplierHeroRoller.getBasicTotal();
+            const stunMultiplierFormula = this._killingStunMultiplierHeroRoller.getFormula();
+            const fullBaseTerms = this._killingStunMultiplierHeroRoller.getFullBaseTerms();
 
             preliminaryTooltip = `
                 <div class="dice">
@@ -1405,11 +1331,7 @@ export class HeroRoller {
                         <span class="part-total">${stunMultiplier}</span>
                     </header>
                     <ol class="dice-rolls">
-                        ${this.#buildDiceRollsTooltip(
-                            fullBaseTerms.base,
-                            fullBaseTerms.baseMetadata,
-                            true,
-                        )}
+                        ${this.#buildDiceRollsTooltip(fullBaseTerms.base, fullBaseTerms.baseMetadata, true)}
                     </ol>
                 </div>
             `;
@@ -1425,92 +1347,58 @@ export class HeroRoller {
             groupedCluster[originalTerm].push(termCluster);
         });
 
-        let tooltipWithDice = groupedCluster
-            .filter(Boolean)
-            .reduce((soFar, termCluster) => {
-                const baseCluster = HeroRoller.#extractPropertyFromTermsCluster(
-                    termCluster,
-                    "base",
-                );
-                const baseTotal = HeroRoller.#sum(baseCluster);
+        let tooltipWithDice = groupedCluster.filter(Boolean).reduce((soFar, termCluster) => {
+            const baseCluster = HeroRoller.#extractPropertyFromTermsCluster(termCluster, "base");
+            const baseTotal = HeroRoller.#sum(baseCluster);
 
-                const baseMetadataCluster =
-                    HeroRoller.#extractPropertyFromTermsCluster(
-                        termCluster,
-                        "baseMetadata",
-                    );
-                const baseFormula = this.#buildFormulaForTerm(
-                    baseMetadataCluster[0],
-                    false,
-                );
-                const baseFormulaPurpose = this.#buildFormulaBasePurpose();
+            const baseMetadataCluster = HeroRoller.#extractPropertyFromTermsCluster(termCluster, "baseMetadata");
+            const baseFormula = this.#buildFormulaForTerm(baseMetadataCluster[0], false);
+            const baseFormulaPurpose = this.#buildFormulaBasePurpose();
 
-                const baseTermTooltip =
-                    this._type === HeroRoller.ROLL_TYPE.ENTANGLE ||
-                    this._type === HeroRoller.ROLL_TYPE.FLASH
-                        ? ""
-                        : `
+            const baseTermTooltip =
+                this._type === HeroRoller.ROLL_TYPE.ENTANGLE || this._type === HeroRoller.ROLL_TYPE.FLASH
+                    ? ""
+                    : `
                     <div class="dice">
                         <header class="part-header flexrow">
                             <span class="part-formula">${baseFormula}${
-                                baseFormulaPurpose
-                                    ? ` ${baseFormulaPurpose}`
-                                    : ""
-                            }${
-                                baseMetadataCluster[0].flavor
-                                    ? ` ${baseMetadataCluster[0].flavor}`
-                                    : ""
-                            }${
+                                baseFormulaPurpose ? ` ${baseFormulaPurpose}` : ""
+                            }${baseMetadataCluster[0].flavor ? ` ${baseMetadataCluster[0].flavor}` : ""}${
                                 this._standardEffect ? " (Standard Effect)" : ""
                             }</span>
                             <span class="part-total">${baseTotal}</span>
                         </header>
                         <ol class="dice-rolls">
-                            ${this.#buildDiceRollsTooltip(
-                                baseCluster,
-                                baseMetadataCluster,
-                                true,
-                            )}
+                            ${this.#buildDiceRollsTooltip(baseCluster, baseMetadataCluster, true)}
                         </ol>
                     </div>
                 `;
 
-                const calculatedCluster =
-                    HeroRoller.#extractPropertyFromTermsCluster(
-                        termCluster,
-                        "calculated",
-                    );
-                const calculatedTotal = HeroRoller.#sum(calculatedCluster);
-                const calculatedFormulaPurpose =
-                    this.#buildFormulaCalculatedPurpose();
-                const calculatedMetadataCluster =
-                    HeroRoller.#extractPropertyFromTermsCluster(
-                        termCluster,
-                        "calculatedMetadata",
-                    );
+            const calculatedCluster = HeroRoller.#extractPropertyFromTermsCluster(termCluster, "calculated");
+            const calculatedTotal = HeroRoller.#sum(calculatedCluster);
+            const calculatedFormulaPurpose = this.#buildFormulaCalculatedPurpose();
+            const calculatedMetadataCluster = HeroRoller.#extractPropertyFromTermsCluster(
+                termCluster,
+                "calculatedMetadata",
+            );
 
-                const calculatedTermTooltip =
-                    !calculatedFormulaPurpose ||
-                    (this._type === HeroRoller.ROLL_TYPE.NORMAL && this._noBody)
-                        ? ""
-                        : `
+            const calculatedTermTooltip =
+                !calculatedFormulaPurpose || (this._type === HeroRoller.ROLL_TYPE.NORMAL && this._noBody)
+                    ? ""
+                    : `
                         <div class="dice">
                             <header class="part-header flexrow">
                                 <span class="part-formula">${calculatedFormulaPurpose} calculated from ${baseFormula} ${baseFormulaPurpose}</span>
                                 <span class="part-total">${calculatedTotal}</span>
                             </header>
                             <ol class="dice-rolls">
-                                ${this.#buildDiceRollsTooltip(
-                                    calculatedCluster,
-                                    calculatedMetadataCluster,
-                                    false,
-                                )}    
+                                ${this.#buildDiceRollsTooltip(calculatedCluster, calculatedMetadataCluster, false)}    
                             </ol>
                         </div>
                     `;
 
-                return `${soFar}${baseTermTooltip}${calculatedTermTooltip}`;
-            }, preliminaryTooltip);
+            return `${soFar}${baseTermTooltip}${calculatedTermTooltip}`;
+        }, preliminaryTooltip);
 
         // Show hit location dice?
         if (this._useHitLocation && this._alreadyHitLocation === "none") {
@@ -1525,11 +1413,9 @@ export class HeroRoller {
                             } (${this._hitLocationRoller.getBaseTotal()})</span>
                         </header>
                         <ol class="dice-rolls">
-                        ${this._hitLocationRoller
-                            .getBaseTerms()
-                            .reduce((soFar, term) => {
-                                return `${soFar}<li class="roll d6">${term}</li>`;
-                            }, "")}
+                        ${this._hitLocationRoller.getBaseTerms().reduce((soFar, term) => {
+                            return `${soFar}<li class="roll d6">${term}</li>`;
+                        }, "")}
                         </ol>
                     </div>`;
         }
@@ -1551,11 +1437,9 @@ export class HeroRoller {
                         } (${this._hitSideRoller.getBaseTotal()})</span>
                     </header>
                     <ol class="dice-rolls">
-                        ${this._hitSideRoller
-                            .getBaseTerms()
-                            .reduce((soFar, term) => {
-                                return `${soFar}<li class="roll d6">${term}</li>`;
-                            }, "")}
+                        ${this._hitSideRoller.getBaseTerms().reduce((soFar, term) => {
+                            return `${soFar}<li class="roll d6">${term}</li>`;
+                        }, "")}
                     </ol>
                 </div>`;
         }
@@ -1565,10 +1449,7 @@ export class HeroRoller {
 
     #buildFormulaForTerm(termMetadata, showOperator) {
         // We want to show a term without sign unless we aren't showing the operator.
-        const scalar =
-            termMetadata.term === "Numeric"
-                ? termMetadata.originalValue
-                : termMetadata.termCardinality;
+        const scalar = termMetadata.term === "Numeric" ? termMetadata.originalValue : termMetadata.termCardinality;
         const sign = showOperator
             ? termMetadata.signMultiplier * scalar < 0
                 ? " - "
@@ -1580,35 +1461,19 @@ export class HeroRoller {
         if (termMetadata.term === "Dice") {
             if (termMetadata.qualifier === HeroRoller.QUALIFIER.HALF_DIE) {
                 return `${sign}${
-                    termMetadata.termCardinality !== 1
-                        ? `${Math.abs(termMetadata.termCardinality)}(½d6)`
-                        : "½d6"
+                    termMetadata.termCardinality !== 1 ? `${Math.abs(termMetadata.termCardinality)}(½d6)` : "½d6"
                 }`;
-            } else if (
-                termMetadata.qualifier ===
-                HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE
-            ) {
+            } else if (termMetadata.qualifier === HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE) {
                 return `${
-                    termMetadata.signMultiplier < 0 ||
-                    termMetadata.termCardinality !== 1
-                        ? `${sign}${Math.abs(
-                              termMetadata.termCardinality,
-                          )}(d6-1)`
+                    termMetadata.signMultiplier < 0 || termMetadata.termCardinality !== 1
+                        ? `${sign}${Math.abs(termMetadata.termCardinality)}(d6-1)`
                         : `${sign}${Math.abs(termMetadata.termCardinality)}d6-1`
                 }`;
-            } else if (
-                termMetadata.qualifier ===
-                HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE_MIN_ONE
-            ) {
+            } else if (termMetadata.qualifier === HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE_MIN_ONE) {
                 return `${
-                    termMetadata.signMultiplier < 0 ||
-                    termMetadata.termCardinality !== 1
-                        ? `${sign}${Math.abs(
-                              termMetadata.termCardinality,
-                          )}(d6-1[min 1])`
-                        : `${sign}${Math.abs(
-                              termMetadata.termCardinality,
-                          )}d6-1[min 1]`
+                    termMetadata.signMultiplier < 0 || termMetadata.termCardinality !== 1
+                        ? `${sign}${Math.abs(termMetadata.termCardinality)}(d6-1[min 1])`
+                        : `${sign}${Math.abs(termMetadata.termCardinality)}d6-1[min 1]`
                 }`;
             } else {
                 return `${sign}${termMetadata.termCardinality}d6`;
@@ -1636,6 +1501,9 @@ export class HeroRoller {
             case HeroRoller.ROLL_TYPE.ADJUSTMENT:
                 return "Active Points";
 
+            case HeroRoller.ROLL_TYPE.EFFECT:
+                return "Effect";
+
             default:
                 console.error(`unknown base purpose type ${this._type}`);
                 return "";
@@ -1647,6 +1515,7 @@ export class HeroRoller {
             case HeroRoller.ROLL_TYPE.BASIC:
             case HeroRoller.ROLL_TYPE.SUCCESS:
             case HeroRoller.ROLL_TYPE.ADJUSTMENT:
+            case HeroRoller.ROLL_TYPE.EFFECT:
                 // No calculated terms
                 return "";
 
@@ -1668,9 +1537,7 @@ export class HeroRoller {
 
     #buildDiceRollsTooltip(diceTerm, diceTermMetadata, showMinMax) {
         return diceTerm.reduce((soFar, result, index) => {
-            const absUnadjustedNumber = Math.abs(
-                diceTermMetadata[index].originalValue,
-            );
+            const absUnadjustedNumber = Math.abs(diceTermMetadata[index].originalValue);
 
             // Show the unadjusted value if this is a partial dice (1d6-1 or 1/2d6)
             // and showMinMax was requested. Alternatively, if this is an ENTANGLE or FLASH
@@ -1678,10 +1545,8 @@ export class HeroRoller {
             const unadjustedTooltip =
                 this._type === HeroRoller.ROLL_TYPE.ENTANGLE ||
                 this._type === HeroRoller.ROLL_TYPE.FLASH ||
-                (diceTermMetadata[index].qualifier !==
-                    HeroRoller.QUALIFIER.FULL_DIE &&
-                    diceTermMetadata[index].qualifier !==
-                        HeroRoller.QUALIFIER.NUMBER &&
+                (diceTermMetadata[index].qualifier !== HeroRoller.QUALIFIER.FULL_DIE &&
+                    diceTermMetadata[index].qualifier !== HeroRoller.QUALIFIER.NUMBER &&
                     showMinMax)
                     ? `title="${absUnadjustedNumber}"`
                     : "";
@@ -1689,9 +1554,7 @@ export class HeroRoller {
             const absNumber = Math.abs(result);
 
             return `${soFar}<li class="${
-                showMinMax
-                    ? `roll die d6 ${diceTermMetadata[index].classDecorators}`
-                    : "roll calculated"
+                showMinMax ? `roll die d6 ${diceTermMetadata[index].classDecorators}` : "roll calculated"
             }" ${unadjustedTooltip}>${absNumber}</li>`;
         }, "");
     }
@@ -1700,11 +1563,7 @@ export class HeroRoller {
         if (metadata.term === "Dice") {
             const absValue = Math.abs(value);
 
-            return absValue === metadata.min
-                ? "min"
-                : absValue === metadata.max
-                  ? "max"
-                  : "";
+            return absValue === metadata.min ? "min" : absValue === metadata.max ? "max" : "";
         }
 
         return "";
@@ -1739,8 +1598,7 @@ export class HeroRoller {
         // For removal: determine indices that have been modified ...
         const fixUp = new Map();
         removed.forEach((termCluster) => {
-            const indexCount =
-                fixUp.get(termCluster.baseMetadata.termIndex) || 0;
+            const indexCount = fixUp.get(termCluster.baseMetadata.termIndex) || 0;
             fixUp.set(termCluster.baseMetadata.termIndex, indexCount + 1);
         });
 
@@ -1755,10 +1613,7 @@ export class HeroRoller {
     }
 
     #removeNDcFromTerms(dcToRemove) {
-        const baseMetadata = HeroRoller.#extractPropertyFromTermsCluster(
-            this._termsCluster,
-            "baseMetadata",
-        );
+        const baseMetadata = HeroRoller.#extractPropertyFromTermsCluster(this._termsCluster, "baseMetadata");
 
         // What unique terms do we have?
         const seenAlready = new Set();
@@ -1783,10 +1638,7 @@ export class HeroRoller {
 
         // 1st pass, order from largest DC to smallest DC, and then start subtracting full terms
         oneTermOfEachType.sort((a, b) => {
-            return (
-                HeroRoller.#qualifierToKillingDC[b.qualifier] -
-                HeroRoller.#qualifierToKillingDC[a.qualifier]
-            );
+            return HeroRoller.#qualifierToKillingDC[b.qualifier] - HeroRoller.#qualifierToKillingDC[a.qualifier];
         });
 
         let remainingPartialTermsToRemove;
@@ -1803,12 +1655,9 @@ export class HeroRoller {
                 remainingPartialTermsToRemove > 0 &&
                 term.qualifier === HeroRoller.QUALIFIER.FULL_DIE
             ) {
-                const toRemove = Math.floor(
-                    Math.min(term.count * 3, remainingPartialTermsToRemove) / 3,
-                );
+                const toRemove = Math.floor(Math.min(term.count * 3, remainingPartialTermsToRemove) / 3);
                 term.count = term.count - toRemove;
-                remainingPartialTermsToRemove =
-                    remainingPartialTermsToRemove - toRemove * 3;
+                remainingPartialTermsToRemove = remainingPartialTermsToRemove - toRemove * 3;
 
                 oneTermOfEachType[index] = term;
             }
@@ -1817,10 +1666,7 @@ export class HeroRoller {
         // 2nd pass: Order from smallest DC to largest DC, and then start subtracting until either
         // all terms are removed or all the removal count has hit 0.
         oneTermOfEachType.sort((a, b) => {
-            return (
-                HeroRoller.#qualifierToKillingDC[a.qualifier] -
-                HeroRoller.#qualifierToKillingDC[b.qualifier]
-            );
+            return HeroRoller.#qualifierToKillingDC[a.qualifier] - HeroRoller.#qualifierToKillingDC[b.qualifier];
         });
 
         const modifiedOneTermOfEachType = oneTermOfEachType
@@ -1831,27 +1677,18 @@ export class HeroRoller {
                     term.qualifier === HeroRoller.QUALIFIER.NUMBER
                 ) {
                     term.count = term.count - 1;
-                    remainingPartialTermsToRemove =
-                        remainingPartialTermsToRemove - 1;
+                    remainingPartialTermsToRemove = remainingPartialTermsToRemove - 1;
                     return term;
                 } else if (
                     term.count > 0 &&
                     remainingPartialTermsToRemove > 0 &&
                     (term.qualifier === HeroRoller.QUALIFIER.HALF_DIE ||
-                        term.qualifier ===
-                            HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE ||
-                        term.qualifier ===
-                            HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE_MIN_ONE)
+                        term.qualifier === HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE ||
+                        term.qualifier === HeroRoller.QUALIFIER.FULL_DIE_LESS_ONE_MIN_ONE)
                 ) {
-                    const toRemove = Math.floor(
-                        Math.min(
-                            term.count * 2,
-                            remainingPartialTermsToRemove,
-                        ) / 2,
-                    );
+                    const toRemove = Math.floor(Math.min(term.count * 2, remainingPartialTermsToRemove) / 2);
                     term.count = term.count - toRemove;
-                    remainingPartialTermsToRemove =
-                        remainingPartialTermsToRemove - toRemove * 2;
+                    remainingPartialTermsToRemove = remainingPartialTermsToRemove - toRemove * 2;
 
                     // turn from half die into 1 pip
                     if (term.count > 0 && remainingPartialTermsToRemove === 1) {
@@ -1863,9 +1700,7 @@ export class HeroRoller {
                             originalCount: 0,
                             qualifier: HeroRoller.QUALIFIER.NUMBER,
                             changeTo: term.metadataTerm.originalValue,
-                            metadataTerm: foundry.utils.deepClone(
-                                term.metadataTerm,
-                            ),
+                            metadataTerm: foundry.utils.deepClone(term.metadataTerm),
                         };
 
                         return [term, newTerm];
@@ -1876,15 +1711,9 @@ export class HeroRoller {
                     remainingPartialTermsToRemove > 0 &&
                     term.qualifier === HeroRoller.QUALIFIER.FULL_DIE
                 ) {
-                    const toRemove = Math.floor(
-                        Math.min(
-                            term.count * 3,
-                            remainingPartialTermsToRemove,
-                        ) / 3,
-                    );
+                    const toRemove = Math.floor(Math.min(term.count * 3, remainingPartialTermsToRemove) / 3);
                     term.count = term.count - toRemove;
-                    remainingPartialTermsToRemove =
-                        remainingPartialTermsToRemove - toRemove * 3;
+                    remainingPartialTermsToRemove = remainingPartialTermsToRemove - toRemove * 3;
 
                     if (term.count > 0 && remainingPartialTermsToRemove === 2) {
                         // turn from full die to 1 pip
@@ -1896,16 +1725,11 @@ export class HeroRoller {
                             originalCount: 0,
                             qualifier: HeroRoller.QUALIFIER.NUMBER,
                             changeTo: 1, // Becomes a +1 term
-                            metadataTerm: foundry.utils.deepClone(
-                                term.metadataTerm,
-                            ),
+                            metadataTerm: foundry.utils.deepClone(term.metadataTerm),
                         };
 
                         return [term, newTerm];
-                    } else if (
-                        term.count > 0 &&
-                        remainingPartialTermsToRemove === 1
-                    ) {
+                    } else if (term.count > 0 && remainingPartialTermsToRemove === 1) {
                         // turn from full die to 1/2 die
                         term.count = term.count - 1;
 
@@ -1915,9 +1739,7 @@ export class HeroRoller {
                             originalCount: 0,
                             qualifier: HeroRoller.QUALIFIER.HALF_DIE, // TODO: Could also be 1d6-1 in some situations.
                             changeTo: term.metadataTerm.originalValue,
-                            metadataTerm: foundry.utils.deepClone(
-                                term.metadataTerm,
-                            ),
+                            metadataTerm: foundry.utils.deepClone(term.metadataTerm),
                         };
 
                         return [term, newTerm];
@@ -1936,18 +1758,14 @@ export class HeroRoller {
             if (term.count < term.originalCount) {
                 entriesToTrim.set(term.index, term);
             } else if (term.originalCount < term.count) {
-                added.push(
-                    this.#buildTermClusterFromFakeTerm(term, term.changeTo),
-                );
+                added.push(this.#buildTermClusterFromFakeTerm(term, term.changeTo));
             }
         });
 
         const remaining = [];
         const removed = [];
         this._termsCluster.forEach((termCluster) => {
-            const termToTrim = entriesToTrim.get(
-                termCluster.baseMetadata.termIndex,
-            );
+            const termToTrim = entriesToTrim.get(termCluster.baseMetadata.termIndex);
 
             // Remove the appropriate number of terms matching this index.
             if (termToTrim && termToTrim.originalCount > termToTrim.count) {
@@ -1967,10 +1785,7 @@ export class HeroRoller {
 
     #buildTermClusterFromFakeTerm(fakeTerm, result) {
         const baseMetadata = {
-            term:
-                fakeTerm.qualifier === HeroRoller.QUALIFIER.NUMBER
-                    ? "Numeric"
-                    : "Dice",
+            term: fakeTerm.qualifier === HeroRoller.QUALIFIER.NUMBER ? "Numeric" : "Dice",
             originalTermIndex: fakeTerm.index,
             termIndex: fakeTerm.index,
             originalResultIndex: 0,
@@ -1981,28 +1796,17 @@ export class HeroRoller {
             signMultiplier: 1,
             min: -99,
             max: -99,
-            originalValue:
-                fakeTerm.qualifier === HeroRoller.QUALIFIER.NUMBER
-                    ? result
-                    : undefined,
+            originalValue: fakeTerm.qualifier === HeroRoller.QUALIFIER.NUMBER ? result : undefined,
         };
 
         const baseResult =
             fakeTerm.qualifier === HeroRoller.QUALIFIER.NUMBER
                 ? result
-                : this.#buildMetadataForDiceTerm(
-                      baseMetadata,
-                      result,
-                      baseMetadata.signMultiplier,
-                  );
+                : this.#buildMetadataForDiceTerm(baseMetadata, result, baseMetadata.signMultiplier);
 
         const calculatedMetadata = foundry.utils.deepClone(baseMetadata);
 
-        const calculated = this.#calculateValue(
-            result,
-            baseResult,
-            calculatedMetadata.qualifier,
-        );
+        const calculated = this.#calculateValue(result, baseResult, calculatedMetadata.qualifier);
 
         return {
             base: baseResult,
@@ -2038,16 +1842,10 @@ export class HeroRoller {
             case HeroRoller.ROLL_TYPE.NORMAL:
                 return {
                     annotatedTerms: `${
-                        this._noBody
-                            ? ""
-                            : `BODY breakdown: [${this.getBodyTerms()}], `
+                        this._noBody ? "" : `BODY breakdown: [${this.getBodyTerms()}], `
                     }STUN breakdown: [${this.getStunTerms()}]`,
-                    terms: `${
-                        this._noBody ? "" : `${this.getBodyTerms()}; `
-                    }${this.getStunTerms()}`,
-                    total: `${
-                        this._noBody ? "" : `${this.getBodyTotal()} BODY; `
-                    }${this.getStunTotal()} STUN`,
+                    terms: `${this._noBody ? "" : `${this.getBodyTerms()}; `}${this.getStunTerms()}`,
+                    total: `${this._noBody ? "" : `${this.getBodyTotal()} BODY; `}${this.getStunTotal()} STUN`,
                 };
 
             case HeroRoller.ROLL_TYPE.KILLING:
@@ -2063,9 +1861,7 @@ export class HeroRoller {
                             : ""
                     }`,
                     total: `${this.getBodyTotal()} BODY; ${this.getStunTotal()} STUN${
-                        !this._useHitLocation
-                            ? ` (${this.getStunMultiplier()} STUNx)`
-                            : ""
+                        !this._useHitLocation ? ` (${this.getStunMultiplier()} STUNx)` : ""
                     }`,
                 };
 
@@ -2088,6 +1884,13 @@ export class HeroRoller {
                     annotatedTerms: `Segments breakdown: [${this.getFlashTerms()}}]`,
                     terms: `[${this.getFlashTerms()}}] Segments`,
                     total: `${this.getFlashTotal()} Segments`,
+                };
+
+            case HeroRoller.ROLL_TYPE.EFFECT:
+                return {
+                    annotatedTerms: `Effect breakdown: [${this.getEffectTerms()}}]`,
+                    terms: `[${this.getEffectTerms()}}] Effect`,
+                    total: `${this.getEffectTotal()} Effect`,
                 };
 
             default:

@@ -13,10 +13,11 @@ export const extendTokenConfig = async function (tokenConfig, html, data) {
     let bar3 = getBarExtendedAttribute.bind(tokenConfig.token)("bar3");
     let barAttributes = data.barAttributes["Attribute Bars"];
     let singleValues = data.barAttributes["Single Values"];
-    let bar3FormGroup = await renderTemplate(
-        `systems/${HEROSYS.module}/module/bar3/resource-form-group.hbs`,
-        { bar3, barAttributes, singleValues },
-    );
+    let bar3FormGroup = await renderTemplate(`systems/${HEROSYS.module}/module/bar3/resource-form-group.hbs`, {
+        bar3,
+        barAttributes,
+        singleValues,
+    });
     resourceTab.append(bar3FormGroup);
 
     // Add event for bar3
@@ -33,10 +34,8 @@ export const extendTokenConfig = async function (tokenConfig, html, data) {
             alternative: event.target.value,
         });
         const bar = event.target.name.split(".").shift();
-        form.querySelector(`input.${bar}-value`).value =
-            attr !== null ? attr.value : "";
-        form.querySelector(`input.${bar}-max`).value =
-            attr !== null && attr.type === "bar" ? attr.max : "";
+        form.querySelector(`input.${bar}-value`).value = attr !== null ? attr.value : "";
+        form.querySelector(`input.${bar}-max`).value = attr !== null && attr.type === "bar" ? attr.max : "";
     }
 
     async function _onSubmit() {
@@ -53,10 +52,7 @@ export const extendTokenConfig = async function (tokenConfig, html, data) {
 };
 
 export function getBarExtendedAttribute(barName, alternative) {
-    const attr =
-        alternative ||
-        this[barName]?.attribute ||
-        this.flags[game.system.id]?.[barName]?.attribute;
+    const attr = alternative || this[barName]?.attribute || this.flags[game.system.id]?.[barName]?.attribute;
     if (!attr || !this.actor) return null;
     let data = foundry.utils.getProperty(this.actor.system, attr);
     if (data === null || data === undefined) return null;

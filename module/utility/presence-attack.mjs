@@ -21,19 +21,14 @@ async function presenceAttackRoll(actor, html) {
 
     const presence = parseInt(actor.system.characteristics.pre.value);
     const presenceDice = presence / 5;
+    const partialDice = presenceDice % 1;
 
     const heroRoller = new HeroRoller()
         .makeBasicRoll()
         .addDice(Math.trunc(presenceDice), "Presence Attack")
-        .addHalfDice(
-            Math.abs(presenceDice) % 1 >= 0.5 ? 1 : 0,
-            "Presence Attack",
-        )
+        .addHalfDice(Math.sign(partialDice) * (Math.abs(partialDice) >= 0.5 ? 1 : 0), "Presence Attack")
         .addDice(Math.trunc(rollModifier), "Roll Modifier")
-        .addHalfDice(
-            Math.abs(rollModifier) % 1 >= 0.5 ? 1 : 0,
-            "Roll Modifier",
-        );
+        .addHalfDice(Math.abs(rollModifier) % 1 >= 0.5 ? 1 : 0, "Roll Modifier");
     await heroRoller.roll();
 
     const cardHtml = await heroRoller.render("Presence Attack");
@@ -67,8 +62,7 @@ async function presenceAttackPopOut(actor) {
             buttons: {
                 presenceAttack: {
                     label: "Make Presence Attack",
-                    callback: (html) =>
-                        resolve(presenceAttackRoll(actor, html)),
+                    callback: (html) => resolve(presenceAttackRoll(actor, html)),
                 },
             },
             default: "presenceAttack",

@@ -122,9 +122,7 @@ export class HeroSystem6eToken extends Token {
         }
         // Draw the bar
         bar.clear();
-        bar.beginFill(blk, 0.5)
-            .lineStyle(bs, blk, 1.0)
-            .drawRoundedRect(0, 0, this.w, h, 3);
+        bar.beginFill(blk, 0.5).lineStyle(bs, blk, 1.0).drawRoundedRect(0, 0, this.w, h, 3);
         bar.beginFill(color, 1.0)
             .lineStyle(bs, blk, 1.0)
             .drawRoundedRect(0, 0, pct * w, h, 2);
@@ -170,24 +168,14 @@ export class HeroSystem6eToken extends Token {
                 break;
 
             case "fraction":
-                this.createBarLabel(
-                    bar,
-                    data,
-                    `${data.label ? data.label + "  " : ""}${value} / ${max}`,
-                );
+                this.createBarLabel(bar, data, `${data.label ? data.label + "  " : ""}${value} / ${max}`);
                 break;
 
             case "percent":
                 {
                     // Label does not match bar percentage because of possible inversion.
-                    const percentage = Math.round(
-                        (clamp(value, 0, max) / max) * 100,
-                    );
-                    this.createBarLabel(
-                        bar,
-                        data,
-                        `${data.label ? data.label + "  " : ""}${percentage}%`,
-                    );
+                    const percentage = Math.round((clamp(value, 0, max) / max) * 100);
+                    this.createBarLabel(bar, data, `${data.label ? data.label + "  " : ""}${percentage}%`);
                 }
                 break;
 
@@ -222,10 +210,7 @@ export class HeroSystem6eToken extends Token {
             return super.drawBars();
         }
 
-        if (
-            !this.actor ||
-            this.document.displayBars === CONST.TOKEN_DISPLAY_MODES.NONE
-        ) {
+        if (!this.actor || this.document.displayBars === CONST.TOKEN_DISPLAY_MODES.NONE) {
             return (this.bars.visible = false);
         }
 

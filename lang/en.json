@@ -18,12 +18,14 @@
             "Class": "Class",
             "CustomEffects": "Custom Effects",
             "DcvMod": "DCV Modifier",
+            "DmcvMod": "DMCV Modifier",
             "DoesKnockback": "Does Knockback",
             "EndCost": "END Cost",
             "KillingAttack": "Killing Attack",
             "NoHitLocations": "No Hit Locations",
             "NoTargetsSelected": "No targets are selected",
             "OcvMod": "OCV Modifier",
+            "OmcvMod": "OMCV Modifier",
             "Penetrating": "Penetrating Levels",
             "Piercing": "Armor Piercing Levels",
             "StunBodyDamage": "Stun and/or Body Damage",
@@ -163,10 +165,18 @@
         },
         "DefaultEdition" : {
             "Name": "Default System Rules",
-            "Hint": "The system rules are typically determined by the edition defined within the HDC file you import for each actor. When there is no actor (or otherwise 5e/6e cannot be determined) we will use this choice for the rule system.",
+            "Hint": "The system rules are typically determined by the edition defined within the HDC file you import for each actor. When there is no actor (or otherwise 5e/6e cannot be determined) we will use this choice for the rule system.  Also used to create the HeroSystem compendium.",
             "Choices": {
                 "six": "6th edition",
                 "five": "5th edition"
+            }
+        },
+        "StrEnd" : {
+            "Name": "Heroic Strength & Endurance",
+            "Hint": "Using STR typipcally costs 1 END per 10 points of STR used.  In heroic campaigns the GM has the option of charging 1 END per 5 STR used.  This setting is ignored for Superheroic characters which will always use 1 END per 10 points of STR.  Heroic vs Superheroic is determined during HDC upload and is based on the Hero Designer template used.",
+            "Choices": {
+                "five": "1 END per 5 STR",
+                "ten": "1 END per 10 STR"
             }
         },
         "Equipment": {

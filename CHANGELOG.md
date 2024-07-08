@@ -1,13 +1,60 @@
 # Releases
 
-## Version 3.0.77 [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+## Version 3.0.82 [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+
+- Improved HDC upload performance.
+- Corrected presence attacks with negative presence. [#838](https://github.com/dmdorman/hero6e-foundryvtt/issues/838)
+- Default Knowledge Skills names now include the "knowledge".  This means when you roll a KS the knowledge is included in the chat message. [#1129](https://github.com/dmdorman/hero6e-foundryvtt/issues/1129)
+- Post-Segment 12 now only performed once per turn during combat.  This resolves some issues where combat is rewound or when actors change their speed. [#1113](https://github.com/dmdorman/hero6e-foundryvtt/issues/1113)
+- You are now prompted before using stun for endurance. [#1125](https://github.com/dmdorman/hero6e-foundryvtt/issues/1125)
+- Fixed costs for Animal Handler. [#1097](https://github.com/dmdorman/hero6e-foundryvtt/issues/1097)
+- Powers can now be used at less than full power. [#1128](https://github.com/dmdorman/hero6e-foundryvtt/issues/1128)
+- Heroic actors can now be set to use 1 END per 5 STR.  This can be changed in the settings menu.  The actor's heroic/superheric status is now visible on the actor sheet just after the name. [#291](https://github.com/dmdorman/hero6e-foundryvtt/issues/291)
+
+## Version 3.0.81
+
+- Fixed bug where conditional defenses prevented some attacks from applying damage. [#1116](https://github.com/dmdorman/hero6e-foundryvtt/issues/1116)
+- Improved Drag and Drop support to handle compound powers within a framework. [#1102](https://github.com/dmdorman/hero6e-foundryvtt/issues/1102) [#1100](https://github.com/dmdorman/hero6e-foundryvtt/issues/1100) [#1111](https://github.com/dmdorman/hero6e-foundryvtt/issues/1111)
+- Players no longer see token type on actor sheets. [#1096](https://github.com/dmdorman/hero6e-foundryvtt/issues/1096)
+- HeroItems and HeroMacros compendiums are now created dynamically for each world.  You can drag and drop these compendium items onto an actor sheet or hotbar slot.  Note that the Default Edition (5e/6e) setting is used to create the compendiums. [#141](https://github.com/dmdorman/hero6e-foundryvtt/issues/141) [#1101](https://github.com/dmdorman/hero6e-foundryvtt/issues/1101)
+- Fixed issue where to hit rolls were private for most attacks. [#1108](https://github.com/dmdorman/hero6e-foundryvtt/issues/1108)
+
+## Version 3.0.80
+
+- Drag and Drop support for compound powers and multi-powers. [#1068](https://github.com/dmdorman/hero6e-foundryvtt/issues/1068)
+- You can upload Hero Designer Prefabs (*.hdp) as compendiums. [#1067](https://github.com/dmdorman/hero6e-foundryvtt/issues/1067) [#142](https://github.com/dmdorman/hero6e-foundryvtt/issues/142)
+
+## Version 3.0.79
+
+- Fixed issue where the roll-to-hit window would open "inappropriately" when selecting targets.
+- Fixed Combat Tracker errors when SPD is lowered for combatant. [#1089](https://github.com/dmdorman/hero6e-foundryvtt/issues/1089)
+- Mind Scan improvements.  
+  - Can select token(s) without the need to use T to target, limiting the reveal of unwanted information.
+  - Can select token(s) across scenes.
+- Video: [Hero System 6e (Unofficial) v2 - Mind Scan - Basic](https://youtu.be/eMoYvJQHVsg)
+
+## Version 3.0.78
+
+- Initial support for Mind Scan. [#1066](https://github.com/dmdorman/hero6e-foundryvtt/issues/1066)
+  - Only works when Mind Scan actor & target are in the same scene.
+  - If GM targets a visible token on behalf of the player, that token gets a target dot and may reveal unwanted information.
+- Perception skill moved to top of skill tab. [#1069](https://github.com/dmdorman/hero6e-foundryvtt/issues/1069)
+- Fixed issue where some attacks were charging twice for END. [#1075](https://github.com/dmdorman/hero6e-foundryvtt/issues/1075)
+- Correct range penalty calculation for 5e non AoE attacks. [#1077](https://github.com/dmdorman/hero6e-foundryvtt/issues/1077)
+- Attacks from compound powers now preface the attack with the compound power name. [#1070](https://github.com/dmdorman/hero6e-foundryvtt/issues/1070)
+- Tokenizer images are no longer overwritten. [#1070](https://github.com/dmdorman/hero6e-foundryvtt/issues/1070)
+- Improved support for Mental Skill Levels.
+- Add success rolls for Psychological Limitation/Complication. [#1082](https://github.com/dmdorman/hero6e-foundryvtt/issues/1082)
+- Migrations now rebuild all actor and item data.
+- Add attack and defense tags to adjustment chat cards. [#1059](https://github.com/dmdorman/hero6e-foundryvtt/issues/1059)
+
+## Version 3.0.77
 
 - PD/ED characteristics with resistant modifier are now actually resistant.  Previously the resistant modifier was ignored.  Also PD/ED purchased as characteristics now show in DEFENSES tab for easy reference. [#1063](https://github.com/dmdorman/hero6e-foundryvtt/issues/1063)
 - Fix where the CSL selections were duplciated during AOE template placement. [#1064](https://github.com/dmdorman/hero6e-foundryvtt/issues/1064)
 - Fix where DCV temporary bonuses from CSLs and other active effects were expiring on our segment instead of on our phase. [#1061](https://github.com/dmdorman/hero6e-foundryvtt/issues/1061)
 - ToHit dialog box now shows a list of all targets.
 - Fix for combat tracker where adding tokens to combat tracker sometimes resulted in error messages, preventing the token from being added. [#1072](https://github.com/dmdorman/hero6e-foundryvtt/issues/1072)
-
 
 ## Version 3.0.76
 

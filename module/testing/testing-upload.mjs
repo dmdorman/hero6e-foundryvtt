@@ -36,11 +36,12 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                     });
 
@@ -103,11 +104,12 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                     });
 
@@ -149,11 +151,12 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                 });
 
@@ -198,14 +201,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.characteristics.dex.value = 15;
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
-                    item.updateItemDescription();
                 });
 
                 it("description", function () {
@@ -251,23 +254,18 @@ export function registerUploadTests(quench) {
                                 },
                                 { temporary: true },
                             );
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Fire Blast 1d6 (PD)",
-                            );
+                            assert.equal(item.system.description, "Fire Blast 1d6 (PD)");
                         });
 
                         it("realCost", function () {
@@ -310,23 +308,18 @@ export function registerUploadTests(quench) {
                                 },
                                 { temporary: true },
                             );
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Blast 1d6 (ED), Area Of Effect (9m Radius; +3/4)",
-                            );
+                            assert.equal(item.system.description, "Blast 1d6 (ED), Area Of Effect (9m Radius; +3/4)");
                         });
 
                         it("realCost", function () {
@@ -368,16 +361,14 @@ export function registerUploadTests(quench) {
                                 },
                                 { temporary: true },
                             );
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -423,23 +414,18 @@ export function registerUploadTests(quench) {
                                 },
                                 { temporary: true },
                             );
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Blast 1d6 (ED), Area Of Effect (19m Cone; +3/4)",
-                            );
+                            assert.equal(item.system.description, "Blast 1d6 (ED), Area Of Effect (19m Cone; +3/4)");
                         });
 
                         it("realCost", function () {
@@ -484,16 +470,14 @@ export function registerUploadTests(quench) {
                                 },
                                 { temporary: true },
                             );
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -539,16 +523,14 @@ export function registerUploadTests(quench) {
                                 },
                                 { temporary: true },
                             );
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -600,16 +582,14 @@ export function registerUploadTests(quench) {
                                 },
                                 { temporary: true },
                             );
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -655,16 +635,14 @@ export function registerUploadTests(quench) {
                                 },
                                 { temporary: true },
                             );
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -722,16 +700,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -790,16 +766,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -849,16 +823,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -908,16 +880,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -973,16 +943,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -1032,16 +1000,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -1089,13 +1055,14 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -1142,20 +1109,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            'Energy Blast 1d6 (ED), Explosion (Cone; -1 DC/4"; +1)',
-                        );
+                        assert.equal(item.system.description, 'Energy Blast 1d6 (ED), Explosion (Cone; -1 DC/4"; +1)');
                     });
 
                     it("realCost", function () {
@@ -1195,13 +1160,14 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -1246,13 +1212,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.characteristics.dex.value = 15;
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -1309,13 +1276,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.characteristics.ego.value = 38;
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -1367,13 +1335,14 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -1435,20 +1404,18 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "Killing Attack - Ranged 2d6-1 (ED)",
-                    );
+                    assert.equal(item.system.description, "Killing Attack - Ranged 2d6-1 (ED)");
                 });
 
                 it("realCost", function () {
@@ -1497,13 +1464,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.characteristics.ego.value = 38;
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -1567,13 +1535,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.characteristics.ego.value = 38;
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -1623,16 +1592,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -1676,23 +1643,18 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Combat Skill Levels: +6 with any single Strike",
-                            );
+                            assert.equal(item.system.description, "Combat Skill Levels: +6 with any single Strike");
                         });
 
                         it("realCost", function () {
@@ -1729,23 +1691,18 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Combat Skill Levels: +6 with any Strike",
-                            );
+                            assert.equal(item.system.description, "Combat Skill Levels: +6 with any Strike");
                         });
 
                         it("realCost", function () {
@@ -1782,23 +1739,18 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Combat Skill Levels: +6 with Martial Maneuvers",
-                            );
+                            assert.equal(item.system.description, "Combat Skill Levels: +6 with Martial Maneuvers");
                         });
 
                         it("realCost", function () {
@@ -1835,23 +1787,18 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Combat Skill Levels: +6 with Magic",
-                            );
+                            assert.equal(item.system.description, "Combat Skill Levels: +6 with Magic");
                         });
 
                         it("realCost", function () {
@@ -1888,16 +1835,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -1941,16 +1886,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -1993,17 +1936,15 @@ export function registerUploadTests(quench) {
                                 },
                                 { temporary: true },
                             );
+                            await actor._postUpload();
+
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -2047,23 +1988,18 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Combat Skill Levels: +6 with Mental Combat",
-                            );
+                            assert.equal(item.system.description, "Combat Skill Levels: +6 with Mental Combat");
                         });
 
                         it("realCost", function () {
@@ -2100,23 +2036,18 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Combat Skill Levels: +6 with Ranged Combat",
-                            );
+                            assert.equal(item.system.description, "Combat Skill Levels: +6 with Ranged Combat");
                         });
 
                         it("realCost", function () {
@@ -2153,16 +2084,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -2206,16 +2135,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -2259,23 +2186,18 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Combat Skill Levels: +6 with HTH and Ranged Combat",
-                            );
+                            assert.equal(item.system.description, "Combat Skill Levels: +6 with HTH and Ranged Combat");
                         });
 
                         it("realCost", function () {
@@ -2312,23 +2234,18 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
-                            assert.equal(
-                                item.system.description,
-                                "Combat Skill Levels: +6 with HTH and Mental Combat",
-                            );
+                            assert.equal(item.system.description, "Combat Skill Levels: +6 with HTH and Mental Combat");
                         });
 
                         it("realCost", function () {
@@ -2365,16 +2282,14 @@ export function registerUploadTests(quench) {
                                 { temporary: true },
                             );
                             actor.system.is5e = true;
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -2418,20 +2333,18 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Combat Skill Levels: +1 with any single attack",
-                        );
+                        assert.equal(item.system.description, "Combat Skill Levels: +1 with any single attack");
                     });
 
                     it("realCost", function () {
@@ -2466,21 +2379,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Invisibility to Hearing Group",
-                        );
+                        assert.equal(item.system.description, "Invisibility to Hearing Group");
                     });
 
                     it("realCost", function () {
@@ -2516,21 +2426,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Invisibility to Mystic and Mental Groups",
-                        );
+                        assert.equal(item.system.description, "Invisibility to Mystic and Mental Groups");
                     });
 
                     it("realCost", function () {
@@ -2575,14 +2482,14 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     // TODO: Not quite right but would require a bunch of work to identify all the sense adders. Good enough for now.
@@ -2624,20 +2531,18 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.characteristics.str.value = 10;
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "1/2 Phase, -2 OCV, +0 DCV, HKA 1d6+1",
-                    );
+                    assert.equal(item.system.description, "1/2 Phase, -2 OCV, +0 DCV, HKA 1d6+1");
                 });
 
                 it("realCost", function () {
@@ -2680,13 +2585,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.characteristics.str.value = 15;
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -2746,13 +2652,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.characteristics.str.value = 15;
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -2798,20 +2705,18 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "Endurance Reserve (20 END, 5 REC)",
-                    );
+                    assert.equal(item.system.description, "Endurance Reserve (20 END, 5 REC)");
                 });
 
                 it("realCost", function () {
@@ -2843,13 +2748,14 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -2888,20 +2794,18 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "+10 with single Skill or Characteristic Roll",
-                    );
+                    assert.equal(item.system.description, "+10 with single Skill or Characteristic Roll");
                 });
 
                 it("realCost", function () {
@@ -2955,13 +2859,14 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    await actor._postUpload();
+
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -3016,13 +2921,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -3067,16 +2973,14 @@ export function registerUploadTests(quench) {
                                 },
                                 { temporary: true },
                             );
-                            item = await new HeroSystem6eItem(
-                                HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
-                                { temporary: true, parent: actor },
-                            );
+                            await actor._postUpload();
+
+                            item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                temporary: true,
+                                parent: actor,
+                            });
                             await item._postUpload();
                             actor.items.set(item.system.XMLID, item);
-                            item.skillRollUpdateValue();
                         });
 
                         it("description", function () {
@@ -3134,13 +3038,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -3203,13 +3108,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -3253,19 +3159,18 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", async function () {
-                        expect(item.system.description).to.be.equal(
-                            "KS: How to Code General Skills 11-",
-                        );
+                        expect(item.system.description).to.be.equal("KS: How to Code General Skills 11-");
                     });
 
                     it("roll", async function () {
@@ -3273,9 +3178,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("tags", async function () {
-                        expect(item.system.tags).to.be.deep.equal([
-                            { value: 11, name: "Base Skill" },
-                        ]);
+                        expect(item.system.tags).to.be.deep.equal([{ value: 11, name: "Base Skill" }]);
                     });
 
                     it("levels", async function () {
@@ -3311,19 +3214,18 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", async function () {
-                        expect(item.system.description).to.be.equal(
-                            "KS: How to Code General Skills 13-",
-                        );
+                        expect(item.system.description).to.be.equal("KS: How to Code General Skills 13-");
                     });
 
                     it("roll", async function () {
@@ -3374,20 +3276,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.characteristics.int.value = 25;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", async function () {
-                        expect(item.system.description).to.be.equal(
-                            "SS: Astronomy 14-",
-                        );
+                        expect(item.system.description).to.be.equal("SS: Astronomy 14-");
                     });
 
                     it("roll", async function () {
@@ -3435,20 +3335,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.characteristics.int.value = 13;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", async function () {
-                        expect(item.system.description).to.be.equal(
-                            "SS: Robotics 15-",
-                        );
+                        expect(item.system.description).to.be.equal("SS: Robotics 15-");
                     });
 
                     it("roll", async function () {
@@ -3497,20 +3395,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.characteristics.int.value = 13;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", async function () {
-                        expect(item.system.description).to.be.equal(
-                            "PS: Appraise 8-",
-                        );
+                        expect(item.system.description).to.be.equal("PS: Appraise 8-");
                     });
 
                     it("roll", async function () {
@@ -3518,9 +3414,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("tags", async function () {
-                        expect(item.system.tags).to.be.deep.equal([
-                            { value: 8, name: "Familiarity" },
-                        ]);
+                        expect(item.system.tags).to.be.deep.equal([{ value: 8, name: "Familiarity" }]);
                     });
 
                     it("levels", async function () {
@@ -3557,20 +3451,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.characteristics.int.value = 13;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", async function () {
-                        expect(item.system.description).to.be.equal(
-                            "PS: Bailiff 11-",
-                        );
+                        expect(item.system.description).to.be.equal("PS: Bailiff 11-");
                     });
 
                     it("roll", async function () {
@@ -3578,9 +3470,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("tags", async function () {
-                        expect(item.system.tags).to.be.deep.equal([
-                            { value: 11, name: "Everyman PS" },
-                        ]);
+                        expect(item.system.tags).to.be.deep.equal([{ value: 11, name: "Everyman PS" }]);
                     });
 
                     it("levels", async function () {
@@ -3622,19 +3512,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
                     });
 
                     it("description", async function () {
-                        assert.equal(
-                            item.system.description,
-                            "Absorption 2½d6 (energy) to STUN",
-                        );
+                        assert.equal(item.system.description, "Absorption 2½d6 (energy) to STUN");
                     });
 
                     it("realCost", async function () {
@@ -3671,19 +3560,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = false;
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
                     });
 
                     it("description", async function () {
-                        assert.equal(
-                            item.system.description,
-                            "Absorption 9 BODY (physical) to DEX",
-                        );
+                        assert.equal(item.system.description, "Absorption 9 BODY (physical) to DEX");
                     });
 
                     it("realCost", async function () {
@@ -3724,20 +3612,18 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Stretching 9m, Reduced Endurance (1/2 END; +1/4)",
-                        );
+                        assert.equal(item.system.description, "Stretching 9m, Reduced Endurance (1/2 END; +1/4)");
                     });
 
                     it("realCost", function () {
@@ -3777,21 +3663,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            'Stretching 9", Reduced Endurance (1/2 END; +1/4)',
-                        );
+                        assert.equal(item.system.description, 'Stretching 9", Reduced Endurance (1/2 END; +1/4)');
                     });
 
                     it("realCost", function () {
@@ -3840,14 +3723,14 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -3888,13 +3771,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -3943,21 +3827,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Force Field (10 rPD/11 rED)",
-                        );
+                        assert.equal(item.system.description, "Force Field (10 rPD/11 rED)");
                     });
 
                     it("realCost", function () {
@@ -3996,13 +3877,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        await actor._postUpload();
+
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -4055,14 +3937,14 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -4116,27 +3998,25 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        mpItem = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(mpContents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        mpItem = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(mpContents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await mpItem._postUpload();
                         actor.items.set(mpItem.system.XMLID, mpItem);
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
                     });
 
                     it("power description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Ego Attack 1d6 (10 Active Points)",
-                        );
+                        assert.equal(item.system.description, "Ego Attack 1d6 (10 Active Points)");
                     });
 
                     it("power realCost", function () {
@@ -4196,18 +4076,19 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        mpItem = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(mpContents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        mpItem = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(mpContents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await mpItem._postUpload();
                         actor.items.set(mpItem.system.XMLID, mpItem);
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
                     });
@@ -4236,10 +4117,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("multipower description", function () {
-                        assert.equal(
-                            mpItem.system.description,
-                            "Multipower, 20-point reserve",
-                        );
+                        assert.equal(mpItem.system.description, "Multipower, 20-point reserve");
                     });
 
                     it("multipower realCost", function () {
@@ -4280,20 +4158,21 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
                         // Elemental Control
-                        ecItem = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(ecContents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        ecItem = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(ecContents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await ecItem._postUpload();
                         actor.items.set(ecItem.system.XMLID, ecItem);
 
                         // Power in Elemental Control
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
                     });
@@ -4368,14 +4247,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.is5e = true;
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -4431,14 +4310,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.is5e = true;
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -4486,21 +4365,18 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.is5e = true;
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "Succor END 5½d6 (END)",
-                    );
+                    assert.equal(item.system.description, "Succor END 5½d6 (END)");
                 });
 
                 it("realCost", function () {
@@ -4558,14 +4434,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.is5e = true;
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -4614,21 +4490,18 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "TF: Small Motorized Ground Vehicles",
-                    );
+                    assert.equal(item.system.description, "TF: Small Motorized Ground Vehicles");
                 });
 
                 it("roll", function () {
@@ -4679,21 +4552,18 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "TF: Dogs, Equines, Flying Beasts, Swimming Beasts",
-                    );
+                    assert.equal(item.system.description, "TF: Dogs, Equines, Flying Beasts, Swimming Beasts");
                 });
 
                 it("roll", function () {
@@ -4732,21 +4602,18 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "TF: Common Motorized Ground Vehicles",
-                    );
+                    assert.equal(item.system.description, "TF: Common Motorized Ground Vehicles");
                 });
 
                 it("roll", function () {
@@ -4782,21 +4649,18 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "Clinging (10 + 18 = 28 STR)",
-                    );
+                    assert.equal(item.system.description, "Clinging (10 + 18 = 28 STR)");
                 });
 
                 it("realCost", function () {
@@ -4830,21 +4694,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Darkness to Hearing Group",
-                        );
+                        assert.equal(item.system.description, "Darkness to Hearing Group");
                     });
 
                     // TODO: Doesn't work yet.
@@ -4881,21 +4742,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Darkness to Sight and Smell/Taste Groups",
-                        );
+                        assert.equal(item.system.description, "Darkness to Sight and Smell/Taste Groups");
                     });
 
                     // TODO: Doesn't work yet.
@@ -4941,14 +4799,14 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     // TODO: Not quite right but would require a bunch of work to identify all the sense adders. Good enough for now.
@@ -4991,14 +4849,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5034,14 +4892,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5084,34 +4942,25 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
+                    await actor._postUpload();
 
                     skillEnhancerItem = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(
-                            skillEnhancerContents,
-                            actor,
-                        ),
+                        HeroSystem6eItem.itemDataFromXml(skillEnhancerContents, actor),
                         { temporary: true, parent: actor },
                     );
                     await skillEnhancerItem._postUpload();
-                    actor.items.set(
-                        skillEnhancerItem.system.XMLID,
-                        skillEnhancerItem,
-                    );
+                    actor.items.set(skillEnhancerItem.system.XMLID, skillEnhancerItem);
 
-                    skillItem = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    skillItem = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await skillItem._postUpload();
                     actor.items.set(skillItem.system.XMLID, skillItem);
-                    skillItem.skillRollUpdateValue();
                 });
 
                 it("skill enhancer description", function () {
-                    assert.equal(
-                        skillEnhancerItem.system.description,
-                        "Scientist",
-                    );
+                    assert.equal(skillEnhancerItem.system.description, "Scientist");
                 });
 
                 it("skill enhancer realCost", function () {
@@ -5127,10 +4976,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("skill description", function () {
-                    assert.equal(
-                        skillItem.system.description,
-                        "SS: Astronomy 11- (3 Active Points)",
-                    );
+                    assert.equal(skillItem.system.description, "SS: Astronomy 11- (3 Active Points)");
                 });
 
                 it("skill realCost", function () {
@@ -5169,14 +5015,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5225,14 +5071,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5279,14 +5125,14 @@ export function registerUploadTests(quench) {
                         },
                         { temporary: true },
                     );
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -5331,14 +5177,14 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5386,21 +5232,18 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            'Flight 1", Usable By Other (Usable By Other; +1/4)',
-                        );
+                        assert.equal(item.system.description, 'Flight 1", Usable By Other (Usable By Other; +1/4)');
                     });
 
                     it("realCost", function () {
@@ -5447,14 +5290,14 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5511,14 +5354,14 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5565,14 +5408,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5619,21 +5462,18 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Drain BODY 6d6, Ranged (Ranged; +1/2)",
-                        );
+                        assert.equal(item.system.description, "Drain BODY 6d6, Ranged (Ranged; +1/2)");
                     });
 
                     it("realCost", function () {
@@ -5679,14 +5519,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5736,21 +5576,18 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Energy Blast 10d6 (ED), Line Of Sight (+1/2)",
-                        );
+                        assert.equal(item.system.description, "Energy Blast 10d6 (ED), Line Of Sight (+1/2)");
                     });
 
                     it("realCost", function () {
@@ -5793,14 +5630,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5850,14 +5687,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5904,14 +5741,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -5958,21 +5795,18 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Ego Attack 1d6 (10 Active Points); No Range (-1/2)",
-                        );
+                        assert.equal(item.system.description, "Ego Attack 1d6 (10 Active Points); No Range (-1/2)");
                     });
 
                     it("realCost", function () {
@@ -6015,21 +5849,18 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "Ego Attack 1d6 (10 Active Points); Normal Range (-1/4)",
-                        );
+                        assert.equal(item.system.description, "Ego Attack 1d6 (10 Active Points); Normal Range (-1/4)");
                     });
 
                     it("realCost", function () {
@@ -6072,14 +5903,14 @@ export function registerUploadTests(quench) {
                             },
                             { temporary: true },
                         );
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -6130,14 +5961,14 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
-                        item = await new HeroSystem6eItem(
-                            HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            { temporary: true, parent: actor },
-                        );
+                        item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            temporary: true,
+                            parent: actor,
+                        });
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
@@ -6195,21 +6026,18 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.is5e = true;
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "Susceptibility:  (1d6 damage; Instant; Uncommon)",
-                    );
+                    assert.equal(item.system.description, "Susceptibility:  (1d6 damage; Instant; Uncommon)");
                 });
 
                 it("realCost", function () {
@@ -6303,14 +6131,14 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.is5e = true;
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
@@ -6355,26 +6183,21 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.characteristics.dex.value = 15;
+                        await actor._postUpload();
+
                         item = await new HeroSystem6eItem(
                             {
-                                ...HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
+                                ...HeroSystem6eItem.itemDataFromXml(contents, actor),
                                 type: "martialart", // TODO: Kludge to make itemDataFromXml match the uploading code.
                             },
                             { temporary: true, parent: actor },
                         );
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "1/2 Phase, -2 OCV, +1 DCV, 6d6 Strike",
-                        );
+                        assert.equal(item.system.description, "1/2 Phase, -2 OCV, +1 DCV, 6d6 Strike");
                     });
 
                     it("realCost", function () {
@@ -6411,27 +6234,21 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
                         item = await new HeroSystem6eItem(
                             {
-                                ...HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
+                                ...HeroSystem6eItem.itemDataFromXml(contents, actor),
                                 type: "martialart", // TODO: Kludge to make itemDataFromXml match the uploading code.
                             },
                             { temporary: true, parent: actor },
                         );
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "1/2 Phase, -1 OCV, -1 DCV, 4d6 (Hearing)",
-                        );
+                        assert.equal(item.system.description, "1/2 Phase, -1 OCV, -1 DCV, 4d6 (Hearing)");
                     });
 
                     it("realCost", function () {
@@ -6472,27 +6289,21 @@ export function registerUploadTests(quench) {
                             { temporary: true },
                         );
                         actor.system.is5e = true;
+                        await actor._postUpload();
 
                         item = await new HeroSystem6eItem(
                             {
-                                ...HeroSystem6eItem.itemDataFromXml(
-                                    contents,
-                                    actor,
-                                ),
+                                ...HeroSystem6eItem.itemDataFromXml(contents, actor),
                                 type: "martialart", // TODO: Kludge to make itemDataFromXml match the uploading code.
                             },
                             { temporary: true, parent: actor },
                         );
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
-                        item.skillRollUpdateValue();
                     });
 
                     it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            "1/2 Phase, -1 OCV, +1 DCV, Disarm; 20 STR to Disarm",
-                        );
+                        assert.equal(item.system.description, "1/2 Phase, -1 OCV, +1 DCV, Disarm; 20 STR to Disarm");
                     });
 
                     it("realCost", function () {
@@ -6534,26 +6345,21 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.characteristics.dex.value = 15;
+                    await actor._postUpload();
+
                     item = await new HeroSystem6eItem(
                         {
-                            ...HeroSystem6eItem.itemDataFromXml(
-                                contents,
-                                actor,
-                            ),
+                            ...HeroSystem6eItem.itemDataFromXml(contents, actor),
                             type: "martialart", // TODO: Kludge to make itemDataFromXml match the uploading code.
                         },
                         { temporary: true, parent: actor },
                     );
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "1/2 Phase, -1 OCV, +1 DCV, 2d6 NND",
-                    );
+                    assert.equal(item.system.description, "1/2 Phase, -1 OCV, +1 DCV, 2d6 NND");
                 });
 
                 it("realCost", function () {
@@ -6590,21 +6396,18 @@ export function registerUploadTests(quench) {
                         { temporary: true },
                     );
                     actor.system.is5e = true;
+                    await actor._postUpload();
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {
-                    assert.equal(
-                        item.system.description,
-                        "Find Weakness 12- with Related Group of Attacks",
-                    );
+                    assert.equal(item.system.description, "Find Weakness 12- with Related Group of Attacks");
                 });
 
                 it("realCost", function () {
@@ -6666,25 +6469,21 @@ export function registerUploadTests(quench) {
                     );
                     actor.system.is5e = true;
                     actor.system.characteristics.int.value = 15;
+                    await actor._postUpload();
 
-                    const perceptionItem = await new HeroSystem6eItem(
-                        itemDataPerception,
-                        { temporary: true, parent: actor },
-                    );
+                    const perceptionItem = await new HeroSystem6eItem(itemDataPerception, {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await perceptionItem._postUpload();
-                    actor.items.set(
-                        perceptionItem.system.XMLID,
-                        perceptionItem,
-                    );
-                    perceptionItem.skillRollUpdateValue();
+                    actor.items.set(perceptionItem.system.XMLID, perceptionItem);
 
-                    item = await new HeroSystem6eItem(
-                        HeroSystem6eItem.itemDataFromXml(contents, actor),
-                        { temporary: true, parent: actor },
-                    );
+                    item = await new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        temporary: true,
+                        parent: actor,
+                    });
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
-                    item.skillRollUpdateValue();
                 });
 
                 it("description", function () {

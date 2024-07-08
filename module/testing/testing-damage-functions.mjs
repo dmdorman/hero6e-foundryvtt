@@ -1,9 +1,6 @@
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
-import {
-    getDiceFormulaFromItemDC,
-    convertToDcFromItem,
-} from "../utility/damage.mjs";
+import { getDiceFormulaFromItemDC, convertToDcFromItem } from "../utility/damage.mjs";
 
 export function registerDamageFunctionTests(quench) {
     quench.registerBatch(
@@ -43,52 +40,31 @@ export function registerDamageFunctionTests(quench) {
                     });
 
                     it("1", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 1),
-                            "1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 1), "1");
                     });
 
                     it("2", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 2),
-                            "½d6",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 2), "½d6");
                     });
 
                     it("3", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 3),
-                            "1d6",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 3), "1d6");
                     });
 
                     it("4", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 4),
-                            "1d6+1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 4), "1d6+1");
                     });
 
                     it("5", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 5),
-                            "1½d6",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 5), "1½d6");
                     });
 
                     it("6", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 6),
-                            "2d6",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 6), "2d6");
                     });
 
                     it("7", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 7),
-                            "2d6+1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 7), "2d6+1");
                     });
                 });
 
@@ -104,52 +80,31 @@ export function registerDamageFunctionTests(quench) {
                     });
 
                     it("1", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 1),
-                            "1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 1), "1");
                     });
 
                     it("2", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 2),
-                            "1d6-1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 2), "1d6-1");
                     });
 
                     it("3", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 3),
-                            "1d6",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 3), "1d6");
                     });
 
                     it("4", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 4),
-                            "1d6+1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 4), "1d6+1");
                     });
 
                     it("5", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 5),
-                            "2d6-1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 5), "2d6-1");
                     });
 
                     it("6", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 6),
-                            "2d6",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 6), "2d6");
                     });
 
                     it("7", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(killingItem, 7),
-                            "2d6+1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(killingItem, 7), "2d6+1");
                     });
                 });
 
@@ -161,55 +116,31 @@ export function registerDamageFunctionTests(quench) {
                     });
 
                     it("0", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(nonKillingItem, 0),
-                            "",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(nonKillingItem, 0), "");
                     });
 
                     it("1", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(nonKillingItem, 1),
-                            "1d6",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(nonKillingItem, 1), "1d6");
                     });
 
                     it("1.2", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(nonKillingItem, 1.2),
-                            "1d6+1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(nonKillingItem, 1.2), "1d6+1");
                     });
 
                     it("1.5", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(nonKillingItem, 1.5),
-                            "1½d6",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(nonKillingItem, 1.5), "1½d6");
                     });
 
                     it("13.2", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(nonKillingItem, 13.2),
-                            "13d6+1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(nonKillingItem, 13.2), "13d6+1");
                     });
 
                     it("20", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(nonKillingItem, 20),
-                            "20d6",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(nonKillingItem, 20), "20d6");
                     });
 
                     it("1234567890.2", function () {
-                        assert.equal(
-                            getDiceFormulaFromItemDC(
-                                nonKillingItem,
-                                1234567890.2,
-                            ),
-                            "1234567890d6+1",
-                        );
+                        assert.equal(getDiceFormulaFromItemDC(nonKillingItem, 1234567890.2), "1234567890d6+1");
                     });
                 });
             });

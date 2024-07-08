@@ -14,7 +14,21 @@
     Attack: <span class="item-name">{{{itemName item}}}</span>
   </div>
 
+  <div class="tags">
+    {{#each adjustmentItemTags as |tag id|}}
+        <span class="tag" {{#if tag.title}}title="{{tag.title}}" {{/if}}>{{tag.name}}</span>
+    {{/each}}
+  </div>
+
+  <hr>
+
   {{#if defenseDescription}}
+    <div class="tags">
+      {{#each defenseTags as |tag id|}}
+        <span class="tag tag_transparent" title="{{tag.title}}">{{tag.name}} {{#if (gte tag.value 0)}}+{{/if}}{{tag.value}}</span>
+      {{/each}}
+    </div>
+
     <div class="card-section">
       <div class="description-tiny">Defense: {{ defenseDescription }}</div>
     </div>

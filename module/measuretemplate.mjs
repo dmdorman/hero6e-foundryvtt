@@ -38,22 +38,14 @@ export default class HeroSystem6eMeasuredTemplate extends MeasuredTemplate {
                     // 5e is based on hexes but 6e is based on gridless. Adapt 5e templates to gridless
                     // but it's only an approximation as the 2 systems are not comparable.
                     const columnarGridArrangement =
-                        game.scenes.current.grid.type ===
-                            CONST.GRID_TYPES.GRIDLESS ||
-                        game.scenes.current.grid.type ===
-                            CONST.GRID_TYPES.SQUARE
+                        game.scenes.current.grid.type === CONST.GRID_TYPES.GRIDLESS ||
+                        game.scenes.current.grid.type === CONST.GRID_TYPES.SQUARE
                             ? true
                             : game.canvas.grid.grid.columnar;
 
                     const shapeVector = columnarGridArrangement
-                        ? [
-                              canvas.dimensions.distancePixels * Math.sqrt(3),
-                              canvas.dimensions.distancePixels * 2,
-                          ]
-                        : [
-                              canvas.dimensions.distancePixels * 2,
-                              canvas.dimensions.distancePixels * Math.sqrt(3),
-                          ];
+                        ? [canvas.dimensions.distancePixels * Math.sqrt(3), canvas.dimensions.distancePixels * 2]
+                        : [canvas.dimensions.distancePixels * 2, canvas.dimensions.distancePixels * Math.sqrt(3)];
 
                     // Hex based circle looks like a hexagon. The hexagon has the opposite orientation of the grid.
                     // See https://www.redblobgames.com/grids/hexagons/#basics for instance.
@@ -72,22 +64,14 @@ export default class HeroSystem6eMeasuredTemplate extends MeasuredTemplate {
                     return new PIXI.Polygon(...pixelHexagonVertices);
                 } else {
                     // v12
-                    const vertices = game.canvas.grid.getCircle(
-                        { x: 0, y: 0 },
-                        distance,
-                    );
+                    const vertices = game.canvas.grid.getCircle({ x: 0, y: 0 }, distance);
 
                     return new PIXI.Polygon(...vertices);
                 }
             } else if (shapeType === "cone") {
                 // 5e cones are hex counted and have a flat end. We only support v12 for these.
                 if (isV12) {
-                    const vertices = game.canvas.grid.getCone(
-                        { x: 0, y: 0 },
-                        distance,
-                        direction,
-                        angle,
-                    );
+                    const vertices = game.canvas.grid.getCone({ x: 0, y: 0 }, distance, direction, angle);
 
                     return new PIXI.Polygon(...vertices);
                 }
@@ -124,9 +108,7 @@ export default class HeroSystem6eMeasuredTemplate extends MeasuredTemplate {
 
         if (!this.isPreview) {
             await game.user.broadcastActivity({
-                targets: Array.from(
-                    game.user.targets.map((target) => target.id),
-                ),
+                targets: Array.from(game.user.targets.map((target) => target.id)),
             });
         }
     }
@@ -134,18 +116,15 @@ export default class HeroSystem6eMeasuredTemplate extends MeasuredTemplate {
     // Tokens within template
     getTokensInTemplate(options) {
         // PERSONALIMMUNITY
-        const PERSONALIMMUNITY = (
-            this.document.flags?.item?.system?.MODIFIER || []
-        ).find((modifier) => modifier.XMLID === "PERSONALIMMUNITY");
+        const PERSONALIMMUNITY = (this.document.flags?.item?.system?.MODIFIER || []).find(
+            (modifier) => modifier.XMLID === "PERSONALIMMUNITY",
+        );
 
         const tokens = [];
         for (const token of this.scene.tokens) {
             // For some reason the only the base ITEM and ACTOR props pass into this class, so we aren't using the typical functions like actor.id instead use actor._id.
             if (this.isTokenInside(token, options)) {
-                if (
-                    !PERSONALIMMUNITY ||
-                    token.actor?.id !== this.document.flags?.actor?._id
-                ) {
+                if (!PERSONALIMMUNITY || token.actor?.id !== this.document.flags?.actor?._id) {
                     tokens.push(token);
                 }
             }
@@ -158,21 +137,14 @@ export default class HeroSystem6eMeasuredTemplate extends MeasuredTemplate {
         // Use Shape (but there are rounding issues; specifically if token and MeasuredTemplate have same hex origin)
         if (options.checkShape) {
             const actorToken = token?.object;
-            const _x =
-                actorToken.center.x - (options?.templateData?.x || this.x);
-            const _y =
-                actorToken.center.y - (options?.templateData?.y || this.y);
+            const _x = actorToken.center.x - (options?.templateData?.x || this.x);
+            const _y = actorToken.center.y - (options?.templateData?.y || this.y);
             if (this.shape.contains(_x, _y)) return true;
         }
 
         // Use positions (but some tokens may not be exactly centered on a 1 hex)
         if (options.checkPositions) {
-            if (
-                this._getGridHighlightPositions().find(
-                    (o) => o.x === token.x && o.y === token.y,
-                )
-            )
-                return true;
+            if (this._getGridHighlightPositions().find((o) => o.x === token.x && o.y === token.y)) return true;
         }
 
         return false;
@@ -188,12 +160,7 @@ export default class HeroSystem6eMeasuredTemplate extends MeasuredTemplate {
             }
         }
 
-        if (
-            JSON.stringify(targets) !==
-            JSON.stringify(
-                Array.from(game.user.targets).map((target) => target.id),
-            )
-        ) {
+        if (JSON.stringify(targets) !== JSON.stringify(Array.from(game.user.targets).map((target) => target.id))) {
             await game.user.updateTokenTargets(targets);
         }
     }

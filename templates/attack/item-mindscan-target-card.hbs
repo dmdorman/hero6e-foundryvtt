@@ -1,0 +1,76 @@
+{{ log 'HEROSYS item-mindscan-target-card' this }}
+<div class="hero chat-card item-card item-mindscan-target-card" data-actor-id="{{actor._id}}" data-item-id="{{item._id}}" {{#if
+    tokenId}}data-token-id="{{tokenId}}" {{/if}}>
+
+    <span class="flavor-text">
+        {{!-- Attack Name --}}
+        <header class="card-header attack flexrow">
+            <img src="{{item.img}}" title="{{item.name}}" width="36" height="36" />
+            <h3 class="item-name">{{{itemName item}}}</h3>
+        </header>
+    </span>
+        
+    <div>
+        {{#if targetTokenId}}
+            <div>
+                <span class="Hit">HIT:</span> You are aware of the targets presence in the area you scanned. <span data-visibility="gm">{{targetName}}</span>
+            </div>
+
+            <div class="mindScanButtons flexrow">
+                <button class="roll-mindscanEgo" data-itemId="{{item.uuid}}" data-target="{{targetTokenId}}" data-effective-levels="{{effectiveLevels}}" title="Character can establish Mind
+Link or use first level of
+Telepathy (communication).
+They also know which
+direction the target is located.">
+                    Mind Scan EGO
+                </button>
+            <button class="roll-mindscanEgo" data-itemId="{{item.uuid}}" data-target="{{targetTokenId}}" data-effective-levels="{{effectiveLevels}}" title="Character can establish Mind
+Link or use first level of
+Telepathy (communication).
+They also know which
+direction the target is located.">
+                    Undetectable EGO+20
+                </button>
+            </div>
+
+            <div class="mindScanButtons flexrow">
+                <button class="roll-mindscanEgo" data-itemId="{{item.uuid}}" data-target="{{targetTokenId}}" data-effective-levels="{{effectiveLevels}}" title="Character can use all Mental
+Powers (including Powers that
+use OMCV against DMCV,
+have no Range Modifier, and
+apply to Mental Defense) on
+the target, and can estimate the
+distance to the target.">
+                    Mind Scan EGO+10
+                </button>
+                <button class="roll-mindscanEgo" data-itemId="{{item.uuid}}" data-target="{{targetTokenId}}" data-effective-levels="{{effectiveLevels}}" title="Character can use all Mental
+Powers (including Powers that
+use OMCV against DMCV,
+have no Range Modifier, and
+apply to Mental Defense) on
+the target, and can estimate the
+distance to the target.">
+                    Undetectable EGO+30
+                </button>
+            </div>
+
+            <div class="mindScanButtons flexrow">
+                <button class="roll-mindscanEgo" data-itemId="{{item.uuid}}" data-target="{{targetTokenId}}" data-effective-levels="{{effectiveLevels}}" title="Character knows the exact
+location of the target. They can
+attack with all attacks.">
+                    Mind Scan EGO+20
+                </button>
+                <button class="roll-mindscanEgo" data-itemId="{{item.uuid}}" data-target="{{targetTokenId}}" data-effective-levels="{{effectiveLevels}}" title="Character knows the exact
+location of the target. They can
+attack with all attacks.">
+                    Undetectable EGO+40
+                </button>
+            </div>
+        {{else}}
+            <div>
+                <span class="Miss">MISS:</span> You are unable to locate the targets presence in the area you scanned.
+            </div>
+        {{/if}}
+    </div>
+
+</div>

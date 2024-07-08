@@ -127,9 +127,7 @@ export function convertToDcFromItem(item, options) {
     // Add in STR
     if (item.system.usesStrength) {
         let str = parseInt(
-            options?.effectivestr != undefined
-                ? options?.effectivestr
-                : actor?.system.characteristics.str.value || 0,
+            options?.effectivestr != undefined ? options?.effectivestr : actor?.system.characteristics.str.value || 0,
         );
 
         // MOVEBY halves STR
@@ -141,9 +139,7 @@ export function convertToDcFromItem(item, options) {
         // A character using a weapon only adds damage for every full 5 points of STR he has above the weapon’s STR Minimum
         const STRMINIMUM = item.findModsByXmlid("STRMINIMUM");
         if (STRMINIMUM) {
-            const strMinimum = parseInt(
-                STRMINIMUM.OPTION_ALIAS.match(/\d+/)?.[0] || 0,
-            );
+            const strMinimum = parseInt(STRMINIMUM.OPTION_ALIAS.match(/\d+/)?.[0] || 0);
             //if (strMinimum && str > strMinimum) {
             const strMinDc = Math.ceil(strMinimum / 5);
             dc -= strMinDc;
@@ -167,9 +163,7 @@ export function convertToDcFromItem(item, options) {
 
     // Add in TK
     if (item.system.usesTk) {
-        let tkItems = actor.items.filter(
-            (o) => o.system.XMLID === "TELEKINESIS",
-        );
+        let tkItems = actor.items.filter((o) => o.system.XMLID === "TELEKINESIS");
         let str = 0;
         for (const item of tkItems) {
             str += parseInt(item.system.LEVELS) || 0;
@@ -183,12 +177,8 @@ export function convertToDcFromItem(item, options) {
 
     // ActiveEffects
     if (item.actor) {
-        for (const ae of item.actor.appliedEffects.filter(
-            (o) => !o.disabled && o.flags?.target === item.uuid,
-        )) {
-            for (const change of ae.changes.filter(
-                (o) => o.key === "system.value" && o.value != 0 && o.mode === 2,
-            )) {
+        for (const ae of item.actor.appliedEffects.filter((o) => !o.disabled && o.flags?.target === item.uuid)) {
+            for (const change of ae.changes.filter((o) => o.key === "system.value" && o.value != 0 && o.mode === 2)) {
                 const _value = parseInt(change.value);
                 dc += _value;
                 tags.push({
@@ -202,10 +192,7 @@ export function convertToDcFromItem(item, options) {
     // Add in Haymaker to any non-maneuver attack DCV based attack
     if (item.actor) {
         const haymakerManeuver = item.actor.items.find(
-            (o) =>
-                o.type == "maneuver" &&
-                o.name === "Haymaker" &&
-                o.system.active,
+            (o) => o.type == "maneuver" && o.name === "Haymaker" && o.system.active,
         );
         if (haymakerManeuver) {
             // && item.type != 'maneuver' && item.system.targets == 'dcv')
@@ -215,35 +202,28 @@ export function convertToDcFromItem(item, options) {
                     tags.push({ value: `4DC`, name: "Haymaker" });
                 } else {
                     if (options?.isAction)
-                        ui.notifications.warn(
-                            "Haymaker can only be used with attacks targeting DCV.",
-                            { localize: true },
-                        );
+                        ui.notifications.warn("Haymaker can only be used with attacks targeting DCV.", {
+                            localize: true,
+                        });
                 }
             } else {
                 if (options?.isAction)
-                    ui.notifications.warn(
-                        "Haymaker cannot be combined with another maneuver (except for Strike).",
-                        { localize: true },
-                    );
+                    ui.notifications.warn("Haymaker cannot be combined with another maneuver (except for Strike).", {
+                        localize: true,
+                    });
             }
         }
     }
 
     // WEAPON MASTER (also check that item is present as a custom ADDER)
     if (item.actor) {
-        const WEAPON_MASTER = item.actor.items.find(
-            (o) => o.system.XMLID === "WEAPON_MASTER",
-        );
+        const WEAPON_MASTER = item.actor.items.find((o) => o.system.XMLID === "WEAPON_MASTER");
         if (WEAPON_MASTER) {
             const weaponMatch = (WEAPON_MASTER.system.ADDER || []).find(
-                (o) =>
-                    o.XMLID === "ADDER" &&
-                    o.ALIAS === (item.system.ALIAS || item.name),
+                (o) => o.XMLID === "ADDER" && o.ALIAS === (item.system.ALIAS || item.name),
             );
             if (weaponMatch) {
-                const dcPlus =
-                    3 * Math.max(1, parseInt(WEAPON_MASTER.system.LEVELS) || 1);
+                const dcPlus = 3 * Math.max(1, parseInt(WEAPON_MASTER.system.LEVELS) || 1);
                 dc += dcPlus;
                 tags.push({
                     value: `+${dcPlus}DC`,
@@ -257,9 +237,7 @@ export function convertToDcFromItem(item, options) {
     // DEADLYBLOW
     // Only check if it has been turned off
 
-    const DEADLYBLOW = item.actor?.items.find(
-        (o) => o.system.XMLID === "DEADLYBLOW",
-    );
+    const DEADLYBLOW = item.actor?.items.find((o) => o.system.XMLID === "DEADLYBLOW");
     if (DEADLYBLOW) {
         item.system.conditionalAttacks ??= {};
         item.system.conditionalAttacks[DEADLYBLOW.id] ??= {
@@ -271,9 +249,7 @@ export function convertToDcFromItem(item, options) {
 
     if (item.actor) {
         for (const key in item.system.conditionalAttacks) {
-            const conditionalAttack = item.actor.items.find(
-                (o) => o.id === key,
-            );
+            const conditionalAttack = item.actor.items.find((o) => o.id === key);
             if (!conditionalAttack) {
                 // Quench and other edge cases where item.id is null
                 if (item.id) {
@@ -282,8 +258,7 @@ export function convertToDcFromItem(item, options) {
                     // NOTE: typically we await here, but this isn't an async function.
                     // Shouldn't be a problem.
                     item.update({
-                        [`system.conditionalAttacks`]:
-                            item.system.conditionalAttacks,
+                        [`system.conditionalAttacks`]: item.system.conditionalAttacks,
                     });
                 }
                 continue;
@@ -294,12 +269,7 @@ export function convertToDcFromItem(item, options) {
 
             switch (conditionalAttack.system.XMLID) {
                 case "DEADLYBLOW": {
-                    const dcPlus =
-                        3 *
-                        Math.max(
-                            1,
-                            parseInt(conditionalAttack.system.LEVELS) || 1,
-                        );
+                    const dcPlus = 3 * Math.max(1, parseInt(conditionalAttack.system.LEVELS) || 1);
                     dc += dcPlus;
                     tags.push({
                         value: `+${dcPlus}DC`,
@@ -309,10 +279,7 @@ export function convertToDcFromItem(item, options) {
                     break;
                 }
                 default:
-                    console.warn(
-                        "Unhandled conditionalAttack",
-                        conditionalAttack,
-                    );
+                    console.warn("Unhandled conditionalAttack", conditionalAttack);
             }
         }
     }
@@ -354,10 +321,7 @@ export function calculateDiceFormulaParts(item, dc) {
             // d3Count = DC % 1 >= 0.5 ? 1 : 0
             halfDieCount = (dc % 1) - 0.5 >= -ourEpsilon ? 1 : 0;
             // constant = (DC % 1 >= 0.2 && DC % 1 < 0.5) ? 1 : 0
-            constant =
-                (dc % 1) - 0.2 >= -ourEpsilon && (dc % 1) - 0.5 < -ourEpsilon
-                    ? 1
-                    : 0;
+            constant = (dc % 1) - 0.2 >= -ourEpsilon && (dc % 1) - 0.5 < -ourEpsilon ? 1 : 0;
         }
 
         // Killing Attack
@@ -381,10 +345,7 @@ export function getDiceFormulaFromItemDC(item, DC) {
     const formulaParts = calculateDiceFormulaParts(item, DC);
 
     return `${
-        formulaParts.d6Count +
-            formulaParts.d6Less1DieCount +
-            formulaParts.halfDieCount >
-        0
+        formulaParts.d6Count + formulaParts.d6Less1DieCount + formulaParts.halfDieCount > 0
             ? `${
                   formulaParts.d6Count + formulaParts.d6Less1DieCount
                       ? `${formulaParts.d6Count + formulaParts.d6Less1DieCount}`
@@ -393,10 +354,7 @@ export function getDiceFormulaFromItemDC(item, DC) {
             : ""
     }${
         formulaParts.constant
-            ? formulaParts.d6Count +
-                  formulaParts.d6Less1DieCount +
-                  formulaParts.halfDieCount >
-              0
+            ? formulaParts.d6Count + formulaParts.d6Less1DieCount + formulaParts.halfDieCount > 0
                 ? "+1"
                 : "1"
             : `${formulaParts.d6Less1DieCount > 0 ? "-1" : ""}`
@@ -411,12 +369,8 @@ export function CombatSkillLevelsForAttack(item) {
 
     const cslSkills = item.actor.items.filter(
         (o) =>
-            ["MENTAL_COMBAT_LEVELS", "COMBAT_LEVELS"].includes(
-                o.system.XMLID,
-            ) &&
-            (o.system.ADDER || []).find(
-                (p) => p.ALIAS === item.system.ALIAS || p.ALIAS === item.name,
-            ) &&
+            ["MENTAL_COMBAT_LEVELS", "COMBAT_LEVELS"].includes(o.system.XMLID) &&
+            (o.system.ADDER || []).find((p) => p.ALIAS === item.system.ALIAS || p.ALIAS === item.name) &&
             o.system.active != false,
     );
 
@@ -431,13 +385,8 @@ export function CombatSkillLevelsForAttack(item) {
         };
 
         if (result.skill && result.skill.system.csl) {
-            for (
-                let i = 0;
-                i < parseInt(result.skill.system.LEVELS || 0);
-                i++
-            ) {
-                result[result.skill.system.csl[i]] =
-                    (result[result.skill.system.csl[i]] || 0) + 1;
+            for (let i = 0; i < parseInt(result.skill.system.LEVELS || 0); i++) {
+                result[result.skill.system.csl[i]] = (result[result.skill.system.csl[i]] || 0) + 1;
             }
             result.item = result.skill;
 

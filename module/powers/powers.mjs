@@ -9,8 +9,7 @@ export async function editSubItem(event) {
 
     const [powerItemId, subItemId] = splitPowerId(id);
 
-    const itemData =
-        game.items.get(powerItemId).system.subItems[type][subItemId];
+    const itemData = game.items.get(powerItemId).system.subItems[type][subItemId];
     itemData.system.realId = powerItemId + "-" + subItemId;
     itemData._id = foundry.utils.randomID(16);
     itemData.type = type;

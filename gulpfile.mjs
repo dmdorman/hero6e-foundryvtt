@@ -98,13 +98,4 @@ const defaultGulpTask = gulp.series(compileSass, watchUpdates);
 /*  Export Tasks
 /* ----------------------------------------- */
 
-export {
-    defaultGulpTask as default,
-    css,
-    lint,
-    prettier,
-    validate,
-    autoFix,
-    lintAutoFix,
-    prettierAutoFix,
-};
+export { defaultGulpTask as default, css, lint, prettier, validate, autoFix, lintAutoFix, prettierAutoFix };

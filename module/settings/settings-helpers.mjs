@@ -1,4 +1,5 @@
 import { HEROSYS } from "../herosystem6e.mjs";
+import { CreateHeroCompendiums } from "../heroCompendiums.mjs";
 
 export default class SettingsHelpers {
     // Initialize System Settings after the Init Hook
@@ -51,12 +52,8 @@ export default class SettingsHelpers {
             config: true,
             type: String,
             choices: {
-                none: game.i18n.localize(
-                    "Settings.HitLocation.Tracking.Choices.DoNotTrack",
-                ),
-                all: game.i18n.localize(
-                    "Settings.HitLocation.Tracking.Choices.TrackForAll",
-                ),
+                none: game.i18n.localize("Settings.HitLocation.Tracking.Choices.DoNotTrack"),
+                all: game.i18n.localize("Settings.HitLocation.Tracking.Choices.TrackForAll"),
             },
             default: "none",
             onChange: (value) => HEROSYS.log(false, value),
@@ -93,12 +90,8 @@ export default class SettingsHelpers {
         // });
 
         game.settings.register(module, "equipmentWeightPercentage", {
-            name: game.i18n.localize(
-                "Settings.Equipment.WeightPercentage.Name",
-            ),
-            hint: game.i18n.localize(
-                "Settings.Equipment.WeightPercentage.Hint",
-            ),
+            name: game.i18n.localize("Settings.Equipment.WeightPercentage.Name"),
+            hint: game.i18n.localize("Settings.Equipment.WeightPercentage.Hint"),
             scope: "world",
             config: true,
             type: Number,
@@ -129,12 +122,8 @@ export default class SettingsHelpers {
             type: String,
             choices: {
                 none: game.i18n.localize("Settings.Automation.Choices.None"),
-                npcOnly: game.i18n.localize(
-                    "Settings.Automation.Choices.NpcOnly",
-                ),
-                pcEndOnly: game.i18n.localize(
-                    "Settings.Automation.Choices.PcEndOnly",
-                ),
+                npcOnly: game.i18n.localize("Settings.Automation.Choices.NpcOnly"),
+                pcEndOnly: game.i18n.localize("Settings.Automation.Choices.PcEndOnly"),
                 all: game.i18n.localize("Settings.Automation.Choices.All"),
             },
             default: "all",
@@ -176,12 +165,25 @@ export default class SettingsHelpers {
             type: String,
             choices: {
                 six: game.i18n.localize("Settings.DefaultEdition.Choices.six"),
-                five: game.i18n.localize(
-                    "Settings.DefaultEdition.Choices.five",
-                ),
+                five: game.i18n.localize("Settings.DefaultEdition.Choices.five"),
             },
             default: "six",
-            onChange: (value) => HEROSYS.log(false, value),
+            onChange: () => CreateHeroCompendiums(),
+            requiresReload: false,
+        });
+
+        game.settings.register(module, "StrEnd", {
+            name: game.i18n.localize("Settings.StrEnd.Name"),
+            hint: game.i18n.localize("Settings.StrEnd.Hint"),
+            scope: "world",
+            config: true,
+            type: String,
+            choices: {
+                five: game.i18n.localize("Settings.StrEnd.Choices.five"),
+                ten: game.i18n.localize("Settings.StrEnd.Choices.ten"),
+            },
+            default: "ten",
+            onChange: () => CreateHeroCompendiums(),
             requiresReload: false,
         });
 
@@ -210,9 +212,7 @@ export default class SettingsHelpers {
 
         // Keep track of last migration version
         game.settings.register(module, "lastMigration", {
-            name: game.i18n.localize(
-                "Settings.AlphaTesting.LastMigration.Name",
-            ),
+            name: game.i18n.localize("Settings.AlphaTesting.LastMigration.Name"),
             scope: "world",
             config: game.settings.get(game.system.id, "alphaTesting"),
             type: String,
@@ -333,18 +333,10 @@ class AutomationMenu extends FormApplication {
             settings,
 
             choices: {
-                none: game.i18n.localize(
-                    "Settings.AutomationPreview.Choices.None",
-                ),
-                npcOnly: game.i18n.localize(
-                    "Settings.AutomationPreview.Choices.NpcOnly",
-                ),
-                pcEndOnly: game.i18n.localize(
-                    "Settings.AutomationPreview.Choices.PcEndOnly",
-                ),
-                all: game.i18n.localize(
-                    "Settings.AutomationPreview.Choices.All",
-                ),
+                none: game.i18n.localize("Settings.AutomationPreview.Choices.None"),
+                npcOnly: game.i18n.localize("Settings.AutomationPreview.Choices.NpcOnly"),
+                pcEndOnly: game.i18n.localize("Settings.AutomationPreview.Choices.PcEndOnly"),
+                all: game.i18n.localize("Settings.AutomationPreview.Choices.All"),
             },
 
             automation,

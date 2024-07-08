@@ -20,12 +20,9 @@ export class HeroProgressBar {
         this._inProgress = true;
 
         // This is very gross reaching in and modifying the CSS while we're using the progress bar.
-        document
-            .querySelector("#loading #loading-bar")
-            .style.setProperty("white-space", "nowrap");
+        document.querySelector("#loading #loading-bar").style.setProperty("white-space", "nowrap");
 
-        const progressBarLabel =
-            document.querySelector("#loading #context").style;
+        const progressBarLabel = document.querySelector("#loading #context").style;
         progressBarLabel.setProperty("text-overflow", "ellipsis");
         progressBarLabel.setProperty("overflow", "hidden");
         progressBarLabel.setProperty("width", "0%");
@@ -60,9 +57,7 @@ export class HeroProgressBar {
                 pct: percentage,
             });
 
-            document
-                .querySelector("#loading #context")
-                .style.setProperty("width", `calc(100% - 52px)`);
+            document.querySelector("#loading #context").style.setProperty("width", `calc(100% - 52px)`);
         } else {
             this.close();
         }
@@ -74,21 +69,16 @@ export class HeroProgressBar {
             // Set the percentage to 100 which will cause foundry to fade out the progress bar.
             SceneNavigation.displayProgressBar({ label: label, pct: 100 });
 
-            document
-                .querySelector("#loading #loading-bar")
-                .style.removeProperty("white-space");
+            document.querySelector("#loading #loading-bar").style.removeProperty("white-space");
 
-            const progressBarLabel =
-                document.querySelector("#loading #context").style;
+            const progressBarLabel = document.querySelector("#loading #context").style;
             progressBarLabel.removeProperty("text-overflow");
             progressBarLabel.removeProperty("overflow");
             progressBarLabel.removeProperty("width");
 
             --HeroProgressBar.#concurrentProgressBarCount;
         } else {
-            console.warn(
-                `Progress bar ${this} close called when already closed`,
-            );
+            console.warn(`Progress bar ${this} close called when already closed`);
         }
     }
 }
