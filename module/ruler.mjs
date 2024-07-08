@@ -214,7 +214,7 @@ export class HeroRuler extends Ruler {
             }
 
             if (game.modules.get("drag-ruler")?.active) {
-                _registerDragRuler();
+                this._registerDragRuler();
             }
         }
     }
