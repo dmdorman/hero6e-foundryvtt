@@ -48,9 +48,9 @@ export class HeroRuler extends Ruler {
                         <input id="radio-${index}" name="radio" type="radio" ${
                             activeMovement === item._id ? "checked" : ""
                         }>
-                        <label for="radio-${index}" class="radio-label">${
-                            item.name
-                        } (${item.value}${getSystemDisplayUnits(relevantToken.actor.is5e)})</label>
+                        <label for="radio-${index}" class="radio-label">${item.name} (${
+                            item.value
+                        }${getSystemDisplayUnits(relevantToken.actor.is5e)})</label>
                     </div>
                 `,
                     )
@@ -183,9 +183,9 @@ export class HeroRuler extends Ruler {
 
         const label = `[${Math.round(
             getRoundedDownDistanceInSystemUnits(segmentDistance.distance, relevantActor),
-        )}${getSystemDisplayUnits(relevantActor?.is5e)}]${
-            activeMovementLabel ? `\n${activeMovementLabel}` : ""
-        }\n${rangeMod > 0 ? "-" : ""}${rangeMod} Range Modifier`;
+        )}${getSystemDisplayUnits(relevantActor?.is5e)}]${activeMovementLabel ? `\n${activeMovementLabel}` : ""}\n${
+            rangeMod > 0 ? "-" : ""
+        }${rangeMod} Range Modifier`;
 
         return label;
     }
