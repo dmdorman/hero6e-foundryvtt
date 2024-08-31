@@ -47,8 +47,6 @@ export async function onMessageRendered(html) {
 
 /// Dialog box for AttackOptions
 export async function AttackOptions(item) {
-    console.log("RWC AttackOptions(item) item:", item);
-
     const actor = item.actor;
     const token = actor.getActiveTokens()[0];
 
@@ -280,9 +278,6 @@ export async function AttackAoeToHit(item, options) {
 /// uses ../templates/chat/item-toHit-card.hbs
 /// manages die rolls and display of hit/miss results
 export async function AttackToHit(item, options) {
-    console.log("RWC AttackToHit(item, options) item:", item);
-    console.log("RWC options:", options);
-
     if (!item) {
         return ui.notifications.error(`Attack details are no longer available.`);
     }
@@ -1316,8 +1311,6 @@ async function _rollApplyKnockback(token, knockbackDice) {
 // clicked on item-attack-card2.hbs
 // Notice the chatListeners function in this file.
 export async function _onRollDamage(event) {
-    console.log("RWC _onRollDamage event:", event);
-
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kluge to fix.
     const toHitData = { ...button.dataset };
@@ -1329,7 +1322,6 @@ export async function _onRollDamage(event) {
     }
 
     const action = JSON.parse(toHitData.actiondata);
-    console.log("RWC _onRollDamage action:", action);
 
     let effectiveItem = item;
 

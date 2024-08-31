@@ -1,26 +1,20 @@
 import { calculateDistanceBetween } from "./range.mjs";
 
 export class Attack {
-
     static addMultipleAttack(data) {
         if (!data.action?.maneuver?.attackKeys?.length) {
             return false;
         }
         const index = data.action.maneuver.attackKeys.length;
         const attackKey = `attack-${index}`;
-        const itemKey = data.item.actor.items.find(
-            (item) => "STRIKE" === item.system.XMLID,
-        ).id;
-        const targetKey = data.action.targetedTokens?.length
-            ? data.action.targetedTokens[0].id
-            : "NONE";
+        const itemKey = data.item.actor.items.find((item) => "STRIKE" === item.system.XMLID).id;
+        const targetKey = data.action.targetedTokens?.length ? data.action.targetedTokens[0].id : "NONE";
         const multipleAttackKeys = { itemKey, attackKey, targetKey };
         data.action.maneuver[attackKey] = multipleAttackKeys;
         data.action.maneuver.attackKeys.push(multipleAttackKeys);
         data.formData ??= {};
         data.action.maneuver.attackKeys.forEach((attackKeys) => {
-            data.formData[`${attackKeys.attackKey}-target`] =
-                attackKeys.targetKey;
+            data.formData[`${attackKeys.attackKey}-target`] = attackKeys.targetKey;
             data.formData[attackKeys.attackKey] = attackKeys.itemKey;
         });
         return true;
@@ -32,11 +26,9 @@ export class Attack {
         }
         console.log(`trash ${attackKey}`);
         console.log(`data:`, data);
-        const indexToRemove = data.action.maneuver.attackKeys.findIndex(
-            (multipleAttackKeys) => {
-                return multipleAttackKeys.attackKey === attackKey;
-            },
-        );
+        const indexToRemove = data.action.maneuver.attackKeys.findIndex((multipleAttackKeys) => {
+            return multipleAttackKeys.attackKey === attackKey;
+        });
         data.action.maneuver.attackKeys.splice(indexToRemove, 1);
         // all the info is in the array; reconstruct the properties
         const keyToRemove = `attack-${data.action.maneuver.attackKeys.length}`;
@@ -55,15 +47,13 @@ export class Attack {
             delete data.formData[`${keyToRemove}-target`];
         }
         data.action.maneuver.attackKeys.forEach((attackKeys) => {
-            data.formData[`${attackKeys.attackKey}-target`] =
-                attackKeys.targetKey;
+            data.formData[`${attackKeys.attackKey}-target`] = attackKeys.targetKey;
             data.formData[attackKeys.attackKey] = attackKeys.itemKey;
         });
         console.log(`data:`, data);
         return true;
     }
-    
-    
+
     static getAttackerToken(item) {
         const attackerToken = item.actor.getActiveTokens()[0] || canvas.tokens.controlled[0];
         if (!attackerToken) {
@@ -106,7 +96,7 @@ export class Attack {
         }
         return 0;
     }
-    
+
     static getTargetInfo(item, targetedToken, options, system) {
         // these are the targeting data used for the attack(s)
         const target = {
@@ -117,16 +107,16 @@ export class Attack {
         target.ocv = Attack.getRangeModifier(item, target.range);
         return target;
     }
-    
+
     static getAttackInfo(item, targetedTokens, options, system) {
         const targets = [];
         for (let i = 0; i < targetedTokens.length; i++) {
-            const target =  Attack.getTargetInfo(item, targetedTokens[i], options, system);
+            const target = Attack.getTargetInfo(item, targetedTokens[i], options, system);
             targets.push(target);
         }
         const attack = {
-            itemId : item.id,
-            targets
+            itemId: item.id,
+            targets,
         };
         return attack;
     }
@@ -140,7 +130,7 @@ export class Attack {
         const maneuver = {
             attackerTokenId: system.attackerToken?.id ?? null,
             isMultipleAttack: true,
-            itemId : item.id
+            itemId: item.id,
         };
         if (options) {
             const keys = [];
@@ -157,17 +147,13 @@ export class Attack {
             }
         }
         // Initialize multiple attack to the default option values
-        maneuver.attackKeys ??= targetedTokens.map(
-            (target, index) => {
-                return {
-                    itemKey: item.actor.items.find(
-                        (item) => "STRIKE" === item.system.XMLID,
-                    ).id,
-                    attackKey: `attack-${index}`,
-                    targetKey: target.id,
-                };
-            },
-        );
+        maneuver.attackKeys ??= targetedTokens.map((target, index) => {
+            return {
+                itemKey: item.actor.items.find((item) => "STRIKE" === item.system.XMLID).id,
+                attackKey: `attack-${index}`,
+                targetKey: target.id,
+            };
+        });
         maneuver.attacks = [];
         const actor = item.actor;
         for (let i = 0; i < maneuver.attackKeys.length; i++) {
@@ -176,14 +162,8 @@ export class Attack {
             const multiAttackItem = actor.items.get(attackKeys.itemKey);
             let multiAttackTarget = system.targetedTokens.find((target) => attackKeys.targetKey === target.id);
             multiAttackTarget ??= system.targetedTokens[0];
-            maneuver.attacks.push(
-                Attack.getAttackInfo(
-                    multiAttackItem,
-                    [multiAttackTarget],
-                    options, system
-                ),
-            );
-        }        
+            maneuver.attacks.push(Attack.getAttackInfo(multiAttackItem, [multiAttackTarget], options, system));
+        }
         return maneuver;
     }
     static getHaymakerManeuverInfo(item, targetedTokens, options, system) {
@@ -192,7 +172,7 @@ export class Attack {
             attackerTokenId: system.attackerToken?.id ?? null,
             isHaymakerAttack: true,
             attacks,
-            itemId : item.id
+            itemId: item.id,
         };
     }
 
@@ -212,12 +192,12 @@ export class Attack {
         return {
             attackerTokenId: system.attackerToken?.id ?? null,
             attacks: Attack.getAttackInfo(item, targetedTokens, options, system),
-            itemId : item.id
+            itemId: item.id,
         };
     }
 
     static getCurrentManeuverInfo(maneuver, options, system) {
-        if ((options?.execute !== undefined) && maneuver.isMultipleAttack) {
+        if (options?.execute !== undefined && maneuver.isMultipleAttack) {
             const attackKey = `attack-${options.execute}`;
             const attackKeys = maneuver[attackKey];
             const maneuverItem = system.attackerToken.actor.items.get(attackKeys.itemKey);
@@ -241,14 +221,14 @@ export class Attack {
             console.error("There is no attack item!");
             return null;
         }
-        const attackerToken = Attack.getAttackerToken(item); 
+        const attackerToken = Attack.getAttackerToken(item);
         const system = {
             attackerToken,
-            currentItem : item,
-            currentTargets : targetedTokens,
+            currentItem: item,
+            currentTargets: targetedTokens,
             targetedTokens,
-            item : {},
-            token : {}
+            item: {},
+            token: {},
         };
         system.item[item.id] = item;
         system.token[attackerToken.id] = attackerToken;
