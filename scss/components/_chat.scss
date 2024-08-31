@@ -122,4 +122,121 @@
       padding-right: 0;
     }
   }
+  .note{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    .notes{
+      flex-grow: 1;
+    }
+    .error {
+      color: red;
+    }
+  }
+
+  .ellipsis-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &.attack-card {
+    table {
+      min-width: 100%;
+    }
+
+    th,
+    td {
+      width : 15%;
+    }
+    .target-name {
+    }
+    td.target-name {
+      text-align: left;
+    }
+    th:last-child {
+      border: 0;
+    }
+
+  }
+
+  .dice-formula.card-section, .card-header.attack {
+    img.more {
+      z-index: 2;
+      position: absolute;
+      right: 2px;
+      top: 6px;
+    }
+  }
+
+  .target-container {
+    display: grid;
+    width: 100%;
+    border-collapse: collapse;
+    border-top: 1px solid var(--color-border-light-tertiary);
+    border-bottom: 1px solid var(--color-border-light-tertiary);
+    margin: 0.5em 0;
+  }
+
+  .attack-options {
+    grid-template-columns: 8fr 3fr 3fr 3fr 3fr;
+  }
+
+  .multi-attack-options {
+    grid-template-columns: 8fr 8fr 1fr;
+  }
+
+  .target-info-row .target-name {
+    padding-left: 2px;
+    text-align: left;
+    width : 100%;
+  }
+
+  .target-info-header {
+    display: contents;
+    color: var(--color-text-light-highlight);
+    text-shadow: 1px 2px var(--color-shadow-dark);
+    margin: 2px;
+  }
+  .target-info-header div{
+    padding-top: 3px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--color-border-dark);
+  }
+
+  .target-container  {
+    text-align: center;
+  }
+
+  .target-container .target-info-header div{
+    font-weight: bold;
+    background-color: #696762;
+  }
+  .target-container div div{
+    margin-bottom: 1px;
+  }
+
+  .target-container .target-info-row div {
+    line-height: 2em;
+  }
+
+  .target-container .target-info-row:nth-child(odd) div {
+    background-color: #dddbd2;
+  }
+
+  .target-container .target-info-row:nth-child(even) div {
+    background-color: #cfcdc3;
+  }
+
+  .target-name {
+  }
+
+  .target-info-row {
+    display: contents;
+  }
+
+  .target-info-row div{
+    padding: 0.25em 0;
+  }  
 }

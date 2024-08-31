@@ -2,146 +2,194 @@
 <form data-actor-id="{{actor.id}}" data-item-id="{{item.id}}" data-token-id="{{token.id}}">
   <div class="hero chat-card item-card attack-card">
     <header class="card-header flexrow">
-      <img src="{{item.img}}" title="{{item.name}}" width="36" height="36" />
-      <h3 class="item-name">{{{itemName item}}}</h3>
+      <img src="{{item.img}}" title="{{action.system.currentItem.name}}" width="36" height="36" />
+      <h3 class="item-name">{{{itemName action.system.currentItem}}}</h3>
     </header>
 
-      <div class="description">
-          <b>{{{itemName item}}}
-              {{#if item.system.SFX}} ({{item.system.SFX}}){{/if}}
-          </b>: {{item.system.description}}
-      </div>
-
-    {{!-- Aim (hit location) form group --}}
-    <div class="form-group" {{#unless useHitLoc}}style="display: none;"{{/unless}}>
-      <label>Aim</label>
-      <select name="aim" id="aim">
-        <option value="none">None</option>
-        {{#each hitLoc as |hitLoc key|}}
-          <option value={{key}}{{#if (eq key @root/aim)}} selected{{/if}}>{{key}}</option>
-        {{/each}}
-      </select>
+    <div class="description">
+        <b>{{{itemName action.system.currentItem}}}
+            {{#if action.system.currentItem.system.SFX}} ({{action.system.currentItem.system.SFX}}){{/if}}
+        </b>: {{action.system.currentItem.system.description}}
     </div>
+    {{!-- BEGIN multiple-attack-section --}}
+    <div class="multiple-attack-section" {{#unless action.current.isMultipleAttack}} style="display: none;"{{/unless}}>  
+      {{!-- multiple attack selection --}}
+      <div class="form-group">
+        <div class="multi-attack-options target-container">
+          <div class="target-info-header">
+            {{!-- could probably do this as an #each and pass it in if there are variations --}}
+            <div>Target</div>
+            <div>Attack</div>
+            <div>+/-</div>
+          </div>
 
-    {{!-- Aim side (hit location side) form group --}}
-    <div class="form-group" {{#unless hitLocSide}}style="display: none;"{{/unless}}>
-      <label>Aim Side</label>
-      <select name="aimSide" id="aimSide">
-        <option value="none">None</option>
-        {{#each hitLocSide as |hitLocSide key|}}
-          <option value={{key}}{{#if (eq key @root/aimSide)}} selected{{/if}}>{{key}}</option>
-        {{/each}}
-      </select>
+          {{#each action.maneuver.attackKeys as |multiAttack index|}}
+            <div class="target-info-row">
+              <select class="ellipsis-text target-name" name="{{multiAttack.attackKey}}-target" id="{{multiAttack.attackKey}}-target">
+                {{#each @root/targets as |target|}}
+                  <option value={{target.id}} {{#if (eq target.id multiAttack.targetKey)}}selected{{/if}}>{{target.name}}</option>
+                {{/each}}
+              </select>
+              <select name="{{multiAttack.attackKey}}" id="{{multiAttack.attackKey}}">
+                {{!-- keep strike at top --}}
+                {{#each @root/actor.items as |item|}}
+                  {{#if (eq item.system.XMLID "STRIKE")}}
+                    <option value={{item.id}}{{#if (eq item.id multiAttack.itemKey)}} selected{{/if}}>{{{itemName item}}}</option>
+                  {{/if}}
+                {{/each}}
+                {{#each @root/actor.items as |item|}}
+                  {{#if (or (eq item.type "attack") (and (ne item.type "maneuver") (eq item.system.subType "attack")))}}
+                    <option value={{item.id}}{{#if (eq item.id multiAttack.itemKey)}} selected{{/if}}>{{item.name}}</option>
+                  {{/if}}
+                {{/each}}
+              </select>
+              <label>
+                {{#if (eq index 0)}}
+                  <span class="fas fa-plus add-multiattack"></span>
+                {{else}}
+                  <span class="fas fa-trash trash-multiattack " data-multiattack="{{multiAttack.attackKey}}"></span>
+                {{/if}}
+              </label>
+            </div>
+          {{/each}}
+        </div>
+      </div>
     </div>
-
-    {{!-- Penalty skill levels --}}
-    <div class="description" {{#unless PENALTY_SKILL_LEVELS}}style="display: none;"{{/unless}}>
-      <b>{{PENALTY_SKILL_LEVELS.name}}
-        {{#if PENALTY_SKILL_LEVELS.system.SFX}} ({{PENALTY_SKILL_LEVELS.system.SFX}}){{/if}}
-      </b>: {{PENALTY_SKILL_LEVELS.system.description}}
-    </div>
-
-    <div class="form-group" {{#unless PENALTY_SKILL_LEVELS}}style="display: none;"{{/unless}}>
-      <label>Use Penalty Skill Levels</label>
-      <input class="item-toggle" name="usePsl" type="checkbox" {{checked usePsl}} data-dtype="Boolean" />
-    </div>
-
-    {{#if mindScanChoices}}
-          <div class="form-group">
-        <label>{{localize "Items.Attack.OmcvMod"}}</label>
-        <input type="text" name="omcvMod" value="{{omcvMod}}" />
+    {{!-- END multiple-attack-section --}}
+    {{!-- BEGIN standard-attack-section --}}
+    <div class="standard-attack-section" {{#if (or action.current.isMultipleAttack action.current.isHaymakerAttack) }}style="display: none;"{{/if}} >
+      {{!-- Aim (hit location) form group --}}
+      <div class="form-group" {{#unless useHitLoc}}style="display: none;"{{/unless}}>
+        <label>Aim</label>
+        <select name="aim" id="aim">
+          <option value="none">None</option>
+          {{#each hitLoc as |hitLoc key|}}
+            <option value={{key}}{{#if (eq key @root/aim)}} selected{{/if}}>{{key}}</option>
+          {{/each}}
+        </select>
       </div>
 
-      <div class="form-group">
-        <label>{{localize "Items.Attack.DmcvMod"}}</label>
-        <input type="text" name="dmcvMod" value="{{dmcvMod}}" />
-      </div>
-    {{else}}
-      <div class="form-group">
-        <label>{{localize "Items.Attack.OcvMod"}}</label>
-        <input type="text" name="ocvMod" value="{{ocvMod}}" />
+      {{!-- Aim side (hit location side) form group --}}
+      <div class="form-group" {{#unless hitLocSide}}style="display: none;"{{/unless}}>
+        <label>Aim Side</label>
+        <select name="aimSide" id="aimSide">
+          <option value="none">None</option>
+          {{#each hitLocSide as |hitLocSide key|}}
+            <option value={{key}}{{#if (eq key @root/aimSide)}} selected{{/if}}>{{key}}</option>
+          {{/each}}
+        </select>
       </div>
 
-      <div class="form-group">
-        <label>{{localize "Items.Attack.DcvMod"}}</label>
-        <input type="text" name="dcvMod" value="{{dcvMod}}" />
+      {{!-- Penalty skill levels --}}
+      <div class="description" {{#unless PENALTY_SKILL_LEVELS}}style="display: none;"{{/unless}}>
+        <b>{{PENALTY_SKILL_LEVELS.name}}
+          {{#if PENALTY_SKILL_LEVELS.system.SFX}} ({{PENALTY_SKILL_LEVELS.system.SFX}}){{/if}}
+        </b>: {{PENALTY_SKILL_LEVELS.system.description}}
       </div>
-    {{/if}}
 
-    {{#if showVelocity}}
-      <div class="form-group">
-        <label>{{localize "Items.Attack.Velocity"}} ({{velocitySystemUnits}}/phase)</label>
-        <input type="text" name="velocity" value="{{velocity}}"
-          title="Typically you assume a starting velocity of 0, accelerate up to half your full move, then decelerate back to a 0 velocity.  A character can accelerate at a rate of 5m per meter.  If the Drag Ruler module is enabled, combat has started, and token has moved on its phase, then a velocity estimate is provided.  A simplistic solution is to assume velocity is equal to the movement speed." />
+      <div class="form-group" {{#unless PENALTY_SKILL_LEVELS}}style="display: none;"{{/unless}}>
+        <label>Use Penalty Skill Levels</label>
+        <input class="item-toggle" name="usePsl" type="checkbox" {{checked usePsl}} data-dtype="Boolean" />
       </div>
-    {{/if}}
 
-    {{#if (gt item.system.LEVELS 1)}}
+      {{#if mindScanChoices}}
         <div class="form-group">
-        <label>Effective Levels</label>
-        <div class="noflexwrap">
-        <input type="text" name="effectiveLevels" value="{{effectiveLevels}}" />
-        <label>/ {{item.system.LEVELS}}</label>
+          <label>{{localize "Items.Attack.OmcvMod"}}</label>
+          <input type="text" name="omcvMod" value="{{omcvMod}}" />
         </div>
-      </div>
-    {{/if}}
 
-
-    {{#if (or item.system.usesStrength item.system.usesTk)}}
-      <div class="form-group">
-        <label>Effective Strength</label>
-        <div class="noflexwrap">
-        <input type="text" name="effectiveStr" value="{{effectiveStr}}" />
-        <label>/ {{str}}</label>
+        <div class="form-group">
+          <label>{{localize "Items.Attack.DmcvMod"}}</label>
+          <input type="text" name="dmcvMod" value="{{dmcvMod}}" />
         </div>
-      </div>
-    {{/if}}
+      {{else}}
+        <div class="form-group">
+          <label>{{localize "Items.Attack.OcvMod"}}</label>
+          <input type="text" name="ocvMod" value="{{ocvMod}}" />
+        </div>
 
-    {{#if boostableCharges}}
-      <div class="form-group">
-        <label>Boostable ({{boostableCharges}})</label>
-        <input type="text" name="boostableCharges" value="0" />
-        
-      </div>
-    {{/if}}
+        <div class="form-group">
+          <label>{{localize "Items.Attack.DcvMod"}}</label>
+          <input type="text" name="dcvMod" value="{{dcvMod}}" />
+        </div>
+      {{/if}}
 
-    {{#if mindScanChoices}}
-      <div class="form-group">
-        <label>Number of Minds</label>
-        <select name="mindScanMinds" data-dtype="text">
-          {{selectOptions mindScanChoices nameAttr="key" labelAttr="label" selected=mindScanMinds}}
-        </select>
-      </div>
+      {{#if showVelocity}}
+        <div class="form-group">
+          <label>{{localize "Items.Attack.Velocity"}} ({{velocitySystemUnits}}/phase)</label>
+          <input type="text" name="velocity" value="{{velocity}}"
+                 title="Typically you assume a starting velocity of 0, accelerate up to half your full move, then decelerate back to a 0 velocity.  A character can accelerate at a rate of 5m per meter.  If the Drag Ruler module is enabled, combat has started, and token has moved on its phase, then a velocity estimate is provided.  A simplistic solution is to assume velocity is equal to the movement speed." />
+        </div>
+      {{/if}}
 
-      <div class="form-group">
-        <label>Familiar Mind</label>
-        <select name="mindScanFamiliar" data-dtype="text">
-          {{selectOptions mindScanFamiliarOptions nameAttr="key" labelAttr="label" selected=mindScanFamiliar}}
-        </select>
-      </div>
-    {{/if}}
+      {{#if (gt item.system.LEVELS 1)}}
+        <div class="form-group">
+          <label>Effective Levels</label>
+          <div class="noflexwrap">
+            <input type="text" name="effectiveLevels" value="{{effectiveLevels}}" />
+            <label>/ {{item.system.LEVELS}}</label>
+          </div>
+        </div>
+      {{/if}}
 
-    {{#each csls}}
-       <div class="form-group">
+
+      {{#if (or item.system.usesStrength item.system.usesTk)}}
+        <div class="form-group">
+          <label>Effective Strength</label>
+          <div class="noflexwrap">
+            <input type="text" name="effectiveStr" value="{{effectiveStr}}" />
+            <label>/ {{str}}</label>
+          </div>
+        </div>
+      {{/if}}
+
+      {{#if boostableCharges}}
+        <div class="form-group">
+          <label>Boostable ({{boostableCharges}})</label>
+          <input type="text" name="boostableCharges" value="0" />
+
+        </div>
+      {{/if}}
+
+      {{#if mindScanChoices}}
+        <div class="form-group">
+          <label>Number of Minds</label>
+          <select name="mindScanMinds" data-dtype="text">
+            {{selectOptions mindScanChoices nameAttr="key" labelAttr="label" selected=mindScanMinds}}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Familiar Mind</label>
+          <select name="mindScanFamiliar" data-dtype="text">
+            {{selectOptions mindScanFamiliarOptions nameAttr="key" labelAttr="label" selected=mindScanFamiliar}}
+          </select>
+        </div>
+      {{/if}}
+
+      {{#each csls}}
+        <div class="form-group">
           <label title="{{{this.cslSkill.system.description}}}">
             {{this.cslSkill.name}}
             {{#if (ne this.cslSkill.name "Combat Skill Levels")}}
-                (CSL)
+              (CSL)
             {{/if}}
-        </label>
-        <div class="form-fields combat-skill-levels">
-          <ol>
-            {{#each this.csl}}
-            <li>
-              {{radioBoxes this.name ../cslChoices checked=this.value localize=true}}
-            </li>
-            {{/each}}
-          </ol>
+          </label>
+          <div class="form-fields combat-skill-levels">
+            <ol>
+              {{#each this.csl}}
+                <li>
+                  {{radioBoxes this.name ../cslChoices checked=this.value localize=true}}
+                </li>
+              {{/each}}
+            </ol>
 
+          </div>
         </div>
-      </div>
-    {{/each}}
+      {{/each}}
 
+    </div>
+    {{!-- END standard-attack-section --}}
   </div>
 
   {{!-- Conditional attack selection. DEADLY BLOW --}}
@@ -160,14 +208,16 @@
         </table>
     </div>
 
+  
+  
   <footer class="sheet-footer flexcol">
-    {{#if (gt targets.length 0)}}
+    {{#if (gt action.system.currentTargets.length 0)}}
       <div class="form-group">
-        <label >Targets</label>
+        <label >Target{{#if (gt action.system.currentTargets.length 1)}}s{{/if}}</label>
         <div>
           <ul>
-            {{#each targets}}
-              <li>{{this.name}}</li>       
+            {{#each action.system.currentTargets  as |target|}}
+              <li>{{target.name}}</li>       
             {{/each}}
           </ul>
         </div>
@@ -195,6 +245,15 @@
       </div>
     {{/if}}
 
+    {{#if cannotAttack}}
+      <div>
+        <p class="hero-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          <i>{{cannotAttack}}</i>
+        </p>
+      </div>
+    {{/if}}
+    
     {{#if mindScanChoices}}
     {{/if}}
 
@@ -204,12 +263,27 @@
       </button>
     {{/if}}
 
-    <button type="submit" name="roll" >
-      {{#if aoeText}}
-        Roll Placement
-      {{else}}
-        Roll to Hit
+    {{#if action.maneuver.isMultipleAttack}}
+      <button type="submit" name="executeMultiattack"  {{#unless action.maneuver.attack-1}}disabled
+              title="The Multiple Attack is not set up." {{/unless}}>      {{!-- TODO: this needs to be more rigorous --}}
+        {{#if action.current.isMultipleAttack}}
+          Begin Multiple Attacks
+        {{else}}
+          Continue Multiple Attacks
+        {{/if}}
+      </button>
+      {{#if (ne action.maneuver.isMultipleAttack action.current.isMultipleAttack)}}
+        <button type="submit" name="cancelMultiattack">
+          Cancel Remaining Multiple Attacks
+        </button>
       {{/if}}
-    </button>
+    {{else}}
+      <button type="submit" name="roll" {{#if rollHide}}
+              disabled title="You must select at least 1 target token, preferably by using the AOE template." {{/if}} >
+        {{#if aoeText}}Roll Placement{{else}}Roll to Hit{{/if}}
+        {{#if cannotAttack}} Anyway{{/if}}
+      </button>
+    {{/if}}
+    
   </footer>
 </form>

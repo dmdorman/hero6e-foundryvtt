@@ -12,7 +12,9 @@ const heroAoeTypeToFoundryAoeTypeConversions = {
     radius: "circle",
     surface: "rect",
 };
-// uses ../templates/attack/item-attack-application.hbs
+/* *
+* uses ../templates/attack/item-attack-application.hbs
+* */
 export class ItemAttackFormApplication extends FormApplication {
     constructor(data) {
         super();
@@ -208,11 +210,39 @@ export class ItemAttackFormApplication extends FormApplication {
             data.targets,
             data.formData, // use formdata to include player options from the form
         );
+        
+        // todo: this doesn't seem to update when the card does, so pick a title and stick with it
+        if(data.action.maneuver.isMultipleAttack){
+            this.options.title = `${this.data?.item?.actor?.name} multiple attack.`;
+        }
+        else if(data.action.maneuver.isHaymakerAttack){
+            this.options.title = `${this.data?.item?.actor?.name} haymaker attack.`;
+        } else {
+            this.options.title = `${this.data?.item?.actor?.name} select attack options and roll to hit`;
+        }
         return data;
     }
 
     activateListeners(html) {
         super.activateListeners(html);
+        // add to multiattack
+        html.find(".add-multiattack").click(this._onAddMultiAttack.bind(this));
+        html.find(".trash-multiattack").click(
+            this._onTrashMultiAttack.bind(this),
+        );
+    }
+
+    async _onAddMultiAttack() {
+        if (Attack.addMultipleAttack(this.data)) {
+            this.render();
+        }
+    }
+
+    async _onTrashMultiAttack(event) {
+        const multipleAttackKey = event.target.dataset.multiattack;
+        if (Attack.trashMultipleAttack(this.data, multipleAttackKey)) {
+            this.render();
+        }
     }
 
     async _render(...args) {
@@ -225,6 +255,7 @@ export class ItemAttackFormApplication extends FormApplication {
     }
 
     async _updateObject(event, formData) {
+        // changes to the form pass through here        
         if (event.submitter?.name === "roll") {
             canvas.tokens.activate();
             await this.close();
@@ -236,11 +267,46 @@ export class ItemAttackFormApplication extends FormApplication {
 
             return _processAttackOptions(this.data.item, formData);
         }
+        this.data.formData ??= {};
+        if (event.submitter?.name === "executeMultiattack") {
+            const begin = this.data.action.current.execute === undefined;
+            // we pressed the button to execute multiple attacks
+            // the first time does not get a roll, but sets up the first attack
+            if (begin) {
+                this.data.formData.execute = 0;
+            } else {
+                // the subsequent presses will roll the attack and set up the next attack
 
+                // this is the roll:
+                await _processAttackOptions(this.data.item, this.data.formData);
+                this.data.formData.execute =
+                    this.data.action.current.execute + 1;
+            }
+            const end =
+                this.data.formData.execute >=
+                this.data.action.maneuver.attackKeys.length;
+            // this is the last step
+            if (end) {
+                canvas.tokens.activate();
+                await this.close();
+            } else {
+                return await new ItemAttackFormApplication(this.data).render(
+                    true,
+                );
+            }
+        }
+
+        if (event.submitter?.name === "cancelMultiattack") {
+            canvas.tokens.activate();
+            await this.close();
+            return;
+        }
         if (event.submitter?.name === "aoe") {
             return this._spawnAreaOfEffect(this.data);
         }
-
+        // collect the changed data; all of these changes can go into get data
+        this.data.formData = {...this.data.formData, ...formData };
+        
         this._updateCsl(event, formData);
 
         this.data.aim = formData.aim;
