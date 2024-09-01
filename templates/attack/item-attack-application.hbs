@@ -1,4 +1,4 @@
-{{ log 'HEROSYS ITEM ATTACK APPLICATION CARD' this }}
+{{ log 'HEROSYS ITEM ATTACK APPLICATION CARD item-attack-application' this }}
 <form data-actor-id="{{actor.id}}" data-item-id="{{item.id}}" data-token-id="{{token.id}}">
   <div class="hero chat-card item-card attack-card">
     <header class="card-header flexrow">
@@ -9,13 +9,19 @@
     <div class="description">
         <b>{{{itemName action.system.currentItem}}}
             {{#if action.system.currentItem.system.SFX}} ({{action.system.currentItem.system.SFX}}){{/if}}
-        </b>: {{action.system.currentItem.system.description}}
+        </b>: {{action.system.currentItem.system.description}} {{action.current.step}}
     </div>
     {{!-- BEGIN multiple-attack-section --}}
     <div class="multiple-attack-section" {{#unless action.current.isMultipleAttack}} style="display: none;"{{/unless}}>  
       {{!-- multiple attack selection --}}
+      {{#if action.current.missed}}
+        <div>Attack number {{action.current.missed.execute}} missed {{action.current.missed.targetName}} with {{action.current.missed.itemName}} in a multiple attack: (todo:)remaining attacks forfeit END and charges to no effect.</div>
+      {{/if}}
       <div class="form-group">
         <div class="multi-attack-options target-container">
+
+          
+          
           <div class="target-info-header">
             {{!-- could probably do this as an #each and pass it in if there are variations --}}
             <div>Target</div>
@@ -25,12 +31,12 @@
 
           {{#each action.maneuver.attackKeys as |multiAttack index|}}
             <div class="target-info-row">
-              <select class="ellipsis-text target-name" name="{{multiAttack.attackKey}}-target" id="{{multiAttack.attackKey}}-target">
+              <select class="ellipsis-text target-name" name="{{multiAttack.attackKey}}-target" id="{{multiAttack.attackKey}}-target" {{#if @root/action.current.missed}}disabled{{/if}} >
                 {{#each @root/targets as |target|}}
                   <option value={{target.id}} {{#if (eq target.id multiAttack.targetKey)}}selected{{/if}}>{{target.name}}</option>
                 {{/each}}
               </select>
-              <select name="{{multiAttack.attackKey}}" id="{{multiAttack.attackKey}}">
+              <select name="{{multiAttack.attackKey}}" id="{{multiAttack.attackKey}}" {{#if @root/action.current.missed}}disabled{{/if}}>
                 {{!-- keep strike at top --}}
                 {{#each @root/actor.items as |item|}}
                   {{#if (eq item.system.XMLID "STRIKE")}}
@@ -45,9 +51,9 @@
               </select>
               <label>
                 {{#if (eq index 0)}}
-                  <span class="fas fa-plus add-multiattack"></span>
+                  <span class="fas fa-plus {{#unless @root/action.current.missed}}add-multiattack{{/unless}}" > </span>
                 {{else}}
-                  <span class="fas fa-trash trash-multiattack " data-multiattack="{{multiAttack.attackKey}}"></span>
+                  <span class="fas fa-trash {{#unless @root/action.current.missed}}trash-multiattack{{/unless}}" data-multiattack="{{multiAttack.attackKey}}" ></span>
                 {{/if}}
               </label>
             </div>
@@ -277,14 +283,23 @@
     {{/if}}
 
     {{#if action.maneuver.isMultipleAttack}}
-      <button type="submit" name="executeMultiattack"  {{#unless action.maneuver.attack-1}}disabled
-              title="The Multiple Attack is not set up." {{/unless}}>      {{!-- TODO: this needs to be more rigorous --}}
-        {{#if action.current.isMultipleAttack}}
-          Begin Multiple Attacks
-        {{else}}
-          Continue Multiple Attacks
-        {{/if}}
-      </button>
+
+      {{#if action.current.missed}}
+        <button type="submit" name="missedMultiattack"  >
+            Missed After {{action.current.missed.execute}} Attack
+        </button>
+      {{else}}
+        <button type="submit" name="executeMultiattack"  {{#unless action.maneuver.attack-1}}disabled
+                title="The Multiple Attack is not set up." {{/unless}}>      {{!-- TODO: this needs to be more rigorous --}}
+          {{#if action.current.isMultipleAttack}}
+            Begin Multiple Attacks
+          {{else}}
+            Continue Multiple Attacks
+          {{/if}}
+        </button>
+      {{/if}}
+      
+      
       {{#if (ne action.maneuver.isMultipleAttack action.current.isMultipleAttack)}}
         <button type="submit" name="cancelMultiattack">
           Cancel Remaining Multiple Attacks

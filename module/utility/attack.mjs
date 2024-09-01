@@ -105,12 +105,14 @@ export class Attack {
         // these are the targeting data used for the attack(s)
         const target = {
             targetId: targetedToken.id,
-            ocvModifiers : [],
+            ocvModifiers: [],
             results: [], // todo: for attacks that roll one effect and apply to multiple targets do something different here
         };
         target.range = canvas.grid.measureDistance(system.attackerToken, targetedToken, { gridSpaces: true });
-        
-        target.ocvModifiers.push(Attack.makeOcvModifier(Attack.getRangeModifier(item, target.range), 'RANGE', "Range Mod"));
+
+        target.ocvModifiers.push(
+            Attack.makeOcvModifier(Attack.getRangeModifier(item, target.range), "RANGE", "Range Mod"),
+        );
         return target;
     }
 
@@ -123,7 +125,7 @@ export class Attack {
         const attack = {
             itemId: item.id,
             targets,
-            ocvModifiers : {}
+            ocvModifiers: {},
         };
         return attack;
     }
@@ -208,14 +210,38 @@ export class Attack {
 
     static getCurrentManeuverInfo(maneuver, options, system) {
         if (options?.execute !== undefined && maneuver.isMultipleAttack) {
-            const attackKey = `attack-${options.execute}`;
+            let lastAttackHit = true;
+            options?.rolledResult?.forEach((roll) => {
+                console.log("roll result:", roll.result.hit);
+                if (roll.result.hit === "Miss") {
+                    lastAttackHit = false;
+                }
+            });
+            let execute = options.execute;
+            if (lastAttackHit === false) {
+                const attackKey = `attack-${execute - 1}`;
+                const attackKeys = maneuver[attackKey];
+                const maneuverItem = system.attackerToken.actor.items.get(attackKeys.itemKey);
+                const maneuverTarget = system.targetedTokens.find((token) => token.id === attackKeys.targetKey);
+                maneuver.missed = {
+                    execute,
+                    targetName: maneuverTarget.name,
+                    itemName: maneuverItem.name,
+                };
+                console.log(
+                    `RWC attack number ${execute} missed ${maneuver.missed.targetName} with ${maneuver.missed.itemName} in a multiple attack: remaining attacks forfeit END and charges to no effect`,
+                );
+
+                return maneuver;
+            }
+            const attackKey = `attack-${execute}`;
             const attackKeys = maneuver[attackKey];
             const maneuverItem = system.attackerToken.actor.items.get(attackKeys.itemKey);
             const maneuverTarget = system.targetedTokens.find((token) => token.id === attackKeys.targetKey);
             const current = this.getManeuverInfo(maneuverItem, [maneuverTarget], options, system);
-
-            current.execute = options.execute;
+            current.execute = execute;
             current.step = attackKey;
+
             // avoid saving forge objects, except in system
             system.item[maneuverItem.id] = maneuverItem;
             system.currentItem = maneuverItem;
@@ -228,7 +254,7 @@ export class Attack {
             // current.attacks.forEach((attack)=>{ attack.targets.forEach((target)=>{
             //     current.ocvModifiers = [].concat(current.ocvModifiers, target.ocvModifiers );
             // }); });
-            current.ocvModifiers.push( Attack.makeOcvModifier(maneuver.ocvMod, xmlid, multipleAttackItem.name) );
+            current.ocvModifiers.push(Attack.makeOcvModifier(maneuver.ocvMod, xmlid, multipleAttackItem.name));
             return current;
         }
         return maneuver;

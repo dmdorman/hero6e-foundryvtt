@@ -205,6 +205,7 @@ export class ItemAttackFormApplication extends FormApplication {
             };
             item.system.conditionalAttacks[DEADLYBLOW.id].checked ??= true;
         }
+
         data.action = Attack.getActionInfo(
             data.item,
             data.targets,
@@ -286,9 +287,14 @@ export class ItemAttackFormApplication extends FormApplication {
                 return await new ItemAttackFormApplication(this.data).render(true);
             }
         }
-
+        if (event.submitter?.name === "missedMultiattack") {
+            // TODO: charge user the end cost for the remaining attacks
+            canvas.tokens.activate();
+            await this.close();
+            return;
+        }
         if (event.submitter?.name === "cancelMultiattack") {
-            // TODO: saves the end cost for the remainding attacks
+            // TODO: saves the end cost for the remaining attacks
             canvas.tokens.activate();
             await this.close();
             return;

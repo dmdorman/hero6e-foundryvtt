@@ -117,7 +117,6 @@ export async function AttackOptions(item) {
 }
 
 export async function _processAttackOptions(item, formData) {
-    
     if (item.getAoeModifier()) {
         await AttackAoeToHit(item, formData);
     }
@@ -286,7 +285,7 @@ export async function AttackToHit(item, options) {
     console.log("RWC AttackToHit action:", action);
     item = action.system.item[action.current.itemId];
     const targets = action.system.currentTargets;
-    
+
     const actor = item.actor;
     let effectiveItem = item;
 
@@ -405,10 +404,9 @@ export async function AttackToHit(item, options) {
     let dcv = parseInt(item.system.dcv || 0);
     let dmcv = parseInt(item.system.dmcv || 0);
 
-    action.current.ocvModifiers.forEach( (ocvModifier)=>{
+    action.current.ocvModifiers.forEach((ocvModifier) => {
         heroRoller.addNumber(ocvModifier.ocvMod, ocvModifier.name);
     });
-
 
     // Combat Skill Levels
     for (const csl of CombatSkillLevelsForAttack(item)) {
@@ -491,7 +489,7 @@ export async function AttackToHit(item, options) {
         }
     }
 
-    heroRoller.addDice(-3); // ??? 
+    heroRoller.addDice(-3); // ???
 
     const autofire = item.findModsByXmlid("AUTOFIRE");
     const autoFireShots = autofire ? parseInt(autofire.OPTION_ALIAS.match(/\d+/)) : 0;
@@ -913,7 +911,9 @@ export async function AttackToHit(item, options) {
             ?.label.match(/[\d,]+/)?.[0],
         action,
     };
-
+    console.log("RWC store rolled result in options");
+    options.rolledResult = targetData;
+    console.log("RWC store rolled result in options:", options.rolledResult);
     action.system = {}; // clear out any system information that would interfere with parsing
     cardData.actionData = JSON.stringify(action);
 
