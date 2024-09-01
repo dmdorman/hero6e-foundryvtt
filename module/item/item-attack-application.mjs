@@ -263,6 +263,8 @@ export class ItemAttackFormApplication extends FormApplication {
         }
         this.data.formData ??= {};
         if (event.submitter?.name === "executeMultiattack") {
+            console.log("RWC executeMultiattack action:", this.data.action);
+
             const begin = this.data.action.current.execute === undefined;
             // we pressed the button to execute multiple attacks
             // the first time does not get a roll, but sets up the first attack

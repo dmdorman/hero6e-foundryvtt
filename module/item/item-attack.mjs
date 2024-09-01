@@ -287,9 +287,10 @@ export async function AttackToHit(item, options) {
     }
 
     const action = Attack.getActionInfo(item, Array.from(game.user.targets), options);
+    console.log("RWC AttackToHit action:", action);
     item = action.system.item[action.current.itemId];
     const targets = action.system.currentTargets;
-
+    
     const actor = item.actor;
     let effectiveItem = item;
 
