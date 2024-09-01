@@ -261,7 +261,7 @@ export class ItemAttackFormApplication extends FormApplication {
             return _processAttackOptions(this.data.item, formData);
         }
         this.data.formData ??= {};
-      if (event.submitter?.name === "executeMultiattack") {
+        if (event.submitter?.name === "executeMultiattack") {
             console.log("RWC executeMultiattack action:", this.data.action);
 
             const begin = this.data.action.current.execute === undefined;
