@@ -404,7 +404,7 @@ export async function AttackToHit(item, options) {
     let dcv = parseInt(item.system.dcv || 0);
     let dmcv = parseInt(item.system.dmcv || 0);
 
-    action.current.ocvModifiers.forEach((ocvModifier) => {
+    action.current.ocvModifiers?.forEach((ocvModifier) => {
         heroRoller.addNumber(ocvModifier.ocvMod, ocvModifier.name);
     });
 
