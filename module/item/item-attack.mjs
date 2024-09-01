@@ -116,7 +116,7 @@ export async function AttackOptions(item) {
     await new ItemAttackFormApplication(data).render(true);
 }
 
-export async function _processAttackOptions(item, formData) {
+export async function processAttackOptions(item, formData) {
     if (item.getAoeModifier()) {
         await AttackAoeToHit(item, formData);
     } else {
@@ -280,9 +280,7 @@ export async function AttackAoeToHit(item, options) {
 /// At this point the user has _committed_ to the attack that they
 /// chose with the die-roll icon and adjusted with the Attack Options
 /// menu.
-/// there was a die roll, and we display the attack to hit results
-/// This is a fine place to activate any effects that are imposed by this attack maneuver,
-/// including setting the combat skill levels in ocv and dcv
+/// There was a die roll, and we display the attack to hit results.
 export async function AttackToHit(item, options) {
     if (!item) {
         return ui.notifications.error(`Attack details are no longer available.`);
@@ -375,11 +373,7 @@ export async function AttackToHit(item, options) {
         }
 
         const target = targets.first();
-        const distance = token
-            ? canvas.grid.measureDistance(token, target, {
-                  gridSpaces: true,
-              })
-            : 0;
+        const distance = token ? calculateDistanceBetween(token, target) : 0;
         const rangePenalty = -calculateRangePenaltyFromDistanceInMetres(distance);
 
         // PENALTY_SKILL_LEVELS (range)
@@ -429,6 +423,10 @@ export async function AttackToHit(item, options) {
         dcv -= 4;
     }
 
+
+    /// This is a fine place to activate any effects that are imposed by this attack maneuver:
+    /// here we just set whatever dcv mod determined above as an effect. 
+    /// todo: we'll want to change this to make an effect for each cv mod and apply them in a way that can be better displayed
     if (dcv != 0 || dmcv != 0) {
         // Make sure we don't already have this activeEffect
         let prevActiveEffect = Array.from(item.actor.allApplicableEffects()).find((o) => o.origin === item.uuid);
@@ -951,6 +949,13 @@ export async function AttackToHit(item, options) {
     await ChatMessage.create(chatData);
     return;
 }
+
+// given that actor's action, apply one or more effects that will modify the actor's OCV & DCV
+// according to their current action.
+// This includes all combat skill levels, overall levels, specific levels
+// multiple attacks / haymaker / brace
+
+function makeActionActiveEffect(){}
 
 function getAttackTags(item) {
     // Attack Tags

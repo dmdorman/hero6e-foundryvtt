@@ -1129,7 +1129,9 @@ export class HeroSystem6eItem extends Item {
         if (!item.actor) {
             return;
         }
-
+        if(item.system.XMLID === "MULTIPLEATTACK"){
+            console.log("RWC MULTIPLEATTACK");
+        }
         // showToggle
         const itemEffects = item.effects.find(() => true);
         if (itemEffects) {
@@ -1162,7 +1164,9 @@ export class HeroSystem6eItem extends Item {
                 item.system.childIdx = `${item.parentItem.system.childIdx}.${item.system.childIdx}`;
             }
         }
-
+        if(item.system.XMLID === "MULTIPLEATTACK"){
+            console.log("RWC MULTIPLEATTACK");
+        }
         // Endurance
         item.system.endEstimate = parseInt(item.system.end) || 0;
 
@@ -3861,6 +3865,9 @@ export class HeroSystem6eItem extends Item {
 
         const xmlid = this.system.XMLID;
 
+        if(xmlid === "MULTIPLEATTACK"){
+            console.log("RWC MULTIPLEATTACK");
+        }
         // Name
         let description = this.system.ALIAS;
         let name = this.system.NAME || description || this.system.name || this.name;
@@ -3876,6 +3883,7 @@ export class HeroSystem6eItem extends Item {
         const input = this.system.INPUT;
 
         const ocv = parseInt(this.system.OCV) || 0;
+        // todo: right here any "1/2" DCV get turned into "1" dcv
         const dcv = parseInt(this.system.DCV) || 0;
 
         // Check if TELEKINESIS + WeaponElement (BAREHAND) + EXTRADC  (WillForce)

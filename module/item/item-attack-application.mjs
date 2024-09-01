@@ -1,5 +1,5 @@
 import { CombatSkillLevelsForAttack } from "../utility/damage.mjs";
-import { _processAttackOptions } from "../item/item-attack.mjs";
+import { processAttackOptions } from "../item/item-attack.mjs";
 import { convertSystemUnitsToMetres, getSystemDisplayUnits } from "../utility/units.mjs";
 import { HEROSYS } from "../herosystem6e.mjs";
 import { Attack } from "../utility/attack.mjs";
@@ -227,17 +227,17 @@ export class ItemAttackFormApplication extends FormApplication {
     activateListeners(html) {
         super.activateListeners(html);
         // add to multiattack
-        html.find(".add-multiattack").click(this._onAddMultiAttack.bind(this));
-        html.find(".remove-multiattack").click(this._onRemoveMultipleAttack.bind(this));
+        html.find(".add-multiattack").click(this._onAddAttackToMultipleAttackManeuver.bind(this));
+        html.find(".remove-multiattack").click(this._onRemoveAttackFromMultipleAttackManeuver.bind(this));
     }
 
-    async _onAddMultiAttack() {
+    async _onAddAttackToMultipleAttackManeuver() {
         if (Attack.addMultipleAttack(this.data)) {
             this.render();
         }
     }
 
-    async _onRemoveMultipleAttack(event) {
+    async _onRemoveAttackFromMultipleAttackManeuver(event) {
         const multipleAttackKey = event.target.dataset.multiattack;
         if (Attack.removeMultipleAttack(this.data, multipleAttackKey)) {
             this.render();
@@ -259,7 +259,7 @@ export class ItemAttackFormApplication extends FormApplication {
             canvas.tokens.activate();
             await this.close();
 
-            return _processAttackOptions(this.data.item, formData);
+            return processAttackOptions(this.data.item, formData);
         }
         this.data.formData ??= {};
         if (event.submitter?.name === "executeMultiattack") {
@@ -273,7 +273,7 @@ export class ItemAttackFormApplication extends FormApplication {
                 // TODO: if any roll misses, the multiattack ends, and the end cost for the remainding attacks are forfeit
 
                 // this is the roll:
-                await _processAttackOptions(this.data.item, this.data.formData);
+                await processAttackOptions(this.data.item, this.data.formData);
                 this.data.formData.execute = this.data.action.current.execute + 1;
             }
             const end = this.data.formData.execute >= this.data.action.maneuver.attackKeys.length;

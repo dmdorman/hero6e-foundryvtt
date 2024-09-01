@@ -1,3 +1,6 @@
+import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMetres } from "./range.mjs";
+
+
 export class Attack {
     static makeOcvModifier(ocvMod, XMLID, name) {
         return { ocvMod, XMLID, name };
@@ -109,7 +112,8 @@ export class Attack {
             ocvModifiers: [],
             results: [], // todo: for attacks that roll one effect and apply to multiple targets do something different here
         };
-        target.range = canvas.grid.measureDistance(system.attackerToken, targetedToken, { gridSpaces: true });
+        
+        target.range = calculateDistanceBetween(system.attackerToken, targetedToken);
         if (item) {
             target.ocvModifiers.push(
                 Attack.makeOcvModifier(Attack.getRangeModifier(item, target.range), "RANGE", "Range Mod"),
