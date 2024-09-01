@@ -1,6 +1,10 @@
 import { calculateDistanceBetween } from "./range.mjs";
 
 export class Attack {
+    static makeOcvModifier(ocvMod, XMLID, name) {
+        return { ocvMod, XMLID, name };
+    }
+
     static addMultipleAttack(data) {
         if (!data.action?.maneuver?.attackKeys?.length) {
             return false;
@@ -101,10 +105,12 @@ export class Attack {
         // these are the targeting data used for the attack(s)
         const target = {
             targetId: targetedToken.id,
+            ocvModifiers : [],
             results: [], // todo: for attacks that roll one effect and apply to multiple targets do something different here
         };
         target.range = canvas.grid.measureDistance(system.attackerToken, targetedToken, { gridSpaces: true });
-        target.ocv = Attack.getRangeModifier(item, target.range);
+        
+        target.ocvModifiers.push(Attack.makeOcvModifier(Attack.getRangeModifier(item, target.range), 'RANGE', "Range Mod"));
         return target;
     }
 
@@ -117,6 +123,7 @@ export class Attack {
         const attack = {
             itemId: item.id,
             targets,
+            ocvModifiers : {}
         };
         return attack;
     }
@@ -164,10 +171,12 @@ export class Attack {
             multiAttackTarget ??= system.targetedTokens[0];
             maneuver.attacks.push(Attack.getAttackInfo(multiAttackItem, [multiAttackTarget], options, system));
         }
+        maneuver.ocvMod = Math.max(maneuver.attacks.length - 1, 0) * -2; // per rules every attack after the first is a cumulative -2 OCV on all attacks
         return maneuver;
     }
+
     static getHaymakerManeuverInfo(item, targetedTokens, options, system) {
-        const attacks = Attack.getHaymakerAttackInfo(item, targetedTokens, options, system);
+        const attacks = [Attack.getHaymakerAttackInfo(item, targetedTokens, options, system)];
         return {
             attackerTokenId: system.attackerToken?.id ?? null,
             isHaymakerAttack: true,
@@ -181,6 +190,7 @@ export class Attack {
         const isHaymakerAttack = item.system.XMLID === "HAYMAKER";
         // todo: Combined Attack
         // todo: martial maneuver plus a weapon
+        // todo: Compound Power
         // answer: probably a specialized use case of multiple attack
 
         if (isMultipleAttack) {
@@ -191,7 +201,7 @@ export class Attack {
         }
         return {
             attackerTokenId: system.attackerToken?.id ?? null,
-            attacks: Attack.getAttackInfo(item, targetedTokens, options, system),
+            attacks: [Attack.getAttackInfo(item, targetedTokens, options, system)],
             itemId: item.id,
         };
     }
@@ -203,6 +213,7 @@ export class Attack {
             const maneuverItem = system.attackerToken.actor.items.get(attackKeys.itemKey);
             const maneuverTarget = system.targetedTokens.find((token) => token.id === attackKeys.targetKey);
             const current = this.getManeuverInfo(maneuverItem, [maneuverTarget], options, system);
+
             current.execute = options.execute;
             current.step = attackKey;
             // avoid saving forge objects, except in system
@@ -210,6 +221,14 @@ export class Attack {
             system.currentItem = maneuverItem;
             system.currentTargets = [maneuverTarget];
 
+            const multipleAttackItem = system.item[maneuver.itemId];
+            const xmlid = multipleAttackItem.system.XMLID;
+            current.ocvModifiers = [];
+            // keep range mods to ourselves until we can agree on a single solution
+            // current.attacks.forEach((attack)=>{ attack.targets.forEach((target)=>{
+            //     current.ocvModifiers = [].concat(current.ocvModifiers, target.ocvModifiers );
+            // }); });
+            current.ocvModifiers.push( Attack.makeOcvModifier(maneuver.ocvMod, xmlid, multipleAttackItem.name) );
             return current;
         }
         return maneuver;

@@ -1,5 +1,5 @@
 import { CombatSkillLevelsForAttack } from "../utility/damage.mjs";
-import { _processAttackOptions, _processAttackAoeOptions } from "../item/item-attack.mjs";
+import { _processAttackOptions } from "../item/item-attack.mjs";
 import { convertSystemUnitsToMetres, getSystemDisplayUnits } from "../utility/units.mjs";
 import { HEROSYS } from "../herosystem6e.mjs";
 import { Attack } from "../utility/attack.mjs";
@@ -210,7 +210,6 @@ export class ItemAttackFormApplication extends FormApplication {
             data.targets,
             data.formData, // use formdata to include player options from the form
         );
-
         // todo: this doesn't seem to update when the card does, so pick a title and stick with it
         if (data.action.maneuver.isMultipleAttack) {
             this.options.title = `${this.data?.item?.actor?.name} multiple attack.`;
@@ -254,18 +253,17 @@ export class ItemAttackFormApplication extends FormApplication {
     async _updateObject(event, formData) {
         // changes to the form pass through here
         if (event.submitter?.name === "roll") {
+            console.log("RWC roll action:", this.data.action);
+
             canvas.tokens.activate();
             await this.close();
-
-            const aoe = this.data.item.getAoeModifier();
-            if (aoe) {
-                return _processAttackAoeOptions(this.data.item, formData);
-            }
 
             return _processAttackOptions(this.data.item, formData);
         }
         this.data.formData ??= {};
-        if (event.submitter?.name === "executeMultiattack") {
+      if (event.submitter?.name === "executeMultiattack") {
+            console.log("RWC executeMultiattack action:", this.data.action);
+
             const begin = this.data.action.current.execute === undefined;
             // we pressed the button to execute multiple attacks
             // the first time does not get a roll, but sets up the first attack
@@ -273,6 +271,7 @@ export class ItemAttackFormApplication extends FormApplication {
                 this.data.formData.execute = 0;
             } else {
                 // the subsequent presses will roll the attack and set up the next attack
+                // TODO: if any roll misses, the multiattack ends, and the end cost for the remainding attacks are forfeit
 
                 // this is the roll:
                 await _processAttackOptions(this.data.item, this.data.formData);
@@ -289,6 +288,7 @@ export class ItemAttackFormApplication extends FormApplication {
         }
 
         if (event.submitter?.name === "cancelMultiattack") {
+            // TODO: saves the end cost for the remainding attacks
             canvas.tokens.activate();
             await this.close();
             return;

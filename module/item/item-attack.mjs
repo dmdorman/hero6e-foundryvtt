@@ -117,11 +117,11 @@ export async function AttackOptions(item) {
 }
 
 export async function _processAttackOptions(item, formData) {
+    
+    if (item.getAoeModifier()) {
+        await AttackAoeToHit(item, formData);
+    }
     await AttackToHit(item, formData);
-}
-
-export async function _processAttackAoeOptions(item, formData) {
-    await AttackAoeToHit(item, formData);
 }
 
 export async function AttackAoeToHit(item, options) {
@@ -283,6 +283,7 @@ export async function AttackToHit(item, options) {
     }
 
     const action = Attack.getActionInfo(item, Array.from(game.user.targets), options);
+    console.log("RWC AttackToHit action:", action);
 
     const actor = item.actor;
     let effectiveItem = item;
@@ -398,8 +399,12 @@ export async function AttackToHit(item, options) {
     let dcv = parseInt(item.system.dcv || 0);
     let dmcv = parseInt(item.system.dmcv || 0);
 
-    // Combat Skill Levels
+    action.current.ocvModifiers.forEach( (ocvModifier)=>{
+        heroRoller.addNumber(ocvModifier.ocvMod, ocvModifier.name);
+    });
 
+
+    // Combat Skill Levels
     for (const csl of CombatSkillLevelsForAttack(item)) {
         if (csl.ocv || csl.omcv > 0) {
             heroRoller.addNumber(csl.ocv || csl.omcv, csl.item.name);
@@ -480,7 +485,7 @@ export async function AttackToHit(item, options) {
         }
     }
 
-    heroRoller.addDice(-3);
+    heroRoller.addDice(-3); // ??? 
 
     const autofire = item.findModsByXmlid("AUTOFIRE");
     const autoFireShots = autofire ? parseInt(autofire.OPTION_ALIAS.match(/\d+/)) : 0;

@@ -54,10 +54,23 @@
           {{/each}}
         </div>
       </div>
+      <div>
+        <label>{{localize "Items.Attack.OcvMod"}}</label>
+        <label>{{action.current.ocvMod}}</label>
+      </div>      
     </div>
     {{!-- END multiple-attack-section --}}
     {{!-- BEGIN standard-attack-section --}}
     <div class="standard-attack-section" {{#if (or action.current.isMultipleAttack action.current.isHaymakerAttack) }}style="display: none;"{{/if}} >
+
+      {{#each action.current.ocvModifiers as |ocvModifier|}}
+          <div>
+            <label>{{ocvModifier.name}} OCV:</label>
+            <label>{{ocvModifier.ocvMod}}</label>
+          </div>
+      {{/each}}
+
+
       {{!-- Aim (hit location) form group --}}
       <div class="form-group" {{#unless useHitLoc}}style="display: none;"{{/unless}}>
         <label>Aim</label>
