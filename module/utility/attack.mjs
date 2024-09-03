@@ -28,8 +28,6 @@ export class Attack {
         if (!data.action?.maneuver?.attackKeys?.length || !attackKey) {
             return false;
         }
-        console.log(`trash ${attackKey}`);
-        console.log(`data:`, data);
         const indexToRemove = data.action.maneuver.attackKeys.findIndex((multipleAttackKeys) => {
             return multipleAttackKeys.attackKey === attackKey;
         });
@@ -54,7 +52,6 @@ export class Attack {
             data.formData[`${attackKeys.attackKey}-target`] = attackKeys.targetKey;
             data.formData[attackKeys.attackKey] = attackKeys.itemKey;
         });
-        console.log(`data:`, data);
         return true;
     }
 
@@ -212,7 +209,6 @@ export class Attack {
         if (options?.execute !== undefined && maneuver.isMultipleAttack) {
             let lastAttackHit = true;
             options?.rolledResult?.forEach((roll) => {
-                console.log("roll result:", roll.result.hit);
                 if (roll.result.hit === "Miss") {
                     lastAttackHit = false;
                 }
@@ -228,10 +224,6 @@ export class Attack {
                     targetName: maneuverTarget.name,
                     itemName: maneuverItem.name,
                 };
-                console.log(
-                    `RWC attack number ${execute} missed ${maneuver.missed.targetName} with ${maneuver.missed.itemName} in a multiple attack: remaining attacks forfeit END and charges to no effect`,
-                );
-
                 return maneuver;
             }
             const attackKey = `attack-${execute}`;

@@ -254,8 +254,6 @@ export class ItemAttackFormApplication extends FormApplication {
     async _updateObject(event, formData) {
         // changes to the form pass through here
         if (event.submitter?.name === "roll") {
-            console.log("RWC roll action:", this.data.action);
-
             canvas.tokens.activate();
             await this.close();
 
@@ -263,8 +261,6 @@ export class ItemAttackFormApplication extends FormApplication {
         }
         this.data.formData ??= {};
         if (event.submitter?.name === "executeMultiattack") {
-            console.log("RWC executeMultiattack action:", this.data.action);
-
             const begin = this.data.action.current.execute === undefined;
             // we pressed the button to execute multiple attacks
             // the first time does not get a roll, but sets up the first attack
