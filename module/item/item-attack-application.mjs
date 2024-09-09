@@ -211,7 +211,9 @@ export class ItemAttackFormApplication extends FormApplication {
             data.targets,
             data.formData, // use formdata to include player options from the form
         );
-        // todo: this doesn't seem to update when the card does, so pick a title and stick with it
+        // the title seems to be fixed when the form is initialized, 
+        // and doesn't change afterwards even if we come through here again
+        // todo: figure out how to adjust the title when we want it to
         if (data.action.maneuver.isMultipleAttack) {
             this.options.title = `${this.data?.item?.actor?.name} multiple attack.`;
         } else if (data.action.maneuver.isHaymakerAttack) {

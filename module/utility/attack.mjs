@@ -12,6 +12,8 @@ export class Attack {
         const index = data.action.maneuver.attackKeys.length;
         const attackKey = `attack-${index}`;
         const itemKey = data.item.actor.items.find((item) => "STRIKE" === item.system.XMLID).id;
+        // todo: if there is some character that doesn't have a STRIKE maneuver, then this find will fail.
+        // double check 
         const targetKey = data.action.targetedTokens?.length ? data.action.targetedTokens[0].id : "NONE";
         const multipleAttackKeys = { itemKey, attackKey, targetKey };
         data.action.maneuver[attackKey] = multipleAttackKeys;
@@ -133,6 +135,7 @@ export class Attack {
     }
 
     static getMultipleAttackManeuverInfo(item, targetedTokens, options, system) {
+        // TODO: need to adjust DCV
         const maneuver = {
             attackerTokenId: system.attackerToken?.id ?? null,
             isMultipleAttack: true,
