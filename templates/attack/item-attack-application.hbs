@@ -53,7 +53,7 @@
                 {{#if (eq index 0)}}
                   <span class="fas fa-plus {{#unless @root/action.current.missed}}add-multiattack{{/unless}}" > </span>
                 {{else}}
-                  <span class="fas fa-trash {{#unless @root/action.current.missed}}trash-multiattack{{/unless}}" data-multiattack="{{multiAttack.attackKey}}" ></span>
+                  <span class="fas fa-trash {{#unless @root/action.current.missed}}remove-multiattack{{/unless}}" data-multiattack="{{multiAttack.attackKey}}" ></span>
                 {{/if}}
               </label>
             </div>

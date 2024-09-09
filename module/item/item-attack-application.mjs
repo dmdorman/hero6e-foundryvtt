@@ -226,7 +226,7 @@ export class ItemAttackFormApplication extends FormApplication {
         super.activateListeners(html);
         // add to multiattack
         html.find(".add-multiattack").click(this._onAddMultiAttack.bind(this));
-        html.find(".trash-multiattack").click(this._onTrashMultiAttack.bind(this));
+        html.find(".remove-multiattack").click(this._onRemoveMultipleAttack.bind(this));
     }
 
     async _onAddMultiAttack() {
@@ -235,9 +235,9 @@ export class ItemAttackFormApplication extends FormApplication {
         }
     }
 
-    async _onTrashMultiAttack(event) {
+    async _onRemoveMultipleAttack(event) {
         const multipleAttackKey = event.target.dataset.multiattack;
-        if (Attack.trashMultipleAttack(this.data, multipleAttackKey)) {
+        if (Attack.removeMultipleAttack(this.data, multipleAttackKey)) {
             this.render();
         }
     }

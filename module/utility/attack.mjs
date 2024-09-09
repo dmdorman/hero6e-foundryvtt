@@ -24,7 +24,7 @@ export class Attack {
         return true;
     }
 
-    static trashMultipleAttack(data, attackKey) {
+    static removeMultipleAttack(data, attackKey) {
         if (!data.action?.maneuver?.attackKeys?.length || !attackKey) {
             return false;
         }
