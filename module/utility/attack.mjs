@@ -4,16 +4,20 @@ export class Attack {
     static makeOcvModifier(ocvMod, XMLID, name) {
         return { ocvMod, XMLID, name };
     }
-
+    static findStrikeKey( item ){
+        // todo: if there is some character that doesn't have a STRIKE maneuver, then this find will fail.
+        // if the character has been loaded from an HDC then they will have the default maneuvers
+        // if they have not been loaded from and HDC they won't have multiple attack and shouldn't get here.
+        let strike =  item.actor.items.find((item) => "STRIKE" === item.system.XMLID);
+        return strike?.id;
+    }
     static addMultipleAttack(data) {
         if (!data.action?.maneuver?.attackKeys?.length) {
             return false;
         }
         const index = data.action.maneuver.attackKeys.length;
         const attackKey = `attack-${index}`;
-        const itemKey = data.item.actor.items.find((item) => "STRIKE" === item.system.XMLID).id;
-        // todo: if there is some character that doesn't have a STRIKE maneuver, then this find will fail.
-        // double check 
+        const itemKey = Attack.findStrikeKey( data.item );
         const targetKey = data.action.targetedTokens?.length ? data.action.targetedTokens[0].id : "NONE";
         const multipleAttackKeys = { itemKey, attackKey, targetKey };
         data.action.maneuver[attackKey] = multipleAttackKeys;
@@ -108,10 +112,11 @@ export class Attack {
             results: [], // todo: for attacks that roll one effect and apply to multiple targets do something different here
         };
         target.range = canvas.grid.measureDistance(system.attackerToken, targetedToken, { gridSpaces: true });
-
-        target.ocvModifiers.push(
-            Attack.makeOcvModifier(Attack.getRangeModifier(item, target.range), "RANGE", "Range Mod"),
-        );
+        if(item){
+            target.ocvModifiers.push(
+                Attack.makeOcvModifier(Attack.getRangeModifier(item, target.range), "RANGE", "Range Mod"),
+            );
+        }
         return target;
     }
 
@@ -122,7 +127,7 @@ export class Attack {
             targets.push(target);
         }
         const attack = {
-            itemId: item.id,
+            itemId: item?.id,
             targets,
             ocvModifiers: {},
         };
@@ -156,9 +161,11 @@ export class Attack {
             }
         }
         // Initialize multiple attack to the default option values
+        const itemKey = Attack.findStrikeKey( item );
+
         maneuver.attackKeys ??= targetedTokens.map((target, index) => {
             return {
-                itemKey: item.actor.items.find((item) => "STRIKE" === item.system.XMLID).id,
+                itemKey,
                 attackKey: `attack-${index}`,
                 targetKey: target.id,
             };
