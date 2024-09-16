@@ -278,6 +278,12 @@ export async function AttackAoeToHit(item, options) {
 /// opened after selecting 'Roll to Hit'
 /// uses ../templates/chat/item-toHit-card.hbs
 /// manages die rolls and display of hit/miss results
+/// At this point the user has _committed_ to the attack that they 
+/// chose with the die-roll icon and adjusted with the Attack Options
+/// menu.
+/// there was a die roll, and we display the attack to hit results
+/// This is a fine place to activate any effects that are imposed by this attack maneuver,
+/// including setting the combat skill levels in ocv and dcv
 export async function AttackToHit(item, options) {
     if (!item) {
         return ui.notifications.error(`Attack details are no longer available.`);
