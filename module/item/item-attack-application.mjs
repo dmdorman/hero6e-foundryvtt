@@ -211,7 +211,7 @@ export class ItemAttackFormApplication extends FormApplication {
             data.targets,
             data.formData, // use formdata to include player options from the form
         );
-        // the title seems to be fixed when the form is initialized, 
+        // the title seems to be fixed when the form is initialized,
         // and doesn't change afterwards even if we come through here again
         // todo: figure out how to adjust the title when we want it to
         if (data.action.maneuver.isMultipleAttack) {

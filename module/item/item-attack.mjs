@@ -119,8 +119,7 @@ export async function AttackOptions(item) {
 export async function _processAttackOptions(item, formData) {
     if (item.getAoeModifier()) {
         await AttackAoeToHit(item, formData);
-    }
-    else {
+    } else {
         await AttackToHit(item, formData);
     }
 }
@@ -278,7 +277,7 @@ export async function AttackAoeToHit(item, options) {
 /// opened after selecting 'Roll to Hit'
 /// uses ../templates/chat/item-toHit-card.hbs
 /// manages die rolls and display of hit/miss results
-/// At this point the user has _committed_ to the attack that they 
+/// At this point the user has _committed_ to the attack that they
 /// chose with the die-roll icon and adjusted with the Attack Options
 /// menu.
 /// there was a die roll, and we display the attack to hit results
@@ -496,11 +495,11 @@ export async function AttackToHit(item, options) {
         }
     }
 
-    heroRoller.addDice(-3); 
-    // This is the actual roll to hit. In order to provide for a die roll 
+    heroRoller.addDice(-3);
+    // This is the actual roll to hit. In order to provide for a die roll
     // that indicates the upper bound of DCV hit, we have added the base (11) and the OCV, and subtracted the mods
-    // and lastly we subtract the die roll. The value returned is the maximum DCV hit 
-    // (so we can be sneaky and not tell the target's DCV out loud). 
+    // and lastly we subtract the die roll. The value returned is the maximum DCV hit
+    // (so we can be sneaky and not tell the target's DCV out loud).
 
     const autofire = item.findModsByXmlid("AUTOFIRE");
     const autoFireShots = autofire ? parseInt(autofire.OPTION_ALIAS.match(/\d+/)) : 0;
