@@ -278,8 +278,7 @@ export async function AttackAoeToHit(item, options) {
 /// uses ../templates/chat/item-toHit-card.hbs
 /// manages die rolls and display of hit/miss results
 /// At this point the user has _committed_ to the attack that they
-/// chose with the die-roll icon and adjusted with the Attack Options
-/// menu.
+/// chose with the die-roll icon and adjusted with the Attack Options menu.
 /// There was a die roll, and we display the attack to hit results.
 export async function AttackToHit(item, options) {
     if (!item) {

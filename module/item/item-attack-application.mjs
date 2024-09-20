@@ -1,5 +1,5 @@
 import { CombatSkillLevelsForAttack } from "../utility/damage.mjs";
-import { processAttackOptions } from "../item/item-attack.mjs";
+import { processAttackOptions } from "./item-attack.mjs";
 import { convertSystemUnitsToMetres, getSystemDisplayUnits } from "../utility/units.mjs";
 import { HEROSYS } from "../herosystem6e.mjs";
 import { Attack } from "../utility/attack.mjs";
