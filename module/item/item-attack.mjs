@@ -6,8 +6,8 @@ import { RoundFavorPlayerDown, RoundFavorPlayerUp } from "../utility/round.mjs";
 import { calculateDiceFormulaParts, CombatSkillLevelsForAttack, convertToDcFromItem } from "../utility/damage.mjs";
 import { performAdjustment, renderAdjustmentChatCards } from "../utility/adjustment.mjs";
 import { getRoundedDownDistanceInSystemUnits, getSystemDisplayUnits } from "../utility/units.mjs";
-import { HeroSystem6eItem, RequiresASkillRollCheck } from "../item/item.mjs";
-import { ItemAttackFormApplication } from "../item/item-attack-application.mjs";
+import { HeroSystem6eItem, RequiresASkillRollCheck } from "./item.mjs";
+import { ItemAttackFormApplication } from "./item-attack-application.mjs";
 import { DICE_SO_NICE_CUSTOM_SETS, HeroRoller } from "../utility/dice.mjs";
 import { clamp } from "../utility/compatibility.mjs";
 import { calculateVelocityInSystemUnits } from "../ruler.mjs";
@@ -289,7 +289,7 @@ export async function AttackToHit(item, options) {
     console.log("RWC AttackToHit action:", action);
     item = action.system.item[action.current.itemId];
     const targets = action.system.currentTargets;
-    
+
     const actor = item.actor;
     let effectiveItem = item;
 
@@ -405,7 +405,7 @@ export async function AttackToHit(item, options) {
     let dmcv = parseInt(item.system.dmcv || 0);
 
     action.current.ocvModifiers?.forEach((ocvModifier) => {
-        heroRoller.addNumber(ocvModifier.ocvMod, ocvModifier.name);
+        heroRoller.addNumber(ocvModifier.cvMod, ocvModifier.name);
     });
 
     // Combat Skill Levels
@@ -423,48 +423,17 @@ export async function AttackToHit(item, options) {
         dcv -= 4;
     }
 
-
     /// This is a fine place to activate any effects that are imposed by this attack maneuver:
-    /// here we just set whatever dcv mod determined above as an effect. 
+    /// here we just set whatever dcv mod determined above as an effect.
     /// todo: we'll want to change this to make an effect for each cv mod and apply them in a way that can be better displayed
-    if (dcv != 0 || dmcv != 0) {
-        // Make sure we don't already have this activeEffect
-        let prevActiveEffect = Array.from(item.actor.allApplicableEffects()).find((o) => o.origin === item.uuid);
-        if (!prevActiveEffect) {
-            // Estimate of how many seconds the DCV penalty lasts (until next phase).
-            // In combat.js#_onStartTurn we remove this AE for exact timing.
-            let seconds = Math.ceil(12 / parseInt(item.actor.system.characteristics.spd.value));
-
-            let _dcvText = "DCV";
-            let _dcvValue = dcv;
-
-            if (dmcv != 0) {
-                _dcvText = "DMCV";
-                _dcvValue = dmcv;
-            }
-
-            let activeEffect = {
-                label: `${item.name} ${_dcvValue.signedString()} ${_dcvText}`,
-                icon: dcv < 0 ? "icons/svg/downgrade.svg" : "icons/svg/upgrade.svg",
-                changes: [
-                    {
-                        key: `system.characteristics.${_dcvText.toLowerCase()}.value`,
-                        value: _dcvValue,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-                    },
-                ],
-                origin: item.uuid,
-                duration: {
-                    seconds: seconds,
-                },
-                flags: {
-                    nextPhase: true,
-                },
-            };
-            //await item.addActiveEffect(activeEffect);
-            await item.actor.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
-        }
+    const dcvModifiers = [];
+    if (dcv != 0) {
+        dcvModifiers.push(Attack.makeCvModifier(dcv, item.system.XMLID, "DCV"));
     }
+    if (dmcv != 0) {
+        dcvModifiers.push(Attack.makeCvModifier(dmcv, item.system.XMLID, "DMCV"));
+    }
+    applyDcvModifiers(item, dcvModifiers);
 
     // [x Stun, x N Stun, x Body, OCV modifier]
     const noHitLocationsPower = !!item.system.noHitLocations;
@@ -950,12 +919,51 @@ export async function AttackToHit(item, options) {
     return;
 }
 
-// given that actor's action, apply one or more effects that will modify the actor's OCV & DCV
+// TODO: given that actor's action, apply one or more effects that will modify the actor's OCV & DCV
 // according to their current action.
 // This includes all combat skill levels, overall levels, specific levels
 // multiple attacks / haymaker / brace
+async function applyDcvModifiers(item, dcvModifiers) {
+    dcvModifiers?.forEach((modifier) => {
+        makeActionActiveEffect(item, modifier);
+    });
+}
 
-function makeActionActiveEffect(){}
+async function makeActionActiveEffect(item, modifier) {
+    const actor = item.actor;
+    const cv = modifier.cvMod;
+    const text = modifier.name;
+
+    // Estimate of how many seconds the DCV penalty lasts (until next phase).
+    // In combat.js#_onStartTurn we remove this AE for exact timing.
+    const seconds = Math.ceil(12 / parseInt(actor.system.characteristics.spd.value));
+
+    // Make sure we don't already have this activeEffect
+    // todo: if we do have it we need to be sure the value is unchanged, or replace it
+    let prevActiveEffect = Array.from(actor.allApplicableEffects()).find((o) => o.origin === item.uuid);
+
+    if (!prevActiveEffect) {
+        let activeEffect = {
+            label: `${item.name} ${cv.signedString()} ${text}`,
+            icon: cv < 0 ? "icons/svg/downgrade.svg" : "icons/svg/upgrade.svg",
+            changes: [
+                {
+                    key: `system.characteristics.${text.toLowerCase()}.value`,
+                    value: cv,
+                    mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                },
+            ],
+            origin: item.uuid,
+            duration: {
+                seconds,
+            },
+            flags: {
+                nextPhase: true,
+            },
+        };
+        await actor.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+    }
+}
 
 function getAttackTags(item) {
     // Attack Tags

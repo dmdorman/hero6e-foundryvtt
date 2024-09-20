@@ -1234,7 +1234,7 @@ export class HeroSystem6eActor extends Actor {
                             }
                             break;
                     }
-                    if(system.XMLID === "MULTIPLEATTACK"){
+                    if (system.XMLID === "MULTIPLEATTACK") {
                         console.log("RWC MULTIPLEATTACK");
                     }
                     // Indicate we're processing this aspect of the HDC. If it crashes it should remain showing this progress note.
@@ -1313,7 +1313,7 @@ export class HeroSystem6eActor extends Actor {
                             parent: this,
                         });
                         this.items.set(item.system.XMLID + item.system.POSITION, item);
-                        if(item.system.XMLID === "MULTIPLEATTACK"){
+                        if (item.system.XMLID === "MULTIPLEATTACK") {
                             console.log("RWC MULTIPLEATTACK");
                         }
                         if (system.XMLID === "COMPOUNDPOWER") {
@@ -1666,9 +1666,9 @@ export class HeroSystem6eActor extends Actor {
                         }
                         await item._postUpload();
                     }
-                    if(maneuver.key === "MULTIPLEATTACK"){
+                    if (maneuver.key === "MULTIPLEATTACK") {
                         console.log("RWC MULTIPLEATTACK");
-                    }                    
+                    }
                 });
         }
     }

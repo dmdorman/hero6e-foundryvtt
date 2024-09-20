@@ -1,9 +1,11 @@
-import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMetres } from "./range.mjs";
-
+import { calculateDistanceBetween } from "./range.mjs";
 
 export class Attack {
-    static makeOcvModifier(ocvMod, XMLID, name) {
-        return { ocvMod, XMLID, name };
+    static makeCvModifierFromItem(cvMod, item) {
+        return Attack.makeCvModifier(cvMod, item.system.XMLID, item.name, item.id);
+    }
+    static makeCvModifier(cvMod, XMLID, name, id) {
+        return { cvMod, XMLID, name, id };
     }
     static findStrikeKey(item) {
         // todo: if there is some character that doesn't have a STRIKE maneuver, then this find will fail.
@@ -112,11 +114,11 @@ export class Attack {
             ocvModifiers: [],
             results: [], // todo: for attacks that roll one effect and apply to multiple targets do something different here
         };
-        
+
         target.range = calculateDistanceBetween(system.attackerToken, targetedToken);
         if (item) {
             target.ocvModifiers.push(
-                Attack.makeOcvModifier(Attack.getRangeModifier(item, target.range), "RANGE", "Range Mod"),
+                Attack.makeCvModifier(Attack.getRangeModifier(item, target.range), "RANGE", "Range Mod"),
             );
         }
         return target;
@@ -258,7 +260,7 @@ export class Attack {
             // current.attacks.forEach((attack)=>{ attack.targets.forEach((target)=>{
             //     current.ocvModifiers = [].concat(current.ocvModifiers, target.ocvModifiers );
             // }); });
-            current.ocvModifiers.push(Attack.makeOcvModifier(maneuver.ocvMod, xmlid, multipleAttackItem.name));
+            current.ocvModifiers.push(Attack.makeCvModifier(maneuver.ocvMod, xmlid, multipleAttackItem.name));
             return current;
         }
         return maneuver;

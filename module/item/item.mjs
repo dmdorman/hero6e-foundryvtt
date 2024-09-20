@@ -1129,7 +1129,7 @@ export class HeroSystem6eItem extends Item {
         if (!item.actor) {
             return;
         }
-        if(item.system.XMLID === "MULTIPLEATTACK"){
+        if (item.system.XMLID === "MULTIPLEATTACK") {
             console.log("RWC MULTIPLEATTACK");
         }
         // showToggle
@@ -1164,7 +1164,7 @@ export class HeroSystem6eItem extends Item {
                 item.system.childIdx = `${item.parentItem.system.childIdx}.${item.system.childIdx}`;
             }
         }
-        if(item.system.XMLID === "MULTIPLEATTACK"){
+        if (item.system.XMLID === "MULTIPLEATTACK") {
             console.log("RWC MULTIPLEATTACK");
         }
         // Endurance
@@ -3865,7 +3865,7 @@ export class HeroSystem6eItem extends Item {
 
         const xmlid = this.system.XMLID;
 
-        if(xmlid === "MULTIPLEATTACK"){
+        if (xmlid === "MULTIPLEATTACK") {
             console.log("RWC MULTIPLEATTACK");
         }
         // Name
