@@ -19,16 +19,12 @@
       {{/if}}
       <div class="form-group">
         <div class="multi-attack-options target-container">
-
-          
-          
           <div class="target-info-header">
             {{!-- could probably do this as an #each and pass it in if there are variations --}}
             <div>Target</div>
             <div>Attack</div>
             <div>+/-</div>
           </div>
-
           {{#each action.maneuver.attackKeys as |multiAttack index|}}
             <div class="target-info-row">
               <select class="ellipsis-text target-name" name="{{multiAttack.attackKey}}-target" id="{{multiAttack.attackKey}}-target" {{#if @root/action.current.missed}}disabled{{/if}} >
@@ -60,20 +56,65 @@
           {{/each}}
         </div>
       </div>
-      <div>
+      <div {{#unless action.current.cvMod.cvMod.ocv }}style="display: none;"{{/unless}}>
+        <label>{{action.current.cvMod.name}}</label>
         <label>{{localize "Items.Attack.OcvMod"}}</label>
-        <label>{{action.current.ocvMod}}</label>
-      </div>      
+        <label>{{action.current.cvMod.cvMod.ocv}}</label>
+      </div>
+      <div {{#unless action.current.cvMod.cvMod.dcv }}style="display: none;"{{/unless}}>
+        <label>{{action.current.cvMod.name}}</label>
+        <label>{{localize "Items.Attack.DcvMod"}}</label>
+        <label>{{action.current.cvMod.cvMod.dcv}}</label>
+      </div>
+      <div {{#unless (ne 1 action.current.cvMod.cvMod.dcvMultiplier) }}style="display: none;"{{/unless}}>
+        <label>{{action.current.cvMod.name}}</label>
+        <label>{{localize "Items.Attack.DcvMod"}}</label>
+        {{!-- TODO: fix this when I have math --}}        
+        {{#if
+          (and
+            (gt action.current.cvMod.cvMod.dcvMultiplier 0)
+            (lt action.current.cvMod.cvMod.dcvMultiplier 1)
+            0
+          )
+        }}
+          <label>x1/{{math 1 action.current.cvMod.cvMod.dcvMultiplier}}</label>
+        {{else}}
+          <label>x{{action.current.cvMod.cvMod.dcvMultiplier}}</label>
+        {{/if}}
+      </div>
+
     </div>
     {{!-- END multiple-attack-section --}}
     {{!-- BEGIN standard-attack-section --}}
     <div class="standard-attack-section" {{#if (or action.current.isMultipleAttack action.current.isHaymakerAttack) }}style="display: none;"{{/if}} >
 
-      {{#each action.current.ocvModifiers as |ocvModifier|}}
-          <div>
-            <label>{{ocvModifier.name}} OCV:</label>
-            <label>{{ocvModifier.cvMod}}</label>
-          </div>
+      {{#each action.current.cvModifiers as |modifier|}}
+        <div {{#unless modifier.cvMod.ocv }}style="display: none;"{{/unless}}>
+          <label>{{modifier.name}}</label>
+          <label>{{localize "Items.Attack.OcvMod"}}</label>
+          <label>{{modifier.cvMod.ocv}}</label>
+        </div>
+        <div {{#unless modifier.cvMod.dcv }}style="display: none;"{{/unless}}>
+          <label>{{modifier.name}}</label>
+          <label>{{localize "Items.Attack.DcvMod"}}</label>
+          <label>{{modifier.cvMod.dcv}}</label>
+        </div>
+        <div {{#unless (ne 1 modifier.cvMod.dcvMultiplier) }}style="display: none;"{{/unless}}>
+          <label>{{modifier.name}}</label>
+          <label>{{localize "Items.Attack.DcvMod"}}</label>
+          {{!-- TODO: fix this when I have math --}}
+          {{#if
+            (and
+              (gt modifier.cvMod.dcvMultiplier 0)
+              (lt modifier.cvMod.dcvMultiplier 1)
+              0
+            )
+          }}
+            <label>x1/{{math 1 modifier.cvMod.dcvMultiplier}}</label>
+          {{else}}
+            <label>x{{modifier.cvMod.dcvMultiplier}}</label>
+          {{/if}}
+        </div>
       {{/each}}
 
 

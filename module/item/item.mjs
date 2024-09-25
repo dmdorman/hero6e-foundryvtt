@@ -1,6 +1,6 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
-import * as Attack from "../item/item-attack.mjs";
+import * as ItemAttack from "../item/item-attack.mjs";
 import { createSkillPopOutFromItem } from "../item/skill.mjs";
 import { enforceManeuverLimits } from "../item/manuever.mjs";
 import {
@@ -16,6 +16,7 @@ import { getSystemDisplayUnits } from "../utility/units.mjs";
 import { calculateVelocityInSystemUnits } from "../ruler.mjs";
 import { HeroRoller } from "../utility/dice.mjs";
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
+import { Attack } from "../utility/attack.mjs";
 
 export function initializeItemHandlebarsHelpers() {
     Handlebars.registerHelper("itemFullDescription", itemFullDescription);
@@ -258,7 +259,7 @@ export class HeroSystem6eItem extends Item {
                     case "STRIKE":
                     case "MINDSCAN":
                     case "TRANSFORM":
-                        return Attack.AttackOptions(this, event);
+                        return ItemAttack.AttackOptions(this, event);
 
                     case "ABSORPTION":
                     case "DISPEL":
@@ -291,7 +292,7 @@ export class HeroSystem6eItem extends Item {
                     case "TRIP":
                     default:
                         ui.notifications.warn(`${this.system.XMLID} roll is not fully supported`);
-                        return Attack.AttackOptions(this, event);
+                        return ItemAttack.AttackOptions(this, event);
                 }
 
             case "defense":
@@ -1129,9 +1130,7 @@ export class HeroSystem6eItem extends Item {
         if (!item.actor) {
             return;
         }
-        if (item.system.XMLID === "MULTIPLEATTACK") {
-            console.log("RWC MULTIPLEATTACK");
-        }
+
         // showToggle
         const itemEffects = item.effects.find(() => true);
         if (itemEffects) {
@@ -1164,9 +1163,7 @@ export class HeroSystem6eItem extends Item {
                 item.system.childIdx = `${item.parentItem.system.childIdx}.${item.system.childIdx}`;
             }
         }
-        if (item.system.XMLID === "MULTIPLEATTACK") {
-            console.log("RWC MULTIPLEATTACK");
-        }
+
         // Endurance
         item.system.endEstimate = parseInt(item.system.end) || 0;
 
@@ -1222,6 +1219,10 @@ export class HeroSystem6eItem extends Item {
                 if (item.system.killing) {
                     item.system.damage += "K";
                 }
+            }
+
+            if (item.system.cvModifiers === undefined) {
+                item.system.cvModifiers = Attack.parseCvModifiers(item.system.OCV, item.system.DCV, item.system.DC);
             }
 
             // Signed OCV and DCV
@@ -1297,6 +1298,8 @@ export class HeroSystem6eItem extends Item {
                     }
                     item.flags.tags.dcv = `${item.flags.tags.dcv}${dcv.signedString()} DCV`;
                 }
+                //todo: why parse if we already changed it to an int?
+                // todo: ok, wait, what?
                 item.system.dcv = parseInt(item.system.dcv).signedString();
                 item.system.dcvEstimated = (
                     dcv +
@@ -3865,9 +3868,7 @@ export class HeroSystem6eItem extends Item {
 
         const xmlid = this.system.XMLID;
 
-        if (xmlid === "MULTIPLEATTACK") {
-            console.log("RWC MULTIPLEATTACK");
-        }
+
         // Name
         let description = this.system.ALIAS;
         let name = this.system.NAME || description || this.system.name || this.name;
@@ -3883,9 +3884,7 @@ export class HeroSystem6eItem extends Item {
         const input = this.system.INPUT;
 
         const ocv = parseInt(this.system.OCV) || 0;
-        // todo: right here any "1/2" DCV get turned into "1" dcv
         const dcv = parseInt(this.system.DCV) || 0;
-
         // Check if TELEKINESIS + WeaponElement (BAREHAND) + EXTRADC  (WillForce)
         if (this.system.XMLID == "TELEKINESIS") {
             if (
@@ -3930,6 +3929,7 @@ export class HeroSystem6eItem extends Item {
         this.system.penetrating = 0;
         this.system.ocv = ocv;
         this.system.dcv = dcv;
+
         this.system.stunBodyDamage = "stunbody";
 
         // FLASHDC, BLOCK, DODGE do not use STR

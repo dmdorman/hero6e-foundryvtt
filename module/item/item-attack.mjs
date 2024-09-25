@@ -286,7 +286,6 @@ export async function AttackToHit(item, options) {
     }
 
     const action = Attack.getActionInfo(item, Array.from(game.user.targets), options);
-    console.log("RWC AttackToHit action:", action);
     item = action.system.item[action.current.itemId];
     const targets = action.system.currentTargets;
 
@@ -401,39 +400,54 @@ export async function AttackToHit(item, options) {
         }
     }
 
+    //todo: why parse if we already changed it to an int?
     let dcv = parseInt(item.system.dcv || 0);
     let dmcv = parseInt(item.system.dmcv || 0);
 
-    action.current.ocvModifiers?.forEach((ocvModifier) => {
-        heroRoller.addNumber(ocvModifier.cvMod, ocvModifier.name);
-    });
+    // todo: move this into a more private space:
+    const cvModifiers = action.current.cvModifiers;
 
     // Combat Skill Levels
+    const skillLevelMods = {};
     for (const csl of CombatSkillLevelsForAttack(item)) {
+        const id = csl.skill.id;
+        skillLevelMods[id] = skillLevelMods[id] ?? { ocv: 0, dcv: 0, dc: 0 };
+        const cvMod = skillLevelMods[id];
+        action.system.item[id] = csl.skill;
+
+        cvMod.dc += csl.dc;
         if (csl.ocv || csl.omcv > 0) {
-            heroRoller.addNumber(csl.ocv || csl.omcv, csl.item.name);
+            cvMod.ocv += csl.ocv || csl.omcv;
+            //heroRoller.addNumber(csl.ocv || csl.omcv, csl.item.name);
         }
         dcv += csl.dcv;
+        cvMod.dcv += csl.dcv;
+        // todo: I'm unsure that CSV will add to dcv and dmcv at the same time
         dmcv += csl.dmcv;
     }
-
+    Object.keys(skillLevelMods).forEach((key) => {
+        const cvMod = Attack.makeCvModifierFromItem(
+            action.system.item[key],
+            action.system,
+            skillLevelMods[key].ocv,
+            skillLevelMods[key].dcv,
+            skillLevelMods[key].dc,
+        );
+        cvModifiers.push(cvMod);
+    });
     // Haymaker -5 DCV
     const haymakerManeuver = actor.items.find((o) => o.type == "maneuver" && o.name === "Haymaker" && o.system.active);
     if (haymakerManeuver) {
+        //todo: if it is -5 , then why -4?
         dcv -= 4;
     }
 
-    /// This is a fine place to activate any effects that are imposed by this attack maneuver:
-    /// here we just set whatever dcv mod determined above as an effect.
-    /// todo: we'll want to change this to make an effect for each cv mod and apply them in a way that can be better displayed
-    const dcvModifiers = [];
-    if (dcv != 0) {
-        dcvModifiers.push(Attack.makeCvModifier(dcv, item.system.XMLID, "DCV"));
-    }
-    if (dmcv != 0) {
-        dcvModifiers.push(Attack.makeCvModifier(dmcv, item.system.XMLID, "DMCV"));
-    }
-    applyDcvModifiers(item, dcvModifiers);
+    cvModifiers.forEach((cvModifier) => {
+        if (cvModifier.cvMod.ocv) {
+            heroRoller.addNumber(cvModifier.cvMod.ocv, cvModifier.name);
+        }
+    });
+    Attack.makeActionActiveEffects(action);
 
     // [x Stun, x N Stun, x Body, OCV modifier]
     const noHitLocationsPower = !!item.system.noHitLocations;

@@ -1,12 +1,195 @@
 import { calculateDistanceBetween } from "./range.mjs";
 
 export class Attack {
-    static makeCvModifierFromItem(cvMod, item) {
+    static async makeActionActiveEffects(action) {
+        const cvModifiers = action.current.cvModifiers;
+        const item = action.system.item[action.current.itemId];
+
+        const actor = action.system.actor;
+        Attack.removeActionActiveEffects(actor);
+        cvModifiers.forEach((cvModifier) => {
+            Attack.makeActionActiveEffect(action, cvModifier);
+        });
+    }
+    // discontinue any effects for the action
+    // action effects have a flag for actions only
+    // they also get pulled in the start of turn (nextPhase flag)
+    static async removeActionActiveEffects(actor) {
+        const prevActiveEffects = actor.effects.filter((o) => o.flags.actionEffect);
+        console.log(prevActiveEffects);
+        for (const ae of prevActiveEffects) {
+            await ae.delete();
+        }
+    }
+
+    static async makeActionActiveEffect(action, cvModifier) {
+        const actor = action.system.actor;
+
+        // Estimate of how many seconds the DCV penalty lasts (until next phase).
+        // In combat.js#_onStartTurn we remove this AE for exact timing.
+        const seconds = Math.ceil(12 / parseInt(actor.system.characteristics.spd.value));
+
+        const item = action.system.item[cvModifier.id];
+
+        // changes include:
+        //{ ocv, dcv, dc, dcvMultiplier, ocvMultiplier }
+        let icon = "icons/svg/upgrade.svg";
+        let label = `${cvModifier.name}`;
+        let comma = false;
+        const changes = [];
+        if (cvModifier.cvMod.ocv) {
+            const ocv = cvModifier.cvMod.ocv;
+            if (ocv < 0) {
+                icon = "icons/svg/downgrade.svg";
+            }
+            label += ` ${ocv.signedString()} OCV`;
+            comma = true;
+            changes.push({
+                key: `system.characteristics.ocv.value`,
+                value: ocv,
+                mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+            });
+        }
+        if (cvModifier.cvMod.dcv) {
+            const dcv = cvModifier.cvMod.dcv;
+            if (dcv < 0) {
+                icon = "icons/svg/downgrade.svg";
+            }
+            label += `${comma?',':''} ${dcv.signedString()} DCV`;
+            comma = true;
+            changes.push({
+                key: `system.characteristics.dcv.value`,
+                value: dcv,
+                mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+            });
+        }
+
+        // if (cvModifier.cvMod.dc) {
+        //     const dc = cvModifier.cvMod.dc;
+        //     // changes.push({
+        //     //     key: `system.characteristics.dcv.value`,
+        //     //     value: cvModifier.cvMod.dcv,
+        //     //     mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+        //     // });
+        // }
+        
+        // todo: this disallows setting the dcv to x0
+        if (cvModifier.cvMod.dcvMultiplier && cvModifier.cvMod.dcvMultiplier != 1) {
+            const dcvMultiplier = cvModifier.cvMod.dcvMultiplier;
+            let multiplierString = `${dcvMultiplier}`;
+            if (dcvMultiplier < 1) {
+                icon = "icons/svg/downgrade.svg";
+            }
+            if(dcvMultiplier != 0 && dcvMultiplier < 1){
+                multiplierString = `1/${1.0/dcvMultiplier}`;
+            }
+            label += `${comma?',':''} x${multiplierString} DCV`;
+            changes.push({
+                key: `system.characteristics.dcv.value`,
+                value: cvModifier.cvMod.dcvMultiplier,
+                mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
+            });
+        }
+        if(changes.length < 1){
+            console.warn("Effect would have no effect:", cvModifier);
+            return;
+        }
+        let activeEffect = {
+            label,
+            icon,
+            changes,
+            origin: item.uuid,
+            duration: {
+                seconds,
+            },
+            flags: {
+                nextPhase: true,
+                actionEffect: true,
+            },
+        };
+        await actor.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+    }
+
+    static parseCvModifiers(OCV, DCV, DC) {
+        let ocv = 0;
+        let dcv = 0;
+        let dc = 0;
+        let dcvMultiplier = 1;
+        let ocvMultiplier = 1;
+        const ocvMod = Attack._parseCvModifier(OCV);
+        const dcvMod = Attack._parseCvModifier(DCV);
+        const dcMod = Attack._parseCvModifier(DC);
+
+        if (ocvMod.isMultiplier) {
+            ocvMultiplier = ocvMod.modifier;
+        } else {
+            ocv = ocvMod.modifier;
+        }
+        if (dcvMod.isMultiplier) {
+            dcvMultiplier = dcvMod.modifier;
+        } else {
+            dcv = dcvMod.modifier;
+        }
+        dc = dcMod.modifier;
+
+        return { ocv, dcv, dc, dcvMultiplier, ocvMultiplier };
+    }
+
+    static _parseCvModifier(modifierString) {
+        const cvModifier = {
+            modifier: 0,
+            isMultiplier: false,
+        };
+        if (modifierString && (typeof modifierString === "string" || modifierString instanceof String)) {
+            const divisorIndex = modifierString.indexOf("/");
+            const isMultiplier = divisorIndex !== -1 && Number.isInteger(divisorIndex);
+            cvModifier.modifier = parseInt(modifierString);
+            if (!Number.isInteger(cvModifier.modifier)) {
+                cvModifier.modifier = 0;
+            } else if (isMultiplier && modifierString.length > divisorIndex + 1) {
+                const divisor = parseInt(modifierString.slice(divisorIndex + 1));
+                if (Number.isInteger(divisor) && divisor !== 0) {
+                    cvModifier.modifier = cvModifier.modifier / divisor;
+                    cvModifier.isMultiplier = true;
+                }
+            }
+            if (!cvModifier.modifier) {
+                cvModifier.modifier = 0;
+                cvModifier.isMultiplier = false; // are there any times we modify to *0?
+            }
+        } else {
+            if (Number.isInteger(modifierString)) {
+                cvModifier.modifier = modifierString;
+            }
+        }
+        return cvModifier;
+    }
+
+    static makeCvModifierFromItem(item, system, ocv, dcv, dc, dcvMultiplier) {
+        if (!item) {
+            console.log("no item");
+        }
+        // todo: refactor into an 'add to system'
+        system.item[item.id] = item;
+        if (item.system.cvModifiers === undefined) {
+            item.system.cvModifiers = Attack.parseCvModifiers(item.system.OCV, item.system.DCV, item.system.DC);
+        }
+
+        // arguments passed in override the item default
+        const cvMod = {
+            ocv: ocv ?? item.system.cvModifiers.ocv,
+            dcv: dcv ?? item.system.cvModifiers.dcv,
+            dc: dc ?? item.system.cvModifiers.dc,
+            dcvMultiplier: dcvMultiplier ?? item.system.cvModifiers.dcvMultiplier,
+        };
+
         return Attack.makeCvModifier(cvMod, item.system.XMLID, item.name, item.id);
     }
+
     static makeCvModifier(cvMod, XMLID, name, id) {
         return { cvMod, XMLID, name, id };
     }
+
     static findStrikeKey(item) {
         // todo: if there is some character that doesn't have a STRIKE maneuver, then this find will fail.
         // if the character has been loaded from an HDC then they will have the default maneuvers
@@ -14,6 +197,7 @@ export class Attack {
         let strike = item.actor.items.find((item) => "STRIKE" === item.system.XMLID);
         return strike?.id;
     }
+
     static addMultipleAttack(data) {
         if (!data.action?.maneuver?.attackKeys?.length) {
             return false;
@@ -111,13 +295,13 @@ export class Attack {
         // these are the targeting data used for the attack(s)
         const target = {
             targetId: targetedToken.id,
-            ocvModifiers: [],
+            cvModifiers: [],
             results: [], // todo: for attacks that roll one effect and apply to multiple targets do something different here
         };
 
         target.range = calculateDistanceBetween(system.attackerToken, targetedToken);
         if (item) {
-            target.ocvModifiers.push(
+            target.cvModifiers.push(
                 Attack.makeCvModifier(Attack.getRangeModifier(item, target.range), "RANGE", "Range Mod"),
             );
         }
@@ -133,7 +317,7 @@ export class Attack {
         const attack = {
             itemId: item?.id,
             targets,
-            ocvModifiers: {},
+            cvModifiers: [],
         };
         return attack;
     }
@@ -149,6 +333,7 @@ export class Attack {
             attackerTokenId: system.attackerToken?.id ?? null,
             isMultipleAttack: true,
             itemId: item.id,
+            cvModifiers: [],
         };
         if (options) {
             const keys = [];
@@ -184,7 +369,9 @@ export class Attack {
             multiAttackTarget ??= system.targetedTokens[0];
             maneuver.attacks.push(Attack.getAttackInfo(multiAttackItem, [multiAttackTarget], options, system));
         }
-        maneuver.ocvMod = Math.max(maneuver.attacks.length - 1, 0) * -2; // per rules every attack after the first is a cumulative -2 OCV on all attacks
+        // per rules every attack after the first is a cumulative -2 OCV on all attacks
+        maneuver.cvMod = Attack.makeCvModifierFromItem(item, system, Math.max(maneuver.attacks.length - 1, 0) * -2);
+
         return maneuver;
     }
 
@@ -195,6 +382,7 @@ export class Attack {
             isHaymakerAttack: true,
             attacks,
             itemId: item.id,
+            cvModifiers: [],
         };
     }
 
@@ -216,6 +404,7 @@ export class Attack {
             attackerTokenId: system.attackerToken?.id ?? null,
             attacks: [Attack.getAttackInfo(item, targetedTokens, options, system)],
             itemId: item.id,
+            cvModifiers: [],
         };
     }
 
@@ -255,12 +444,11 @@ export class Attack {
 
             const multipleAttackItem = system.item[maneuver.itemId];
             const xmlid = multipleAttackItem.system.XMLID;
-            current.ocvModifiers = [];
             // keep range mods to ourselves until we can agree on a single solution
             // current.attacks.forEach((attack)=>{ attack.targets.forEach((target)=>{
             //     current.ocvModifiers = [].concat(current.ocvModifiers, target.ocvModifiers );
             // }); });
-            current.ocvModifiers.push(Attack.makeCvModifier(maneuver.ocvMod, xmlid, multipleAttackItem.name));
+            current.cvModifiers.push(maneuver.cvMod);
             return current;
         }
         return maneuver;
@@ -274,6 +462,7 @@ export class Attack {
         }
         const attackerToken = Attack.getAttackerToken(item);
         const system = {
+            actor: item.actor,
             attackerToken,
             currentItem: item,
             currentTargets: targetedTokens,
