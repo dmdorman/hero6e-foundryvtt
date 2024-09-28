@@ -45,6 +45,19 @@ export async function onMessageRendered(html) {
     }
 }
 
+function isBodyBasedEffectRoll(item) {
+    return !!(item.system.XMLID === "TRANSFORM");
+}
+
+function isStunBasedEffectRoll(item) {
+    return !!(
+        item.system.XMLID === "MENTALILLUSIONS" ||
+        item.system.XMLID === "MINDCONTROL" ||
+        item.system.XMLID === "MINDSCAN" ||
+        item.system.XMLID === "TELEPATHY"
+    );
+}
+
 /// Dialog box for AttackOptions
 export async function AttackOptions(item) {
     const actor = item.actor;
@@ -430,7 +443,7 @@ export async function AttackToHit(item, options) {
                 _dcvValue = dmcv;
             }
 
-            let activeEffect = {
+            const activeEffect = {
                 label: `${item.name} ${_dcvValue.signedString()} ${_dcvText}`,
                 icon: dcv < 0 ? "icons/svg/downgrade.svg" : "icons/svg/upgrade.svg",
                 changes: [
@@ -1343,8 +1356,8 @@ export async function _onRollDamage(event) {
     const senseAffecting = getPowerInfo({
         item: item,
     })?.type?.includes("sense-affecting");
+
     const entangle = item.system.XMLID === "ENTANGLE";
-    const transform = item.system.XMLID === "TRANSFORM";
 
     const increasedMultiplierLevels = parseInt(item.findModsByXmlid("INCREASEDSTUNMULTIPLIER")?.LEVELS || 0);
     const decreasedMultiplierLevels = parseInt(item.findModsByXmlid("DECREASEDSTUNMULTIPLIER")?.LEVELS || 0);
@@ -1365,8 +1378,8 @@ export async function _onRollDamage(event) {
         .makeKillingRoll(!senseAffecting && !adjustment && formulaParts.isKilling)
         .makeAdjustmentRoll(!!adjustment)
         .makeFlashRoll(!!senseAffecting)
-        .makeEntangleRoll(entangle)
-        .makeEffectRoll(transform)
+        .makeEntangleRoll(!!entangle)
+        .makeEffectRoll(isBodyBasedEffectRoll(item) || isStunBasedEffectRoll(item))
         .addStunMultiplier(increasedMultiplierLevels - decreasedMultiplierLevels)
         .addDice(formulaParts.d6Count >= 1 ? formulaParts.d6Count : 0)
         .addHalfDice(formulaParts.halfDieCount >= 1 ? formulaParts.halfDieCount : 0)
@@ -1449,7 +1462,7 @@ export async function _onRollDamage(event) {
 
     const cardData = {
         item: item,
-        nonDmgEffect: adjustment || transform,
+        nonDmgEffect: adjustment || isBodyBasedEffectRoll(item) || isStunBasedEffectRoll(item),
         senseAffecting,
 
         // dice rolls
@@ -2543,8 +2556,8 @@ async function _calcDamage(heroRoller, item, options) {
         item: item,
     })?.type?.includes("sense-affecting");
     const entangle = item.system.XMLID === "ENTANGLE";
-    const transform = item.system.XMLID === "TRANSFORM";
-    const mindScan = item.system.XMLID === "MINDSCAN"; // TODO: Effect roll should be expanded to many other mental powers
+    const bodyBasedEffectRollItem = isBodyBasedEffectRoll(item);
+    const stunBasedEffectRollItem = isStunBasedEffectRoll(item);
 
     let body;
     let stun;
@@ -2562,11 +2575,11 @@ async function _calcDamage(heroRoller, item, options) {
         body = heroRoller.getEntangleTotal();
         stun = 0;
         bodyForPenetrating = 0;
-    } else if (transform) {
+    } else if (bodyBasedEffectRollItem) {
         body = heroRoller.getEffectTotal();
         stun = 0;
         bodyForPenetrating = 0;
-    } else if (mindScan) {
+    } else if (stunBasedEffectRollItem) {
         body = 0;
         stun = heroRoller.getEffectTotal();
         bodyForPenetrating = 0;

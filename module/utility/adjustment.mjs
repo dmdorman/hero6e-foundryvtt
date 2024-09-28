@@ -397,7 +397,7 @@ export async function performAdjustment(
 
     // Do we have a target?
     if (!targetCharacteristic && !targetPower) {
-        console.error(`${nameOfCharOrPower} is an invalid target for the adjustmment power ${item.name}`);
+        console.error(`${nameOfCharOrPower} is an invalid target for the adjustment power ${item.name}`);
         return;
     }
 
