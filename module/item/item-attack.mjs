@@ -1386,7 +1386,10 @@ export async function _onRollDamage(event) {
         .addDiceMinus1(formulaParts.d6Less1DieCount >= 1 ? formulaParts.d6Less1DieCount : 0)
         .addNumber(formulaParts.constant)
         .modifyToStandardEffect(useStandardEffect)
-        .modifyToNoBody(item.system.stunBodyDamage === "stunonly" || item.system.stunBodyDamage === "effectonly")
+        .modifyToNoBody(
+            item.system.stunBodyDamage === CONFIG.HERO.stunBodyDamages.stunonly ||
+                item.system.stunBodyDamage === CONFIG.HERO.stunBodyDamages.effectonly,
+        )
         .addToHitLocation(
             includeHitLocation,
             toHitData.aim,
@@ -2720,11 +2723,11 @@ async function _calcDamage(heroRoller, item, options) {
     }
 
     // Special effects that change damage?
-    if (item.system.stunBodyDamage === "stunonly") {
+    if (item.system.stunBodyDamage === CONFIG.HERO.stunBodyDamages.stunonly) {
         body = 0;
-    } else if (item.system.stunBodyDamage === "bodyonly") {
+    } else if (item.system.stunBodyDamage === CONFIG.HERO.stunBodyDamages.bodyonly) {
         stun = 0;
-    } else if (item.system.stunBodyDamage === "effectonly") {
+    } else if (item.system.stunBodyDamage === CONFIG.HERO.stunBodyDamages.effectonly) {
         stun = 0;
         body = 0;
     }

@@ -6425,7 +6425,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
 
 // For some reason the BASECOST of some modifiers/adder are 0, some are just wrong
 // Turns out this is actually correct BASECOST can be 0, and COSTPERLEVEL is calculated.
-// Plan it to remove ModifierOverride and add them to the powers list as modifiers.
+// Plan is to remove ModifierOverride and add them to the powers list as modifiers.
 HERO.ModifierOverride = {
     ADDITIONALED: { BASECOST: 5 / 2 },
     ADDITIONALPD: { BASECOST: 5 / 2 },
@@ -6539,12 +6539,12 @@ HERO.mcsl = {
     },
 };
 
-HERO.stunBodyDamages = {
+HERO.stunBodyDamages = Object.freeze({
     stunbody: "Stun and Body",
     stunonly: "Stun only",
     bodyonly: "Body only",
     effectonly: "Effect only",
-};
+});
 
 HERO.knockbackMultiplier = {
     0: "No Knockback",

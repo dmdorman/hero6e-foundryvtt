@@ -4007,7 +4007,7 @@ export class HeroSystem6eItem extends Item {
             this.system.uses = "omcv";
             this.system.knockbackMultiplier = 0;
             this.system.usesStrength = false;
-            this.system.stunBodyDamage = "stunonly";
+            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunonly;
             this.system.noHitLocations = true;
         } else if (
             xmlid === "MINDCONTROL" ||
@@ -4137,7 +4137,7 @@ export class HeroSystem6eItem extends Item {
 
         const stunOnly = this.findModsByXmlid("STUNONLY");
         if (stunOnly) {
-            this.system.stunBodyDamage = "stunonly";
+            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunonly;
         }
 
         const doesBody = this.findModsByXmlid("DOESBODY");
