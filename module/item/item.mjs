@@ -1280,11 +1280,7 @@ export class HeroSystem6eItem extends Item {
                             const token = tokens[0];
                             const velocity = calculateVelocityInSystemUnits(item.actor, token);
 
-                            item.system.ocvEstimated = (
-                                ocv +
-                                parseInt(cslSummary.ocv) +
-                                parseInt(velocity / 10)
-                            ).signedString();
+                            item.system.ocvEstimated = String(ocv + parseInt(cslSummary.ocv) + parseInt(velocity / 10));
 
                             if (parseInt(velocity / 10) != 0) {
                                 if (item.flags.tag.ocv) {
@@ -1302,11 +1298,9 @@ export class HeroSystem6eItem extends Item {
                     default:
                         item.system.ocv = parseInt(item.system.ocv).signedString();
 
-                        item.system.ocvEstimated = (
-                            ocv +
-                            parseInt(item.system.ocv) +
-                            parseInt(cslSummary.ocv || cslSummary.omcv || 0)
-                        ).signedString();
+                        item.system.ocvEstimated = String(
+                            ocv + parseInt(item.system.ocv) + parseInt(cslSummary.ocv || cslSummary.omcv || 0),
+                        );
 
                         if (parseInt(item.system.ocv) != 0) {
                             if (item.flags.tags.ocv) {
@@ -1330,11 +1324,9 @@ export class HeroSystem6eItem extends Item {
                     item.flags.tags.dcv = `${item.flags.tags.dcv}${dcv.signedString()} DCV`;
                 }
                 item.system.dcv = parseInt(item.system.dcv).signedString();
-                item.system.dcvEstimated = (
-                    dcv +
-                    parseInt(item.system.dcv) +
-                    parseInt(cslSummary.dcv || cslSummary.dmcv || 0)
-                ).signedString();
+                item.system.dcvEstimated = String(
+                    dcv + parseInt(item.system.dcv) + parseInt(cslSummary.dcv || cslSummary.dmcv || 0),
+                );
 
                 if (parseInt(item.system.dcv) != 0) {
                     if (item.flags.tags.dcv) {
@@ -1348,7 +1340,7 @@ export class HeroSystem6eItem extends Item {
 
             if (item.system.uses === "omcv") {
                 const omcv = parseInt(item.actor?.system.characteristics.omcv?.value || 0);
-                item.system.ocvEstimated = (omcv + parseInt(cslSummary.omcv || 0)).signedString();
+                item.system.ocvEstimated = String(omcv + parseInt(cslSummary.omcv || 0));
                 if (omcv != 0) {
                     if (item.flags.tags.omcv) {
                         item.flags.tags.omcv += "\n";
@@ -1359,7 +1351,7 @@ export class HeroSystem6eItem extends Item {
                 }
 
                 const dmcv = parseInt(item.actor?.system.characteristics.dmcv?.value || 0);
-                item.system.dcvEstimated = (dmcv + parseInt(cslSummary.dmcv || 0)).signedString();
+                item.system.dcvEstimated = String(dmcv + parseInt(cslSummary.dmcv || 0));
                 if (dmcv != 0) {
                     if (item.flags.tags.dmcv) {
                         item.flags.tags.dmcv += "\n";
@@ -1375,7 +1367,7 @@ export class HeroSystem6eItem extends Item {
                 (o) => o.type == "maneuver" && o.name === "Set" && o.system.active,
             );
             if (setManeuver) {
-                item.system.ocvEstimated = (parseInt(item.system.ocvEstimated) + 1).signedString();
+                item.system.ocvEstimated = String(parseInt(item.system.ocvEstimated) + 1);
 
                 if (item.flags.tags.ocv) {
                     item.flags.tags.ocv += "\n";
@@ -1390,14 +1382,14 @@ export class HeroSystem6eItem extends Item {
                 (o) => o.type == "maneuver" && o.name === "Haymaker" && o.system.active,
             );
             if (haymakerManeuver) {
-                item.system.dcvEstimated = (parseInt(item.system.dcvEstimated) - 4).signedString();
+                item.system.dcvEstimated = String(parseInt(item.system.dcvEstimated) - 5);
 
                 if (item.flags.tags.dcv) {
                     item.flags.tags.dcv += "\n";
                 } else {
                     item.flags.tags.dcv = "";
                 }
-                item.flags.tags.dcv += `-4 Haymaker`;
+                item.flags.tags.dcv += `-5 Haymaker`;
             }
 
             item.system.phase = item.system.PHASE;
