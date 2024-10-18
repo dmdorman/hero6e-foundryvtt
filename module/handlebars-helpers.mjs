@@ -10,6 +10,7 @@ export function initializeHandlebarsHelpers() {
         return value !== undefined;
     });
     Handlebars.registerHelper("includes", includes);
+    Handlebars.registerHelper("jsonify", jsonify);
 }
 
 function indexOf(str, searchTerm) {
@@ -34,4 +35,8 @@ function getModulePath(templateDirectory) {
 
 function includes(str, searchTerm) {
     return str?.includes(searchTerm);
+}
+
+function jsonify(context) {
+    return JSON.stringify(context);
 }

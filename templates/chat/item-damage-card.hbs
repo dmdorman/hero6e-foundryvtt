@@ -45,10 +45,10 @@
         </div>
 
         <div data-visibility="gm">
-            <button class="apply-damage" title="Apply damage to selected tokens." data-itemId="{{item.uuid}}"
+            <button class="apply-damage" title="Apply damage to selected tokens." data-item-id="{{item.uuid}}"
                 data-body-damage="{{bodyDamage}}" data-body-damage-effective="{{bodyDamageEffective}}"
                 data-stun-damage="{{stunDamage}}" data-stun-damage-effective="{{stunDamageEffective}}"
-                data-roller="{{roller}}" data-stun-multiplier="{{stunMultiplier}}" data-hit-location="{{hitLocation}}" data-target-Entangle="{{targetEntangle}}">
+                data-roller="{{roller}}" data-stun-multiplier="{{stunMultiplier}}" data-hit-location="{{hitLocation}}" data-target-entangle="{{targetEntangle}}">
                 {{#if (or nonDmgEffect senseAffecting)}}
                 Apply {{item.system.XMLID}}
                 {{else}}
@@ -57,35 +57,39 @@
             </button>
 
             {{#each targetTokens as |target id|}}
-            <button class="apply-damage" title="Apply damage to {{target.token.name}}." data-itemId="{{../item.uuid}}"
-                data-target-token-id="{{target.token.id}}"
-                data-body-damage="{{../bodyDamage}}" data-body-damage-effective="{{../bodyDamageEffective}}"
-                data-stun-damage="{{../stunDamage}}" data-stun-damage-effective="{{../stunDamageEffective}}"
-                data-roller="{{target.roller}}" data-stun-multiplier="{{../stunMultiplier}}" data-hit-location="{{../hitLocation}}" data-target-Entangle="{{../targetEntangle}}">
-                {{#if ../nonDmgEffect}}
-                Apply {{../item.system.XMLID}} to <b>{{target.token.name}}</b>
-                {{else}}
-                    {{#if target.subTarget}}
-                        Apply <span title="{{target.roller.title}}">{{target.roller.total}}</span> Damage to <b>{{target.subTarget}} {{item.system.XMLID}}</b>
+                <button class="apply-damage" title="Apply damage to {{target.token.name}}." data-item-id="{{../item.uuid}}"
+                    data-target-token-id="{{target.token.id}}"
+                    {{!-- Can these be removed? --}}
+                    data-body-damage="{{../bodyDamage}}" data-body-damage-effective="{{../bodyDamageEffective}}"
+                    data-stun-damage="{{../stunDamage}}" data-stun-damage-effective="{{../stunDamageEffective}}"
+                    data-stun-multiplier="{{../stunMultiplier}}" data-hit-location="{{../hitLocation}}" data-target-entangle="{{../targetEntangle}}"
+                    data-token-data="{{jsonify target}}">
+                    {{#if ../nonDmgEffect}}
+                    Apply {{../item.system.XMLID}} to <b>{{target.token.name}}</b>
                     {{else}}
-                        Apply <span title="{{target.roller.title}}">{{target.roller.total}}</span> Damage to <b>{{target.token.name}} {{item.system.XMLID}}</b>
+                        {{#if target.subTarget}}
+                            Apply <span title="{{target.roller.title}}">{{target.roller.total}}</span> Damage to <b>{{target.subTarget}} {{item.system.XMLID}}</b>
+                        {{else}}
+                            Apply <span title="{{target.roller.title}}">{{target.roller.total}}</span> Damage to <b>{{target.token.name}} {{item.system.XMLID}}</b>
+                        {{/if}}
                     {{/if}}
-                {{/if}}
-            </button>
+                </button>
             {{/each}}
 
             {{#if targetIds}}
-            <button class="apply-damage" title="Apply damage to ALL tokens that were hit." data-itemId="{{item.uuid}}"
-                data-target-Ids="{{targetIds}}"
-                data-body-damage="{{bodyDamage}}" data-body-damage-effective="{{bodyDamageEffective}}"
-                data-stun-damage="{{stunDamage}}" data-stun-damage-effective="{{stunDamageEffective}}"
-                data-roller="{{roller}}" data-stun-multiplier="{{stunMultiplier}}" data-hit-location="{{hitLocation}}" data-target-Entangle="{{targetEntangle}}">
-                {{#if nonDmgEffect}}
-                Apply {{item.system.XMLID}} to <b>ALL</b>
-                {{else}}
-                Apply Damage to <b>ALL</b>
-                {{/if}}
-            </button>
+                <button class="apply-damage" title="Apply damage to ALL tokens that were hit." data-item-id="{{item.uuid}}"
+                    data-target-ids="{{targetIds}}"
+                    {{!-- Can these be removed? --}}
+                    data-body-damage="{{bodyDamage}}" data-body-damage-effective="{{bodyDamageEffective}}"
+                    data-stun-damage="{{stunDamage}}" data-stun-damage-effective="{{stunDamageEffective}}"
+                    data-stun-multiplier="{{stunMultiplier}}" data-hit-location="{{hitLocation}}" data-target-entangle="{{targetEntangle}}"
+                    data-token-data="{{jsonify targetTokens}}">
+                    {{#if nonDmgEffect}}
+                    Apply {{item.system.XMLID}} to <b>ALL</b>
+                    {{else}}
+                    Apply Damage to <b>ALL</b>
+                    {{/if}}
+                </button>
             {{/if}}
         </div>
 
