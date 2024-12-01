@@ -77,7 +77,7 @@ npm run build
 
 This will automatically leave `gulp` in watch mode which means that any of your changes will automatically rebuilt.
 
-One this step successful executes, you should be able to run worlds using this system.
+One this step successful executes, you should be able to run worlds using this system although you will need to restart your FoundryVTT to see this world for the first time.
 
 ### Testing
 

@@ -1,6 +1,6 @@
 import { HEROSYS } from "./herosystem6e.mjs";
 
-export default class HeroSystem6eMeasuredTemplate extends MeasuredTemplate {
+export default class HeroSystem6eMeasuredTemplate extends foundry.canvas.placeables.MeasuredTemplate {
     async _onClickLeft(event) {
         await super._onClickLeft(event);
 

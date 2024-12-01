@@ -20,26 +20,31 @@ import { Attack } from "../utility/attack.mjs";
 import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMetres } from "../utility/range.mjs";
 
 export async function chatListeners(html) {
-    html.on("click", "button.roll-damage", this._onRollDamage.bind(this));
-    html.on("click", "button.apply-damage", this._onApplyDamage.bind(this));
-    html.on("click", "button.rollAoe-damage", this._onRollAoeDamage.bind(this));
-    html.on("click", "button.roll-knockback", this._onRollKnockback.bind(this));
-    html.on("click", "button.roll-mindscan", this._onRollMindScan.bind(this));
-    html.on("click", "button.roll-mindscan-ego", this._onRollMindScanEffectRoll.bind(this));
+    bindEventListenersToHtml(html, "click", "button.roll-damage", this._onRollDamage.bind(this));
+    bindEventListenersToHtml(html, "click", "button.apply-damage", this._onApplyDamage.bind(this));
+    bindEventListenersToHtml(html, "click", "button.rollAoe-damage", this._onRollAoeDamage.bind(this));
+    bindEventListenersToHtml(html, "click", "button.roll-knockback", this._onRollKnockback.bind(this));
+    bindEventListenersToHtml(html, "click", "button.roll-mindscan", this._onRollMindScan.bind(this));
+    bindEventListenersToHtml(html, "click", "button.roll-mindscan-ego", this._onRollMindScanEffectRoll.bind(this));
 }
 
-export async function onMessageRendered(html) {
-    //[data-visibility="gm"]
+function bindEventListenersToHtml(html, selector, eventName, listener) {
+    const nodeList = html.querySelectorAll(selector);
+    nodeList.forEach((node) => {
+        node[`on${eventName}`] = listener;
+    });
+}
+
+export async function onMessageRendered(jQueryHtml) {
     if (!game.user.isGM) {
-        html.find(`[data-visibility="gm"]`).remove();
-    }
-    if (game.user.isGM) {
-        html.find(`[data-visibility="redacted"]`).remove();
-        html.find(`[data-visibility="!gm"]`).remove();
+        jQueryHtml.find(`[data-visibility="gm"]`).remove();
+    } else {
+        jQueryHtml.find(`[data-visibility="redacted"]`).remove();
+        jQueryHtml.find(`[data-visibility="!gm"]`).remove();
     }
 
     // visibility based on actor owner
-    let element = html.find("div [data-visibility]");
+    let element = jQueryHtml.find("div [data-visibility]");
     if (element) {
         let actorId = element.data("visibility");
         if (actorId) {
