@@ -766,19 +766,6 @@ Hooks.once("setup", function () {
     game.packs.filter((p) => p.metadata.type === "Item").forEach((p) => (p.applicationClass = HeroSystem6eCompendium));
 });
 
-// An errant "bar3" reference causes v12 to crash.
-// Hopefully we are in v11 and can fix the problem before GM decides to migrate to v12.
-// If we are already in v12 then we have to manually revert to v11 to delete the problem property.
-// REF: https://github.com/dmdorman/hero6e-foundryvtt/issues/1187
-Hooks.once("ready", async function () {
-    let _defaultToken = game.settings.get("core", DefaultTokenConfig.SETTING) ?? {};
-    if (_defaultToken.bar3) {
-        delete _defaultToken.bar3;
-        game.settings.set("core", DefaultTokenConfig.SETTING, _defaultToken);
-        console.warn("Removing errant bar3 setting as it will prevent loading of world in FoundryVTT V12+");
-    }
-});
-
 Hooks.on("getCombatTrackerEntryContext", function (html, menu) {
     const entry = {
         name: "COMBAT.CombatantRemoveHero",

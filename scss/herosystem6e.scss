@@ -7,15 +7,24 @@
 
 /* Global styles */
 @use "global/colors" as colors2;
-@use "global/window";
+
+/* V13REMOVAL - These should be scoped so that they don't affect the general FoundryVTT stuff
+@use "global/window"; 
 @use "global/grid";
 @use "global/flex";
+*/
 
 /* Styles for dice which are direct overrides of FoundryVTT styling */
 @include meta.load-css("components/foundry-overrides/dice");
 
 /* Styles limited to hero sheets */
 .hero {
+    /* V13ADDITION START - Moved from global as these should be scoped */
+    @include meta.load-css("global/grid");
+    @include meta.load-css("global/flex");
+
+    /* V13ADDITION END - Moved from global as these should be scoped */
+
     @include meta.load-css("components/forms");
     @include meta.load-css("components/resource");
     @include meta.load-css("components/tabs");
@@ -27,6 +36,7 @@
     }
 }
 
+/* V13TODO - This should all be scoped to hero */
 @include meta.load-css("components/chat");
 
 /* Styles for time tracking */

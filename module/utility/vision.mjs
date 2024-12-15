@@ -40,48 +40,16 @@ export class HeroPointVisionSource extends foundry.canvas.sources.PointVisionSou
 }
 
 export function setPerceptionModes() {
-    // class HeroVisionMode extends VisionMode {
-    //     constructor() {
-    //         super({
-    //             id: "heroSight",
-    //             //label: "PF2E.Actor.Creature.Sense.Type.Thoughts",
-    //             walls: false,
-    //             angle: false,
-    //             type: DetectionMode.DETECTION_TYPES.OTHER,
-    //         });
-    //     }
-    // }
-    // CONFIG.Canvas.visionModes.heroVision = new HeroVisionMode();
-    // CONFIG.Canvas.visionModes.heroSight = new VisionMode({
-    //     id: "heroSight",
-    //     label: "VISION.HeroSight",
-    //     canvas: {
-    //         shader: ColorAdjustmentsSamplerShader,
-    //         //uniforms: { enable: true, contrast: 0, saturation: -1.0, brightness: 0 },
-    //         uniforms: { brightness: 0, contrast: 0, darknessLevel: 0, saturation: -1 },
-    //     },
-    //     lighting: {
-    //         levels: {
-    //             // from core-bundled darkvision mode: maybe restore?
-    //             //[VisionMode.LIGHTING_LEVELS.DIM]: VisionMode.LIGHTING_LEVELS.BRIGHT,
-    //         },
-    //         background: { visibility: VisionMode.LIGHTING_VISIBILITY.REQUIRED },
-    //     },
-    //     vision: {
-    //         darkness: { adaptive: false },
-    //         defaults: { contrast: 0, saturation: -1, brightness: 0.1 },
-    //     },
-    // });
     // Hero Generic Sense
 
-    class HeroDetectionSightMode extends DetectionMode {
+    class HeroDetectionSightMode extends foundry.canvas.perception.DetectionMode {
         constructor() {
             super({
                 id: "heroDetectSight",
                 //label: "PF2E.Actor.Creature.Sense.Type.Thoughts",
                 //walls: true,
                 //angle: false,
-                type: DetectionMode.DETECTION_TYPES.SIGHT,
+                type: foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT,
             });
         }
         static getDetectionFilter() {
