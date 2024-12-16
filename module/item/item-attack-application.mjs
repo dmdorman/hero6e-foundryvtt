@@ -254,7 +254,7 @@ export class ItemAttackFormApplication extends FormApplication {
             data.action = Attack.getActionInfo(
                 data.item,
                 data.targets,
-                data.formData, // use formdata to include player options from the form
+                data.formData, // use formData to include player options from the form
             );
             // the title seems to be fixed when the form is initialized,
             // and doesn't change afterwards even if we come through here again

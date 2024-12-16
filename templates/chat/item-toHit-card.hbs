@@ -119,36 +119,33 @@
                 <i>The Game Master is reviewing the target to confirm it is within the Mind Scan area and that your attack score exceeded the target's DMCV.</i>
             </div>
 
-            <button data-visibility="gm" class="roll-mindscan" data-itemId="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
-                data-damageMod="{{damageMod}}" data-hitRollData="{{hitRollData}}"
-                data-effectiveStr="{{effectiveStr}}" data-effective-Levels="{{effectiveLevels}}" data-targetIds="{{targetIds}}" data-velocity="{{velocity}}" 
+            <button data-visibility="gm" class="roll-mindscan" data-item-id="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
+                data-effectiveStr="{{effectiveStr}}" data-effective-levels="{{effectiveLevels}}" data-target-ids="{{targetIds}}" data-velocity="{{velocity}}" 
                 data-boostable-Charges="{{boostableChargesToUse}}" data-to-hit-roll-total="{{toHitRollTotal}}" data-target="" title="Will result in a MISS">
                 No Target or Miss
             </button>
 
-            <button data-visibility="gm" class="roll-mindscan" data-itemId="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
-                data-damageMod="{{damageMod}}" data-hitRollData="{{hitRollData}}"
-                data-effectiveStr="{{effectiveStr}}" data-effective-Levels="{{effectiveLevels}}" data-targetIds="{{targetIds}}" data-velocity="{{velocity}}" 
+            <button data-visibility="gm" class="roll-mindscan" data-item-id="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
+                data-effectiveStr="{{effectiveStr}}" data-effective-levels="{{effectiveLevels}}" data-target-ids="{{targetIds}}" data-velocity="{{velocity}}" 
                 data-boostable-Charges="{{boostableChargesToUse}}" data-to-hit-roll-total="{{toHitRollTotal}}" data-target="Selected" title="Select a token on the scene">
                 Selected Token
             </button>
 
             {{#each targetData as |target|}}
                 {{#if (eq target.result.hit "Hit")}}
-                    <button data-visibility="gm" class="roll-mindscan" data-itemId="{{../item.uuid}}" data-aim="{{../aim}}" data-aim-side="{{../aimSide}}"
-                        data-damageMod="{{../damageMod}}" data-hitRollData="{{../hitRollData}}"
-                        data-effectiveStr="{{../effectiveStr}}" data-effective-Levels="{{../effectiveLevels}}" data-targetIds="{{../targetIds}}" data-velocity="{{../velocity}}" 
-                        data-boostable-Charges="{{../boostableChargesToUse}}" data-target-Entangle="{{targetEntangle}}" data-to-hit-roll-total="{{../toHitRollTotal}}" data-target="{{this.id}}">
+                    <button data-visibility="gm" class="roll-mindscan" data-item-id="{{../item.uuid}}" data-aim="{{../aim}}" data-aim-side="{{../aimSide}}"
+                        data-effectiveStr="{{../effectiveStr}}" data-effective-levels="{{../effectiveLevels}}" data-target-ids="{{../targetIds}}" data-velocity="{{../velocity}}" 
+                        data-boostable-charges="{{../boostableChargesToUse}}" data-target-entangle="{{targetEntangle}}" data-to-hit-roll-total="{{../toHitRollTotal}}" data-target="{{this.id}}">
                         <b>{{this.name}}</b>
                     </button>
                 {{/if}}
             {{/each}}
         {{else}}
             <div data-visibility="{{actor.id}}">
-                <button class="roll-damage" data-itemId="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
-                    data-damageMod="{{damageMod}}" data-hitRollData="{{hitRollData}}" data-actionData="{{actionData}}"
-                    data-effectiveStr="{{effectiveStr}}" data-effective-Levels="{{effectiveLevels}}" data-targetIds="{{targetIds}}" data-velocity="{{velocity}}" 
-                    data-boostable-Charges="{{boostableChargesToUse}}" data-target-Entangle="{{targetEntangle}}">
+                <button class="roll-damage" data-item-id="{{item.uuid}}" data-aim="{{aim}}" data-aim-side="{{aimSide}}"
+                    data-action-data="{{actionData}}"
+                    data-effectiveStr="{{effectiveStr}}" data-effective-levels="{{effectiveLevels}}" data-target-ids="{{targetIds}}" data-velocity="{{velocity}}" 
+                    data-boostable-charges="{{boostableChargesToUse}}" data-target-entangle="{{targetEntangle}}">
                     {{#if (or adjustment senseAffecting)}}
                         Roll {{item.system.XMLID}}
                     {{else}}

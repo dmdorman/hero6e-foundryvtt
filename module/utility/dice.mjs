@@ -849,6 +849,14 @@ export class HeroRoller {
     }
 
     /**
+     *
+     * @returns {boolean}
+     */
+    hitLocationValid() {
+        return this._useHitLocation;
+    }
+
+    /**
      * Make a copy of this existing roller that can be modified without affecting the original.
      *
      * @returns HeroRoller
