@@ -1,5 +1,7 @@
+import { HEROSYS } from "../herosystem6e.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
+import { calculateStrengthMinimumForItem } from "../utility/damage.mjs";
 
 export function registerUploadTests(quench) {
     quench.registerBatch(
@@ -1238,22 +1240,22 @@ export function registerUploadTests(quench) {
             describe("TELEKINESIS", async function () {
                 const contents = `
                     <POWER XMLID="TELEKINESIS" ID="1589145928828" BASECOST="0.0" LEVELS="62" ALIAS="Telekinesis" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Psychokinesis" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
-                    <NOTES />
-                    <MODIFIER XMLID="LIMITEDRANGE" ID="1596334078773" BASECOST="-0.25" LEVELS="0" ALIAS="Limited Range" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
                         <NOTES />
-                    </MODIFIER>
-                    <MODIFIER XMLID="OIHID" ID="1596334078774" BASECOST="-0.25" LEVELS="0" ALIAS="Only In Alternate Identity" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
-                        <NOTES />
-                    </MODIFIER>
-                    <MODIFIER XMLID="EXTRATIME" ID="1596334078813" BASECOST="-0.25" LEVELS="0" ALIAS="Extra Time" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="PHASE" OPTIONID="PHASE" OPTION_ALIAS="Delayed Phase" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
-                        <NOTES />
-                    </MODIFIER>
-                    <MODIFIER XMLID="REQUIRESASKILLROLL" ID="1596334078849" BASECOST="0.25" LEVELS="0" ALIAS="Requires A Roll" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="14" OPTIONID="14" OPTION_ALIAS="14- roll" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
-                        <NOTES />
-                    </MODIFIER>
-                    <MODIFIER XMLID="ACV" ID="1596334078859" BASECOST="0.0" LEVELS="0" ALIAS="Alternate Combat Value" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="NONMENTALOMCV" OPTIONID="NONMENTALOMCV" OPTION_ALIAS="uses OMCV against DCV" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
-                        <NOTES />
-                    </MODIFIER>
+                        <MODIFIER XMLID="LIMITEDRANGE" ID="1596334078773" BASECOST="-0.25" LEVELS="0" ALIAS="Limited Range" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                            <NOTES />
+                        </MODIFIER>
+                        <MODIFIER XMLID="OIHID" ID="1596334078774" BASECOST="-0.25" LEVELS="0" ALIAS="Only In Alternate Identity" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                            <NOTES />
+                        </MODIFIER>
+                        <MODIFIER XMLID="EXTRATIME" ID="1596334078813" BASECOST="-0.25" LEVELS="0" ALIAS="Extra Time" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="PHASE" OPTIONID="PHASE" OPTION_ALIAS="Delayed Phase" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                            <NOTES />
+                        </MODIFIER>
+                        <MODIFIER XMLID="REQUIRESASKILLROLL" ID="1596334078849" BASECOST="0.25" LEVELS="0" ALIAS="Requires A Roll" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="14" OPTIONID="14" OPTION_ALIAS="14- roll" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                            <NOTES />
+                        </MODIFIER>
+                        <MODIFIER XMLID="ACV" ID="1596334078859" BASECOST="0.0" LEVELS="0" ALIAS="Alternate Combat Value" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="NONMENTALOMCV" OPTIONID="NONMENTALOMCV" OPTION_ALIAS="uses OMCV against DCV" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                            <NOTES />
+                        </MODIFIER>
                     </POWER>
                 `;
                 let item;
@@ -1295,6 +1297,10 @@ export function registerUploadTests(quench) {
 
                 it("levels", function () {
                     assert.equal(item.system.value, 62);
+                });
+
+                it("damage", function () {
+                    assert.equal(item.system.damage, "12d6");
                 });
 
                 it("end", function () {
@@ -1350,14 +1356,6 @@ export function registerUploadTests(quench) {
 
                 it("activePoints", function () {
                     assert.equal(item.system.activePoints, 40);
-                });
-
-                it("dice", function () {
-                    assert.equal(item.system.dice, 2);
-                });
-
-                it("extraDice", function () {
-                    assert.equal(item.system.extraDice, "half");
                 });
 
                 it("end", function () {
@@ -1418,14 +1416,6 @@ export function registerUploadTests(quench) {
                     assert.equal(item.system.activePoints, 25);
                 });
 
-                it("dice", function () {
-                    assert.equal(item.system.dice, 1);
-                });
-
-                it("extraDice", function () {
-                    assert.equal(item.system.extraDice, "one-pip");
-                });
-
                 it("end", function () {
                     assert.equal(item.system.end, 2);
                 });
@@ -1476,14 +1466,6 @@ export function registerUploadTests(quench) {
 
                 it("activePoints", function () {
                     assert.equal(item.system.activePoints, 75);
-                });
-
-                it("dice", function () {
-                    assert.equal(item.system.dice, 15);
-                });
-
-                it("extraDice", function () {
-                    assert.equal(item.system.extraDice, "zero");
                 });
 
                 it("end", function () {
@@ -1550,14 +1532,6 @@ export function registerUploadTests(quench) {
 
                 it("activePoints", function () {
                     assert.equal(item.system.activePoints, 206);
-                });
-
-                it("dice", function () {
-                    assert.equal(item.system.dice, 15);
-                });
-
-                it("extraDice", function () {
-                    assert.equal(item.system.extraDice, "zero");
                 });
 
                 it("end", function () {
@@ -2491,7 +2465,7 @@ export function registerUploadTests(quench) {
             describe("Killing Strike", async function () {
                 const contents = `
                     <MANEUVER XMLID="MANEUVER" ID="1689357675658" BASECOST="4.0" LEVELS="0" ALIAS="Killing Strike" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Killing Strike" OCV="-2" DCV="+0" DC="2" PHASE="1/2" EFFECT="[KILLINGDC]" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="10" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[WEAPONKILLINGDC]">
-                    <NOTES />
+                        <NOTES />
                     </MANEUVER>
                 `;
                 let item;
@@ -2508,15 +2482,21 @@ export function registerUploadTests(quench) {
                     actor.system.characteristics.str.value = 10;
                     await actor._postUpload();
 
-                    item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
-                        parent: actor,
-                    });
+                    item = new HeroSystem6eItem(
+                        {
+                            ...HeroSystem6eItem.itemDataFromXml(contents, actor),
+                            type: "martialart", // TODO: Kludge to make itemDataFromXml match the uploading code.
+                        },
+                        {
+                            parent: actor,
+                        },
+                    );
                     await item._postUpload();
                     actor.items.set(item.system.XMLID, item);
                 });
 
                 it("description", function () {
-                    assert.equal(item.system.description, "1/2 Phase, -2 OCV, +0 DCV, HKA 1d6+1");
+                    assert.equal(item.system.description, "1/2 Phase, -2 OCV, +0 DCV, 1d6+1 HKA");
                 });
 
                 it("realCost", function () {
@@ -2802,25 +2782,25 @@ export function registerUploadTests(quench) {
             describe("Flash", async function () {
                 const contents = `
                     <POWER XMLID="FLASH" ID="1692225594431" BASECOST="0.0" LEVELS="5" ALIAS="Flash" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="SIGHTGROUP" OPTIONID="SIGHTGROUP" OPTION_ALIAS="Sight Group" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
-                    <NOTES />
-                    <ADDER XMLID="HEARINGGROUP" ID="1692227848754" BASECOST="5.0" LEVELS="0" ALIAS="Hearing Group" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
                         <NOTES />
-                    </ADDER>
-                    <ADDER XMLID="PLUSONEHALFDIE" ID="1692227848755" BASECOST="3.0" LEVELS="0" ALIAS="+1/2 d6" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="No" INCLUDE_NOTES_IN_PRINTOUT="No" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
-                        <NOTES />
-                    </ADDER>
-                    <ADDER XMLID="MENTALGROUP" ID="1692227851548" BASECOST="5.0" LEVELS="0" ALIAS="Mental Group" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
-                        <NOTES />
-                    </ADDER>
-                    <ADDER XMLID="NORMALSMELL" ID="1692227860234" BASECOST="3.0" LEVELS="0" ALIAS="Normal Smell" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
-                        <NOTES />
-                    </ADDER>
-                    <ADDER XMLID="DANGER_SENSE" ID="1692227865084" BASECOST="3.0" LEVELS="0" ALIAS="Danger Sense" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
-                        <NOTES />
-                    </ADDER>
-                    <ADDER XMLID="COMBAT_SENSE" ID="1692227866025" BASECOST="5.0" LEVELS="0" ALIAS="Combat Sense" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
-                        <NOTES />
-                    </ADDER>
+                        <ADDER XMLID="HEARINGGROUP" ID="1692227848754" BASECOST="5.0" LEVELS="0" ALIAS="Hearing Group" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
+                            <NOTES />
+                        </ADDER>
+                        <ADDER XMLID="PLUSONEHALFDIE" ID="1692227848755" BASECOST="3.0" LEVELS="0" ALIAS="+1/2 d6" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="No" INCLUDE_NOTES_IN_PRINTOUT="No" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
+                            <NOTES />
+                        </ADDER>
+                        <ADDER XMLID="MENTALGROUP" ID="1692227851548" BASECOST="5.0" LEVELS="0" ALIAS="Mental Group" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
+                            <NOTES />
+                        </ADDER>
+                        <ADDER XMLID="NORMALSMELL" ID="1692227860234" BASECOST="3.0" LEVELS="0" ALIAS="Normal Smell" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
+                            <NOTES />
+                        </ADDER>
+                        <ADDER XMLID="DANGER_SENSE" ID="1692227865084" BASECOST="3.0" LEVELS="0" ALIAS="Danger Sense" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
+                            <NOTES />
+                        </ADDER>
+                        <ADDER XMLID="COMBAT_SENSE" ID="1692227866025" BASECOST="5.0" LEVELS="0" ALIAS="Combat Sense" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
+                            <NOTES />
+                        </ADDER>
                     </POWER>
                 `;
                 let item;
@@ -2860,14 +2840,6 @@ export function registerUploadTests(quench) {
 
                 it("end", function () {
                     assert.equal(item.system.end, "5");
-                });
-
-                it("dice", function () {
-                    assert.equal(item.system.dice, "5");
-                });
-
-                it("extraDice", function () {
-                    assert.equal(item.system.extraDice, "half");
                 });
 
                 it("killing", function () {
@@ -4285,7 +4257,6 @@ export function registerUploadTests(quench) {
                 it("description", function () {
                     assert.equal(
                         item.system.description,
-                        //"Aid CON 3d6+1 (Increased Maximum (+8 points) (27 total points)), Continuous (+1) (74 Active Points); Crew-Served (2 people; -1/4)",
                         "Aid CON 3d6+1, Can Add Maximum Of 27 Points, Continuous (+1) (74 Active Points); Crew-Served (2 people; -1/4)",
                     );
                 });
@@ -6125,6 +6096,12 @@ export function registerUploadTests(quench) {
                     let item;
 
                     before(async () => {
+                        const previousDoubleDamageLimitSetting = await game.settings.set(
+                            HEROSYS.module,
+                            "DoubleDamageLimit",
+                        );
+                        await game.settings.set(HEROSYS.module, "DoubleDamageLimit", false);
+
                         const actor = new HeroSystem6eActor(
                             {
                                 name: "Quench Actor",
@@ -6145,6 +6122,8 @@ export function registerUploadTests(quench) {
                         );
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
+
+                        await game.settings.set(HEROSYS.module, "DoubleDamageLimit", previousDoubleDamageLimitSetting);
                     });
 
                     it("description", function () {
@@ -6159,15 +6138,12 @@ export function registerUploadTests(quench) {
                         assert.equal(item.system.activePoints, 5);
                     });
 
-                    it("dice", function () {
-                        assert.equal(item.system.dice, 4); // There are 4 raw dice, STR is added later
-                    });
-
                     it("end", function () {
                         assert.equal(item.system.end, 0);
                     });
+
                     it("damage", function () {
-                        assert.equal(item.system.description, "1/2 Phase, -2 OCV, +1 DCV, 6d6 Strike");
+                        assert.equal(item.system.damage, "6d6");
                     });
                 });
 
@@ -6180,6 +6156,12 @@ export function registerUploadTests(quench) {
                     let item;
 
                     before(async () => {
+                        const previousDoubleDamageLimitSetting = await game.settings.set(
+                            HEROSYS.module,
+                            "DoubleDamageLimit",
+                        );
+                        await game.settings.set(HEROSYS.module, "DoubleDamageLimit", true);
+
                         const actor = new HeroSystem6eActor(
                             {
                                 name: "Quench Actor",
@@ -6199,6 +6181,8 @@ export function registerUploadTests(quench) {
                         );
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
+
+                        await game.settings.set(HEROSYS.module, "DoubleDamageLimit", previousDoubleDamageLimitSetting);
                     });
 
                     it("description", function () {
@@ -6213,16 +6197,16 @@ export function registerUploadTests(quench) {
                         assert.equal(item.system.activePoints, 4);
                     });
 
-                    it("dice", function () {
-                        assert.equal(item.system.dice, 4);
-                    });
-
                     it("levels", function () {
                         assert.equal(item.system.value, 0);
                     });
 
                     it("end", function () {
                         assert.equal(item.system.end, 0);
+                    });
+
+                    it("damage", function () {
+                        assert.equal(item.system.damage, "4d6");
                     });
                 });
 
@@ -6235,6 +6219,12 @@ export function registerUploadTests(quench) {
                     let item;
 
                     before(async () => {
+                        const previousDoubleDamageLimitSetting = await game.settings.set(
+                            HEROSYS.module,
+                            "DoubleDamageLimit",
+                        );
+                        await game.settings.set(HEROSYS.module, "DoubleDamageLimit", true);
+
                         const actor = new HeroSystem6eActor(
                             {
                                 name: "Quench Actor",
@@ -6254,6 +6244,8 @@ export function registerUploadTests(quench) {
                         );
                         await item._postUpload();
                         actor.items.set(item.system.XMLID, item);
+
+                        await game.settings.set(HEROSYS.module, "DoubleDamageLimit", previousDoubleDamageLimitSetting);
                     });
 
                     it("description", function () {
@@ -6268,10 +6260,6 @@ export function registerUploadTests(quench) {
                         assert.equal(item.system.activePoints, 4);
                     });
 
-                    it("dice", function () {
-                        assert.equal(item.system.dice, 2);
-                    });
-
                     it("levels", function () {
                         assert.equal(item.system.value, 0);
                     });
@@ -6279,58 +6267,70 @@ export function registerUploadTests(quench) {
                     it("end", function () {
                         assert.equal(item.system.end, 0);
                     });
-                });
-            });
 
-            describe("Nerve Strike", async function () {
-                const contents = `
+                    it("damage", function () {
+                        assert.equal(item.system.damage, "4d6");
+                    });
+                });
+
+                describe("Nerve Strike", async function () {
+                    const contents = `
                     <MANEUVER XMLID="MANEUVER" ID="1717892734727" BASECOST="4.0" LEVELS="0" ALIAS="Nerve Strike" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Nerve Strike" OCV="-1" DCV="+1" DC="4" PHASE="1/2" EFFECT="[NNDDC]" ADDSTR="No" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[NNDDC]">
-                    <NOTES />
+                        <NOTES />
                     </MANEUVER>
                 `;
-                let item;
+                    let item;
 
-                before(async () => {
-                    const actor = new HeroSystem6eActor(
-                        {
-                            name: "Quench Actor",
-                            type: "pc",
-                        },
-                        {},
-                    );
-                    actor.system.is5e = false;
-                    actor.system.characteristics.dex.value = 15;
-                    await actor._postUpload();
+                    before(async () => {
+                        const previousDoubleDamageLimitSetting = await game.settings.set(
+                            HEROSYS.module,
+                            "DoubleDamageLimit",
+                        );
+                        await game.settings.set(HEROSYS.module, "DoubleDamageLimit", false);
 
-                    item = await new HeroSystem6eItem(
-                        {
-                            ...HeroSystem6eItem.itemDataFromXml(contents, actor),
-                            type: "martialart", // TODO: Kludge to make itemDataFromXml match the uploading code.
-                        },
-                        { parent: actor },
-                    );
-                    await item._postUpload();
-                    actor.items.set(item.system.XMLID, item);
-                });
+                        const actor = new HeroSystem6eActor(
+                            {
+                                name: "Quench Actor",
+                                type: "pc",
+                            },
+                            {},
+                        );
+                        actor.system.is5e = false;
+                        actor.system.characteristics.dex.value = 15;
+                        await actor._postUpload();
 
-                it("description", function () {
-                    assert.equal(item.system.description, "1/2 Phase, -1 OCV, +1 DCV, 2d6 NND");
-                });
+                        item = await new HeroSystem6eItem(
+                            {
+                                ...HeroSystem6eItem.itemDataFromXml(contents, actor),
+                                type: "martialart", // TODO: Kludge to make itemDataFromXml match the uploading code.
+                            },
+                            { parent: actor },
+                        );
+                        await item._postUpload();
+                        actor.items.set(item.system.XMLID, item);
 
-                it("realCost", function () {
-                    assert.equal(item.system.realCost, 4);
-                });
+                        await game.settings.set(HEROSYS.module, "DoubleDamageLimit", previousDoubleDamageLimitSetting);
+                    });
 
-                it("activePoints", function () {
-                    assert.equal(item.system.activePoints, 4);
-                });
+                    it("description", function () {
+                        assert.equal(item.system.description, "1/2 Phase, -1 OCV, +1 DCV, 2d6 NND");
+                    });
 
-                it("dice", function () {
-                    assert.equal(item.system.dice, 2); // There are 4 raw dice, STR is added later
-                });
+                    it("realCost", function () {
+                        assert.equal(item.system.realCost, 4);
+                    });
 
-                it("end", function () {
-                    assert.equal(item.system.end, 0);
+                    it("activePoints", function () {
+                        assert.equal(item.system.activePoints, 4);
+                    });
+
+                    it("damage", function () {
+                        assert.equal(item.system.damage, "2d6");
+                    });
+
+                    it("end", function () {
+                        assert.equal(item.system.end, 0);
+                    });
                 });
             });
 
@@ -7235,6 +7235,380 @@ export function registerUploadTests(quench) {
 
                     it("end", function () {
                         assert.equal(item.system.end, 0);
+                    });
+                });
+            });
+
+            describe("EB with AVLD advantage", () => {
+                const contents = `
+                    <POWER XMLID="ENERGYBLAST" ID="1735535975123" BASECOST="0.0" LEVELS="4" ALIAS="Energy Blast" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                        <NOTES />
+                        <MODIFIER XMLID="AVLD" ID="1735536296325" BASECOST="0.75" LEVELS="0" ALIAS="Attack Versus Limited Defense" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                            <NOTES />
+                        </MODIFIER>
+                    </POWER>
+                `;
+                let item;
+
+                before(async () => {
+                    const actor = new HeroSystem6eActor(
+                        {
+                            name: "Quench Actor",
+                            type: "pc",
+                        },
+                        {},
+                    );
+                    actor.system.is5e = true;
+                    await actor._postUpload();
+
+                    item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                        parent: actor,
+                    });
+                    await item._postUpload();
+                    actor.items.set(item.system.XMLID, item);
+                });
+
+                it("description", async function () {
+                    expect(item.system.description).to.be.equal(
+                        "Energy Blast 4d6 (ED), Attack Versus Limited Defense (+3/4)",
+                    );
+                });
+
+                it("levels", async function () {
+                    assert.equal(item.system.value, 4);
+                });
+
+                it("realCost", function () {
+                    assert.equal(item.system.realCost, 35);
+                });
+
+                it("activePoints", function () {
+                    assert.equal(item.system.activePoints, 35);
+                });
+
+                it("end", function () {
+                    assert.equal(item.system.end, 3);
+                });
+            });
+
+            describe("STRMINIMUM", async function () {
+                describe("Low fidelity -1/4 Limitation", function () {
+                    const contents = `
+                        <POWER XMLID="RKA" ID="1735936415724" BASECOST="0.0" LEVELS="1" ALIAS="Killing Attack - Ranged" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            <MODIFIER XMLID="FOCUS" ID="1735937175257" BASECOST="-1.0" LEVELS="0" ALIAS="Focus" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="OAF" OPTIONID="OAF" OPTION_ALIAS="OAF" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                            <MODIFIER XMLID="REALWEAPON" ID="1735937175259" BASECOST="-0.25" LEVELS="0" ALIAS="Real Weapon" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                            <MODIFIER XMLID="STRMINIMUM" ID="1735937175267" BASECOST="-0.25" LEVELS="0" ALIAS="STR Minimum (low fidelity)" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="1-5" OPTIONID="1-5" OPTION_ALIAS="1-5" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                        </POWER>
+                    `;
+                    let item;
+
+                    before(async () => {
+                        const actor = new HeroSystem6eActor(
+                            {
+                                name: "Quench Actor",
+                                type: "pc",
+                            },
+                            {},
+                        );
+                        actor.system.is5e = false;
+                        actor.system.characteristics.ego.value = 38;
+                        await actor._postUpload();
+
+                        item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            parent: actor,
+                        });
+                        await item._postUpload();
+                        actor.items.set(item.system.XMLID, item);
+                    });
+
+                    it("description", function () {
+                        assert.equal(
+                            item.system.description,
+                            "Killing Attack - Ranged 1d6 (ED) (15 Active Points); OAF (-1), Real Weapon (-1/4), STR Minimum (low fidelity) (1-5; -1/4)",
+                        );
+                    });
+
+                    it("realCost", function () {
+                        assert.equal(item.system.realCost, 6);
+                    });
+
+                    it("activePoints", function () {
+                        assert.equal(item.system.activePoints, 15);
+                    });
+
+                    it("STR Minimum", function () {
+                        assert.equal(calculateStrengthMinimumForItem(item, item.findModsByXmlid("STRMINIMUM")), 5);
+                    });
+
+                    it("damage", function () {
+                        assert.equal(item.system.damage, "1d6K");
+                    });
+
+                    it("end", function () {
+                        assert.equal(item.system.end, 9);
+                    });
+                });
+
+                describe("Low fidelity -1/2 Limitation", function () {
+                    const contents = `
+                        <POWER XMLID="RKA" ID="1735936415724" BASECOST="0.0" LEVELS="1" ALIAS="Killing Attack - Ranged" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            <MODIFIER XMLID="FOCUS" ID="1735937175257" BASECOST="-1.0" LEVELS="0" ALIAS="Focus" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="OAF" OPTIONID="OAF" OPTION_ALIAS="OAF" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                            <MODIFIER XMLID="REALWEAPON" ID="1735937175259" BASECOST="-0.25" LEVELS="0" ALIAS="Real Weapon" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                            <MODIFIER XMLID="STRMINIMUM" ID="1735937214714" BASECOST="-0.5" LEVELS="0" ALIAS="STR Minimum (low fidelity)" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="6-14" OPTIONID="6-14" OPTION_ALIAS="6-14" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                        </POWER>
+                    `;
+                    let item;
+
+                    before(async () => {
+                        const actor = new HeroSystem6eActor(
+                            {
+                                name: "Quench Actor",
+                                type: "pc",
+                            },
+                            {},
+                        );
+                        actor.system.is5e = false;
+                        actor.system.characteristics.ego.value = 38;
+                        await actor._postUpload();
+
+                        item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            parent: actor,
+                        });
+                        await item._postUpload();
+                        actor.items.set(item.system.XMLID, item);
+                    });
+
+                    it("description", function () {
+                        assert.equal(
+                            item.system.description,
+                            "Killing Attack - Ranged 1d6 (ED) (15 Active Points); OAF (-1), STR Minimum (low fidelity) (6-14; -1/2), Real Weapon (-1/4)",
+                        );
+                    });
+
+                    it("realCost", function () {
+                        assert.equal(item.system.realCost, 5);
+                    });
+
+                    it("activePoints", function () {
+                        assert.equal(item.system.activePoints, 15);
+                    });
+
+                    it("STR Minimum", function () {
+                        assert.equal(calculateStrengthMinimumForItem(item, item.findModsByXmlid("STRMINIMUM")), 14);
+                    });
+
+                    it("damage", function () {
+                        assert.equal(item.system.damage, "1d6K");
+                    });
+
+                    it("end", function () {
+                        assert.equal(item.system.end, 9);
+                    });
+                });
+
+                describe("Low fidelity -3/4 Limitation", function () {
+                    const contents = `
+                        <POWER XMLID="RKA" ID="1735936415724" BASECOST="0.0" LEVELS="1" ALIAS="Killing Attack - Ranged" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            <MODIFIER XMLID="FOCUS" ID="1735937175257" BASECOST="-1.0" LEVELS="0" ALIAS="Focus" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="OAF" OPTIONID="OAF" OPTION_ALIAS="OAF" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                            <MODIFIER XMLID="REALWEAPON" ID="1735937175259" BASECOST="-0.25" LEVELS="0" ALIAS="Real Weapon" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                            <MODIFIER XMLID="STRMINIMUM" ID="1735937226862" BASECOST="-0.75" LEVELS="0" ALIAS="STR Minimum (low fidelity)" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="15-17" OPTIONID="15-17" OPTION_ALIAS="15-17" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                        </POWER>
+                    `;
+                    let item;
+
+                    before(async () => {
+                        const actor = new HeroSystem6eActor(
+                            {
+                                name: "Quench Actor",
+                                type: "pc",
+                            },
+                            {},
+                        );
+                        actor.system.is5e = false;
+                        actor.system.characteristics.ego.value = 38;
+                        await actor._postUpload();
+
+                        item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            parent: actor,
+                        });
+                        await item._postUpload();
+                        actor.items.set(item.system.XMLID, item);
+                    });
+
+                    it("description", function () {
+                        assert.equal(
+                            item.system.description,
+                            "Killing Attack - Ranged 1d6 (ED) (15 Active Points); OAF (-1), STR Minimum (low fidelity) (15-17; -3/4), Real Weapon (-1/4)",
+                        );
+                    });
+
+                    it("realCost", function () {
+                        assert.equal(item.system.realCost, 5);
+                    });
+
+                    it("activePoints", function () {
+                        assert.equal(item.system.activePoints, 15);
+                    });
+
+                    it("STR Minimum", function () {
+                        assert.equal(calculateStrengthMinimumForItem(item, item.findModsByXmlid("STRMINIMUM")), 17);
+                    });
+
+                    it("damage", function () {
+                        assert.equal(item.system.damage, "1d6K");
+                    });
+
+                    it("end", function () {
+                        assert.equal(item.system.end, 9);
+                    });
+                });
+
+                describe("Low fidelity -1 Limitation", function () {
+                    const contents = `
+                        <POWER XMLID="RKA" ID="1735936415724" BASECOST="0.0" LEVELS="1" ALIAS="Killing Attack - Ranged" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            <MODIFIER XMLID="FOCUS" ID="1735937175257" BASECOST="-1.0" LEVELS="0" ALIAS="Focus" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="OAF" OPTIONID="OAF" OPTION_ALIAS="OAF" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                            <MODIFIER XMLID="REALWEAPON" ID="1735937175259" BASECOST="-0.25" LEVELS="0" ALIAS="Real Weapon" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                            <MODIFIER XMLID="STRMINIMUM" ID="1735937233728" BASECOST="-1.0" LEVELS="0" ALIAS="STR Minimum (low fidelity)" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="OVER17" OPTIONID="OVER17" OPTION_ALIAS="18 and higher" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                        </POWER>
+                    `;
+                    let item;
+
+                    before(async () => {
+                        const actor = new HeroSystem6eActor(
+                            {
+                                name: "Quench Actor",
+                                type: "pc",
+                            },
+                            {},
+                        );
+                        actor.system.is5e = false;
+                        actor.system.characteristics.ego.value = 38;
+                        await actor._postUpload();
+
+                        item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            parent: actor,
+                        });
+                        await item._postUpload();
+                        actor.items.set(item.system.XMLID, item);
+                    });
+
+                    it("description", function () {
+                        assert.equal(
+                            item.system.description,
+                            "Killing Attack - Ranged 1d6 (ED) (15 Active Points); OAF (-1), STR Minimum (low fidelity) (18 and higher; -1), Real Weapon (-1/4)",
+                        );
+                    });
+
+                    it("realCost", function () {
+                        assert.equal(item.system.realCost, 5);
+                    });
+
+                    it("activePoints", function () {
+                        assert.equal(item.system.activePoints, 15);
+                    });
+
+                    it("STR Minimum", function () {
+                        assert.equal(calculateStrengthMinimumForItem(item, item.findModsByXmlid("STRMINIMUM")), 20);
+                    });
+
+                    it("damage", function () {
+                        assert.equal(item.system.damage, "1d6K");
+                    });
+
+                    it("end", function () {
+                        assert.equal(item.system.end, 9);
+                    });
+                });
+
+                describe("High fidelity -1 Limitation", function () {
+                    const contents = `
+                        <POWER XMLID="RKA" ID="1735936415724" BASECOST="0.0" LEVELS="1" ALIAS="Killing Attack - Ranged" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            <MODIFIER XMLID="FOCUS" ID="1735937175257" BASECOST="-1.0" LEVELS="0" ALIAS="Focus" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="OAF" OPTIONID="OAF" OPTION_ALIAS="OAF" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                            <MODIFIER XMLID="REALWEAPON" ID="1735937175259" BASECOST="-0.25" LEVELS="0" ALIAS="Real Weapon" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                            <MODIFIER XMLID="STRMINIMUM" ID="1735937264881" BASECOST="-1.0" LEVELS="0" ALIAS="STR Minimum (high fidelity)" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="OVER17" OPTIONID="OVER17" OPTION_ALIAS="22" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                        </POWER>
+                    `;
+                    let item;
+
+                    before(async () => {
+                        const actor = new HeroSystem6eActor(
+                            {
+                                name: "Quench Actor",
+                                type: "pc",
+                            },
+                            {},
+                        );
+                        actor.system.is5e = false;
+                        actor.system.characteristics.ego.value = 38;
+                        await actor._postUpload();
+
+                        item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            parent: actor,
+                        });
+                        await item._postUpload();
+                        actor.items.set(item.system.XMLID, item);
+                    });
+
+                    it("description", function () {
+                        assert.equal(
+                            item.system.description,
+                            "Killing Attack - Ranged 1d6 (ED) (15 Active Points); OAF (-1), STR Minimum (high fidelity) (22; -1), Real Weapon (-1/4)",
+                        );
+                    });
+
+                    it("realCost", function () {
+                        assert.equal(item.system.realCost, 5);
+                    });
+
+                    it("activePoints", function () {
+                        assert.equal(item.system.activePoints, 15);
+                    });
+
+                    it("STR Minimum", function () {
+                        assert.equal(calculateStrengthMinimumForItem(item, item.findModsByXmlid("STRMINIMUM")), 22);
+                    });
+
+                    it("damage", function () {
+                        assert.equal(item.system.damage, "1d6K");
+                    });
+
+                    it("end", function () {
+                        assert.equal(item.system.end, 9);
                     });
                 });
             });

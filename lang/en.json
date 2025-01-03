@@ -286,7 +286,7 @@
         },
         "DoubleDamageLimit": {
             "Name": "Double Damage Limit",
-            "Hint": "A character cannot more than double the Damage Classes of his base attack. This should be enabled for 5E games. It is an optional rule for 6E games."
+            "Hint": "A character cannot more than double the Damage Classes of their base attack. This should be enabled for 5E games. It is an optional rule for 6E games."
         },
         "DiceSkinning": {
             "Name": "Dice Skinning (Dice So Nice)",

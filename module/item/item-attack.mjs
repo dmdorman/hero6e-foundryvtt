@@ -4,10 +4,10 @@ import { getActorDefensesVsAttack, getConditionalDefenses } from "../utility/def
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
 import { RoundFavorPlayerDown, RoundFavorPlayerUp } from "../utility/round.mjs";
 import {
-    calculateDiceFormulaParts,
-    CombatSkillLevelsForAttack,
-    PenaltySkillLevelsForAttack,
-    convertToDcFromItem,
+    calculateDicePartsForItem,
+    calculateStrengthMinimumForItem,
+    combatSkillLevelsForAttack,
+    penaltySkillLevelsForAttack,
 } from "../utility/damage.mjs";
 import { performAdjustment, renderAdjustmentChatCards } from "../utility/adjustment.mjs";
 import { getRoundedDownDistanceInSystemUnits, getSystemDisplayUnits } from "../utility/units.mjs";
@@ -188,7 +188,7 @@ export async function AttackAoeToHit(item, options) {
         const rangePenalty = -calculateRangePenaltyFromDistanceInMetres(distanceToken);
 
         // PENALTY_SKILL_LEVELS (range)
-        const pslRange = PenaltySkillLevelsForAttack(item).find(
+        const pslRange = penaltySkillLevelsForAttack(item).find(
             (o) => o.system.penalty === "range" && o.system.checked,
         );
         if (pslRange) {
@@ -218,7 +218,7 @@ export async function AttackAoeToHit(item, options) {
 
     // Combat Skill Levels
     const skillLevelMods = {};
-    for (const csl of CombatSkillLevelsForAttack(item)) {
+    for (const csl of combatSkillLevelsForAttack(item)) {
         const id = csl.skill.id;
         skillLevelMods[id] = skillLevelMods[id] ?? { ocv: 0, dcv: 0, dc: 0 };
         const cvMod = skillLevelMods[id];
@@ -227,7 +227,6 @@ export async function AttackAoeToHit(item, options) {
         cvMod.dc += csl.dc;
         if (csl.ocv || csl.omcv > 0) {
             cvMod.ocv += csl.ocv || csl.omcv;
-            //heroRoller.addNumber(csl.ocv || csl.omcv, csl.item.name);
         }
         dcv += csl.dcv;
         cvMod.dcv += csl.dcv;
@@ -262,7 +261,6 @@ export async function AttackAoeToHit(item, options) {
                     nextPhase: true,
                 },
             };
-            //await item.addActiveEffect(activeEffect);
             await item.actor.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
         }
     }
@@ -568,7 +566,7 @@ export async function AttackToHit(item, options) {
         const rangePenalty = -calculateRangePenaltyFromDistanceInMetres(distance);
 
         // PENALTY_SKILL_LEVELS (range)
-        const pslRange = PenaltySkillLevelsForAttack(item).find(
+        const pslRange = penaltySkillLevelsForAttack(item).find(
             (o) => o.system.penalty === "range" && o.system.checked,
         );
         if (pslRange) {
@@ -599,7 +597,7 @@ export async function AttackToHit(item, options) {
 
     // Combat Skill Levels
     const skillLevelMods = {};
-    for (const csl of CombatSkillLevelsForAttack(item)) {
+    for (const csl of combatSkillLevelsForAttack(item)) {
         const id = csl.skill.id;
         skillLevelMods[id] = skillLevelMods[id] ?? { ocv: 0, dcv: 0, dc: 0 };
         const cvMod = skillLevelMods[id];
@@ -643,7 +641,6 @@ export async function AttackToHit(item, options) {
                     nextPhase: true,
                 },
             };
-            //await item.addActiveEffect(activeEffect);
             await item.actor.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
         }
     }
@@ -665,12 +662,12 @@ export async function AttackToHit(item, options) {
     }
 
     // STRMINIMUM
-    const STRMINIMUM = item.findModsByXmlid("STRMINIMUM");
-    if (STRMINIMUM) {
-        const strMinimumValue = parseInt(STRMINIMUM.OPTION_ALIAS.match(/\d+/)?.[0] || 0);
+    const strMinimumModifier = item.findModsByXmlid("STRMINIMUM");
+    if (strMinimumModifier) {
+        const strMinimumValue = calculateStrengthMinimumForItem(item, strMinimumModifier);
         const extraStr = Math.max(0, parseInt(actor.system.characteristics.str.value)) - strMinimumValue;
         if (extraStr < 0) {
-            heroRoller.addNumber(Math.floor(extraStr / 5), STRMINIMUM.ALIAS);
+            heroRoller.addNumber(Math.floor(extraStr / 5), strMinimumModifier.ALIAS);
         }
     }
 
@@ -702,7 +699,7 @@ export async function AttackToHit(item, options) {
 
         // Penalty Skill Levels
         if (options.usePsl) {
-            const pslHit = PenaltySkillLevelsForAttack(item).find(
+            const pslHit = penaltySkillLevelsForAttack(item).find(
                 (o) => o.system.penalty === "hitLocation" && o.system.checked,
             );
             if (pslHit) {
@@ -1038,7 +1035,7 @@ function getAttackTags(item) {
 
     // Item adders
     if (item.system.adders) {
-        for (let adder of item.system.adders) {
+        for (const adder of item.system.adders) {
             switch (adder.XMLID) {
                 case "MINUSONEPIP":
                 case "PLUSONEHALFDIE":
@@ -1532,6 +1529,7 @@ export async function _onRollDamage(event) {
     const senseAffecting = getPowerInfo({
         item: item,
     })?.type?.includes("sense-affecting");
+    const isKilling = item.system.killing;
 
     const entangle = item.system.XMLID === "ENTANGLE";
 
@@ -1540,27 +1538,26 @@ export async function _onRollDamage(event) {
 
     const useStandardEffect = item.system.USESTANDARDEFFECT || false;
 
-    const { dc, tags } = convertToDcFromItem(effectiveItem, {
+    const { diceParts, tags } = calculateDicePartsForItem(effectiveItem, {
         isAction: true,
         ...toHitData,
     });
-    const formulaParts = calculateDiceFormulaParts(effectiveItem, dc);
 
     const includeHitLocation = game.settings.get(HEROSYS.module, "hit locations") && !item.system.noHitLocations;
 
     const damageRoller = new HeroRoller()
         .modifyTo5e(actor.system.is5e)
-        .makeNormalRoll(!senseAffecting && !adjustment && !formulaParts.isKilling)
-        .makeKillingRoll(!senseAffecting && !adjustment && formulaParts.isKilling)
+        .makeNormalRoll(!senseAffecting && !adjustment && !isKilling)
+        .makeKillingRoll(!senseAffecting && !adjustment && isKilling)
         .makeAdjustmentRoll(!!adjustment)
         .makeFlashRoll(!!senseAffecting)
         .makeEntangleRoll(!!entangle)
         .makeEffectRoll(isBodyBasedEffectRoll(item) || isStunBasedEffectRoll(item))
         .addStunMultiplier(increasedMultiplierLevels - decreasedMultiplierLevels)
-        .addDice(formulaParts.d6Count >= 1 ? formulaParts.d6Count : 0)
-        .addHalfDice(formulaParts.halfDieCount >= 1 ? formulaParts.halfDieCount : 0)
-        .addDiceMinus1(formulaParts.d6Less1DieCount >= 1 ? formulaParts.d6Less1DieCount : 0)
-        .addNumber(formulaParts.constant)
+        .addDice(diceParts.d6Count >= 1 ? diceParts.d6Count : 0)
+        .addHalfDice(diceParts.halfDieCount >= 1 ? diceParts.halfDieCount : 0)
+        .addDiceMinus1(diceParts.d6Less1DieCount >= 1 ? diceParts.d6Less1DieCount : 0)
+        .addNumber(diceParts.constant)
         .modifyToStandardEffect(useStandardEffect)
         .modifyToNoBody(
             item.system.stunBodyDamage === CONFIG.HERO.stunBodyDamages.stunonly ||
@@ -1746,25 +1743,23 @@ export async function _onRollMindScanEffectRoll(event) {
 
     const useStandardEffect = item.system.USESTANDARDEFFECT || false;
 
-    const { dc, tags } = convertToDcFromItem(effectiveItem, {
+    const { diceParts, tags } = calculateDicePartsForItem(item, {
         isAction: true,
         ...toHitData,
     });
 
-    const formulaParts = calculateDiceFormulaParts(effectiveItem, dc);
-
-    const damageRoller = new HeroRoller()
+    const mindScanRoller = new HeroRoller()
         .modifyTo5e(actor.system.is5e)
         .makeEffectRoll()
-        .addDice(formulaParts.d6Count >= 1 ? formulaParts.d6Count : 0)
-        .addHalfDice(formulaParts.halfDieCount >= 1 ? formulaParts.halfDieCount : 0)
-        .addDiceMinus1(formulaParts.d6Less1DieCount >= 1 ? formulaParts.d6Less1DieCount : 0)
-        .addNumber(formulaParts.constant)
+        .addDice(diceParts.d6Count >= 1 ? diceParts.d6Count : 0)
+        .addHalfDice(diceParts.halfDieCount >= 1 ? diceParts.halfDieCount : 0)
+        .addDiceMinus1(diceParts.d6Less1DieCount >= 1 ? diceParts.d6Less1DieCount : 0)
+        .addNumber(diceParts.constant)
         .modifyToStandardEffect(useStandardEffect);
 
-    await damageRoller.roll();
+    await mindScanRoller.roll();
 
-    const damageRenderedResult = await damageRoller.render();
+    const damageRenderedResult = await mindScanRoller.render();
 
     // Conditional defense not implemented yet
     const ignoreDefenseIds = [];
@@ -1808,7 +1803,7 @@ export async function _onRollMindScanEffectRoll(event) {
         knockbackResistanceValue;
     damageData.targetToken = token;
 
-    const damageDetail = await _calcDamage(damageRoller, item, damageData);
+    const damageDetail = await _calcDamage(mindScanRoller, item, damageData);
 
     const cardData = {
         item: item,
@@ -1843,7 +1838,7 @@ export async function _onRollMindScanEffectRoll(event) {
         stunMultiplier: damageDetail.stunMultiplier,
         hasStunMultiplierRoll: damageDetail.hasStunMultiplierRoll,
 
-        roller: damageRoller.toJSON(),
+        roller: mindScanRoller.toJSON(),
 
         // misc
         targetIds: toHitData.targetIds,
@@ -1862,7 +1857,7 @@ export async function _onRollMindScanEffectRoll(event) {
 
     const chatData = {
         style: CONST.CHAT_MESSAGE_STYLES.OOC,
-        rolls: damageRoller.rawRolls(),
+        rolls: mindScanRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,
         speaker: speaker,
@@ -2555,18 +2550,17 @@ async function _performAbsorptionForToken(token, absorptionItems, damageDetail, 
             const actor = absorptionItem.actor;
             let maxAbsorption;
             if (actor.system.is5e) {
-                const dice = absorptionItem.system.dice;
-                const extraDice = absorptionItem.system.extraDice;
+                const { diceParts } = calculateDicePartsForItem(absorptionItem, {});
 
                 // Absorption allowed based on a roll with the usual requirements
                 const absorptionRoller = new HeroRoller()
                     .makeAdjustmentRoll()
-                    .addDice(dice)
-                    .addHalfDice(extraDice === "half" ? 1 : 0)
-                    .addDiceMinus1(extraDice === "one-pip" ? 1 : 0)
-                    .addNumber(extraDice === "pip" ? 1 : 0);
+                    .addDice(diceParts.d6Count)
+                    .addHalfDice(diceParts.halfDieCount)
+                    .addDiceMinus1(diceParts.d6Less1DieCount)
+                    .addNumber(diceParts.constant);
 
-                if (dice > 0 || (dice === 0 && extraDice !== "zero")) {
+                if (diceParts.d6Count + diceParts.halfDieCount + diceParts.d6Less1DieCount + diceParts.constant) {
                     await absorptionRoller.roll();
                     maxAbsorption = absorptionRoller.getAdjustmentTotal();
                 } else {
@@ -2985,7 +2979,7 @@ async function _calcDamage(heroRoller, item, options) {
 
     let effects = "";
     if (item.system.EFFECT) {
-        effects = item.system.EFFECT + "; ";
+        effects = `${item.system._effect || item.system.EFFECT}; `;
     }
 
     // VULNERABILITY

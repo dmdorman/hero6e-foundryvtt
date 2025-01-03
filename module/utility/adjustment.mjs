@@ -1,8 +1,8 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { getPowerInfo, hdcTimeOptionIdToSeconds } from "./util.mjs";
-// import { RoundFavorPlayerUp } from "./round.mjs";
-// import { HeroSystem6eTokenDocument } from "../actor/actor-token.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
+import { calculateDicePartsForItem } from "./damage.mjs";
+
 /**
  * Return the full list of possible powers and characteristics. No skills, talents, or perks.
  */
@@ -133,34 +133,23 @@ export function determineMaxAdjustment(item) {
         item.system.XMLID !== "AID" &&
         item.system.XMLID !== "SUCCOR" &&
         item.system.XMLID !== "TRANSFER"
-        // && item.system.XMLID !== "HEALING"
     ) {
         return reallyBigInteger;
     }
 
+    const { diceParts } = calculateDicePartsForItem(item, {});
+
     if (item.actor.is5e) {
+        // INCREASEDMAX, if available.
+        const increaseMax = parseInt(item.system.ADDER?.find((adder) => adder.XMLID === "INCREASEDMAX")?.LEVELS || 0);
+
         // Max pips in a roll is starting max base.
-        // let maxAdjustment = item.system.dice * 6;
-
-        // const extraDice = item.system.extraDice;
-        // switch (extraDice) {
-        //     case "pip":
-        //         maxAdjustment = maxAdjustment + 1;
-        //         break;
-        //     case "half":
-        //         maxAdjustment = maxAdjustment + 3;
-        //         break;
-        //     case "one-pip":
-        //         maxAdjustment = maxAdjustment + 5;
-        //         break;
-        //     default:
-        //         break;
-        // }
-        let maxAdjustment = Math.floor(item.convertToDc.dc * 6);
-
-        // Add INCREASEDMAX if available.
-        const increaseMax = item.system.ADDER?.find((adder) => adder.XMLID === "INCREASEDMAX");
-        maxAdjustment = maxAdjustment + (parseInt(increaseMax?.LEVELS) || 0);
+        const maxAdjustment =
+            6 * diceParts.d6Count +
+            5 * diceParts.d6Less1DieCount +
+            3 * diceParts.halfDieCount +
+            1 * diceParts.constant +
+            increaseMax;
 
         return maxAdjustment;
     } else {
@@ -175,22 +164,9 @@ export function determineMaxAdjustment(item) {
             return maxAdjustment;
         }
 
-        // let maxAdjustment = item.system.dice * 6;
-        // const extraDice = item.system.extraDice;
-        // switch (extraDice) {
-        //     case "pip":
-        //         maxAdjustment = maxAdjustment + 1;
-        //         break;
-        //     case "half":
-        //         maxAdjustment = maxAdjustment + 3;
-        //         break;
-        //     case "one-pip":
-        //         maxAdjustment = maxAdjustment + 5;
-        //         break;
-        //     default:
-        //         break;
-        // }
-        let maxAdjustment = Math.floor(item.convertToDc.dc * 6);
+        // Max pips in a roll is starting max base.
+        const maxAdjustment =
+            6 * diceParts.d6Count + 5 * diceParts.d6Less1DieCount + 3 * diceParts.halfDieCount + 1 * diceParts.constant;
 
         return maxAdjustment;
     }

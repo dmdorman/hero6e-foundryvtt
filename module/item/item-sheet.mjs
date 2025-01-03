@@ -613,7 +613,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
                     const newAdder = {
                         XMLID: "ADDER",
                         ID: new Date().getTime().toString(),
-                        ALIAS: attackItem.name, //attackItem.system.ALIAS ||
+                        ALIAS: attackItem.name,
                         BASECOST: "0.0",
                         LEVELS: "0",
                         NAME: "",
@@ -627,9 +627,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
 
                 // Delete custom adders that matches attack name
                 if (adder && !checked) {
-                    this.item.system.ADDER = this.item.system.ADDER.filter(
-                        (o) => o.ALIAS != attackItem.name, //(attackItem.system.ALIAS ||
-                    );
+                    this.item.system.ADDER = this.item.system.ADDER.filter((o) => o.ALIAS != attackItem.name);
                 }
             }
         }

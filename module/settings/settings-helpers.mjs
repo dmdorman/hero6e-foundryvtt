@@ -185,7 +185,7 @@ export default class SettingsHelpers {
             config: true,
             type: Boolean,
             default: false,
-            requiresReload: false,
+            requiresReload: true,
         });
 
         game.settings.register(module, "DiceSkinning", {

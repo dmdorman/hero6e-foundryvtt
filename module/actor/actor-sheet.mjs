@@ -8,7 +8,7 @@ import { getActorDefensesVsAttack } from "../utility/defense.mjs";
 import { presenceAttackPopOut } from "../utility/presence-attack.mjs";
 import { onManageActiveEffect } from "../utility/effects.mjs";
 import { getPowerInfo, getCharacteristicInfoArrayForActor, whisperUserTargetsForActor } from "../utility/util.mjs";
-import { CombatSkillLevelsForAttack, convertToDcFromItem, convertToDiceParts } from "../utility/damage.mjs";
+import { combatSkillLevelsForAttack, calculateDcFromItem, characteristicValueToDiceParts } from "../utility/damage.mjs";
 import { HeroRoller } from "../utility/dice.mjs";
 import { getSystemDisplayUnits } from "../utility/units.mjs";
 import { RoundFavorPlayerUp } from "../utility/round.mjs";
@@ -88,12 +88,12 @@ export class HeroSystemActorSheet extends ActorSheet {
             data.pointsTitle = "";
             data.activePointsTitle = "";
             if (data.actor.system.pointsDetail) {
-                for (let [key, value] of Object.entries(data.actor.system.pointsDetail)) {
+                for (const [key, value] of Object.entries(data.actor.system.pointsDetail)) {
                     data.pointsTitle += `${key.replace("equipment", "[equipment]")}: ${value}\n`;
                 }
             }
             if (data.actor.system.activePointsDetail) {
-                for (let [key, value] of Object.entries(data.actor.system.activePointsDetail)) {
+                for (const [key, value] of Object.entries(data.actor.system.activePointsDetail)) {
                     data.activePointsTitle += `${key}: ${value}\n`;
                 }
             } else {
@@ -101,17 +101,13 @@ export class HeroSystemActorSheet extends ActorSheet {
             }
 
             // // override actor.items (which is a map) to an array with some custom properties
-            // let items = [];
             for (let item of data.actor.items) {
                 // Update Attack Details (estimateOCV, DCV, Damage)
                 item._postUploadDetails();
 
-                if (item.type == "martialart") {
+                if (item.type === "martialart") {
                     data.hasMartialArts = true;
-                    continue;
-                }
-
-                if (item.type == "equipment") {
+                } else if (item.type === "equipment") {
                     data.hasEquipment = true;
                 }
             }
@@ -417,7 +413,7 @@ export class HeroSystemActorSheet extends ActorSheet {
             const defensePowers = data.actor.items.filter(
                 (o) => (o.system.subType || o.type) === "defense" && !o.effects.size,
             );
-            for (let d of defensePowers) {
+            for (const d of defensePowers) {
                 d.disabled = !d.isActive;
                 switch (getPowerInfo({ xmlid: d.system.XMLID, actor: this.actor })?.duration) {
                     case "instant":
@@ -484,8 +480,10 @@ export class HeroSystemActorSheet extends ActorSheet {
                 let activePoints = item.system.activePoints;
 
                 if (item.type == "attack" || item.system.subType === "attack" || item.system.XMLID === "martialart") {
-                    const csl = CombatSkillLevelsForAttack(item);
-                    let { dc } = convertToDcFromItem(item, { ignoreDeadlyBlow: true });
+                    const csl = combatSkillLevelsForAttack(item);
+
+                    // PH: TODO: Look at this. Why does it need to do this here?
+                    let { dc } = calculateDcFromItem(item, { ignoreDeadlyBlow: true });
 
                     if (dc > 0) {
                         let costPerDice =
@@ -925,11 +923,11 @@ export class HeroSystemActorSheet extends ActorSheet {
 
     async _onPrimaryNonStrengthCharacteristicRoll(characteristicValue, flavor) {
         // NOTE: Characteristic rolls can't have +1 to their roll.
-        const diceParts = convertToDiceParts(characteristicValue);
+        const diceParts = characteristicValueToDiceParts(characteristicValue);
         const characteristicRoller = new HeroRoller()
             .makeBasicRoll()
-            .addDice(diceParts.dice)
-            .addHalfDice(diceParts.halfDice ? 1 : 0);
+            .addDice(diceParts.d6Count)
+            .addHalfDice(diceParts.halfDieCount ? 1 : 0);
 
         await characteristicRoller.roll();
 
@@ -976,11 +974,11 @@ export class HeroSystemActorSheet extends ActorSheet {
         }
 
         // NOTE: Characteristic rolls can't have +1 to their roll.
-        const diceParts = convertToDiceParts(characteristicValue);
+        const diceParts = characteristicValueToDiceParts(characteristicValue);
         const characteristicRoller = new HeroRoller()
             .makeNormalRoll()
-            .addDice(diceParts.dice)
-            .addHalfDice(diceParts.halfDice ? 1 : 0);
+            .addDice(diceParts.d6Count)
+            .addHalfDice(diceParts.halfDieCount ? 1 : 0);
 
         await characteristicRoller.roll();
         const damageRenderedResult = await characteristicRoller.render();

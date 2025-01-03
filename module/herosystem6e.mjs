@@ -357,8 +357,6 @@ async function CreateCustomAttack(actor) {
     "realCost": 2,
     "subType": "attack",
     "class": "energy",
-    "dice": 1,
-    "extraDice": "zero",
     "killing": false,
     "knockbackMultiplier": 1,
     "targets": "dcv",

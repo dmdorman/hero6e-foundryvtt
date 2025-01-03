@@ -1312,7 +1312,7 @@ export class HeroSystem6eActor extends Actor {
 
     getActiveConstantItems() {
         let results = [];
-        for (let item of this.items.filter((o) => o.isActive)) {
+        for (let item of this.items.filter((item) => item.isActive)) {
             let duration = getPowerInfo({
                 xmlid: item.system.XMLID,
                 actor: this,
@@ -1332,14 +1332,14 @@ export class HeroSystem6eActor extends Actor {
     getConstantEffects() {
         return Array.from(this.allApplicableEffects())
             .filter(
-                (o) =>
-                    !o.duration.duration &&
-                    o.statuses.size === 0 &&
-                    (!o.flags?.XMLID ||
+                (ae) =>
+                    !ae.duration.duration &&
+                    ae.statuses.size === 0 &&
+                    (!ae.flags?.XMLID ||
                         getPowerInfo({
-                            xmlid: o.flags?.XMLID,
+                            xmlid: ae.flags?.XMLID,
                             actor: this,
-                        })?.duration != "persistent"),
+                        })?.duration !== "persistent"),
             )
             .sort((a, b) => a.name.localeCompare(b.name));
     }
@@ -1347,11 +1347,11 @@ export class HeroSystem6eActor extends Actor {
     getPersistentEffects() {
         return Array.from(this.allApplicableEffects())
             .filter(
-                (o) =>
-                    !o.duration.duration &&
-                    o.statuses.size === 0 &&
-                    o.flags?.XMLID &&
-                    getPowerInfo({ xmlid: o.flags?.XMLID, actor: this })?.duration === "persistent",
+                (ae) =>
+                    !ae.duration.duration &&
+                    ae.statuses.size === 0 &&
+                    ae.flags?.XMLID &&
+                    getPowerInfo({ xmlid: ae.flags?.XMLID, actor: this })?.duration === "persistent",
             )
             .sort((a, b) => a.name.localeCompare(b.name));
     }
@@ -1995,7 +1995,7 @@ export class HeroSystem6eActor extends Actor {
             const powerList = this.system.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
 
             powerList
-                .filter((power) => power.type.includes("maneuver"))
+                .filter((power) => power.type?.includes("maneuver"))
                 .forEach(async (maneuver) => {
                     const name = maneuver.name;
                     const XMLID = maneuver.key;
@@ -2005,6 +2005,10 @@ export class HeroSystem6eActor extends Actor {
                     const OCV = maneuverDetails.ocv;
                     const DCV = maneuverDetails.dcv;
                     const EFFECT = maneuverDetails.effects;
+                    const DC = maneuverDetails.dc;
+                    const ADDSTR = maneuverDetails.addStr;
+                    const USEWEAPON = maneuverDetails.useWeapon; // "No" if unarmed or not offensive maneuver
+                    const WEAPONEFFECT = maneuverDetails.weaponEffect; // Not be present if not offensive maneuver
 
                     const itemData = {
                         name,
@@ -2013,11 +2017,12 @@ export class HeroSystem6eActor extends Actor {
                             PHASE,
                             OCV,
                             DCV,
+                            DC,
                             EFFECT,
                             active: false, // TODO: This is probably not always true. It should, however, be generated in other means.
                             description: EFFECT,
                             XMLID,
-                            // MARTIALARTS consises of a list of MANEUVERS, the MARTIALARTS MANEUVERS have more props than our basic ones.
+                            // MARTIALARTS consists of a list of MANEUVERS, the MARTIALARTS MANEUVERS have more props than our basic ones.
                             // Adding in some of those props as we may enhance/rework the basic maneuvers in the future.
                             //  <MANEUVER XMLID="MANEUVER" ID="1705867725258" BASECOST="4.0" LEVELS="0" ALIAS="Block" POSITION="1"
                             //  MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes"
@@ -2025,6 +2030,9 @@ export class HeroSystem6eActor extends Actor {
                             //  DCV="+2" DC="0" PHASE="1/2" EFFECT="Block, Abort" ADDSTR="No" ACTIVECOST="20" DAMAGETYPE="0"
                             //  MAXSTR="0" STRMULT="1" USEWEAPON="Yes" WEAPONEFFECT="Block, Abort">
                             DISPLAY: name, // Not sure we should allow editing of basic maneuvers
+                            ADDSTR,
+                            USEWEAPON,
+                            WEAPONEFFECT,
                         },
                     };
 
@@ -2033,16 +2041,24 @@ export class HeroSystem6eActor extends Actor {
                         return;
                     }
 
-                    // Skip if temporary actor (Quench)
-                    if (this.id) {
-                        const item = await HeroSystem6eItem.create(itemData, {
-                            parent: this,
-                        });
-                        if (maneuverDetails.attack) {
-                            await item.makeAttack();
-                        }
-                        await item._postUpload();
+                    const item = this.id
+                        ? await HeroSystem6eItem.create(itemData, {
+                              parent: this,
+                          })
+                        : new HeroSystem6eItem(itemData, {
+                              parent: this,
+                          });
+
+                    if (maneuverDetails.attack) {
+                        console.warn(`${item.name}/${item.system.XMLID} is being turned into an attack`);
+                        await item.makeAttack();
                     }
+
+                    // Work around if temporary actor
+                    if (!this.id) {
+                        this.items.set(item.system.XMLID, item);
+                    }
+                    await item._postUpload();
                 });
         }
     }
@@ -2411,7 +2427,7 @@ export class HeroSystem6eActor extends Actor {
 
             if (_realCost != 0) {
                 // Equipment is typically purchased with money, not character points
-                if ((item.parentItem?.type || item.type) != "equipment") {
+                if ((item.parentItem?.type || item.type) !== "equipment") {
                     realCost += _realCost;
                 }
                 activePoints += _activePoints;

@@ -34,14 +34,3 @@ export function RoundFavorPlayerUp(number) {
     if (number % 1 < 0.5) return Math.floor(number);
     return Math.ceil(number);
 }
-
-export function RoundDc(number) {
-    return Math.round(number * 10) / 10;
-    //return number.toFixed(1);  // 10.29999 = 10.2
-
-    // 13DC from STR
-    // 1/4 Adv due to Armor Piercing
-    // How may DC or Dice should we roll?
-    // 10.3 === 10.2
-    // 0.2 === +1 PIP
-}

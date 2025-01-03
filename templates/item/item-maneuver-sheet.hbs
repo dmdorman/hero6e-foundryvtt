@@ -1,14 +1,20 @@
-{{ log 'HEROSYS ITEM MANEUVER SHEET' this }}
+{{log "HEROSYS ITEM MANEUVER SHEET" this}}
 <form class="{{cssClass}}" autocomplete="off" data-id="{{item._id}}" data-realId="{{item.system.realId}}">
     <header class="sheet-header">
-        <img class="profile-img" name="img" src="{{item.img}}" data-edit="img" title="{{item.name}}"/>
+        <img class="profile-img" name="img" src="{{item.img}}" data-edit="img" title="{{item.name}}" />
         <div class="header-fields">
-            <h1 class="charname"><input name="name" type="text" value="{{item.name}}" placeholder="Name"/></h1>
+            <h1 class="charname"><input name="name" type="text" value="{{item.name}}" placeholder="Name" /></h1>
         </div>
     </header>
 
-    {{!-- Sheet Body --}}
+    {{! Sheet Body }}
     <section class="sheet-body">
+        <div class="description">
+            {{system.description}}
+            {{#if system.NOTES}}
+                <div class="item-notes-elidable-content"><b>Notes:</b> {{{system.NOTES}}}</div>
+            {{/if}}
+        </div>
         <div class="form-group">
             <label>Phase</label>
             <input type="text" name="system.phase" value="{{system.phase}}" data-dtype="text" />

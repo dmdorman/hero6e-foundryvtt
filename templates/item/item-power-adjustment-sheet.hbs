@@ -17,17 +17,6 @@
         {{!-- Common --}}
         {{> systems/hero6efoundryvttv2/templates/item/item-partial-common.hbs }}
 
-        <!-- Adjustment Dice (Active Points) -->
-        {{!-- <div class="form-group">
-            <label>{{localize "Items.Attack.Value"}}</label>
-            <input type="text" name="system.dice" value="{{system.dice}}" data-dtype="Number" />
-            D6
-            <select name="system.extraDice" value={{system.extraDice}} data-dtype="text">
-                {{selectOptions config.extraDice selected=system.extraDice}}
-
-            </select>
-        </div> --}}
-
         <!-- Adjustment Targets/Sources (possibly infinite number depending on modifiers and 5e vs 6e) -->
         {{#each reduces as |input id|}}
             <div class="form-group">
@@ -46,11 +35,6 @@
                 </select>
             </div>
         {{/each}}
-
-        {{!-- <hr> --}}
-
-        {{!-- {{> (getModulePath 'item/item-common-partial.hbs') item=item }}
-        {{> (getModulePath 'item/item-effects-partial.hbs') item=item alphaTesting=alphaTesting}} --}}
 
         {{!-- Active Points --}}
         {{> (getModulePath 'item/item-partial-active-points.hbs') }}
