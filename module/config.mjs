@@ -330,7 +330,7 @@ function validatePowers() {
     }
     numViolations += modifiersWithoutDcAffectingFunction.length;
 
-    // All attack powers have a effect rolling function
+    // All effect causing powers have a effect rolling function that is async
     const powersOrManeuversWithoutEffectsDicePartsFunction = this.filter(
         (power) =>
             !(power.behaviors.includes("modifier") || power.behaviors.includes("adder")) &&
@@ -5350,7 +5350,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             costPerLevel: fixedValueFunction(10),
             unusualDicePerDc: true,
             baseEffectDicePartsBundle: (item) => {
-                const baseBodyDice = parseInt(item.adjustedLevels || 0);
+                const baseBodyDice = parseInt(item.system.LEVELS || 0);
                 let baseHalfDice = 0;
                 let additionalBodyDice = 0;
 
@@ -6452,8 +6452,8 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 // The damage for TELEKINESIS is based on STR.
                 // Each LEVEL of TELEKINESIS is equal to 1 point of STR.
                 const str =
-                    options.effectivestr != undefined
-                        ? parseInt(options.effectivestr)
+                    options.effectiveStr != undefined
+                        ? parseInt(options.effectiveStr)
                         : parseInt(item.adjustedLevels || 0);
 
                 return defaultPowerDicePartsBundle(item, characteristicValueToDiceParts(str));
@@ -6538,10 +6538,6 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             duration: "instant",
             range: HERO.RANGE_TYPES.STANDARD,
             costPerLevel: fixedValueFunction(5),
-            cost: () => {
-                // We want this power to be free
-                return 0;
-            },
             costEnd: true,
             baseEffectDicePartsBundle: standardBaseEffectDiceParts,
             xml: `<POWER XMLID="__STRENGTHDAMAGE" ID="1709333792635" BASECOST="0.0" LEVELS="1" ALIAS="__InternalStrengthPlaceholder" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="PD" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes"></POWER>`,
@@ -7933,18 +7929,6 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         },
         {},
     );
-
-    // DUPLICATE?
-    // addPower(
-    //     {
-    //         key: "PLUSONEHALFDIE",
-    //         behaviors: ["adder"],
-    //         costPerLevel: fixedValueFunction(0),
-    //         xml: `<ADDER XMLID="PLUSONEHALFDIE" ID="1712342067007" BASECOST="3.0" LEVELS="0" ALIAS="+1/2 d6" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="No" DISPLAYINSTRING="No" GROUP="No" SELECTED="YES"></<ADDER XMLID="OFFENSIVE" ID="1735589940604" BASECOST="0.25" LEVELS="0" ALIAS="Offensive" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="No" DISPLAYINSTRING="Yes" GROUP="No" SELECTED="YES"></ADDER>`,
-    //     },
-    //     {},
-    // );
-
     addPower(
         {
             // AUTOFIRE related

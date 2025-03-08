@@ -1,5 +1,5 @@
 import { HEROSYS } from "../herosystem6e.mjs";
-//import { HeroSystem6eItem } from "./item.mjs";
+import { createModifierOrAdderFromXml } from "./item.mjs";
 import { adjustmentSourcesPermissive, adjustmentSourcesStrict } from "../utility/adjustment.mjs";
 import { ItemModifierFormApplication } from "../item/item-modifier-application.mjs";
 
@@ -321,7 +321,7 @@ export class HeroSystem6eItemSheet extends ItemSheet {
                 const xmlA = parserA.parseFromString(a.xml.trim(), "text/xml");
                 const alias = xmlA.children[0].getAttribute("ALIAS");
 
-                // Make sure XMLID's match, if not then skip
+                // Make sure XMLIDs match, if not then skip
                 if (a.key != xmlA.children[0].getAttribute("XMLID")) {
                     console.warn(`XMLID mismatch`, a, xmlA.children[0]);
                     return "";
@@ -373,42 +373,18 @@ export class HeroSystem6eItemSheet extends ItemSheet {
                             );
                         }
 
-                        // Prepare the modifier object. This is not really an item, but a MODIFER or ADDER
-                        // Using a simplied version of HeroSystemItem6e.itemDataFromXml for now.
-                        let modifierData = {};
-                        const parser = new DOMParser();
-                        const xmlDoc = parser.parseFromString(power.xml, "text/xml");
-                        for (const attribute of xmlDoc.children[0].attributes) {
-                            switch (attribute.value) {
-                                case "Yes":
-                                case "YES":
-                                    modifierData[attribute.name] = true;
-                                    break;
-                                case "No":
-                                case "NO":
-                                    modifierData[attribute.name] = false;
-                                    break;
-                                // case "GENERIC_OBJECT":
-                                //     modifierData[attribute.name] =
-                                //     modifierData.tagName.toUpperCase(); // e.g. MULTIPOWER
-                                //     break;
-                                default:
-                                    modifierData[attribute.name] = attribute.value.trim();
-                            }
-                        }
+                        const modifierOrAdderData = createModifierOrAdderFromXml(power.xml);
 
                         // Track when added manually for diagnostic purposes
-                        modifierData.versionHeroSystem6eManuallyCreated = game.system.version;
-
-                        // Create a unique ID
-                        modifierData.ID = new Date().getTime().toString();
+                        modifierOrAdderData.versionHeroSystem6eManuallyCreated = game.system.version;
 
                         // Add the modifer (create array if necessary)
                         item.system[adderOrModifier.toUpperCase()] ??= [];
-                        item.system[adderOrModifier.toUpperCase()].push(modifierData);
+                        item.system[adderOrModifier.toUpperCase()].push(modifierOrAdderData);
 
                         await item._postUpload();
                         await item.actor.CalcActorRealAndActivePoints();
+
                         return;
                     },
                 },

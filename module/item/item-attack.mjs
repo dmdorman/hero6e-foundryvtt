@@ -19,7 +19,7 @@ import { calculateVelocityInSystemUnits } from "../ruler.mjs";
 import { Attack } from "../utility/attack.mjs";
 import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMetres } from "../utility/range.mjs";
 import { overrideCanAct } from "../settings/settings-helpers.mjs";
-import { activateManeuver } from "./maneuver.mjs";
+import { activateManeuver, doManeuverEffects } from "./maneuver.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 
 export async function chatListeners(_html) {
@@ -58,11 +58,11 @@ export async function onMessageRendered(html) {
 }
 
 function isBodyBasedEffectRoll(item) {
-    return !!(item.system.XMLID === "TRANSFORM");
+    return item.system.XMLID === "TRANSFORM";
 }
 
 function isStunBasedEffectRoll(item) {
-    return !!(
+    return (
         item.system.XMLID === "MENTALILLUSIONS" ||
         item.system.XMLID === "MINDCONTROL" ||
         item.system.XMLID === "MINDSCAN" ||
@@ -70,15 +70,49 @@ function isStunBasedEffectRoll(item) {
     );
 }
 
+// PH: FIXME: Should we be looking to override the existing Item JSON functions for this functionality?
 /**
- * Dialog box for collectActionDataBeforeToHitOptions. The action doesn't have to be an attack such as
- * the Block maneuver.
+ * Turn an item into JSON
+ * @param {*} item
+ */
+function dehydrateAttackItem(item) {
+    if (item.system._active.effectiveStrItem) {
+        item.system._active.effectiveStrItem = item.system._active.effectiveStrItem.toObject(false);
+    }
+
+    const stringifiedItem = JSON.stringify(item.toObject(false));
+    return stringifiedItem;
+}
+
+/**
+ *
+ * @param {Object} rollInfo
+ */
+function rehydrateAttackItemAndActor(rollInfo) {
+    const actor = fromUuidSync(rollInfo.actorUuid);
+    const item = HeroSystem6eItem.fromSource(JSON.parse(rollInfo.itemJsonStr), {
+        parent: actor,
+    });
+
+    // If there is a strength item, then we need to rehydrate it as well.
+    if (item.system._active.effectiveStrItem) {
+        item.system._active.effectiveStrItem = HeroSystem6eItem.fromSource(item.system._active.effectiveStrItem, {
+            parent: actor,
+        });
+    }
+
+    return { actor, item };
+}
+
+/**
+ * Dialog box for collectActionDataBeforeToHitOptions. The action doesn't have to be an attack (such as
+ * the Block maneuver).
  */
 export async function collectActionDataBeforeToHitOptions(item) {
     const actor = item.actor;
     const token = actor.getActiveTokens()[0];
     const data = {
-        item: item,
+        originalItem: item,
         actor: actor,
         token: token,
         state: null,
@@ -86,7 +120,7 @@ export async function collectActionDataBeforeToHitOptions(item) {
     };
 
     // Uses Tk
-    let tkItems = item.actor.items.filter((o) => o.system.XMLID == "TELEKINESIS");
+    const tkItems = item.actor.items.filter((o) => o.system.XMLID == "TELEKINESIS");
     let tkStr = 0;
     for (const item of tkItems) {
         tkStr += parseInt(item.system.LEVELS) || 0;
@@ -115,7 +149,12 @@ export async function collectActionDataBeforeToHitOptions(item) {
     await new ItemAttackFormApplication(data).render(true);
 }
 
+// PH: FIXME: formData is insufficient ... why are we doing it this way?
 export async function processActionToHit(item, formData) {
+    if (!item) {
+        return ui.notifications.error(`Attack details are no longer available.`);
+    }
+
     const haymakerManeuverActive = item.actor?.items.find(
         (item) => item.type === "maneuver" && item.system.XMLID === "HAYMAKER" && item.system.active,
     );
@@ -128,6 +167,50 @@ export async function processActionToHit(item, formData) {
         }
     }
 
+    let _targetArray = Array.from(game.user.targets);
+    // Make sure player who rolled attack is still the same
+    if (formData.userId && formData.userId !== game.user.id && game.users.get(formData.userId)) {
+        // GM or someone else intervened.  Likely an AOE template placement confirmation.
+        // Need to check if they are the same targets
+        const _userTargetArray = Array.from(game.users.get(formData.userId).targets);
+        if (
+            JSON.stringify(_targetArray.map((o) => o.document.id)) !==
+            JSON.stringify(_userTargetArray.map((o) => o.document.id))
+        ) {
+            let html = `<table><tr><th width="50%">${game.user.name}</th><th width="50%">${game.users.get(formData.userId).name}</th></tr><tr><td><ol>`;
+            for (const target of _targetArray) {
+                html += `<li style="text-align:left">${target.name}</li>`;
+            }
+            html += "</ol></td><td><ol>";
+            for (const target of _userTargetArray) {
+                html += `<li style="text-align:left">${target.name}</li>`;
+            }
+            html += "</ol></td></tr></table>";
+            _targetArray = await Dialog.wait({
+                title: `Pick target list`,
+                content: html,
+                buttons: {
+                    gm: {
+                        label: game.user.name,
+                        callback: async function () {
+                            return _targetArray;
+                        },
+                    },
+                    user: {
+                        label: game.users.get(formData.userId).name,
+                        callback: async function () {
+                            return _userTargetArray;
+                        },
+                    },
+                },
+            });
+        }
+    }
+
+    const action = Attack.getActionInfo(item, _targetArray, formData);
+    item = action.system.item[action.current.itemId];
+
+    // PH: FIXME: Need to not pass in formData presumably or at least pass in action
     if (item.getAoeModifier()) {
         await doAoeActionToHit(item, formData);
     } else {
@@ -224,7 +307,6 @@ export async function doAoeActionToHit(item, options) {
         }
     }
 
-    // FIXME: Why do we have this? We don't do anything with it.
     let dcv = parseInt(item.system.dcv || 0);
 
     const cvModifiers = action.current.cvModifiers;
@@ -342,7 +424,10 @@ export async function doAoeActionToHit(item, options) {
 
         // data for damage card
         actor,
+
         item,
+        itemJsonStr: dehydrateAttackItem(item),
+
         ...options,
 
         // misc
@@ -425,6 +510,9 @@ export async function doSingleTargetActionToHit(item, options) {
     const action = Attack.getActionInfo(item, _targetArray, options);
     item = action.system.item[action.current.itemId];
     const targets = action.system.currentTargets;
+    const hthAttackItemMergeObj = {
+        hthAttackItems: action.hthAttackItems.map((hthAttack) => fromUuidSync(hthAttack.uuid)),
+    };
 
     const actor = item.actor;
 
@@ -433,18 +521,12 @@ export async function doSingleTargetActionToHit(item, options) {
         actor.getActiveTokens().find((t) => canvas.tokens.controlled.find((c) => c.id === t.id)) ||
         actor.getActiveTokens()[0];
 
-    let effectiveItem = item;
-
     // STR 0 character must succeed with
     // a STR Roll in order to perform any Action that uses STR, such
     // as aiming an attack, pulling a trigger, or using a Power with the
     // Gestures Limitation.
     // Not all token types (base) will have STR
-    if (
-        actor &&
-        actor.system.characteristics.str &&
-        (effectiveItem.system.usesStrength || effectiveItem.findModsByXmlid("GESTURES"))
-    ) {
+    if (actor && actor.system.characteristics.str && (item.system.usesStrength || item.findModsByXmlid("GESTURES"))) {
         if (parseInt(actor.system.characteristics.str.value) <= 0) {
             if (
                 !(await RequiresACharacteristicRollCheck(
@@ -477,18 +559,6 @@ export async function doSingleTargetActionToHit(item, options) {
         }
     }
 
-    // Create a temporary item based on effectiveLevels
-    if (options?.effectiveLevels && parseInt(item.system.LEVELS) > 0) {
-        options.effectiveLevels = parseInt(options.effectiveLevels) || 0;
-        if (options.effectiveLevels > 0 && options.effectiveLevels !== parseInt(item.system.LEVELS)) {
-            const effectiveItemData = item.toObject();
-            effectiveItemData._id = null;
-            effectiveItemData.system.LEVELS = options.effectiveLevels;
-            effectiveItem = new HeroSystem6eItem(effectiveItemData, { parent: item.actor });
-            await effectiveItem._postUpload();
-        }
-    }
-
     // Make sure there are enough resources and consume them
     const {
         error: resourceError,
@@ -496,10 +566,10 @@ export async function doSingleTargetActionToHit(item, options) {
         resourcesRequired,
         resourcesUsedDescription,
         resourcesUsedDescriptionRenderedRoll,
-    } = await userInteractiveVerifyOptionallyPromptThenSpendResources(effectiveItem, {
+    } = await userInteractiveVerifyOptionallyPromptThenSpendResources(item, {
         ...options,
         ...{ noResourceUse: overrideCanAct },
-        ...{ hthAttackItems: action.hthAttackItems.map((hthAttack) => fromUuidSync(hthAttack.uuid)) },
+        ...hthAttackItemMergeObj,
     });
     if (resourceError) {
         return ui.notifications.error(`${item.name} ${resourceError}`);
@@ -942,9 +1012,14 @@ export async function doSingleTargetActionToHit(item, options) {
         }
     }
 
+    // The act of making the attack can cause effects for maneuvers related to OCV and DCV
+    // PH: FIXME: They are figured into the to-hit modal's ocv and dcv already
     if (["maneuver", "martialart"].includes(item.type)) {
         activateManeuver(item);
     }
+
+    // this doesn't work because we create data-item-id="{{item.uuid}}" for the button. However, item is now something that has no uuid.
+    // move all these fields to action?
 
     const cardData = {
         // dice rolls
@@ -954,7 +1029,10 @@ export async function doSingleTargetActionToHit(item, options) {
         // data for damage card
         actor,
         token,
+
         item,
+        itemJsonStr: dehydrateAttackItem(item),
+
         adjustment,
         senseAffecting,
         ...options,
@@ -1162,7 +1240,7 @@ function getAttackTags(item) {
     }
 
     // MartialArts NND
-    if (item.system.EFFECT?.includes("NND")) {
+    if (item.system.EFFECT?.includes("NNDDC")) {
         attackTags.push({
             name: `NND`,
             title: `No Normal Defense`,
@@ -1187,9 +1265,9 @@ function getAttackTags(item) {
 export async function _onRollAoeDamage(event) {
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kludge to fix.
-    const options = { ...button.dataset };
-    const item = fromUuidSync(options.itemId);
-    return doSingleTargetActionToHit(item, JSON.parse(options.formData));
+    const toHitData = { ...button.dataset };
+    const { item } = rehydrateAttackItemAndActor(toHitData);
+    return doSingleTargetActionToHit(item, JSON.parse(toHitData.formData));
 }
 
 export async function _onRollKnockback(event) {
@@ -1500,10 +1578,10 @@ export async function _onRollDamage(event) {
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kludge to fix.
     const toHitData = { ...button.dataset };
-    const item = fromUuidSync(toHitData.itemId);
-    const actor = item?.actor;
 
-    if (!actor) {
+    const { actor, item } = rehydrateAttackItemAndActor(toHitData);
+
+    if (!item || !actor) {
         return ui.notifications.error(`Attack details are no longer available.`);
     }
 
@@ -1511,37 +1589,23 @@ export async function _onRollDamage(event) {
     const hthAttackItems = (action.hthAttackItems || []).map((hthAttack) => fromUuidSync(hthAttack.uuid));
     toHitData.hthAttackItems = hthAttackItems;
 
-    let effectiveItem = item;
-
     const haymakerManeuverActiveItem = item.actor?.items.find(
         (item) => item.type === "maneuver" && item.system.XMLID === "HAYMAKER" && item.system.active,
     );
-
-    // Create a temporary item based on effectiveLevels
-    if (toHitData?.effectiveLevels && parseInt(item.system.LEVELS) > 0) {
-        toHitData.effectiveLevels = parseInt(toHitData.effectiveLevels) || 0;
-        if (toHitData.effectiveLevels > 0 && toHitData.effectiveLevels !== parseInt(item.system.LEVELS)) {
-            const effectiveItemData = item.toObject();
-            effectiveItemData._id = null;
-            effectiveItemData.system.LEVELS = toHitData.effectiveLevels;
-            effectiveItem = new HeroSystem6eItem(effectiveItemData, { parent: item.actor });
-            await effectiveItem._postUpload();
-        }
-    }
 
     // Coerce type to boolean
     toHitData.targetEntangle =
         toHitData.targetEntangle === true || toHitData.targetEntangle.match(/true/i) ? true : false;
 
-    const adjustment = getPowerInfo({
+    const isAdjustment = !!getPowerInfo({
         item: item,
     })?.type?.includes("adjustment");
     // Sense affecting power or maneuver with FLASHDC
-    const senseAffecting = item.isSenseAffecting();
+    const isSenseAffecting = item.isSenseAffecting();
     const isKilling = item.doesKillingDamage;
     const isEntangle = item.system.XMLID === "ENTANGLE";
-    const isNormalAttack = !isEntangle && !senseAffecting && !adjustment && !isKilling;
-    const isKillingAttack = !isEntangle && !senseAffecting && !adjustment && isKilling;
+    const isNormalAttack = !isEntangle && !isSenseAffecting && !isAdjustment && !isKilling;
+    const isKillingAttack = !isEntangle && !isSenseAffecting && !isAdjustment && isKilling;
     const isEffectBasedAttack = isBodyBasedEffectRoll(item) || isStunBasedEffectRoll(item);
 
     const increasedMultiplierLevels = parseInt(item.findModsByXmlid("INCREASEDSTUNMULTIPLIER")?.LEVELS || 0);
@@ -1549,7 +1613,7 @@ export async function _onRollDamage(event) {
 
     const useStandardEffect = item.system.USESTANDARDEFFECT || false;
 
-    const { diceParts, tags } = calculateDicePartsForItem(effectiveItem, {
+    const { diceParts, tags } = calculateDicePartsForItem(item, {
         isAction: true,
         ...toHitData,
         ...{ haymakerManeuverActiveItem },
@@ -1574,9 +1638,9 @@ export async function _onRollDamage(event) {
                 ? customStunMultiplierSetting
                 : undefined,
         )
-        .makeAdjustmentRoll(!!adjustment)
-        .makeFlashRoll(!!senseAffecting)
-        .makeEntangleRoll(!!isEntangle)
+        .makeAdjustmentRoll(isAdjustment)
+        .makeFlashRoll(isSenseAffecting)
+        .makeEntangleRoll(isEntangle)
         .makeEffectRoll(isEffectBasedAttack)
         .addStunMultiplier(increasedMultiplierLevels - decreasedMultiplierLevels)
         .addDice(diceParts.d6Count >= 1 ? diceParts.d6Count : 0)
@@ -1634,9 +1698,12 @@ export async function _onRollDamage(event) {
         user: game.user,
 
         item: item,
+        itemJsonStr: toHitData.itemJsonStr, // PH: FIXME: Would be nice to just have this in action data that is always passed through
+        actor: item.actor,
+
         nonDmgEffect:
-            adjustment || isBodyBasedEffectRoll(item) || isStunBasedEffectRoll(item) || item.baseInfo?.nonDmgEffect,
-        senseAffecting,
+            isAdjustment || isBodyBasedEffectRoll(item) || isStunBasedEffectRoll(item) || item.baseInfo?.nonDmgEffect,
+        isSenseAffecting,
 
         // dice rolls
         renderedDamageRoll: damageRenderedResult,
@@ -1677,9 +1744,9 @@ export async function _onRollMindScan(event) {
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kludge to fix.
     const toHitData = { ...button.dataset };
-    const item = fromUuidSync(event.currentTarget.dataset.itemId);
-
-    const template2 = `systems/${HEROSYS.module}/templates/attack/item-mindscan-target-card.hbs`;
+    const item = HeroSystem6eItem.fromSource(JSON.parse(toHitData.itemJsonStr), {
+        parent: fromUuidSync(toHitData.actorUuid),
+    });
 
     // We may need to use selected token
     if (toHitData.target === "Selected") {
@@ -1709,13 +1776,16 @@ export async function _onRollMindScan(event) {
         return;
     }
 
-    let data = {
+    const data = {
         targetTokenId: toHitData.target,
         targetName: token?.name,
-        effectiveLevels: toHitData.effectiveLevels,
+
         item,
+        itemJsonStr: toHitData.itemJsonStr, // PH: FIXME: Would be nice to just have this in action data that is always passed through
+        actor: item.actor,
     };
 
+    const template2 = `systems/${HEROSYS.module}/templates/attack/item-mindscan-target-card.hbs`;
     const content = await renderTemplate(template2, data);
     const chatData = {
         author: game.user._id,
@@ -1731,25 +1801,13 @@ export async function _onRollMindScanEffectRoll(event) {
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kludge to fix.
     const toHitData = { ...button.dataset };
-    const item = fromUuidSync(event.currentTarget.dataset.itemId);
+    const item = HeroSystem6eItem.fromSource(JSON.parse(toHitData.itemJsonStr), {
+        parent: fromUuidSync(toHitData.actorUuid),
+    });
     const actor = item?.actor;
 
     if (!actor) {
         return ui.notifications.error(`Attack details are no longer available.`);
-    }
-
-    let effectiveItem = item;
-
-    // Create a temporary item based on effectiveLevels
-    if (toHitData?.effectiveLevels && parseInt(item.system.LEVELS) > 0) {
-        toHitData.effectiveLevels = parseInt(toHitData.effectiveLevels) || 0;
-        if (toHitData.effectiveLevels > 0 && toHitData.effectiveLevels !== parseInt(item.system.LEVELS)) {
-            const effectiveItemData = item.toObject();
-            effectiveItemData._id = null;
-            effectiveItemData.system.LEVELS = toHitData.effectiveLevels;
-            effectiveItem = new HeroSystem6eItem(effectiveItemData, { parent: item.actor });
-            await effectiveItem._postUpload();
-        }
     }
 
     // Look through all the scenes to find this token
@@ -1838,7 +1896,7 @@ export async function _onRollMindScanEffectRoll(event) {
         targetsEgo,
         egoAdder,
         targetEgo,
-        success: damageDetail.stun >= targetEgo,
+        success: damageDetail.effect >= targetEgo,
         buttonText: button.innerHTML.trim(),
         buttonTitle: button.title.replace(/\n/g, " ").trim(),
         defense,
@@ -1847,24 +1905,10 @@ export async function _onRollMindScanEffectRoll(event) {
         // dice rolls
         renderedDamageRoll: damageRenderedResult,
         renderedStunMultiplierRoll: damageDetail.renderedStunMultiplierRoll,
-
-        // hit locations
-        useHitLoc: damageDetail.useHitLoc,
-        hitLocText: damageDetail.hitLocText,
-        hitLocation: damageDetail.hitLocation,
-
-        // body
-        bodyDamage: damageDetail.bodyDamage,
-        bodyDamageEffective: damageDetail.body,
-
-        // stun
-        stunDamage: damageDetail.stunDamage,
-        stunDamageEffective: damageDetail.stun,
-        hasRenderedDamageRoll: true,
-        stunMultiplier: damageDetail.stunMultiplier,
-        hasStunMultiplierRoll: damageDetail.hasStunMultiplierRoll,
-
         roller: mindScanRoller.toJSON(),
+
+        // effect
+        effectDamage: damageDetail.effect,
 
         // misc
         targetIds: toHitData.targetIds,
@@ -1900,10 +1944,13 @@ export async function _onApplyDamage(event) {
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kludge to fix.
 
-    // PH: FIXME: Is toHitData actually needed?
     const damageData = { ...button.dataset };
-    const toHitData = damageData.toHitData;
     const targetTokens = JSON.parse(damageData.targetTokens);
+    const action = JSON.parse(damageData.actionData);
+
+    const item = HeroSystem6eItem.fromSource(JSON.parse(damageData.itemJsonStr), {
+        parent: fromUuidSync(damageData.actorUuid),
+    });
 
     if (targetTokens.length === 0) {
         // Check to make sure we have a selected token
@@ -1911,7 +1958,6 @@ export async function _onApplyDamage(event) {
             return ui.notifications.warn(`You must select at least one token before applying damage.`);
         }
 
-        const item = fromUuidSync(damageData.itemId);
         const action = damageData.actionData ? JSON.parse(damageData.actionData) : null;
 
         if (!item && action?.damageType) {
@@ -1946,7 +1992,7 @@ export async function _onApplyDamage(event) {
         }
 
         for (const token of canvas.tokens.controlled) {
-            await _onApplyDamageToSpecificToken(toHitData, damageData, {
+            await _onApplyDamageToSpecificToken(item, damageData, action, {
                 tokenId: token.id,
                 name: token.name,
                 subTarget: null,
@@ -1956,7 +2002,7 @@ export async function _onApplyDamage(event) {
     } else {
         // Apply to all provided targets
         for (const targetToken of targetTokens) {
-            await _onApplyDamageToSpecificToken(toHitData, damageData, targetToken);
+            await _onApplyDamageToSpecificToken(item, damageData, action, targetToken);
 
             // If entangle is transparent to damage, damage actor too
             if (targetToken.targetEntangle) {
@@ -1965,7 +2011,8 @@ export async function _onApplyDamage(event) {
                 if (ae) {
                     const entangle = fromUuidSync(ae.origin);
                     if (entangle.findModsByXmlid("TAKESNODAMAGE") || entangle.findModsByXmlid("BOTHDAMAGE")) {
-                        await _onApplyDamageToSpecificToken(toHitData, damageData, {
+                        // PH: FIXME: Is action correct here?
+                        await _onApplyDamageToSpecificToken(item, damageData, action, {
                             ...targetToken,
                             targetEntangle: false,
                         });
@@ -1979,7 +2026,7 @@ export async function _onApplyDamage(event) {
     $(button).css("color", "#A9A9A9");
 }
 
-export async function _onApplyDamageToSpecificToken(toHitData, damageData, targetToken) {
+export async function _onApplyDamageToSpecificToken(item, damageData, action, targetToken) {
     const token = canvas.scene.tokens.get(targetToken.tokenId);
     if (!token) {
         return ui.notifications.warn(`You must select at least one token before applying damage.`);
@@ -1991,9 +2038,7 @@ export async function _onApplyDamageToSpecificToken(toHitData, damageData, targe
         );
     }
 
-    const action = damageData.actionData ? JSON.parse(damageData.actionData) : null;
-    let item = fromUuidSync(damageData.itemId);
-
+    // PH: FIXME: Do we want to have this created here. Seems wrong given the structure. Feels like a kludge.
     // Generic Damage Roll - create a fake item
     if (!item && action.damageType) {
         let xml;
@@ -2035,7 +2080,7 @@ export async function _onApplyDamageToSpecificToken(toHitData, damageData, targe
     // Remove haymaker status
     const haymakerAe = item.actor?.effects.find((effect) => effect.statuses.has("haymaker"));
     if (haymakerAe) {
-        item.actor.removeActiveEffect(haymakerAe);
+        await item.actor.removeActiveEffect(haymakerAe);
     }
 
     const damageRoller = HeroRoller.fromJSON(damageData.roller);
@@ -2100,6 +2145,11 @@ export async function _onApplyDamageToSpecificToken(toHitData, damageData, targe
     const baseDamageRoller = damageRoller.clone();
 
     const automation = game.settings.get(HEROSYS.module, "automation");
+
+    // Maneuvers can include effects beyond damage
+    if (["maneuver", "martialart"].includes(item.type)) {
+        await doManeuverEffects(item, action);
+    }
 
     if (item.system.XMLID === "ENTANGLE") {
         return _onApplyEntangleToSpecificToken(item, token, damageRoller, action);
@@ -2295,25 +2345,29 @@ export async function _onApplyDamageToSpecificToken(toHitData, damageData, targe
     // We need to recalculate damage to account for possible Damage Negation
     const damageDetail = await _calcDamage(damageRoller, item, damageData);
 
-    // TRANSFORMATION
-    const transformation =
+    const isTransform =
         getPowerInfo({
             item: item,
         })?.XMLID === "TRANSFORM";
-    if (transformation) {
-        return _onApplyTransformationToSpecificToken(item, token, damageDetail, defense, defenseTags, action);
-    }
-
-    // AID, DRAIN or any adjustment powers
-    const adjustment = getPowerInfo({
+    const isAdjustment = !!getPowerInfo({
         item: item,
     })?.type?.includes("adjustment");
-    if (adjustment) {
+    const isSenseAffecting = item.isSenseAffecting();
+
+    if (isTransform) {
+        return _onApplyTransformationToSpecificToken(item, token, damageDetail, defense, defenseTags, action);
+    } else if (isAdjustment) {
         return _onApplyAdjustmentToSpecificToken(item, token, damageDetail, defense, defenseTags, action);
-    }
-    const senseAffecting = item.isSenseAffecting();
-    if (senseAffecting) {
-        return _onApplySenseAffectingToSpecificToken(item, token, damageDetail, defense);
+    } else if (isSenseAffecting) {
+        return _onApplySenseAffectingToSpecificToken(
+            item,
+            token,
+            damageDetail,
+            defense,
+            defenseTags,
+            action,
+            damageRoller,
+        );
     }
 
     // AUTOMATION immune to mental powers
@@ -2693,7 +2747,7 @@ export async function _onApplyDamageToEntangle(attackItem, token, originalRoll, 
             entangleAE.update({ changes: entangleAE.changes });
             effectsFinal = `Entangle has ${newBody} BODY remaining.`;
         } else {
-            entangleAE.parent.removeActiveEffect(entangleAE);
+            await entangleAE.parent.removeActiveEffect(entangleAE);
             effectsFinal = `Entangle was destroyed.`;
         }
     }
@@ -2988,7 +3042,15 @@ async function _onApplyAdjustmentToSpecificToken(adjustmentItem, token, damageDe
     }
 }
 
-async function _onApplySenseAffectingToSpecificToken(senseAffectingItem, token, damageData, defense) {
+async function _onApplySenseAffectingToSpecificToken(
+    senseAffectingItem,
+    token,
+    damageData,
+    defense,
+    _defenseTags,
+    _action,
+    flashRoller,
+) {
     const defenseTags = [];
     let totalDefense = 0;
 
@@ -3071,10 +3133,15 @@ async function _onApplySenseAffectingToSpecificToken(senseAffectingItem, token, 
 
     const cardData = {
         item: senseAffectingItem,
+
         // dice rolls
 
         // body
         damageData,
+
+        // Incoming Damage Information
+        incomingDamageSummary: flashRoller.getTotalSummary(),
+        incomingAnnotatedDamageTerms: flashRoller.getAnnotatedTermsSummary(),
 
         // defense
         defense: defense,
@@ -3102,63 +3169,68 @@ async function _onApplySenseAffectingToSpecificToken(senseAffectingItem, token, 
 
 /**
  *
- * @param {HeroRoller} heroRoller
+ * @param {HeroRoller} damageRoller
  * @param {*} item
  * @param {*} options
  * @returns
  */
-async function _calcDamage(heroRoller, item, options) {
+async function _calcDamage(damageRoller, item, options) {
     let damageDetail = {};
     const itemData = item.system;
 
-    const adjustmentPower = getPowerInfo({
+    const isAdjustment = !!getPowerInfo({
         item: item,
     })?.type?.includes("adjustment");
-    const senseAffectingPower = item.isSenseAffecting();
-    const entangle = item.system.XMLID === "ENTANGLE";
-    const bodyBasedEffectRollItem = isBodyBasedEffectRoll(item);
-    const stunBasedEffectRollItem = isStunBasedEffectRoll(item);
+    const isSenseAffectingPower = item.isSenseAffecting();
+    const isEntangle = item.system.XMLID === "ENTANGLE";
+    const isBodyBasedEffectRollItem = isBodyBasedEffectRoll(item);
+    const isStunBasedEffectRollItem = isStunBasedEffectRoll(item);
 
     let body;
     let stun;
+    let effect = 0;
     let bodyForPenetrating = 0;
     let effects = "";
 
-    if (adjustmentPower) {
+    if (isAdjustment) {
         // kludge for SIMPLIFIED HEALING
         if (item.system.XMLID === "HEALING" && item.system.INPUT.match(/simplified/i)) {
             // PH: FIXME: Didn't we already do this in the damage roll?
-            const shr = await heroRoller.cloneWhileModifyingType(HeroRoller.ROLL_TYPE.NORMAL);
+            const shr = await damageRoller.cloneWhileModifyingType(HeroRoller.ROLL_TYPE.NORMAL);
             body = shr.getBodyTotal();
             stun = shr.getStunTotal();
         } else {
             body = 0;
-            stun = heroRoller.getAdjustmentTotal();
-            bodyForPenetrating = (await heroRoller.cloneWhileModifyingType(HeroRoller.ROLL_TYPE.NORMAL)).getBodyTotal();
+            stun = damageRoller.getAdjustmentTotal();
+            bodyForPenetrating = (
+                await damageRoller.cloneWhileModifyingType(HeroRoller.ROLL_TYPE.NORMAL)
+            ).getBodyTotal();
         }
-    } else if (senseAffectingPower) {
-        body = heroRoller.getFlashTotal();
+    } else if (isSenseAffectingPower) {
+        body = damageRoller.getFlashTotal();
         stun = 0;
         bodyForPenetrating = 0;
-    } else if (entangle) {
-        body = heroRoller.getEntangleTotal();
+    } else if (isEntangle) {
+        body = damageRoller.getEntangleTotal();
         stun = 0;
         bodyForPenetrating = 0;
-    } else if (bodyBasedEffectRollItem) {
-        body = heroRoller.getEffectTotal();
+    } else if (isBodyBasedEffectRollItem) {
+        body = damageRoller.getEffectTotal();
         stun = 0;
         bodyForPenetrating = 0;
-    } else if (stunBasedEffectRollItem) {
+    } else if (isStunBasedEffectRollItem) {
         body = 0;
-        stun = heroRoller.getEffectTotal();
+        stun = damageRoller.getEffectTotal();
         bodyForPenetrating = 0;
     } else {
-        body = heroRoller.getBodyTotal();
-        stun = heroRoller.getStunTotal();
+        body = damageRoller.getBodyTotal();
+        stun = damageRoller.getStunTotal();
 
         // TODO: Doesn't handle a 1 point killing attack which is explicitly called out as doing 1 penetrating BODY.
         if (item.doesKillingDamage) {
-            bodyForPenetrating = (await heroRoller.cloneWhileModifyingType(HeroRoller.ROLL_TYPE.NORMAL)).getBodyTotal();
+            bodyForPenetrating = (
+                await damageRoller.cloneWhileModifyingType(HeroRoller.ROLL_TYPE.NORMAL)
+            ).getBodyTotal();
         } else {
             bodyForPenetrating = body;
         }
@@ -3176,7 +3248,7 @@ async function _calcDamage(heroRoller, item, options) {
     const useHitLocations = game.settings.get(HEROSYS.module, "hit locations") && !noHitLocationsPower;
     const hasStunMultiplierRoll = item.doesKillingDamage && !useHitLocations;
 
-    const stunMultiplier = hasStunMultiplierRoll ? heroRoller.getStunMultiplier() : 1;
+    const stunMultiplier = hasStunMultiplierRoll ? damageRoller.getStunMultiplier() : 1;
 
     // TODO: FIXME: This calculation is buggy as it doesn't consider:
     //       multiple levels of penetrating vs hardened/impenetrable
@@ -3194,9 +3266,9 @@ async function _calcDamage(heroRoller, item, options) {
         useHitLoc = true;
 
         if (game.settings.get(HEROSYS.module, "hitLocTracking") === "all") {
-            hitLocation = heroRoller.getHitLocation().fullName;
+            hitLocation = damageRoller.getHitLocation().fullName;
         } else {
-            hitLocation = heroRoller.getHitLocation().name;
+            hitLocation = damageRoller.getHitLocation().name;
         }
     }
 
@@ -3263,8 +3335,8 @@ async function _calcDamage(heroRoller, item, options) {
 
     let hitLocText = "";
     if (useHitLocations) {
-        const hitLocationBodyMultiplier = heroRoller.getHitLocation().bodyMultiplier;
-        const hitLocationStunMultiplier = heroRoller.getHitLocation().stunMultiplier;
+        const hitLocationBodyMultiplier = damageRoller.getHitLocation().bodyMultiplier;
+        const hitLocationStunMultiplier = damageRoller.getHitLocation().stunMultiplier;
 
         if (item.doesKillingDamage) {
             // Killing attacks apply hit location multiplier after resistant damage protection has been subtracted
@@ -3275,7 +3347,7 @@ async function _calcDamage(heroRoller, item, options) {
             stun = RoundFavorPlayerDown(stun * hitLocationStunMultiplier);
             body = RoundFavorPlayerDown(body * hitLocationBodyMultiplier);
         }
-        if (heroRoller.getHitLocation().item || heroRoller.getHitLocation().activeEffect) {
+        if (damageRoller.getHitLocation().item || damageRoller.getHitLocation().activeEffect) {
             hitLocText = `Hit ${hitLocation}`;
         } else {
             hitLocText = `Hit ${hitLocation} (x${hitLocationBodyMultiplier} BODY x${hitLocationStunMultiplier} STUN)`;
@@ -3298,7 +3370,7 @@ async function _calcDamage(heroRoller, item, options) {
     }
 
     // minimum damage rule (needs to be last)
-    if (stun < body && !senseAffectingPower) {
+    if (stun < body && !isSenseAffectingPower) {
         stun = body;
         effects +=
             `minimum damage invoked <i class="fal fa-circle-info" data-tooltip="` +
@@ -3314,8 +3386,15 @@ async function _calcDamage(heroRoller, item, options) {
     } else if (item.system.stunBodyDamage === CONFIG.HERO.stunBodyDamages.bodyonly) {
         stun = 0;
     } else if (item.system.stunBodyDamage === CONFIG.HERO.stunBodyDamages.effectonly) {
-        stun = 0;
-        body = 0;
+        if (isBodyBasedEffectRollItem) {
+            effect = body;
+            stun = 0;
+            body = 0;
+        } else if (isStunBasedEffectRollItem) {
+            effect = stun;
+            stun = 0;
+            body = 0;
+        }
     }
 
     stun = RoundFavorPlayerDown(stun);
@@ -3331,6 +3410,8 @@ async function _calcDamage(heroRoller, item, options) {
     damageDetail.useHitLoc = useHitLoc;
     damageDetail.hitLocText = hitLocText;
     damageDetail.hitLocation = hitLocation;
+
+    damageDetail.effect = effect;
 
     damageDetail.knockbackMessage = knockbackMessage;
     damageDetail.useKnockBack = useKnockback;
@@ -3366,7 +3447,6 @@ async function _calcKnockback(body, item, options, knockbackMultiplier) {
             </POWER>
         `;
         const kbAttack = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(kbContentsAttack, actor), {});
-        //await pdAttack._postUpload();
         const { defenseTags } = getActorDefensesVsAttack(actor, kbAttack);
         knockbackTags = [...knockbackTags, ...defenseTags];
         for (const tag of defenseTags) {
@@ -3706,6 +3786,9 @@ function calculateRequiredEnd(item, effectiveStr) {
         const itemEndurance = (parseInt(item.system.end) || 0) * (autoFireShots || 1);
 
         endToUse = itemEndurance;
+
+        // Pushing uses 1 END per pushed CP
+        endToUse += item.system._active.pushedRealPoints || 0;
 
         // TODO: May want to get rid of this so we can support HKA with 0 STR (weird but possible?) or
         // attacks such as TK or EB which have no STR component.

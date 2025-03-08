@@ -14,6 +14,10 @@
     Attack: <span class="item-name">{{{itemName item}}}</span>
   </div>
 
+  <div class="apply-damage-amount">
+    <span title="{{incomingAnnotatedDamageTerms}}">{{incomingDamageSummary}}</span>
+  </div>
+
   <div class="tags">
       {{#each attackTags as |tag id|}}
       <span class="tag" {{#if tag.title}}title="{{tag.title}}" {{/if}}>{{tag.name}}</span>

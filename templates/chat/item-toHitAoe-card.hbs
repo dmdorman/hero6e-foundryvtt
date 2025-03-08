@@ -1,6 +1,5 @@
 {{ log 'HEROSYS item-toHitAoe-card' this }}
-<div class="hero chat-card item-card to-hit-card" data-actor-id="{{actor._id}}" data-item-id="{{item._id}}" {{#if
-    tokenId}}data-token-id="{{tokenId}}" {{/if}}>
+<div class="hero chat-card item-card to-hit-card">
 
     <span class="flavor-text">
 
@@ -62,7 +61,7 @@
         </div>
 
         <div data-visibility="{{actor.id}}">
-            <button class="rollAoe-damage" data-item-id="{{item.uuid}}" data-form-data="{{formData}}">
+            <button class="rollAoe-damage" data-actor-uuid="{{actor.uuid}}" data-item-json-str="{{itemJsonStr}}" data-form-data="{{formData}}">
                 {{{buttonText}}}
             </button>
         </div>

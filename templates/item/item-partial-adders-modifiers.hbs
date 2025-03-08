@@ -11,30 +11,30 @@
         </th>
     </tr>
     {{#each item.adders as |adder XMLID|}}
-    <tr data-xmlid="{{adder.XMLID}}" data-adder="{{adder.ID}}">
-        <td class="left">{{adder.ALIAS}}</td>
-        <td>{{#if adder.SELECTED}}{{adder.BASECOST_total}}{{/if}}</td>
-        <td class="right">
-            <a class="item-control modifier-edit" data-action="edit" title="Edit"><i
-                    class="fas fa-edit"></i></a>
-            <a class="item-control modifier-delete" data-action="delete" title="Delete">
-                <i class="fas fa-trash"></i>
-            </a>
-        </td>
-    </tr>
-
-        {{#each adder.ADDER as |adder XMLID|}}
-        <tr  class="modifier-adder indent" data-xmlid="{{adder.XMLID}}" data-adder="{{adder.ID}}">
+        <tr data-xmlid="{{adder.XMLID}}" data-adder="{{adder.ID}}">
             <td class="left">{{adder.ALIAS}}</td>
-            <td>{{adder.BASECOST_total}}</td>
+            <td>{{#if adder.SELECTED}}{{adder.BASECOST_total}}{{/if}}</td>
             <td class="right">
-                {{!-- <a class="item-control modifier-edit" data-action="edit" title="Edit"><i
+                <a class="item-control modifier-edit" data-action="edit" title="Edit"><i
                         class="fas fa-edit"></i></a>
                 <a class="item-control modifier-delete" data-action="delete" title="Delete">
                     <i class="fas fa-trash"></i>
-                </a> --}}
+                </a>
             </td>
         </tr>
+
+        {{#each adder.ADDER as |adder XMLID|}}
+            <tr  class="modifier-adder indent" data-xmlid="{{adder.XMLID}}" data-adder="{{adder.ID}}">
+                <td class="left">{{adder.ALIAS}}</td>
+                <td>{{adder.BASECOST_total}}</td>
+                <td class="right">
+                    {{!-- <a class="item-control modifier-edit" data-action="edit" title="Edit"><i
+                            class="fas fa-edit"></i></a>
+                    <a class="item-control modifier-delete" data-action="delete" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </a> --}}
+                </td>
+            </tr>
         {{/each}}
     {{/each}}
 
@@ -65,17 +65,17 @@
         </tr>
 
         {{#each mod.adders as |adder id|}}
-        <tr class="hero modifier-adder indent {{#if mod.parentId}}from-parent{{/if}}"data-xmlid="{{adder.XMLID}}" data-adder="{{adder.ID}}">
-            <td class="left" title="{{adder.XMLID}}">{{adder.ALIAS}} {{adder.OPTION_ALIAS}} {{#if adder.PRIVATE}}p{{/if}}</td>
-            <td>{{adder.cost}}</td>
-            <td class="right">
-                {{!-- <a class="item-control modifier-edit" data-action="edit" title="Edit"><i
-                        class="fas fa-edit"></i></a>
-                <a class="item-control modifier-delete" data-action="delete" title="Delete">
-                    <i class="fas fa-trash"></i>
-                </a> --}}
-            </td>
-        </tr>
+            <tr class="hero modifier-adder indent {{#if mod.parentId}}from-parent{{/if}}"data-xmlid="{{adder.XMLID}}" data-adder="{{adder.ID}}">
+                <td class="left" title="{{adder.XMLID}}">{{adder.ALIAS}} {{adder.OPTION_ALIAS}} {{#if adder.PRIVATE}}p{{/if}}</td>
+                <td>{{adder.cost}}</td>
+                <td class="right">
+                    {{!-- <a class="item-control modifier-edit" data-action="edit" title="Edit"><i
+                            class="fas fa-edit"></i></a>
+                    <a class="item-control modifier-delete" data-action="delete" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </a> --}}
+                </td>
+            </tr>
         {{/each}}
 
     {{/each}}

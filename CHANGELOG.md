@@ -22,6 +22,8 @@
 - Improved error handling for older/unsupported tokens. Uploading the HDC file again fixes these errors.
 - Custom Adders now includes cost on description.
 - MULTIPOWER, COMPOUNDPOWER, and LIST don't really have a range property. [#1837](https://github.com/dmdorman/hero6e-foundryvtt/issues/1837)
+- Support Naked Advantages.
+- Support advantages for Hand-to-Hand Attacks.
 
 ## Version 4.0.20 20250217
 

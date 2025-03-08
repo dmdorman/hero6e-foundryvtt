@@ -128,7 +128,8 @@ export class HeroSystemActorSheet extends ActorSheet {
                 data.activePointsTitle = "Total Active Points (estimate)";
             }
 
-            // // override actor.items (which is a map) to an array with some custom properties
+            // FIXME: This is the cost of a major amount of rework done that should be calculated once when either the HDC or the system changes.
+            // override actor.items (which is a map) to an array with some custom properties
             for (let item of data.actor.items) {
                 // Update Attack Details (estimateOCV, DCV, Damage)
                 item._postUploadDetails();

@@ -1,7 +1,7 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
-import { calculateDicePartsFromDcForItem, addDiceParts } from "../utility/damage.mjs";
+import { addDiceParts, calculateDicePartsFromDcForItem } from "../utility/damage.mjs";
 
 export function registerDamageFunctionTests(quench) {
     quench.registerBatch(
@@ -921,7 +921,7 @@ export function registerDamageFunctionTests(quench) {
                         {},
                     );
                     actor.system.is5e = false;
-                    await actor.addAttackPlaceholders();
+                    await actor.addAttackPlaceholder();
                     await actor._postUpload();
 
                     item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
@@ -962,7 +962,7 @@ export function registerDamageFunctionTests(quench) {
                         {},
                     );
                     actor.system.is5e = true;
-                    await actor.addAttackPlaceholders();
+                    await actor.addAttackPlaceholder();
                     await actor._postUpload();
 
                     item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
@@ -1185,7 +1185,7 @@ export function registerDamageFunctionTests(quench) {
                         {},
                     );
                     actor.system.is5e = false;
-                    await actor.addAttackPlaceholders();
+                    await actor.addAttackPlaceholder();
                     await actor._postUpload();
 
                     item = new HeroSystem6eItem(
@@ -1226,7 +1226,7 @@ export function registerDamageFunctionTests(quench) {
                         {},
                     );
                     actor.system.is5e = false;
-                    await actor.addAttackPlaceholders();
+                    await actor.addAttackPlaceholder();
                     await actor._postUpload();
 
                     item = new HeroSystem6eItem(

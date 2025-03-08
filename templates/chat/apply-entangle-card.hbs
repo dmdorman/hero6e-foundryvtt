@@ -1,9 +1,7 @@
 {{ log 'HEROSYS apply-entangle-card' this }}
-<div class="hero chat-card apply-damage-card" data-actor-id="{{actor._id}}" data-item-id="{{item._id}}" {{#if
-  tokenId}}data-token-id="{{tokenId}}" {{/if}}>
+<div class="hero chat-card apply-damage-card" data-actor-id="{{actor._id}}" data-item-id="{{item._id}}" {{#if tokenId}}data-token-id="{{tokenId}}" {{/if}}>
 
   <header class="card-header flexrow">
-    {{!-- <img src="{{item.img}}" title="{{item.name}}" width="36" height="36" /> --}}
     <h3>{{item.name}} vs {{targetToken.name}}</h3>
   </header>
 
@@ -44,7 +42,6 @@
 
   <div class="card-section">
     <div class="description-tiny">Effect</div>
-    {{!-- <div class="description-medium">{{ bodyDamageEffective }} BODY; {{ stunDamageEffective }} STUN</div> --}}
     <div class="description-tiny">{{{ effects }}}</div>
   </div>
 
