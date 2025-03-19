@@ -3,6 +3,7 @@ import { HeroSystem6eItem } from "./item.mjs";
 
 export class HeroSystem6eAdder {
     #baseInfo;
+
     constructor(json, options) {
         // These are needed first
         this.item = options.item;
@@ -35,7 +36,7 @@ export class HeroSystem6eAdder {
         if (!this.#baseInfo && !this.BASECOST && !this.LVLCOST) {
             if (!window.warnAdder?.includes(this.XMLID)) {
                 console.warn(
-                    `${this.item?.actor.name}/${this.item?.name}/${this.item?.system.XMLID}/${this.XMLID}: missing baseInfo.`,
+                    `${this.item?.actor.name}/${this.item?.detailedName()}/${this.XMLID}: missing baseInfo.`,
                     this,
                 );
                 window.warnAdder ??= [];
@@ -63,12 +64,6 @@ export class HeroSystem6eAdder {
                 // Override default costPerLevel?
                 if (this.LVLCOST && levels > 0) {
                     const _costPerLevel = parseFloat(this.LVLCOST || 0) / parseFloat(this.LVLVAL || 1) || 1;
-                    // if (costPerLevel !== _costPerLevel && this.baseInfo) {
-                    //     console.warn(
-                    //         `${this.item?.actor.name}/${this.item?.name}/${this.item?.system.XMLID}/${this.XMLID}: costPerLevel inconsistency ${costPerLevel} vs ${_costPerLevel}`,
-                    //         this,
-                    //     );
-                    // }
                     costPerLevel = _costPerLevel;
                 }
                 _cost += levels * costPerLevel;

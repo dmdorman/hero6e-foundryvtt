@@ -473,7 +473,6 @@ export class HeroSystem6eCombat extends Combat {
         // Stop holding
         if (combatant.actor.statuses.has("holding")) {
             const ae = combatant.actor.effects.find((effect) => effect.statuses.has("holding"));
-            //combatant.actor.removeActiveEffect(ae);
             await combatant.actor.toggleStatusEffect(ae.id, {
                 active: false,
             });
@@ -482,7 +481,6 @@ export class HeroSystem6eCombat extends Combat {
         // Stop nonCombatMovement
         if (combatant.actor.statuses.has("nonCombatMovement")) {
             const ae = combatant.actor.effects.find((effect) => effect.statuses.has("nonCombatMovement"));
-            //combatant.actor.removeActiveEffect(ae);
             await combatant.actor.toggleStatusEffect(ae.id, {
                 active: false,
             });
@@ -547,9 +545,8 @@ export class HeroSystem6eCombat extends Combat {
              */
             const spentResources = {
                 totalEnd: 0,
-                end: 0,
-                reserveEnd: 0,
-                charges: 0,
+                totalReserveEnd: 0,
+                totalCharges: 0,
             };
 
             for (const powerUsingResourcesToContinue of combatant.actor.items.filter(
@@ -573,13 +570,12 @@ export class HeroSystem6eCombat extends Combat {
                     await powerUsingResourcesToContinue.toggle();
                 } else {
                     content += resourcesUsedDescription
-                        ? `<li>${powerUsingResourcesToContinue.name} spent ${resourcesUsedDescription}${resourcesUsedDescriptionRenderedRoll}</li>`
+                        ? `<li>${powerUsingResourcesToContinue.detailedName()} spent ${resourcesUsedDescription}${resourcesUsedDescriptionRenderedRoll}</li>`
                         : "";
 
                     spentResources.totalEnd += resourcesRequired.totalEnd;
-                    spentResources.end += resourcesRequired.end;
-                    spentResources.reserveEnd += resourcesRequired.reserveEnd;
-                    spentResources.charges += resourcesRequired.charges;
+                    spentResources.totalReserveEnd += resourcesRequired.totalReserveEnd;
+                    spentResources.totalCharges += resourcesRequired.totalCharges;
                 }
             }
 
@@ -604,12 +600,15 @@ export class HeroSystem6eCombat extends Combat {
                 }
             }
 
-            if (content !== "" && (spentResources.totalEnd > 0 || spentResources.charges > 0)) {
+            if (
+                content !== "" &&
+                (spentResources.totalEnd > 0 || spentResources.totalReserveEnd > 0 || spentResources.totalCharges > 0)
+            ) {
                 const segment = this.combatant.flags.segment;
 
-                content = `Spent ${spentResources.end} END, ${spentResources.reserveEnd} reserve END, and ${
-                    spentResources.charges
-                } charge${spentResources.charges > 1 ? "s" : ""} on turn ${
+                content = `Spent ${spentResources.totalEnd} END, ${spentResources.totalReserveEnd} reserve END, and ${
+                    spentResources.totalCharges
+                } charge${spentResources.totalCharges > 1 ? "s" : ""} on turn ${
                     this.round
                 } segment ${segment}:<ul>${content}</ul>`;
 

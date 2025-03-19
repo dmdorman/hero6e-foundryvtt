@@ -354,9 +354,6 @@ export class HeroSystem6eActor extends Actor {
             }
 
             if (data.system.characteristics.stun.value > 0) {
-                // this.removeActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.knockedOutEffect);
-                // this.removeActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.bleedingEffect);
-                // this.removeActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.deadEffect);
                 await this.toggleStatusEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.knockedOutEffect.id, {
                     active: false,
                 });
@@ -393,9 +390,9 @@ export class HeroSystem6eActor extends Actor {
 
         // Mark as undefeated in combat tracker (automaton)
         if (this.type === "automaton" && data.system?.characteristics?.body?.value > 0) {
-            this.removeActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.knockedOutEffect);
-            this.removeActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.bleedingEffect);
-            this.removeActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.deadEffect);
+            await this.removeActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.knockedOutEffect);
+            await this.removeActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.bleedingEffect);
+            await this.removeActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.deadEffect);
         }
 
         // Mark as undefeated in combat tracker (pc/npc)
@@ -404,7 +401,6 @@ export class HeroSystem6eActor extends Actor {
             data.system?.characteristics?.body?.value > 0 &&
             this.system.characteristics.stun.value >= -30
         ) {
-            //this.removeActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.deadEffect);
             await this.toggleStatusEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.deadEffect.id, {
                 active: false,
             });
@@ -714,6 +710,27 @@ export class HeroSystem6eActor extends Actor {
         return result;
     }
 
+    // Abort effect - If in combat and not our turn then this must be an abort unless holding an action
+    /**
+     * Is there combat and is it the actor's turn to act?
+     *
+     * @returns {boolean}
+     */
+    needsToAbortToAct() {
+        const currentCombatActorId = game.combat?.combatants.find(
+            (combatant) => combatant.tokenId === game.combat.current?.tokenId,
+        )?.actorId;
+        const thisActorsCombatTurn =
+            game.combat?.active && currentCombatActorId != undefined && currentCombatActorId === this.id;
+        const thisActorHoldingAnAction = this.statuses.has("holding");
+
+        if (game.combat?.active && !thisActorsCombatTurn && !thisActorHoldingAnAction) {
+            return true;
+        }
+
+        return false;
+    }
+
     // When stunned, knockedout, etc you cannot act
     canAct(uiNotice, event) {
         // Bases can always act (used for token attacher)
@@ -722,21 +739,31 @@ export class HeroSystem6eActor extends Actor {
         let result = true;
         let badStatus = [];
 
+        // Is knocked out?
         if (this.statuses.has("knockedOut")) {
             if (uiNotice) badStatus.push("KNOCKED OUT");
             result = false;
         }
 
+        // Is stunned?
         if (this.statuses.has("stunned")) {
             badStatus.push("STUNNED");
             result = false;
         }
 
+        // Is already aborted?
         if (this.statuses.has("aborted")) {
             badStatus.push("ABORTED");
             result = false;
         }
 
+        // Is not actor's turn to act
+        if (this.needsToAbortToAct()) {
+            badStatus.push("NOT THE ACTIVE COMBATANT");
+            result = false;
+        }
+
+        // No speed?
         if (parseInt(this.system.characteristics.spd?.value || 0) < 1) {
             if (uiNotice) badStatus.push("SPD1");
             result = false;
@@ -1700,7 +1727,7 @@ export class HeroSystem6eActor extends Actor {
                     power.type.includes("maneuver"),
             ).length +
             1 + // Perception
-            2; // STR and Weapon placeholder
+            1; // Weapon placeholder
 
         const xmlItemsToProcess =
             1 + // we process heroJson.CHARACTER.CHARACTERISTICS all at once so just track as 1 item.
@@ -1998,12 +2025,12 @@ export class HeroSystem6eActor extends Actor {
             // Power needs to exist
             if (!power) {
                 await ui.notifications.error(
-                    `${this.name}/${item.name} has unknown power XMLID: ${item.system.XMLID}. Please report.`,
+                    `${this.name}/${item.detailedName()} has unknown power XMLID}. Please report.`,
                     { console: true, permanent: true },
                 );
             } else if (!power.behaviors) {
                 await ui.notifications.error(
-                    `${this.name}/${item.name}/${item.system.XMLID} does not have behaviors defined. Please report.`,
+                    `${this.name}/${item.detailedName()} does not have behaviors defined. Please report.`,
                     { console: true, permanent: true },
                 );
             }
@@ -2240,7 +2267,7 @@ export class HeroSystem6eActor extends Actor {
         await this.addPerception();
 
         // MANEUVERS
-        await this.addAttackPlaceholders();
+        await this.addAttackPlaceholder();
         await this.addHeroSystemManeuvers();
     }
 
@@ -2272,25 +2299,7 @@ export class HeroSystem6eActor extends Actor {
         return perceptionItem._postUpload({ applyEncumbrance: false });
     }
 
-    async addAttackPlaceholders() {
-        // Maneuver Strength Placeholder
-        // PH: FIXME: Figure out how to hide this (has name "__strengthPlaceholderWeapon") in the UI
-        const strengthPlaceholderItemContent = `<POWER XMLID="__STRENGTHDAMAGE" ID="1709333792635" BASECOST="0.0" LEVELS="1" ALIAS="__InternalStrengthPlaceholder" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="__InternalStrengthPlaceholder" INPUT="PD" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes"></POWER>`;
-        const strengthPlaceholderItemData = HeroSystem6eItem.itemDataFromXml(strengthPlaceholderItemContent, this);
-        const strengthPlaceholderItem = this.id
-            ? await HeroSystem6eItem.create(strengthPlaceholderItemData, {
-                  parent: this,
-              })
-            : new HeroSystem6eItem(strengthPlaceholderItemData, {
-                  parent: this,
-              });
-
-        // Work around if temporary actor
-        if (!this.id) {
-            this.items.set(strengthPlaceholderItem.name, strengthPlaceholderItem);
-        }
-        await strengthPlaceholderItem._postUpload();
-
+    async addAttackPlaceholder() {
         // Maneuver Weapon Placeholder
         // PH: FIXME: Figure out how to hide this (has name "__InternalManeuverPlaceholderWeapon") in the UI
         const maneuverWeaponPlaceholderItemContent = `<POWER XMLID="__STRENGTHDAMAGE" ID="1709333792633" BASECOST="0.0" LEVELS="1" ALIAS="__InternalManeuverPlaceholderWeapon" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="__InternalManeuverPlaceholderWeapon" INPUT="PD" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes"></POWER>`;
@@ -2739,24 +2748,16 @@ export class HeroSystem6eActor extends Actor {
 
         // Add in costs for items
         for (const item of this.items.filter(
-            (o) => o.type != "attack" && o.type != "defense" && o.type != "movement",
+            (o) =>
+                o.type !== "attack" &&
+                o.type !== "defense" &&
+                o.type !== "movement" &&
+                !o.system.XMLID.startsWith("__"), // Exclude placeholder powers
         )) {
             let _characterPointCost = parseInt(item.system?.characterPointCost || item.system?.realCost) || 0;
             const _activePoints = parseInt(item.system?.activePoints) || 0;
 
-            // if ((item.parentItem?.type || item.type) != "equipment") {
-            //     if (item.system.XMLID === "COMPOUNDPOWER") {
-            //         // This compound power may be within a framework, so use that cost
-            //         _characterPointCost = parseInt(item.compoundCost);
-            //     }
-
-            //     // Don't include costs from COMPOUNDPOWER children as we added them above
-            //     if (item.parentItem?.system.XMLID === "COMPOUNDPOWER") {
-            //         _characterPointCost = 0;
-            //     }
-            // }
-
-            if (_characterPointCost != 0) {
+            if (_characterPointCost !== 0) {
                 // Equipment is typically purchased with money, not character points
                 if ((item.parentItem?.type || item.type) !== "equipment") {
                     characterPointCost += _characterPointCost;
@@ -2773,7 +2774,7 @@ export class HeroSystem6eActor extends Actor {
         // DISAD_POINTS: realCost
         const DISAD_POINTS = parseInt(this.system.CHARACTER?.BASIC_CONFIGURATION?.DISAD_POINTS || 0);
         const _disadPoints = Math.min(DISAD_POINTS, this.system.pointsDetail?.disadvantage || 0);
-        if (_disadPoints != 0) {
+        if (_disadPoints !== 0) {
             this.system.pointsDetail.MatchingDisads = -_disadPoints;
             this.system.activePointsDetail.MatchingDisads = -_disadPoints;
             characterPointCost -= _disadPoints;

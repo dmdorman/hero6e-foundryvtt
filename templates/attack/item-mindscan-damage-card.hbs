@@ -14,12 +14,8 @@
         Attacker: <span class="item-name">{{item.actor.name}}</span>
     </div>
     <div>
-        {{!-- {{#if (gte stunDamage targetEgo)}}
-            Target: {{targetToken.name}} <span class="item-name" data-visibility="gm">(EGO {{targetsEgo}} + {{egoAdder}} = {{targetEgo}})</span>
-        {{else}} --}}
-            Target: <span class="item-name" data-visibility="gm">{{targetToken.name}} (EGO {{targetsEgo}} + {{egoAdder}} = {{targetEgo}})</span>
+        Target: <span class="item-name" data-visibility="gm">{{targetToken.name}} (EGO {{targetsEgo}} + {{egoAdder}} = {{targetEgo}})</span>
         <span class="item-name" data-visibility="redacted">redacted</span>
-        {{!-- {{/if}} --}}
     </div>
 
     <div class="tags">
@@ -49,7 +45,7 @@
 
     <div class="card-section" data-visibility="gm">
         <div class="description-tiny">Mind Scan Effect After Defenses</div>
-        <div class="description-medium" >{{ stunDamageEffective }} Effect</div>
+        <div class="description-medium" >{{ effectDamage }} Effect</div>
         <div class="description-tiny">{{{ effects }}}</div>
     </div>
 

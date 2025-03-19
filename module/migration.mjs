@@ -123,6 +123,15 @@ export async function migrateWorld() {
     );
     console.log(`%c Took ${Date.now() - _start}ms to migrate to version 4.0.16`, "background: #1111FF; color: #FFFFFF");
 
+    await migrateToVersion(
+        "4.0.24",
+        lastMigration,
+        getAllActorsInGame(),
+        "removing STR placeholder",
+        async (actor) => await removeStrengthPlaceholderAndCreateActiveProperty(actor),
+    );
+    console.log(`%c Took ${Date.now() - _start}ms to migrate to version 4.0.24`, "background: #1111FF; color: #FFFFFF");
+
     // Always rebuild the database for all actors by recreating actors and all their items (description, cost, etc)
     _start = Date.now();
     await migrateToVersion(
@@ -135,6 +144,34 @@ export async function migrateWorld() {
     console.log(`%c Took ${Date.now() - _start}ms to migrate to latest version`, "background: #1111FF; color: #FFFFFF");
 
     await ui.notifications.info(`Migration complete to ${game.system.version}`);
+}
+
+async function removeStrengthPlaceholderAndCreateActiveProperty(actor) {
+    try {
+        if (!actor) return false;
+
+        // Delete strength placeholder as we need many of them so will be creating them on the fly.
+        await actor.items.find((item) => item.system.ALIAS === "__InternalStrengthPlaceholder")?.delete();
+
+        // Create the _active object for all items
+        const modifiedItems = actor.items
+            .map((item) => {
+                if (!item.system._active) {
+                    return item.update({ "system._active": {} });
+                }
+
+                return undefined;
+            })
+            .filter(Boolean);
+
+        await Promise.all(modifiedItems);
+    } catch (e) {
+        const msg = `Migration of maneuvers to 4.0.24 failed for ${actor?.name}. Please report.`;
+        console.error(msg, e);
+        if (game.user.isGM && game.settings.get(game.system.id, "alphaTesting")) {
+            await ui.notifications.warn(msg);
+        }
+    }
 }
 
 async function replaceActorsBuiltInManeuvers(actor) {
@@ -156,9 +193,9 @@ async function replaceActorsBuiltInManeuvers(actor) {
         }
 
         // Add in the new placeholder items and all built in maneuvers
-        timer.placeholdersStart = Date.now();
-        await actor.addAttackPlaceholders();
-        timer.placeholdersEnd = Date.now();
+        timer.placeholderStart = Date.now();
+        await actor.addAttackPlaceholder();
+        timer.placeholderEnd = Date.now();
 
         timer.maneuversStart = Date.now();
         await actor.addHeroSystemManeuvers();

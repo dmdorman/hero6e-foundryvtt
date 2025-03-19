@@ -1,4 +1,5 @@
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
+import { HeroSystem6eActor } from "../actor/actor.mjs";
 
 /**
  * Maneuvers have some rules of their own that should be considered.
@@ -51,6 +52,15 @@ function addOcvTraitToChanges(maneuverOcvChange) {
 
 function buildManeuverNextPhaseFlags(item) {
     return { type: "maneuverNextPhaseEffect", itemUuid: item.uuid, toggle: item.isActivatable() };
+}
+
+/**
+ * Things which have the "abort" trait in their effect can be aborted to.
+ * @returns {boolean}
+ */
+export function maneuverCanBeAbortedTo(item) {
+    const maneuverHasAbortTrait = item.system.EFFECT?.toLowerCase().indexOf("abort") > -1;
+    return maneuverHasAbortTrait;
 }
 
 /**
@@ -114,7 +124,7 @@ export async function activateManeuver(item) {
         item.system.XMLID === "SETANDBRACE" ||
         item.system.XMLID === "PULLINGAPUNCH"
     ) {
-        console.error(`Unsupported maneuver ${item.name}/${item.system.XMLID}`);
+        console.error(`Unsupported maneuver ${item.detailedName()}`);
     } else {
         // PH: FIXME: Assume this is a martial maneuver and give it a default effect
         const maneuverEffect = foundry.utils.deepClone(HeroSystem6eActorActiveEffects.statusEffectsObj.strikeEffect);
@@ -165,4 +175,33 @@ export async function deactivateManeuver(item) {
     }
 
     return Promise.all(removedEffects);
+}
+
+export async function doManeuverEffects(item, action) {
+    const newActiveEffects = [];
+
+    const effect = item.system.EFFECT?.toLowerCase();
+    if (effect) {
+        const maneuverHasTargetFallsTrait = effect.indexOf("target falls") > -1;
+        const maneuverHasAttackerFallsTrait = effect.indexOf("you fall") > -1;
+
+        // Add prone effects (attacker and target)
+        if (maneuverHasTargetFallsTrait) {
+            const currentTargets = action.system.currentTargets;
+            currentTargets.forEach((targetedToken) => {
+                const actor = HeroSystem6eActor.get(targetedToken.document.actorId);
+                newActiveEffects.push(
+                    actor.addActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.proneEffect),
+                );
+            });
+        }
+
+        if (maneuverHasAttackerFallsTrait) {
+            newActiveEffects.push(
+                item.actor.addActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.proneEffect),
+            );
+        }
+    }
+
+    return Promise.all(newActiveEffects);
 }

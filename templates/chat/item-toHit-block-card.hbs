@@ -1,24 +1,24 @@
-{{ log 'HEROSYS item-toHit-block-card' this }}
-<div class="hero chat-card item-card to-hit-card" data-actor-id="{{actor._id}}" data-item-id="{{item._id}}"{{#if
-    tokenId}} data-token-id="{{tokenId}}"{{/if}}>
+{{log "HEROSYS item-toHit-block-card" this}}
+<div class="hero chat-card item-card to-hit-card">
 
     <span class="flavor-text">
-        {{!-- Attack Name --}}
+        {{! Attack Name }}
         <header class="card-header attack flexrow">
             <img src="{{item.img}}" title="{{item.name}}" width="36" height="36" />
             <h3 class="item-name">{{{itemName item}}}</h3>
         </header>
 
-        {{!-- Show Target, if any --}}
+        {{! Show Target, if any }}
         <div class="target-dc-result">
             {{#each targetData as |target|}}
                 <div class="target-dc">
 
                     <span>Target: {{target.name}}</span>
 
-                    {{!-- TODO: Make dcv/dmcv visibility based on ownership --}}
+                    {{! TODO: Make dcv/dmcv visibility based on ownership }}
                     <span>
-                        ({{target.toHitChar}} {{target.value}})
+                        ({{target.toHitChar}}
+                        {{target.value}})
                     </span>
                 </div>
             {{/each}}
@@ -34,7 +34,7 @@
             {{#if item.doesKillingDamage}}
                 <span class="tag">killing</span>
             {{/if}}
-            {{#if (ne item.system.stunBodyDamage 'Stun and Body')}}
+            {{#if (ne item.system.stunBodyDamage "Stun and Body")}}
                 <span class="tag">{{item.system.stunBodyDamage}}S</span>
             {{/if}}
             {{#if item.system.piercing}}
@@ -43,14 +43,18 @@
             {{#if item.system.penetrating}}
                 <span class="tag" title="Penetrating">PENx{{item.system.penetrating}}</span>
             {{/if}}
-            {{#if (ne item.system.areaOfEffect.type 'none')}}
-                <span class="tag area-effect-tag" data-aoe-type="{{item.system.areaOfEffect.type}}"
-                    data-aoe-value="{{item.system.areaOfEffect.value}}">
-                    {{item.system.areaOfEffect.type}} ({{item.system.areaOfEffect.value}})
+            {{#if (ne item.system.areaOfEffect.type "none")}}
+                <span
+                    class="tag area-effect-tag"
+                    data-aoe-type="{{item.system.areaOfEffect.type}}"
+                    data-aoe-value="{{item.system.areaOfEffect.value}}"
+                >
+                    {{item.system.areaOfEffect.type}}
+                    ({{item.system.areaOfEffect.value}})
                 </span>
             {{/if}}
         </div>
-        <hr>
+        <hr />
         <div class="tags">
             {{#each tags as |tag id|}}
                 <span class="tag tag-transparent">{{tag.name}}
@@ -58,24 +62,25 @@
                 </span>
             {{/each}}
         </div>
-        <hr>
+        <hr />
     </span>
 
     <div class="hit-roll">
         {{#if resourcesUsedDescription}}
             <div class="card-section">
-                <div class="description-tiny">Spent {{{ resourcesUsedDescription }}}</div>
+                <div class="description-tiny">Spent {{{resourcesUsedDescription}}}</div>
             </div>
         {{/if}}
 
         {{#each targetData as |target|}}
             <div class="card-section">
-                <div class="description-tiny">Attack Roll<br>vs.<br>{{target.name}}</div>
-                <div class="hit-roll">{{{ target.renderedRoll }}}</div>
+                <div class="description-tiny">Attack Roll<br />vs.<br />{{target.name}}</div>
+                <div class="hit-roll">{{{target.renderedRoll}}}</div>
                 <div class="description-medium">
-                    {{{ target.hitRollText }}}
+                    {{{target.hitRollText}}}
                     <span data-visibility="gm">
-                        ({{target.toHitChar}} {{target.value}})
+                        ({{target.toHitChar}}
+                        {{target.value}})
                     </span>
                 </div>
             </div>

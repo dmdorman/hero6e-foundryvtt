@@ -37,7 +37,7 @@ export class HeroSystem6eModifier {
                 }
             } else {
                 console.warn(
-                    `${this.item?.actor?.name}/${this.item?.name}/${this.item?.system.XMLID}/${json.XMLID}: Unexpected modifier property (${key}). Shouldn't be a problem, re-uploading from HDC should resolve.`,
+                    `${this.item?.actor?.name}/${this.item?.detailedName()}/${json.XMLID}: Unexpected modifier property (${key}). Shouldn't be a problem, re-uploading from HDC should resolve.`,
                     this,
                     json,
                     options,
@@ -56,7 +56,7 @@ export class HeroSystem6eModifier {
         if (!this.#baseInfo && !this.BASECOST) {
             if (!window.warnAdder?.includes(this.XMLID)) {
                 console.info(
-                    `${this.item?.actor.name}/${this.item?.name}/${this.item?.system.XMLID}/${this.XMLID}: missing baseInfo.`,
+                    `${this.item?.actor.name}/${this.item?.detailedName()}/${this.XMLID}: missing baseInfo.`,
                     this,
                 );
                 window.warnAdder ??= [];
@@ -68,28 +68,6 @@ export class HeroSystem6eModifier {
     get item() {
         return this._item;
     }
-
-    // get #original() {
-    //     try {
-    //         let item = this._item;
-    //         let original;
-    //         for (let i = 0; i < 10; i++) {
-    //             original = item.system.MODIFIER?.find((p) => p.ID === this._id);
-    //             if (original) break;
-    //             item = item.parentItem;
-    //         }
-    //         if (!original) {
-    //             console.error(
-    //                 `${this.item?.actor?.name}/${this.item?.name}/${this.item?.system.XMLID}: Unable to locate modifier with ID=${this._id}`,
-    //                 this,
-    //             );
-    //         }
-    //         return original;
-    //     } catch (e) {
-    //         console.error(e);
-    //     }
-    //     return null;
-    // }
 
     get baseInfo() {
         return this.#baseInfo;
@@ -108,7 +86,7 @@ export class HeroSystem6eModifier {
             const levels = parseInt(this.LEVELS) || 0;
             if (!costPerLevel && this.LVLCOST) {
                 console.warn(
-                    `${this.item?.actor.name}/${this.item?.name}/${this.item?.system.XMLID}/${this.XMLID}: is missing costPerLevel, using LVLCOST & LVLVAL`,
+                    `${this.item?.actor.name}/${this.item?.detailedName()}/${this.XMLID}: is missing costPerLevel, using LVLCOST & LVLVAL`,
                 );
                 costPerLevel = parseFloat(this.LVLCOST || 0) / parseFloat(this.LVLVAL || 1) || 1;
             }
@@ -164,7 +142,7 @@ export class HeroSystem6eModifier {
         if (this._BASECOST_total !== undefined) {
             if (this._BASECOST_total !== this.cost) {
                 console.warn(
-                    `${this.item?.actor.name}/${this.item?.name}/${this.item?.system.XMLID}/${this.XMLID} BASECOST_total (${this.cost}) did not match cost ${this._BASECOST_total}`,
+                    `${this.item?.actor.name}/${this.item?.detailedName()}/${this.XMLID} BASECOST_total (${this.cost}) did not match cost ${this._BASECOST_total}`,
                     this,
                 );
             }
@@ -175,7 +153,7 @@ export class HeroSystem6eModifier {
     set BASECOST_total(value) {
         if (this.cost !== value) {
             console.error(
-                `${this.item?.actor.name}/${this.item?.name}/${this.item?.system.XMLID}/${this.XMLID} BASECOST_total (${value}) did not match cost ${this.BASECOST_total}`,
+                `${this.item?.actor.name}/${this.item?.detailedName()}/${this.XMLID} BASECOST_total (${value}) did not match cost ${this.BASECOST_total}`,
             );
         }
     }

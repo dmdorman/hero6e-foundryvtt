@@ -10,6 +10,8 @@
 - Fix for 5e actors uploading as PRONE [#2050](https://github.com/dmdorman/hero6e-foundryvtt/issues/2050)
 - Movement powers now upload as active, unless they have CHARGES or are in a MULTIPOWER. [#2026](https://github.com/dmdorman/hero6e-foundryvtt/issues/2026)
 - Added Support for FLASH with multiple target group adders and associated defenses. [#2025](https://github.com/dmdorman/hero6e-foundryvtt/issues/2025)
+- Support Naked Advantages for attack powers.
+- Support advantages for Hand-to-Hand Attacks.
 
 ## Version 4.0.23 20250315
 

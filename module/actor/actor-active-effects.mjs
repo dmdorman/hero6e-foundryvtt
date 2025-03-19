@@ -259,6 +259,9 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
             braceEffect: {
                 id: "brace",
                 name: "Braced",
+                flags: {
+                    type: "maneuver",
+                },
                 img: "icons/svg/statue.svg",
                 changes: [
                     {

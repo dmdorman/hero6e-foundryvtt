@@ -379,7 +379,7 @@ export function defenseConditionalCheckedByDefault(defenseItem, attackingItem) {
 export async function getConditionalDefenses(token, item, avad) {
     // Some attacks have no defenses
     if (item.baseInfo.hasNoDefense) {
-        console.debug(`${item.name}/${item.system.XMLID} has no defense`);
+        console.debug(`${item.detailedName()} has no defense`);
         return { ignoreDefenseIds: [], conditionalDefenses: [] };
     }
 

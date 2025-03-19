@@ -1,17 +1,8 @@
-{{!-- {{ log 'HEROSYS ITEM ATTACK CARD' this }} --}}
-<form
-    data-actor-id="{{actor.id}}"
-    data-item-id="{{item.id}}"
-    data-token-id="{{token.id}}"
->
+{{!-- {{log "HEROSYS ITEM ATTACK CARD" this}} --}}
+<form data-actor-id="{{actor.id}}" data-item-id="{{item.id}}" data-token-id="{{token.id}}">
     <div class="hero chat-card item-card attack-card">
         <header class="card-header flexrow">
-            <img
-                src="{{item.img}}"
-                title="{{item.name}}"
-                width="36"
-                height="36"
-            />
+            <img src="{{item.img}}" title="{{item.name}}" width="36" height="36" />
             <h3 class="item-name">{{{itemName item}}}</h3>
         </header>
     </div>
@@ -65,12 +56,7 @@
                 <ol>
                     {{#each csl}}
                         <li>
-                            {{radioBoxes
-                                this.name
-                                @root/cslChoices
-                                checked=this.value
-                                localize=true
-                            }}
+                            {{radioBoxes this.name @root/cslChoices checked=this.value localize=true}}
                         </li>
                     {{/each}}
                 </ol>

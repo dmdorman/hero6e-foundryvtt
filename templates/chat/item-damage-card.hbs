@@ -1,6 +1,5 @@
 {{ log 'HEROSYS item-damage-card' this }}
-<div class="hero chat-card item-card damage-card2" data-actor-id="{{actor._id}}" data-item-id="{{item._id}}" {{#if
-    tokenId}}data-token-id="{{tokenId}}" {{/if}}>
+<div class="hero chat-card item-card damage-card2">
 
     <div>
         {{#if item}}
@@ -43,12 +42,13 @@
 
             <button class="apply-damage"
                 title="Apply damage to selected tokens."
-                data-item-id="{{item.uuid}}"
+                data-item-json-str="{{itemJsonStr}}"
+                data-actor-uuid="{{actor.uuid}}"
                 data-action-data="{{actionDataJSON}}"
                 data-roller="{{rollerJSON}}"
                 data-target-tokens="{{toJsonArray null}}"
             >
-                {{#if (or nonDmgEffect senseAffecting)}}
+                {{#if (or nonDmgEffect isSenseAffecting)}}
                     Apply {{item.system.XMLID}}
                 {{else}}
                     Apply Damage
@@ -59,12 +59,13 @@
 
                 <button class="apply-damage"
                     title="Apply damage to {{target.name}}"
-                    data-item-id="{{../item.uuid}}"
+                    data-item-json-str="{{../itemJsonStr}}"
+                    data-actor-uuid="{{../actor.uuid}}"
                     data-action-data="{{../actionDataJSON}}"
                     data-roller="{{../rollerJSON}}"
                     data-target-tokens="{{toJsonArray target}}"
                 >
-                    {{#if (or ../nonDmgEffect ../senseAffecting)}}
+                    {{#if (or ../nonDmgEffect ../isSenseAffecting)}}
                         Apply {{../item.system.XMLID}} to <b>{{target.name}}</b>
                     {{else}}
                         {{#if target.subTarget}}
@@ -79,12 +80,13 @@
             {{#if (gt targetTokens.length 1)}}
                 <button class="apply-damage"
                     title="Apply damage to ALL tokens that were hit"
-                    data-item-id="{{item.uuid}}"
+                    data-item-json-str="{{itemJsonStr}}"
+                    data-actor-uuid="{{actor.uuid}}"
                     data-action-data="{{actionDataJSON}}"
                     data-roller="{{rollerJSON}}"
                     data-target-tokens="{{toJSON targetTokens}}"
                 >
-                    {{#if (or nonDmgEffect senseAffecting)}}
+                    {{#if (or nonDmgEffect isSenseAffecting)}}
                         Apply {{item.system.XMLID}} to <b>ALL</b>
                     {{else}}
                         Apply Damage to <b>ALL</b>

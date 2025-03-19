@@ -31,9 +31,7 @@ export class HeroSystem6ePower {
             console.warn(`${this.XMLID} item not found`);
         }
         if (!this.#baseInfo) {
-            console.warn(
-                `${this.item?.actor.name}/${this.item?.name}/${this.item?.system.XMLID}/${this.XMLID} baseInfo not found`,
-            );
+            console.warn(`${this.item?.actor.name}/${this.item?.detailedName()}/${this.XMLID} baseInfo not found`);
         }
     }
 
@@ -92,28 +90,8 @@ export class HeroSystem6ePower {
         if (this.cost != value) {
             //debugger;
             console.error(
-                `${this.item?.actor.name}/${this.item?.name}/${this.item?.system.XMLID}/${this.XMLID} BASECOST_total (${value}) did not match cost ${this.BASECOST_total}`,
+                `${this.item?.actor.name}/${this.item?.detailedName()}/${this.XMLID} BASECOST_total (${value}) did not match cost ${this.BASECOST_total}`,
             );
         }
     }
-
-    // get LEVELS() {
-    //     return this._original.LEVELS;
-    // }
-
-    // set LEVELS(value) {
-    //     this._original.LEVELS = value;
-    // }
-
-    // toData() {
-    //     const _data = Object.getOwnPropertyDescriptors(this);
-    //     for (const key of Object.keys(_data).filter((o) => o.startsWith("_"))) {
-    //         delete _data[key];
-    //     }
-    //     return _data;
-    // }
-
-    // toJSON() {
-    //     return JSON.stringify(this.toData());
-    // }
 }

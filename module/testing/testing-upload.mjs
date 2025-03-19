@@ -2480,7 +2480,7 @@ export function registerUploadTests(quench) {
                     );
                     actor.system.is5e = false;
                     actor.system.characteristics.str.value = 10;
-                    await actor.addAttackPlaceholders();
+                    await actor.addAttackPlaceholder();
                     await actor._postUpload();
 
                     item = new HeroSystem6eItem(
@@ -2784,7 +2784,7 @@ export function registerUploadTests(quench) {
             });
 
             describe("Flash", async function () {
-                describe("Flash non targeting sense", async function () {
+                describe("Flash just nontargeting sense", async function () {
                     const contents = `
                         <POWER XMLID="FLASH" ID="1739848128585" BASECOST="0.0" LEVELS="11" ALIAS="Flash" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="HEARINGGROUP" OPTIONID="HEARINGGROUP" OPTION_ALIAS="Hearing Group" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
                             <NOTES />
@@ -2827,6 +2827,56 @@ export function registerUploadTests(quench) {
 
                     it("end", function () {
                         assert.equal(item.system.end, 3);
+                    });
+
+                    it("killing", function () {
+                        assert.equal(item.doesKillingDamage, false);
+                    });
+                });
+
+                describe("Flash just targeting sense", async function () {
+                    const contents = `
+                        <POWER XMLID="FLASH" ID="1740973760304" BASECOST="0.0" LEVELS="11" ALIAS="Flash" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="SIGHTGROUP" OPTIONID="SIGHTGROUP" OPTION_ALIAS="Sight Group" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            <ADDER XMLID="PLUSONEHALFDIE" ID="1740974186866" BASECOST="3.0" LEVELS="0" ALIAS="+1/2 d6" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="No" INCLUDE_NOTES_IN_PRINTOUT="No" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="Yes" DISPLAYINSTRING="No" GROUP="No" LVLCOST="-1.0" LVLVAL="-1.0" SELECTED="YES">
+                                <NOTES />
+                            </ADDER>
+                        </POWER>
+                    `;
+                    let item;
+
+                    before(async () => {
+                        const actor = new HeroSystem6eActor(
+                            {
+                                name: "Quench Actor",
+                                type: "pc",
+                            },
+                            {},
+                        );
+                        actor.system.is5e = false;
+                        await actor._postUpload();
+
+                        item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            parent: actor,
+                        });
+                        await item._postUpload();
+                        actor.items.set(item.system.XMLID, item);
+                    });
+
+                    it("description", function () {
+                        assert.equal(item.system.description, "Sight Group Flash 11½d6");
+                    });
+
+                    it("realCost", function () {
+                        assert.equal(item.system.realCost, 58);
+                    });
+
+                    it("activePoints", function () {
+                        assert.equal(item.system.activePoints, 58);
+                    });
+
+                    it("end", function () {
+                        assert.equal(item.system.end, 6);
                     });
 
                     it("killing", function () {
@@ -6229,7 +6279,7 @@ export function registerUploadTests(quench) {
                         );
                         actor.system.is5e = false;
                         actor.system.characteristics.dex.value = 15;
-                        await actor.addAttackPlaceholders();
+                        await actor.addAttackPlaceholder();
                         await actor._postUpload();
 
                         item = new HeroSystem6eItem(
@@ -6289,7 +6339,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = true;
-                        await actor.addAttackPlaceholders();
+                        await actor.addAttackPlaceholder();
                         await actor._postUpload();
 
                         item = new HeroSystem6eItem(
@@ -6353,7 +6403,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = true;
-                        await actor.addAttackPlaceholders();
+                        await actor.addAttackPlaceholder();
                         await actor._postUpload();
 
                         item = new HeroSystem6eItem(
@@ -6418,7 +6468,7 @@ export function registerUploadTests(quench) {
                         );
                         actor.system.is5e = false;
                         actor.system.characteristics.dex.value = 15;
-                        await actor.addAttackPlaceholders();
+                        await actor.addAttackPlaceholder();
                         await actor._postUpload();
 
                         item = await new HeroSystem6eItem(
@@ -7754,12 +7804,8 @@ export function registerUploadTests(quench) {
                     );
                 });
 
-                it("cost", function () {
-                    assert.equal(item.system.cost, 0);
-                });
-
                 it("realCost", function () {
-                    assert.equal(item.system.cost, 0);
+                    assert.equal(item.system.realCost, 0);
                 });
 
                 it("activePoints", function () {

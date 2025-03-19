@@ -128,7 +128,8 @@ export class HeroSystemActorSheet extends ActorSheet {
                 data.activePointsTitle = "Total Active Points (estimate)";
             }
 
-            // // override actor.items (which is a map) to an array with some custom properties
+            // FIXME: This is the cost of a major amount of rework done that should be calculated once when either the HDC or the system changes.
+            // override actor.items (which is a map) to an array with some custom properties
             for (let item of data.actor.items) {
                 // Update Attack Details (estimateOCV, DCV, Damage)
                 item._postUploadDetails();
@@ -440,12 +441,12 @@ export class HeroSystemActorSheet extends ActorSheet {
                         if (game.settings.get(game.system.id, "alphaTesting")) {
                             if (!d.baseInfo) {
                                 ui.notifications.warn(
-                                    `${this.actor.name}: ${d.name}/${d.system.XMLID} has no powerInfo/config.`,
+                                    `${this.actor.name}: ${d.detailedName()} has no powerInfo/config.`,
                                     d,
                                 );
                             } else {
                                 ui.notifications.warn(
-                                    `${this.actor.name}: ${d.name}/${d.system.XMLID} has no duration specified.`,
+                                    `${this.actor.name}: ${d.detailedName()} has no duration specified.`,
                                     d,
                                 );
                             }
@@ -836,25 +837,12 @@ export class HeroSystemActorSheet extends ActorSheet {
             this.options.itemFilters.skill = expandedData.itemFilters?.skill;
             this.options.itemFilters.equipment = expandedData.itemFilters?.equipment;
             this.options.itemFilters.martial = expandedData.itemFilters?.martial;
-
-            // If core characteristics changed the re-calculate costs
-            // let recalculateCosts = false;
-            // for (const char of Object.keys(expandedData?.system?.characteristics)) {
-            //     if (this.actor.system.characteristics[char].core !== expandedData.system.characteristics[char].core) {
-            //         recalculateCosts = true;
-            //     }
-            // }
         } catch (e) {
             console.error(e);
         }
 
         // Do all the standard things like updating item properties that match the name of input boxes
         await super._updateObject(event, expandedData); //formData);
-
-        // if (recalculateCosts) {
-        //     await this.actor.calcCharacteristicsCost();
-        //     await this.actor.CalcActorRealAndActivePoints();
-        // }
 
         await this.render();
     }

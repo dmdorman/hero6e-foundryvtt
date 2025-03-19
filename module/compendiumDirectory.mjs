@@ -239,7 +239,7 @@ export class HeroSystem6eCompendiumDirectory extends CompendiumDirectory {
                                     } catch (e) {
                                         console.error(e);
                                         await ui.notifications.error(
-                                            `${this.name}/${item.name}/${item2.name}/${item2.system.XMLID} failed to parse. It will not be available to this actor.  Please report.`,
+                                            `${this.detailedName()}/${item2.detailedName()} failed to parse. It will not be available to this actor.  Please report.`,
                                             {
                                                 console: true,
                                                 permanent: true,
