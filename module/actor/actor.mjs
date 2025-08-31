@@ -1934,7 +1934,8 @@ export class HeroSystem6eActor extends Actor {
         const xmlNoImage = foundry.utils.deepClone(xml);
         const image = xmlNoImage.getElementsByTagName("IMAGE")[0];
         image?.parentNode?.removeChild(image);
-        await this.update({ [`system._hdc`]: new XMLSerializer().serializeToString(xmlNoImage) });
+        this.system._hdc = new XMLSerializer().serializeToString(xmlNoImage);
+        changes["system._hdc"] = this.system._hdc;
 
         // Heroic Action Points (always keep the value)
         changes["system.hap.value"] = retainValuesOnUpload.hap;
