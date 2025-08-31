@@ -39,6 +39,10 @@ class HeroItemAdderModCommonModel extends foundry.abstract.DataModel {
         };
     }
 
+    get aaron() {
+        return this.XMLID + "aaron";
+    }
+
     /** @inheritdoc */
     // toString() {
     //     const letter = this.value === 1 ? (this.letter ?? "") : "";
@@ -56,7 +60,7 @@ export class HeroSystem6eItemTypeDataModelMisc extends foundry.abstract.TypeData
     /// https://foundryvtt.wiki/en/development/api/DataModel
 
     static defineSchema() {
-        const { ObjectField, StringField, ArrayField, EmbeddedDataField } = foundry.data.fields;
+        const { StringField, ArrayField, EmbeddedDataField } = foundry.data.fields;
         // Note that the return is just a simple object
         return {
             ACTIVECOST: new StringField(),
@@ -122,7 +126,7 @@ export class HeroSystem6eItemTypeDataModelMisc extends foundry.abstract.TypeData
             WEAPONEFFECT: new StringField(),
             XMLID: new StringField(),
 
-            _hdc: new ObjectField({}),
+            //_hdc: new StringField({}), // STORE RAW XML (strip off image)
         };
     }
 

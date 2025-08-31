@@ -1825,33 +1825,6 @@ export class HeroSystem6eActor extends Actor {
                 )
                 .map((o) => o.system),
         };
-        // if (
-        //     retainValuesOnUpload.body ||
-        //     retainValuesOnUpload.stun ||
-        //     retainValuesOnUpload.end ||
-        //     retainValuesOnUpload.charges.length > 0
-        // ) {
-        //     let content = `${this.name} has:<ul>`;
-        //     if (retainValuesOnUpload.body) content += `<li>${retainValuesOnUpload.body} BODY damage</li>`;
-        //     if (retainValuesOnUpload.stun) content += `<li>${retainValuesOnUpload.stun} STUN damage</li>`;
-        //     if (retainValuesOnUpload.end) content += `<li>${retainValuesOnUpload.end} END used</li>`;
-        //     for (const c of retainValuesOnUpload.charges) {
-        //         content += `<li>Charges: ${c.NAME || c.ALIAS}</li>`;
-        //     }
-        //     content += `</ul><p>Do you want to apply resource usage after the upload?</p>`;
-        //     const confirmed = await Dialog.confirm({
-        //         title: "Retain resource usage after upload?",
-        //         content: content,
-        //     });
-        //     if (confirmed === null) {
-        //         return ui.notifications.warn(`${this.name} upload canceled.`);
-        //     } else if (!confirmed) {
-        //         retainValuesOnUpload.body = 0;
-        //         retainValuesOnUpload.stun = 0;
-        //         retainValuesOnUpload.end = 0;
-        //         retainValuesOnUpload.charges = [];
-        //     }
-        // }
 
         const uploadPerformance = {
             startTime: new Date(),
@@ -1956,6 +1929,12 @@ export class HeroSystem6eActor extends Actor {
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// WE ARE DONE RESETTING TOKEN PROPS
         /// NOW LOAD THE HDC STUFF
+
+        // Keep raw XML data without IMAGE
+        const xmlNoImage = foundry.utils.deepClone(xml);
+        const image = xmlNoImage.getElementsByTagName("IMAGE")[0];
+        image?.parentNode?.removeChild(image);
+        await this.update({ [`system._hdc`]: new XMLSerializer().serializeToString(xmlNoImage) });
 
         // Heroic Action Points (always keep the value)
         changes["system.hap.value"] = retainValuesOnUpload.hap;
