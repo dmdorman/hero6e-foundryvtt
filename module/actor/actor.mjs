@@ -1934,8 +1934,8 @@ export class HeroSystem6eActor extends Actor {
         const xmlNoImage = foundry.utils.deepClone(xml);
         const image = xmlNoImage.getElementsByTagName("IMAGE")[0];
         image?.parentNode?.removeChild(image);
-        this.system._hdc = new XMLSerializer().serializeToString(xmlNoImage);
-        changes["system._hdc"] = this.system._hdc;
+        this.system._hdcXml = new XMLSerializer().serializeToString(xmlNoImage);
+        changes["system._hdcXml"] = this.system._hdcXml;
 
         // Heroic Action Points (always keep the value)
         changes["system.hap.value"] = retainValuesOnUpload.hap;
@@ -2060,7 +2060,8 @@ export class HeroSystem6eActor extends Actor {
             sortBase += 1000;
             if (heroJson.CHARACTER[itemTag]) {
                 for (const system of heroJson.CHARACTER[itemTag]) {
-                    if (system.XMLID === "COMPOUNDPOWER") {
+                    // TODO: This need some vetting, likely PRIVATE checking
+                    if (system.xmlTag === "COMPOUNDPOWER") {
                         for (const _modifier of system.MODIFIER || []) {
                             console.warn(
                                 `${this.name}/${system.ALIAS}/${system.XMLID}/${_modifier.XMLID}/${_modifier.ID} was excluded from upload because MODIFIERs are not supported on a COMPOUNDPOWER. It is likely on the parentItem and thus should flow down to the children.`,
@@ -2139,7 +2140,7 @@ export class HeroSystem6eActor extends Actor {
                                     }
                                 }
                                 // Remove attribute/property since we just created items for it
-                                delete system[key];
+                                delete itemData.system[key];
                             }
                         }
                         compoundItems.sort((a, b) => parseInt(a.POSITION) - parseInt(b.POSITION));
@@ -2149,14 +2150,14 @@ export class HeroSystem6eActor extends Actor {
                                 actor: this,
                                 xmlTag: system2.xmlTag,
                             });
-                            let itemData2 = {
+                            const itemData2 = {
                                 name: system2.NAME || system2.ALIAS || system2.XMLID,
                                 type: power.type.includes("skill") ? "skill" : "power",
+                                sort: itemData.sort + 100 + parseInt(system2.POSITION),
                                 system: {
                                     ...system2,
                                     PARENTID: system.ID,
                                     POSITION: parseInt(system2.POSITION),
-                                    sort: itemData.sort + 100 + parseInt(system2.POSITION),
                                     errors: [...(system2.errors || []), "Added PARENTID for COMPOUNDPOWER child"],
                                     is5e: this.is5e,
                                 },
@@ -2789,6 +2790,7 @@ export class HeroSystem6eActor extends Actor {
                             break;
                         case "GENERIC_OBJECT":
                             jsonChild[attribute.name] = child.tagName.toUpperCase(); // e.g. MULTIPOWER
+                            jsonChild["xmlid"] = attribute.value.trim(); // Sept 1 2025: Consider keeping the original XMLID for eventual write
                             break;
                         default:
                             jsonChild[attribute.name] = attribute.value.trim();
@@ -2800,7 +2802,7 @@ export class HeroSystem6eActor extends Actor {
                 if (child.attributes.length > 0) {
                     try {
                         jsonChild.xmlTag = tagName;
-                        //jsonChild._hdc = new XMLSerializer().serializeToString(child);
+                        jsonChild._hdcXml = new XMLSerializer().serializeToString(child.cloneNode());
                     } catch (e) {
                         console.error(e);
                     }
@@ -3135,7 +3137,7 @@ export class HeroSystem6eActor extends Actor {
         return undefined;
     }
 
-    async getActorRealAndActivePoints() {
+    getActorRealAndActivePoints() {
         // Calculate realCost & Active Points for bought as characteristics
         let characterPointCost = 0;
         let activePoints = 0;
@@ -3195,21 +3197,21 @@ export class HeroSystem6eActor extends Actor {
 
         let realCost = characterPointCost;
         //this.system.activePoints = activePoints;
-        if (this.id) {
-            await this.update(
-                {
-                    "system.points": characterPointCost,
-                    "system.activePoints": activePoints,
-                    "system.pointsDetail": this.system.pointsDetail,
-                    "system.activePointsDetail": this.system.activePointsDetail,
-                },
-                //{ render: false },
-                { hideChatMessage: true },
-            );
-        } else {
-            //points = characterPointCost;
-            //this.system.activePoints = activePoints;
-        }
+        // if (this.id) {
+        //     await this.update(
+        //         {
+        //             "system.points": characterPointCost,
+        //             "system.activePoints": activePoints,
+        //             "system.pointsDetail": this.system.pointsDetail,
+        //             "system.activePointsDetail": this.system.activePointsDetail,
+        //         },
+        //         //{ render: false },
+        //         { hideChatMessage: true },
+        //     );
+        // } else {
+        //     //points = characterPointCost;
+        //     //this.system.activePoints = activePoints;
+        // }
 
         return {
             activePoints,
@@ -3218,6 +3220,26 @@ export class HeroSystem6eActor extends Actor {
             activePointsDetail,
             realCost,
         };
+    }
+
+    get activePoints() {
+        return this.getActorRealAndActivePoints().activePoints;
+    }
+
+    get characterPointCost() {
+        return this.getActorRealAndActivePoints().characterPointCost;
+    }
+
+    get pointsDetail() {
+        return this.getActorRealAndActivePoints().pointsDetail;
+    }
+
+    get activePointsDetail() {
+        return this.getActorRealAndActivePoints().activePointsDetail;
+    }
+
+    get realCost() {
+        return this.getActorRealAndActivePoints().realCost;
     }
 
     pslPentaltyItems(penaltyType) {
@@ -3251,7 +3273,7 @@ export class HeroSystem6eActor extends Actor {
     }
 
     get _characterPoints() {
-        return this.system.points;
+        return this.characterPointCost;
     }
 
     get _characterPointsForDisplay() {
@@ -3259,7 +3281,7 @@ export class HeroSystem6eActor extends Actor {
     }
 
     get _activePoints() {
-        return this.system.activePoints;
+        return this.activePoints;
     }
 
     get _activePointsForDisplay() {

@@ -129,13 +129,13 @@ export class HeroSystemActorSheet extends FoundryVttActorSheet {
 
             data.pointsTitle = "";
             data.activePointsTitle = "";
-            if (data.actor.system.pointsDetail) {
-                for (const [key, value] of Object.entries(data.actor.system.pointsDetail)) {
+            if (data.actor.pointsDetail) {
+                for (const [key, value] of Object.entries(data.actor.pointsDetail)) {
                     data.pointsTitle += `${key.replace("equipment", "[equipment]")}: ${value}\n`;
                 }
             }
-            if (data.actor.system.activePointsDetail) {
-                for (const [key, value] of Object.entries(data.actor.system.activePointsDetail)) {
+            if (data.actor.activePointsDetail) {
+                for (const [key, value] of Object.entries(data.actor.activePointsDetail)) {
                     data.activePointsTitle += `${key}: ${value}\n`;
                 }
             } else {
@@ -506,7 +506,7 @@ export class HeroSystemActorSheet extends FoundryVttActorSheet {
                     continue;
                 }
 
-                const activePoints = item.system.activePoints;
+                const activePoints = item.activePoints;
                 if (activePoints > 0) {
                     let name = item.name;
                     if (item.name.toUpperCase().indexOf(item.system.XMLID) == -1) {

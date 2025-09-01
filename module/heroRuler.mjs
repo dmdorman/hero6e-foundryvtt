@@ -254,7 +254,7 @@ export class HeroRuler extends FoundryVttRuler {
                                 const MaximumEndurance = Math.max(
                                     1,
                                     RoundFavorPlayerDown(
-                                        (movementPower?.system.activePoints || this.getRanges(token)[1].range) /
+                                        (movementPower?.activePoints || this.getRanges(token)[1].range) /
                                             DistancePerEnd,
                                     ),
                                 );

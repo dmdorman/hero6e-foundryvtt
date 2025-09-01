@@ -65,6 +65,7 @@ import {
     HeroSystem6eItemMartialArt,
     HeroSystem6eItemDisadvantage,
 } from "./HeroSystem6eItemTypeDataModel.mjs";
+import { HeroAdderModel } from "./HeroSystem6eItemTypeDataModel.mjs";
 
 export function initializeItemHandlebarsHelpers() {
     Handlebars.registerHelper("itemFullDescription", itemFullDescription);
@@ -369,7 +370,7 @@ export class HeroSystem6eItem extends Item {
         this.determinePointCosts();
         this.setCharges();
         this.setShowToggle();
-        this.calcEndurance();
+        //this.calcEndurance();
         this.setCarried();
         this.setShowToggleActiveDefault();
         this.setMovement();
@@ -475,7 +476,7 @@ export class HeroSystem6eItem extends Item {
         // ACTIVE EFFECTS
         if (this.id && this.baseInfo && this.baseInfo.type?.includes("movement")) {
             const activeEffect = Array.from(this.effects)?.[0] || {};
-            activeEffect.name = (this.name ? `${this.name}: ` : "") + `${this.system.XMLID} +${this.system.value}`;
+            activeEffect.name = (this.name ? `${this.name}: ` : "") + `${this.system.XMLID} +${this.system.LEVELS}`;
             activeEffect.img = "icons/svg/upgrade.svg";
             activeEffect.description = this.system.description;
             activeEffect.changes = [
@@ -798,7 +799,7 @@ export class HeroSystem6eItem extends Item {
             this.system.showToggle &&
             this.system.active === undefined &&
             this.system.charges === undefined &&
-            !this.system.end &&
+            !this.end &&
             this.parentItem?.system.XMLID === "MULTIPOWER"
         ) {
             this.system.active ??= true;
@@ -1034,7 +1035,7 @@ export class HeroSystem6eItem extends Item {
                             targetId: attackItem.id,
                         };
                         this.system.ADDER ??= [];
-                        this.system.ADDER.push(newAdder);
+                        this.system.ADDER.push(new HeroAdderModel(newAdder, { parent: this }));
                         count++;
                     }
                 }
@@ -1220,7 +1221,7 @@ export class HeroSystem6eItem extends Item {
     }
 
     setCarried() {
-        if (this.system.CARRIED && this.system.active === undefined && this.system.end === 0) {
+        if (this.system.CARRIED && this.system.active === undefined && this.end === 0) {
             this.system.active ??= true;
         }
     }
@@ -1280,9 +1281,8 @@ export class HeroSystem6eItem extends Item {
         //let changed = false;
         //super.prepareDerivedData();
 
-        if (this.actor?.is5e === undefined) {
-            //console.warn(`${this.actor.name}/${this.name}: Skipping prepareDerivedData because is5e === undefined`);
-            return false;
+        if (this.is5e === undefined) {
+            console.warn(`${this.actor.name}/${this.name}: is5e === undefined`);
         }
 
         // Base points plus adders
@@ -1386,7 +1386,7 @@ export class HeroSystem6eItem extends Item {
                     await effect.update({ disabled: true });
                 } else {
                     // Otherwise turn it on if it has no charges and uses no endurance
-                    if (!effect.parent?.system.end && effect.parent?.system.charges === undefined) {
+                    if (!effect.parent?.end && effect.parent?.system.charges === undefined) {
                         await effect.update({ disabled: false });
                     }
                 }
@@ -1653,8 +1653,8 @@ export class HeroSystem6eItem extends Item {
             content += ` Perceivability: ${this.baseInfo.perceivability}.`;
         }
 
-        if (this.system.end) {
-            content += ` Estimated End: ${this.system.end}.`;
+        if (this.end) {
+            content += ` Estimated End: ${this.end}.`;
         }
 
         if (this.system.realCost && !isNaN(this.system.realCost)) {
@@ -2221,11 +2221,11 @@ export class HeroSystem6eItem extends Item {
         return true;
     }
 
-    determinePointCosts() {
-        let changed = false;
-        changed = this.calcItemPoints() || changed;
-        return changed;
-    }
+    // determinePointCosts() {
+    //     let changed = false;
+    //     changed = this.calcItemPoints() || changed;
+    //     return changed;
+    // }
 
     // An attempt to cache getPowerInfo for performance reasons.
     get baseInfo() {
@@ -2238,7 +2238,7 @@ export class HeroSystem6eItem extends Item {
     get is5e() {
         if (this.system.is5e !== undefined && this.actor && this.actor.system.is5e !== this.system.is5e) {
             console.warn(
-                `${this.name} has is5e=${this.system.is5e} does not match actor=${this.actor.system.is5e}`,
+                `${this.actor?.name}/${this.name} has is5e=${this.system.is5e} does not match actor=${this.actor.system.is5e}`,
                 this,
             );
         }
@@ -2629,7 +2629,7 @@ export class HeroSystem6eItem extends Item {
         }
 
         // Endurance
-        item.system.endEstimate = parseInt(item.system.end) || 0;
+        item.system.endEstimate = parseInt(item.end) || 0;
 
         // Effect
         this.configureAttackParameters();
@@ -3149,11 +3149,6 @@ export class HeroSystem6eItem extends Item {
 
     static _modifiersCache = HeroSystemGenericSharedCache.create("modifiers");
     get modifiers() {
-        if (!this.system?.MODIFIER) {
-            console.warn(`${this.actor?.name}/${this.detailedName()} has no MODIFIER`);
-            return [];
-        }
-        return this.system.MODIFIER;
         // Caching for performance
         // if (this.id) {
         //     const cachedValue = HeroSystem6eItem._modifiersCache.getCachedValue(this.id);
@@ -3162,50 +3157,53 @@ export class HeroSystem6eItem extends Item {
         //     }
         // }
 
-        // let _modifiers = [];
+        // Need to be careful we don't jumble up parent & child modifiers, so make a working copy.
+        // Any changes will require special handling.
+        let _modifiers = [...(this.system.MODIFIER || [])];
         // for (const _mod of this.system.MODIFIER || []) {
         //     _modifiers.push(new HeroSystem6eModifier(_mod, { item: this, _itemUuid: this.uuid }));
         // }
 
-        // if (this.parentItem) {
-        //     // Include common modifiers from parent that are not private.
-        //     // <i>Crossbow:</i>  Multipower, 50-point reserve,  (50 Active Points); all slots OAF (-1)
-        //     for (const pMod of this.parentItem.modifiers.filter((mod) => mod.PRIVATE === false)) {
-        //         // Add parent mod if we don't already have it
-        //         if (!_modifiers.find((mod) => mod.ID === pMod.ID)) {
-        //             // We may want the parent reference at some point (like for ingame editing of items)
-        //             //pMod.parentId ??= this.parentItem.system.ID;
+        if (this.parentItem) {
+            // Include common modifiers from parent that are not private.
+            // <i>Crossbow:</i>  Multipower, 50-point reserve,  (50 Active Points); all slots OAF (-1)
+            for (const pMod of this.parentItem.modifiers.filter((mod) => mod.PRIVATE === false)) {
+                // Add parent mod if we don't already have it
+                if (!_modifiers.find((mod) => mod.ID === pMod.ID)) {
+                    // We may want the parent reference at some point (like for ingame editing of items)
+                    //pMod.parentId ??= this.parentItem.system.ID;
 
-        //             // Sometimes the same modifiers is applied to item and items parent, we keep the most expensive one
-        //             const mod = _modifiers.find((mod) => mod.XMLID === pMod.XMLID);
+                    // Sometimes the same modifiers is applied to item and items parent, we keep the most expensive one
+                    const mod = _modifiers.find((mod) => mod.XMLID === pMod.XMLID);
 
-        //             // Cannot use mod.cost because we may trigger a stack overflow due to recursion.
-        //             // Instead we will use a rough cost estimate using BASECOST
-        //             const pCost = parseFloat(pMod.BASECOST || 0);
-        //             const mCost = parseFloat(mod?.BASECOST || 0);
-        //             if (mod && pCost === 0 && mCost === 0) {
-        //                 // Do we really care, likely not, leave warn code commented out as we may want it later.
-        //                 // console.warn(`inconclusive parent/child mod BASECOST for ${this.actor?.name}:${this.name}`),
-        //                 //     this;
-        //             }
-        //             if (!mod || (pCost < 0 && pCost < mCost)) {
-        //                 // Keeping parent modifier
-        //                 _modifiers = _modifiers.filter((mod) => mod.XMLID !== pMod.XMLID);
-        //                 _modifiers.push(new HeroSystem6eModifier(pMod._original || pMod, { item: this }));
-        //             } else {
-        //                 // Keeping child modifier
-        //                 console.debug("Keeping child modifier instead of parent", pMod, mod);
-        //             }
-        //         }
-        //     }
-        // }
+                    // Cannot use mod.cost because we may trigger a stack overflow due to recursion.
+                    // Instead we will use a rough cost estimate using BASECOST
+                    const pCost = parseFloat(pMod.BASECOST || 0);
+                    const mCost = parseFloat(mod?.BASECOST || 0);
+                    if (mod && pCost === 0 && mCost === 0) {
+                        // Do we really care, likely not, leave warn code commented out as we may want it later.
+                        // console.warn(`inconclusive parent/child mod BASECOST for ${this.actor?.name}:${this.name}`),
+                        //     this;
+                    }
+                    if (!mod || (pCost < 0 && pCost < mCost)) {
+                        // Keeping parent modifier
+                        _modifiers = _modifiers.filter((mod) => mod.XMLID !== pMod.XMLID);
+                        //_modifiers.push(new HeroSystem6eModifier(pMod._original || pMod, { item: this }));
+                        _modifiers.push(pMod);
+                    } else {
+                        // Keeping child modifier
+                        console.debug("Keeping child modifier instead of parent", pMod, mod);
+                    }
+                }
+            }
+        }
 
         // // Cache modifiers if this is a non temporary item
         // if (this.id) {
         //     HeroSystem6eItem._modifiersCache.setCachedValue(this.id, _modifiers);
         // }
 
-        // return _modifiers;
+        return _modifiers;
     }
 
     get advantages() {
@@ -3219,7 +3217,6 @@ export class HeroSystem6eItem extends Item {
     static _addersCache = HeroSystemGenericSharedCache.create("adders");
     get adders() {
         if (!this.system?.ADDER) {
-            console.warn(`${this.actor?.name}/${this.detailedName()} has no ADDER`);
             return [];
         }
         return this.system.ADDER;
@@ -3247,7 +3244,6 @@ export class HeroSystem6eItem extends Item {
     //static #powersCache = HeroSystemGenericSharedCache.create("powers");
     get powers() {
         if (!this.system?.POWER) {
-            console.warn(`${this.actor?.name}/${this.detailedName()} has no POWER`);
             return [];
         }
         return this.system.POWER;
@@ -3387,11 +3383,11 @@ export class HeroSystem6eItem extends Item {
 
             case "MENTALDEFENSE":
             case "POWERDEFENSE":
-                description = `${system.ALIAS} ${system.value} points`;
+                description = `${system.ALIAS} ${system.LEVELS} points`;
                 break;
 
             case "FLASHDEFENSE":
-                description = `${system.OPTION_ALIAS} ${system.ALIAS} (${system.value} points)`;
+                description = `${system.OPTION_ALIAS} ${system.ALIAS} (${system.LEVELS} points)`;
                 break;
 
             case "FOLLOWER":
@@ -3444,7 +3440,7 @@ export class HeroSystem6eItem extends Item {
                     const reduceAndEnhanceTargets = this.splitAdjustmentSourceAndTarget();
                     const diceFormula = getEffectFormulaFromItem(this, { ignoreDeadlyBlow: true });
 
-                    description = `${system.ALIAS} ${is5e ? `${diceFormula}` : `${system.value} BODY`} (${
+                    description = `${system.ALIAS} ${is5e ? `${diceFormula}` : `${system.LEVELS} BODY`} (${
                         system.OPTION_ALIAS
                     }) to ${
                         reduceAndEnhanceTargets.valid
@@ -3493,7 +3489,7 @@ export class HeroSystem6eItem extends Item {
                 break;
 
             case "STRETCHING":
-                description = `${system.ALIAS} ${system.value}${getSystemDisplayUnits(this.is5e)}`;
+                description = `${system.ALIAS} ${system.LEVELS}${getSystemDisplayUnits(this.is5e)}`;
                 break;
 
             case "LEAPING":
@@ -3520,7 +3516,7 @@ export class HeroSystem6eItem extends Item {
                         pd = 1 + parseInt(defbonus?.LEVELS || 0);
                     }
 
-                    description = `${system.ALIAS} ${system.value}${getSystemDisplayUnits(
+                    description = `${system.ALIAS} ${system.LEVELS}${getSystemDisplayUnits(
                         this.is5e,
                     )} through ${pd} PD materials`;
                 }
@@ -3529,7 +3525,7 @@ export class HeroSystem6eItem extends Item {
             case "NAKEDMODIFIER":
                 // Area Of Effect (8m Radius; +1/2) for up to 53 Active Points of STR
                 // Naked Advantage: Reduced Endurance (0 END; +1/2) for up to 70 Active Points (35 Active Points); Gestures (Requires both hands; -1/2), Linked to Opening of the Blind, Third Eye (Opening of the Blind, Third Eye; -1/4), Visible (Tattoos of flames encompass the biceps and shoulders.  When this power is active, these flames appear to burn, emitting firelight.  ; -1/4)
-                description = `${system.ALIAS} for up to ${system.value} Active points`;
+                description = `${system.ALIAS} for up to ${system.LEVELS} Active points`;
                 if (system.INPUT) {
                     description += ` of ${system.INPUT}`;
                 }
@@ -3643,11 +3639,11 @@ export class HeroSystem6eItem extends Item {
                 description =
                     (system.INPUT ? system.INPUT + " " : "") +
                     (system.OPTION_ALIAS || system.ALIAS) +
-                    ` -${system.value}m`;
+                    ` -${system.LEVELS}m`;
                 break;
 
             case "ENTANGLE":
-                description = `${system.ALIAS} ${system.value}d6, ${this.baseInfo.defense(this).string}`;
+                description = `${system.ALIAS} ${system.LEVELS}d6, ${this.baseInfo.defense(this).string}`;
                 break;
 
             case "ELEMENTAL_CONTROL":
@@ -3770,7 +3766,7 @@ export class HeroSystem6eItem extends Item {
                 //Psychokinesis:  Telekinesis (62 STR), Alternate Combat Value (uses OMCV against DCV; +0)
                 // (93 Active Points); Limited Range (-1/4), Only In Alternate Identity (-1/4),
                 // Extra Time (Delayed Phase, -1/4), Requires A Roll (14- roll; -1/4)
-                description = `${system.ALIAS} (${system.value} STR)`;
+                description = `${system.ALIAS} (${system.LEVELS} STR)`;
                 const strDetails = this.actor?.strDetails(parseInt(system.LEVELS));
                 if (strDetails) {
                     description += ` Throw ${strDetails.strThrow}${getSystemDisplayUnits(this.actor.is5e)}`;
@@ -3781,7 +3777,7 @@ export class HeroSystem6eItem extends Item {
             case "MENTAL_COMBAT_LEVELS":
             case "COMBAT_LEVELS":
                 // +1 with any single attack
-                description = `${system.ALIAS}: +${system.value} ${system.OPTION_ALIAS}`;
+                description = `${system.ALIAS}: +${system.LEVELS} ${system.OPTION_ALIAS}`;
                 break;
 
             case "WEAPON_MASTER":
@@ -3805,7 +3801,7 @@ export class HeroSystem6eItem extends Item {
                 break;
 
             case "COMBAT_LUCK":
-                description = `Combat Luck (${3 * system.value} rPD/${3 * system.value} rED)`;
+                description = `Combat Luck (${3 * system.LEVELS} rPD/${3 * system.LEVELS} rED)`;
                 // Check to make sure ALIAS is largely folling default format before overriding
                 if (this.name.trim().length <= 1 || this.name.match(/Combat Luck \(\d+ rPD\/\d+ rED\)/)) {
                     system.ALIAS = description;
@@ -3833,7 +3829,7 @@ export class HeroSystem6eItem extends Item {
                         if (parseInt(system.LEVELS) === parseInt(system.max)) {
                             description += ` (${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
                         } else {
-                            description += ` (${system.value}/${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
+                            description += ` (${system.LEVELS}/${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
                         }
                     }
                 }
@@ -3908,7 +3904,7 @@ export class HeroSystem6eItem extends Item {
                         description = `${system.ALIAS}`;
                     } else {
                         const baseStr = this.actor.system.characteristics.str.value;
-                        const additionalClingingStr = system.value;
+                        const additionalClingingStr = system.LEVELS;
                         const totalStr = baseStr + additionalClingingStr;
                         description = `${system.ALIAS} (${baseStr} + ${additionalClingingStr} = ${totalStr} STR)`;
                     }
@@ -4047,7 +4043,7 @@ export class HeroSystem6eItem extends Item {
                     }
 
                     if (configPowerInfo?.type?.includes("characteristic")) {
-                        description = "+" + system.value + " " + system.ALIAS;
+                        description = "+" + system.LEVELS + " " + system.ALIAS;
                         break;
                     }
 
@@ -4363,7 +4359,7 @@ export class HeroSystem6eItem extends Item {
             }
 
             if (configPowerInfo?.type.includes("adjustment")) {
-                description += " (standard effect: " + parseInt(system.value * 3) + " points)";
+                description += " (standard effect: " + parseInt(system.LEVELS * 3) + " points)";
             } else {
                 description += ` (standard effect: ${stun} STUN, ${body} BODY)`;
             }
@@ -4381,8 +4377,8 @@ export class HeroSystem6eItem extends Item {
         }
 
         // Active Points show if there are limitations or the real cost is not equal to the displayed cost
-        if (this._activePoints !== this._realCost || system.realCost !== system.characterPointCost) {
-            if (system.activePoints) {
+        if (this._activePoints !== this._realCost || this.realCost !== this.characterPointCost) {
+            if (this.activePoints) {
                 description += " (" + this.activePointCostForDisplay + " Active Points);";
             }
         }
@@ -4409,18 +4405,18 @@ export class HeroSystem6eItem extends Item {
             .trim();
 
         // Endurance
-        this.calcEndurance();
+        //this.calcEndurance();
 
         // STR only costs endurance when used.
         // Can get a bit messy, like when resisting an entangle, but will deal with that later.
-        if (system.XMLID === "STR") {
-            system.end = 0;
-        }
+        // if (system.XMLID === "STR") {
+        //     system.end = 0;
+        // }
 
         // MOVEMENT only costs endurance when used.  Typically per round.
-        if (configPowerInfo && configPowerInfo.type?.includes("movement")) {
-            system.end = 0;
-        }
+        // if (configPowerInfo && configPowerInfo.type?.includes("movement")) {
+        //     system.end = 0;
+        // }
 
         // Some names should include modifiers
         // if (this.type.includes("disadvantage")) {
@@ -5759,6 +5755,10 @@ export class HeroSystem6eItem extends Item {
             console.error(`active mismatch`, this);
         }
 
+        if (this.system.active === undefined) {
+            return true;
+        }
+
         return this.system.active;
     }
 
@@ -5814,9 +5814,29 @@ export class HeroSystem6eItem extends Item {
      * However, be aware that HD keep the actual point cost expressed in 1 or 2 decimal points (based on 5e or 6e)
      */
     get characterPointCostForDisplay() {
-        const cost = this.system.characterPointCost || parseFloat(this.system.realCost);
+        const cost = this.characterPointCost || parseFloat(this.realCost);
 
         return RoundFavorPlayerUp(cost);
+    }
+
+    get activePoints() {
+        return this.calcItemPoints().activePoints;
+    }
+
+    get characterPointCost() {
+        return this.calcItemPoints().characterPointCost;
+    }
+
+    get realCost() {
+        return this.calcItemPoints().realCost;
+    }
+
+    get _activePointsWithoutEndMods() {
+        return this.calcItemPoints()._activePointsWithoutEndMods;
+    }
+
+    get _advantages() {
+        return this.calcItemPoints()._advantages;
     }
 
     get characterPointCostForDisplayPlusSuffix() {
@@ -6188,41 +6208,52 @@ export class HeroSystem6eItem extends Item {
         return this.baseInfo?.costPerLevel(this);
     }
 
-    calcEndurance() {
-        this.system.end = this.getBaseEndCost();
+    get end() {
+        let end = this.getBaseEndCost();
 
         const increasedEnd = this.findModsByXmlid("INCREASEDEND");
         if (increasedEnd) {
-            this.system.end *= parseInt(increasedEnd.OPTION.replace("x", ""));
+            end *= parseInt(increasedEnd.OPTION.replace("x", ""));
         }
 
         const reducedEnd =
             this.findModsByXmlid("REDUCEDEND") || (this.parentItem && this.parentItem.findModsByXmlid("REDUCEDEND"));
         if (reducedEnd && reducedEnd.OPTION === "HALFEND") {
-            this.system.end = RoundFavorPlayerDown(
-                (this.system._activePointsWithoutEndMods || this.system.activePoints) / 10,
-            );
-            this.system.end = Math.max(1, RoundFavorPlayerDown(this.system.end / 2));
+            end = RoundFavorPlayerDown((this.system._activePointsWithoutEndMods || this.activePoints) / 10);
+            end = Math.max(1, RoundFavorPlayerDown(end / 2));
         } else if (reducedEnd && reducedEnd.OPTION === "ZERO") {
-            this.system.end = 0;
+            end = 0;
         }
 
         const costsEnd = this.findModsByXmlid("COSTSEND");
         if (!costsEnd) {
             if (!this.baseInfo?.costEnd) {
-                this.system.end = 0;
+                end = 0;
             }
 
             // Charges typically do not cost END
             if (this.findModsByXmlid("CHARGES")) {
-                this.system.end = 0;
+                end = 0;
             }
         } else {
             // Full endurance cost unless it's purchased with half endurance
             if (costsEnd.OPTIONID === "HALFEND") {
-                this.system.end = RoundFavorPlayerDown(this.system.end / 2);
+                end = RoundFavorPlayerDown(end / 2);
             }
         }
+
+        // STR only costs endurance when used.
+        // Can get a bit messy, like when resisting an entangle, but will deal with that later.
+        if (this.XMLID === "STR") {
+            end = 0;
+        }
+
+        // MOVEMENT only costs endurance when used.  Typically per round.
+        if (this.baseInfo?.type.includes("movement")) {
+            end = 0;
+        }
+
+        return end;
     }
 
     get duration() {
@@ -6330,7 +6361,7 @@ export class HeroSystem6eItem extends Item {
             // Add the adder
             const newAdder = createModifierOrAdderFromXml(minusOnePipAdderData.xml);
             this.system.ADDER ??= [];
-            this.system.ADDER.push(newAdder);
+            this.system.ADDER.push(new HeroAdderModel(newAdder, { parent: this }));
         }
 
         // Invalidate the adders cache if this is a non temporary item.
@@ -6375,11 +6406,11 @@ export class HeroSystem6eItem extends Item {
                     break;
             }
 
-            xml = xml.replace(/BASECOST=".+"/, `BASECOST="${baseCost}"`);
+            xml = xml.replace(/BASECOST="[\d.]+"/, `BASECOST="${baseCost}"`);
 
             const newAdder = createModifierOrAdderFromXml(xml);
             this.system.ADDER ??= [];
-            this.system.ADDER.push(newAdder);
+            this.system.ADDER.push(new HeroAdderModel(newAdder, { parent: this }));
         }
 
         // Invalidate the adders cache if this is a non temporary item.
@@ -6424,11 +6455,11 @@ export class HeroSystem6eItem extends Item {
                     break;
             }
 
-            xml = xml.replace(/BASECOST=".+"/, `BASECOST="${baseCost}"`);
+            xml = xml.replace(/BASECOST="[\d.]+"/, `BASECOST="${baseCost}"`);
 
             const newAdder = createModifierOrAdderFromXml(xml);
             this.system.ADDER ??= [];
-            this.system.ADDER.push(newAdder);
+            this.system.ADDER.push(new HeroAdderModel(newAdder, { parent: this }));
         }
 
         // Invalidate the adders cache if this is a non temporary item.
@@ -6496,7 +6527,9 @@ export class HeroSystem6eItem extends Item {
 // Using a simplied version of HeroSystemItem6e.itemDataFromXml for now.
 // PH: FIXME: Probably want to move from here and consolidate
 export function createModifierOrAdderFromXml(xml) {
-    const modifierOrAdderData = {};
+    const modifierOrAdderData = {
+        _hdcXml: xml,
+    };
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xml, "text/xml");
     for (const attribute of xmlDoc.children[0].attributes) {
@@ -6626,9 +6659,9 @@ export async function requiresASkillRollCheck(item, options = {}) {
                     if (skill) {
                         value = parseInt(skill.system.roll);
                         if (rar.OPTIONID === "SKILL1PER5")
-                            value = Math.max(3, value - Math.floor(parseInt(item.system.activePoints) / 5));
+                            value = Math.max(3, value - Math.floor(parseInt(item.activePoints) / 5));
                         if (rar.OPTIONID === "SKILL1PER20")
-                            value = Math.max(3, value - Math.floor(parseInt(item.system.activePoints) / 20));
+                            value = Math.max(3, value - Math.floor(parseInt(item.activePoints) / 20));
 
                         OPTION_ALIAS += ` ${value}-`;
                     } else {

@@ -281,11 +281,11 @@ export function registerFullTests(quench) {
                 });
 
                 it("realCost", async function () {
-                    assert.equal(actor.system.realCost, 162);
+                    assert.equal(actor.realCost, 162);
                 });
 
                 it("activePoints", async function () {
-                    assert.equal(actor.system.activePoints, 162);
+                    assert.equal(actor.activePoints, 162);
                 });
             });
 
@@ -540,7 +540,7 @@ export function registerFullTests(quench) {
                 });
 
                 it("activePoints", async function () {
-                    assert.equal(actor.system.activePoints, -63);
+                    assert.equal(actor.activePoints, -63);
                 });
             });
 
@@ -1603,7 +1603,7 @@ export function registerFullTests(quench) {
                 });
 
                 it("activePoints", async function () {
-                    assert.equal(actor.system.activePoints, 219);
+                    assert.equal(actor.activePoints, 219);
                 });
             });
 
@@ -1763,7 +1763,7 @@ export function registerFullTests(quench) {
                 });
 
                 it("Actor activePoints", async function () {
-                    assert.equal(actor.system.activePoints, 4);
+                    assert.equal(actor.activePoints, 4);
                 });
             });
 
@@ -1925,7 +1925,7 @@ export function registerFullTests(quench) {
                     assert.equal(actor.system.points, 303);
                 });
                 it("should match the cost breakdown of HD", function () {
-                    assert.deepEqual(actor.system.pointsDetail, {
+                    assert.deepEqual(actor.pointsDetail, {
                         characteristics: 60,
                         martialart: 65,
                         power: 60,
@@ -2333,7 +2333,7 @@ export function registerFullTests(quench) {
                 });
 
                 it("should match the cost breakdown of HD", function () {
-                    assert.deepEqual(actor.system.pointsDetail, {
+                    assert.deepEqual(actor.pointsDetail, {
                         characteristics: 0,
                         martialart: 30,
                         power: 142,
@@ -2346,7 +2346,7 @@ export function registerFullTests(quench) {
                     describe("BLOCK Combat Maneuver", function () {
                         it("should use 1 END", function () {
                             const blockCombatManeuver = actor.items.find((item) => item.system.XMLID === "BLOCK");
-                            assert.equal(blockCombatManeuver.system.end, 1);
+                            assert.equal(blockCombatManeuver.end, 1);
                         });
                     });
 
@@ -2354,7 +2354,7 @@ export function registerFullTests(quench) {
                     describe("DODGE Combat Maneuver", function () {
                         it("should use 1 END", function () {
                             const dodgeCombatManeuver = actor.items.find((item) => item.system.XMLID === "DODGE");
-                            assert.equal(dodgeCombatManeuver.system.end, 1);
+                            assert.equal(dodgeCombatManeuver.end, 1);
                         });
                     });
 
@@ -2364,7 +2364,7 @@ export function registerFullTests(quench) {
                             const blockCombatManeuver = actor.items.find(
                                 (item) => item.system.XMLID === "MANEUVER" && item.name === "Flying Dodge",
                             );
-                            assert.equal(blockCombatManeuver.system.end, 0);
+                            assert.equal(blockCombatManeuver.end, 0);
                         });
                     });
                 });
@@ -2889,7 +2889,7 @@ export function registerFullTests(quench) {
                 });
 
                 it("should match the cost breakdown of HD", function () {
-                    assert.deepEqual(actor.system.pointsDetail, {
+                    assert.deepEqual(actor.pointsDetail, {
                         characteristics: 0,
                         power: 125,
                     });
@@ -2897,11 +2897,11 @@ export function registerFullTests(quench) {
 
                 describe("Energy Blast", function () {
                     it("should have the correct cost for the little EB", function () {
-                        assert.equal(threeDcEnergyBlast.system.activePoints, 15);
+                        assert.equal(threeDcEnergyBlast.activePoints, 15);
                     });
 
                     it("should have the correct END cost for the little EB", function () {
-                        assert.equal(threeDcEnergyBlast.system.end, 0);
+                        assert.equal(threeDcEnergyBlast.end, 0);
                     });
 
                     it("should have the correct damage for the little EB", function () {
@@ -2917,11 +2917,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("should have the correct cost for the big EB", function () {
-                        assert.equal(fourDcEnergyBlast.system.activePoints, 20);
+                        assert.equal(fourDcEnergyBlast.activePoints, 20);
                     });
 
                     it("should have the correct END cost for the big EB", function () {
-                        assert.equal(fourDcEnergyBlast.system.end, 0);
+                        assert.equal(fourDcEnergyBlast.end, 0);
                     });
 
                     it("should have the correct damage for the big EB", function () {
@@ -2943,11 +2943,11 @@ export function registerFullTests(quench) {
 
                 describe("Ego Attack", function () {
                     it("should have the correct cost for the little Ego Attack", function () {
-                        assert.equal(threeDcEgoAttack.system.activePoints, 15);
+                        assert.equal(threeDcEgoAttack.activePoints, 15);
                     });
 
                     it("should have the correct END cost for the little Ego Attack", function () {
-                        assert.equal(threeDcEgoAttack.system.end, 0);
+                        assert.equal(threeDcEgoAttack.end, 0);
                     });
 
                     it("should have the correct damage for the little Ego Attack", function () {
@@ -2963,11 +2963,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("should have the correct cost for the big Ego Attack", function () {
-                        assert.equal(fourDcEgoAttack.system.activePoints, 20);
+                        assert.equal(fourDcEgoAttack.activePoints, 20);
                     });
 
                     it("should have the correct END cost for the big Ego Attack", function () {
-                        assert.equal(fourDcEgoAttack.system.end, 0);
+                        assert.equal(fourDcEgoAttack.end, 0);
                     });
 
                     it("should have the correct damage for the big Ego Attack", function () {
@@ -2989,11 +2989,11 @@ export function registerFullTests(quench) {
 
                 describe("Major Transform", function () {
                     it("should have the correct cost for the little Transform", function () {
-                        assert.equal(threeDcTransform.system.activePoints, 15);
+                        assert.equal(threeDcTransform.activePoints, 15);
                     });
 
                     it("should have the correct END cost for the little Transform", function () {
-                        assert.equal(threeDcTransform.system.end, 0);
+                        assert.equal(threeDcTransform.end, 0);
                     });
 
                     it("should have the correct damage for the little Transform", function () {
@@ -3009,11 +3009,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("should have the correct cost for the big Transform", function () {
-                        assert.equal(eightDcTransform.system.activePoints, 40);
+                        assert.equal(eightDcTransform.activePoints, 40);
                     });
 
                     it("should have the correct END cost for the big Transform", function () {
-                        assert.equal(eightDcTransform.system.end, 0);
+                        assert.equal(eightDcTransform.end, 0);
                     });
 
                     it("should have the correct damage for the big Transform", function () {
@@ -3711,7 +3711,7 @@ export function registerFullTests(quench) {
                 });
 
                 it("should recognize the cost of the energy blast", async function () {
-                    assert.equal(energyBlastItem.system.activePoints, 225);
+                    assert.equal(energyBlastItem.activePoints, 225);
                 });
 
                 it("should recognize all energy blast advantages", async function () {
@@ -3723,7 +3723,7 @@ export function registerFullTests(quench) {
                 });
 
                 it("should recognize the cost of the entangle", async function () {
-                    assert.equal(entangleItem.system.activePoints, 37);
+                    assert.equal(entangleItem.activePoints, 37);
                 });
 
                 it("should recognize all entangle advantages", async function () {
@@ -3735,7 +3735,7 @@ export function registerFullTests(quench) {
                 });
 
                 it("should recognize the cost of the flight", async function () {
-                    assert.equal(flightItem.system.activePoints, 6);
+                    assert.equal(flightItem.activePoints, 6);
                 });
 
                 it("should recognize all flight advantages ", async function () {
@@ -3906,11 +3906,11 @@ export function registerFullTests(quench) {
 
                 describe("Energy Blast", function () {
                     it("should have the correct cost for the +1/2 EB", function () {
-                        assert.equal(ebPlusHalfItem.system.activePoints, 30);
+                        assert.equal(ebPlusHalfItem.activePoints, 30);
                     });
 
                     it("should have the correct END cost for the +1/2 EB", function () {
-                        assert.equal(ebPlusHalfItem.system.end, 3);
+                        assert.equal(ebPlusHalfItem.end, 3);
                     });
 
                     it("should have the correct damage for the +1/2 EB", function () {
@@ -3918,11 +3918,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("should have the correct cost for the +1 EB", function () {
-                        assert.equal(ebPlusOneItem.system.activePoints, 40);
+                        assert.equal(ebPlusOneItem.activePoints, 40);
                     });
 
                     it("should have the correct END cost for the +1 EB", function () {
-                        assert.equal(ebPlusOneItem.system.end, 4);
+                        assert.equal(ebPlusOneItem.end, 4);
                     });
 
                     it("should have the correct damage for the +1 EB", function () {
@@ -3932,11 +3932,11 @@ export function registerFullTests(quench) {
 
                 describe("Ego Attack", function () {
                     it("should have the correct cost for the +1/2 EA", function () {
-                        assert.equal(eaPlusHalfItem.system.activePoints, 60);
+                        assert.equal(eaPlusHalfItem.activePoints, 60);
                     });
 
                     it("should have the correct END cost for the +1/2 EA", function () {
-                        assert.equal(eaPlusHalfItem.system.end, 6);
+                        assert.equal(eaPlusHalfItem.end, 6);
                     });
 
                     it("should have the correct damage for the +1/2 EA", function () {
@@ -3944,11 +3944,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("should have the correct cost for the +1 EA", function () {
-                        assert.equal(eaPlusOneItem.system.activePoints, 80);
+                        assert.equal(eaPlusOneItem.activePoints, 80);
                     });
 
                     it("should have the correct END cost for the +1 EA", function () {
-                        assert.equal(eaPlusOneItem.system.end, 8);
+                        assert.equal(eaPlusOneItem.end, 8);
                     });
 
                     it("should have the correct damage for the +1 EA", function () {
@@ -3958,11 +3958,11 @@ export function registerFullTests(quench) {
 
                 describe("Killing Attack", function () {
                     it("should have the correct cost for the +1/2 RKA", function () {
-                        assert.equal(rkaPlusHalfItem.system.activePoints, 67);
+                        assert.equal(rkaPlusHalfItem.activePoints, 67);
                     });
 
                     it("should have the correct END cost for the +1/2 RKA", function () {
-                        assert.equal(rkaPlusHalfItem.system.end, 7);
+                        assert.equal(rkaPlusHalfItem.end, 7);
                     });
 
                     it("should have the correct damage for the +1/2 RKA", function () {
@@ -3970,11 +3970,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("should have the correct cost for the +1/2 HKA", function () {
-                        assert.equal(hkaPlusHalfItem.system.activePoints, 67);
+                        assert.equal(hkaPlusHalfItem.activePoints, 67);
                     });
 
                     it("should have the correct END cost for the +1/2 HKA", function () {
-                        assert.equal(hkaPlusHalfItem.system.end, 7);
+                        assert.equal(hkaPlusHalfItem.end, 7);
                     });
 
                     it("should have the correct damage for the +1/2 HKA", function () {
@@ -4286,11 +4286,11 @@ export function registerFullTests(quench) {
 
                 describe("Energy Blast", function () {
                     it("should have the correct cost for the +1/2 EB", function () {
-                        assert.equal(ebPlusHalfItem.system.activePoints, 30);
+                        assert.equal(ebPlusHalfItem.activePoints, 30);
                     });
 
                     it("should have the correct END cost for the +1/2 EB", function () {
-                        assert.equal(ebPlusHalfItem.system.end, 3);
+                        assert.equal(ebPlusHalfItem.end, 3);
                     });
 
                     it("should have the correct damage for the +1/2 EB", function () {
@@ -4298,11 +4298,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("should have the correct cost for the +1 EB", function () {
-                        assert.equal(ebPlusOneItem.system.activePoints, 40);
+                        assert.equal(ebPlusOneItem.activePoints, 40);
                     });
 
                     it("should have the correct END cost for the +1 EB", function () {
-                        assert.equal(ebPlusOneItem.system.end, 4);
+                        assert.equal(ebPlusOneItem.end, 4);
                     });
 
                     it("should have the correct damage for the +1 EB", function () {
@@ -4312,11 +4312,11 @@ export function registerFullTests(quench) {
 
                 describe("Ego Attack", function () {
                     it("should have the correct cost for the +1/2 EA", function () {
-                        assert.equal(eaPlusHalfItem.system.activePoints, 60);
+                        assert.equal(eaPlusHalfItem.activePoints, 60);
                     });
 
                     it("should have the correct END cost for the +1/2 EA", function () {
-                        assert.equal(eaPlusHalfItem.system.end, 6);
+                        assert.equal(eaPlusHalfItem.end, 6);
                     });
 
                     it("should have the correct damage for the +1/2 EA", function () {
@@ -4324,11 +4324,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("should have the correct cost for the +1 EA", function () {
-                        assert.equal(eaPlusOneItem.system.activePoints, 80);
+                        assert.equal(eaPlusOneItem.activePoints, 80);
                     });
 
                     it("should have the correct END cost for the +1 EA", function () {
-                        assert.equal(eaPlusOneItem.system.end, 8);
+                        assert.equal(eaPlusOneItem.end, 8);
                     });
 
                     it("should have the correct damage for the +1 EA", function () {
@@ -4338,11 +4338,11 @@ export function registerFullTests(quench) {
 
                 describe("Killing Attack", function () {
                     it("should have the correct cost for the +1/2 RKA", function () {
-                        assert.equal(rkaPlusHalfItem.system.activePoints, 67);
+                        assert.equal(rkaPlusHalfItem.activePoints, 67);
                     });
 
                     it("should have the correct END cost for the +1/2 RKA", function () {
-                        assert.equal(rkaPlusHalfItem.system.end, 7);
+                        assert.equal(rkaPlusHalfItem.end, 7);
                     });
 
                     it("should have the correct damage for the +1/2 RKA", function () {
@@ -4350,11 +4350,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("should have the correct cost for the +1/2 HKA", function () {
-                        assert.equal(hkaPlusHalfItem.system.activePoints, 67);
+                        assert.equal(hkaPlusHalfItem.activePoints, 67);
                     });
 
                     it("should have the correct END cost for the +1/2 HKA", function () {
-                        assert.equal(hkaPlusHalfItem.system.end, 7);
+                        assert.equal(hkaPlusHalfItem.end, 7);
                     });
 
                     it("should have the correct damage for the +1/2 HKA", function () {
@@ -4986,7 +4986,7 @@ export function registerFullTests(quench) {
                 });
 
                 it("should match the cost breakdown of HD", function () {
-                    assert.deepEqual(actor.system.pointsDetail, {
+                    assert.deepEqual(actor.pointsDetail, {
                         characteristics: 160,
                         skill: 40,
                         talent: 6,
@@ -5006,7 +5006,7 @@ export function registerFullTests(quench) {
                 });
 
                 it("activePoints", async function () {
-                    assert.equal(actor.system.activePoints, 680);
+                    assert.equal(actor.activePoints, 680);
                 });
             });
 
@@ -5283,7 +5283,7 @@ export function registerFullTests(quench) {
                     });
 
                     it("should match the cost breakdown of HD", function () {
-                        assert.deepEqual(actor.system.pointsDetail, {
+                        assert.deepEqual(actor.pointsDetail, {
                             characteristics: 0,
                             power: 9,
                         });
@@ -5300,11 +5300,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("activePoints", function () {
-                        assert.equal(hearingFlash.system.activePoints, 4.5);
+                        assert.equal(hearingFlash.activePoints, 4.5);
                     });
 
                     it("end", function () {
-                        assert.equal(hearingFlash.system.end, 1);
+                        assert.equal(hearingFlash.end, 1);
                     });
                 });
 
@@ -5318,11 +5318,11 @@ export function registerFullTests(quench) {
                     });
 
                     it("activePoints", function () {
-                        assert.equal(mysticFlash.system.activePoints, 4.5);
+                        assert.equal(mysticFlash.activePoints, 4.5);
                     });
 
                     it("end", function () {
-                        assert.equal(mysticFlash.system.end, 1);
+                        assert.equal(mysticFlash.end, 1);
                     });
                 });
             });

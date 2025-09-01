@@ -219,7 +219,7 @@ export function determineCostPerActivePoint(targetCharacteristic, targetPower, t
     }
 
     return targetPower
-        ? parseFloat(targetPower.system.activePoints / targetPower.system.LEVELS)
+        ? parseFloat(targetPower.activePoints / targetPower.system.LEVELS)
         : parseFloat(powerInfo?.cost || powerInfo?.costPerLevel(targetActor) || 0);
 }
 

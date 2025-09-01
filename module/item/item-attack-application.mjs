@@ -764,7 +764,7 @@ export class ItemAttackFormApplication extends FormApplication {
             // PH: FIXME: Is this right? What should we be showing for something like stike with weapon or fist?
             this.data.effectiveActivePoints = Math.min(
                 desiredEffectiveActivePoints,
-                this.data.originalItem.system.activePoints + Math.min(10, this.data.originalItem.system.activePoints),
+                this.data.originalItem.activePoints + Math.min(10, this.data.originalItem.activePoints),
             );
 
             if (this.data.effectiveActivePoints < desiredEffectiveActivePoints) {

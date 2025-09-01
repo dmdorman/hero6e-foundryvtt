@@ -1628,11 +1628,11 @@ export function registerDamageFunctionTests(quench) {
 
                     describe("confirm default values", function () {
                         it("realCost", function () {
-                            assert.equal(threePointFlashItem.system.realCost, 34.5);
+                            assert.equal(threePointFlashItem.realCost, 34.5);
                         });
 
                         it("activePoints", function () {
-                            assert.equal(threePointFlashItem.system.activePoints, 34.5);
+                            assert.equal(threePointFlashItem.activePoints, 34.5);
                         });
 
                         it("damage", function () {
@@ -1640,7 +1640,7 @@ export function registerDamageFunctionTests(quench) {
                         });
 
                         it("end", function () {
-                            assert.equal(threePointFlashItem.system.end, 3);
+                            assert.equal(threePointFlashItem.end, 3);
                         });
                     });
 
@@ -1672,7 +1672,7 @@ export function registerDamageFunctionTests(quench) {
                         });
 
                         it("END", function () {
-                            assert.equal(pushedItem.system.end, 3);
+                            assert.equal(pushedItem.end, 3);
                         });
 
                         // PH: FIXME: pushed endurance usage
@@ -1709,7 +1709,7 @@ export function registerDamageFunctionTests(quench) {
                         });
 
                         it("END", function () {
-                            assert.equal(pushedItem.system.end, 3);
+                            assert.equal(pushedItem.end, 3);
                         });
 
                         // PH: FIXME: pushed endurance usage
@@ -1754,11 +1754,11 @@ export function registerDamageFunctionTests(quench) {
 
                     describe("confirm default values", function () {
                         it("realCost", function () {
-                            assert.equal(ebWithAdvAndLimItem.system.realCost, 50);
+                            assert.equal(ebWithAdvAndLimItem.realCost, 50);
                         });
 
                         it("activePoints", function () {
-                            assert.equal(ebWithAdvAndLimItem.system.activePoints, 75);
+                            assert.equal(ebWithAdvAndLimItem.activePoints, 75);
                         });
 
                         it("damage", function () {
@@ -1766,7 +1766,7 @@ export function registerDamageFunctionTests(quench) {
                         });
 
                         it("end", function () {
-                            assert.equal(ebWithAdvAndLimItem.system.end, 14);
+                            assert.equal(ebWithAdvAndLimItem.end, 14);
                         });
                     });
 
@@ -1798,7 +1798,7 @@ export function registerDamageFunctionTests(quench) {
                         });
 
                         it("END", function () {
-                            assert.equal(pushedItem.system.end, 14);
+                            assert.equal(pushedItem.end, 14);
                         });
 
                         // PH: FIXME: pushed endurance usage
@@ -1811,9 +1811,10 @@ export function registerDamageFunctionTests(quench) {
                         let pushedItem;
 
                         before(async function () {
-                            const pushedItemData = ebWithAdvAndLimItem.toObject(false);
-                            pushedItemData._id = null;
-                            pushedItem = new HeroSystem6eItem(pushedItemData, { parent: actor });
+                            // const pushedItemData = ebWithAdvAndLimItem.toObject(false);
+                            // pushedItemData._id = null;
+                            // pushedItem = new HeroSystem6eItem(pushedItemData, { parent: actor });
+                            pushedItem = ebWithAdvAndLimItem.clone();
 
                             // Reduce or Push the item
                             pushedItem.changePowerLevel(58);
@@ -1835,7 +1836,7 @@ export function registerDamageFunctionTests(quench) {
                         });
 
                         it("END", function () {
-                            assert.equal(pushedItem.system.end, 14);
+                            assert.equal(pushedItem.end, 14);
                         });
 
                         // PH: FIXME: pushed endurance usage
@@ -1884,7 +1885,7 @@ export function registerDamageFunctionTests(quench) {
                         });
 
                         it("activePoints", function () {
-                            assert.equal(drainWithLimItem.system.activePoints, 70);
+                            assert.equal(drainWithLimItem.activePoints, 70);
                         });
 
                         it("damage", function () {
@@ -1892,7 +1893,7 @@ export function registerDamageFunctionTests(quench) {
                         });
 
                         it("end", function () {
-                            assert.equal(drainWithLimItem.system.end, 7);
+                            assert.equal(drainWithLimItem.end, 7);
                         });
                     });
 
@@ -1924,7 +1925,7 @@ export function registerDamageFunctionTests(quench) {
                         });
 
                         it("END", function () {
-                            assert.equal(pushedItem.system.end, 7);
+                            assert.equal(pushedItem.end, 7);
                         });
 
                         it("total END usage", function () {
@@ -1960,7 +1961,7 @@ export function registerDamageFunctionTests(quench) {
                         });
 
                         it("END", function () {
-                            assert.equal(pushedItem.system.end, 7);
+                            assert.equal(pushedItem.end, 7);
                         });
 
                         // PH: FIXME: pushed endurance usage

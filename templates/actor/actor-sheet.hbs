@@ -157,17 +157,17 @@
             <h1 class="charname flex4" title='"{{getScopedFlagValue actor @root/gameSystemId "file" "name"}}" was uploaded by {{getScopedFlagValue actor @root/gameSystemId "file" "uploadedBy"}}']"><input name="name" type="text" value="{{actor.name}}" placeholder="Name" /></h1>
 
 
-            {{#if actor.system.is5e}}
+            {{#if actor.is5e}}
                 <div class="fifth-ed flex0" title="5th edition {{actor._templateType}} {{actor.type}}">5{{actor._templateTypeAbreviation}}</div>
             {{else}}
                 <div class="sixth-ed flex0" title="6th edition {{actor._templateType}} {{actor.type}}">6{{actor._templateTypeAbreviation}}</div>
             {{/if}}
 
-            {{#if actor.system.points}}
+            {{#if actor.characterPointCost}}
                 <div class="points flex0" title="{{pointsTitle}}">{{actor._characterPointsForDisplay}}CP</div>
             {{/if}}
 
-            {{#if actor.system.activePoints}}
+            {{#if actor.activePoints}}
                 <div class="points flex0" title="{{activePointsTitle}}">{{actor._activePointsForDisplay}}AP</div>
             {{/if}}
 

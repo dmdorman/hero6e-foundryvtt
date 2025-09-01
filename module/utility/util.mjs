@@ -7,6 +7,7 @@ import { performAdjustment, renderAdjustmentChatCards } from "./adjustment.mjs";
 export function getPowerInfo(options) {
     const xmlid =
         options.xmlid ||
+        options.XMLID ||
         options.item?.XMLID ||
         options.item?.system?.XMLID ||
         options.item?.system?.xmlid ||

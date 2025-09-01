@@ -42,7 +42,7 @@
     </td>
 
     {{#if this.isContainer}}
-        <td>{{this.system.end}}</td>
+        <td>{{this.end}}</td>
         <td>{{priceText}}</td>
         <td title="Total weight of container and contents in kg">
         {{#if this.childItems}}<b>{{this.weightKg}}</b>{{else}}{{this.weightKg}}{{/if}}
@@ -53,7 +53,7 @@
         <td></td>
         <td></td>
         {{else}}
-            <td>{{this.system.end}}</td>
+            <td>{{this.end}}</td>
             <td>{{this.priceText}}</td>
             <td>{{this.weightKg}}</td>
         {{/if}}

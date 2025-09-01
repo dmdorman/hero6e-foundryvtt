@@ -4145,7 +4145,7 @@ function calculateRequiredEnd(item) {
         }
 
         // Pushing uses 1 END per pushed CP
-        const endPerShot = (item.system.end || 0) + (item.system._active.pushedRealPoints || 0);
+        const endPerShot = (item.end || 0) + (item.system._active.pushedRealPoints || 0);
 
         // How many applications?
         const autofire = item.findModsByXmlid("AUTOFIRE");
@@ -4170,7 +4170,7 @@ function calculateRequiredReserveEndurance(item) {
         // TODO: Lack of support for ENDRESERVEOREND is coded in calculateRequiredEnd
 
         // Pushing uses 1 END per pushed CP
-        const endPerShot = (item.system.end || 0) + (item.system._active.pushedRealPoints || 0);
+        const endPerShot = (item.end || 0) + (item.system._active.pushedRealPoints || 0);
 
         // How many applications?
         const autofire = item.findModsByXmlid("AUTOFIRE");

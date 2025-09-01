@@ -803,7 +803,7 @@ export class HeroSystem6eCombat extends Combat {
                     item.isActive === true && // Is the power active?
                     item.baseInfo && // Do we have baseInfo for this power
                     item.baseInfo.duration !== "instant" && // Is the power non instant
-                    ((parseInt(item.system.end || 0) > 0 && // Does the power use END?
+                    ((parseInt(item.end || 0) > 0 && // Does the power use END?
                         !item.system.MODIFIER?.find(
                             (o) =>
                                 (o.XMLID === "COSTSEND" && o.OPTION === "ACTIVATE") ||

@@ -304,7 +304,7 @@ export function isManeuverThatDoesReplaceableDamageType(item) {
     const effect = getManeuverEffect(item);
 
     if (!effect) {
-        debugger;
+        console.error(`no effect for maneuver`);
     }
 
     return (

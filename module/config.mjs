@@ -3830,7 +3830,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                     console.warn(`${adder.XMLID} cost was ${adderCost} but expected it to be 2`);
                 }
                 // First adder is full cost
-                if (adder.parent.adders[0].ID === adder.ID) {
+                if (adder.item.adders[0].ID === adder.ID) {
                     return adderCost;
                 }
                 // Additional adders cost 1
@@ -8554,7 +8554,9 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             key: "ALWAYSOCCURS",
             behaviors: ["modifier"],
             cost: function (heroModifier /*, item*/) {
-                const sideEffectCost = parseFloat(heroModifier.parent?._original.BASECOST || 0);
+                const sideEffectCost = parseFloat(
+                    heroModifier.parent.XMLID === "SIDEEFFECTS" ? heroModifier.parent.BASECOST : 0,
+                );
 
                 // Always occurs doubles the cost (so this costs the same as the parent).
                 return sideEffectCost;

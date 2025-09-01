@@ -144,11 +144,4 @@ export class HeroSystem6eItemTypeDataModelMisc extends foundry.abstract.TypeData
 
         return super.migrateData(data);
     }
-
-    get name() {
-        return this._hdc.NAME;
-    }
-    set name(value) {
-        this.HDC._hdc = value;
-    }
 }
