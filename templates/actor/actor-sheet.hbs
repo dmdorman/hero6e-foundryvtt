@@ -67,11 +67,11 @@
                             <div class="attribute-value multiple characteristic">
                                 <input name="endReserve.{{endReserve.id}}.value" type="text"
                                     value="{{endReserve.system.value}}" data-dtype="Number"
-                                    class="{{#if (gt endReserve.system.value endReserve.system.max)}}over-max{{/if}}
-                                    {{#if (lt endReserve.system.value endReserve.system.max)}} under-max{{/if}}">
+                                    class="{{#if (gt endReserve.system.value endReserve.system.LEVELS)}}over-max{{/if}}
+                                    {{#if (lt endReserve.system.value endReserve.system.LEVELS)}} under-max{{/if}}">
                                 <span class="sep"> / </span>
                                 <span>
-                                    ({{endReserve.system.max}})
+                                    ({{endReserve.system.LEVELS}})
                                 </span>
                             </div>
                         </li>

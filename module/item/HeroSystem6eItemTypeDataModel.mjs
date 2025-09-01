@@ -406,6 +406,8 @@ export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeData
             xmlTag: new StringField(),
             USE_END_RESERVE: new BooleanField(),
             FREE_POINTS: new NumberField({ integer: true }),
+            value: new NumberField({ integer: true }), // ENEDURANCERESERVE
+            //max: new NumberField({ integer: true }), // ENEDURANCERESERVE (use LEVELS instead)
         };
     }
 }

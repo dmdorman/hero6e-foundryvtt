@@ -1393,8 +1393,8 @@ export class HeroSystem6eItem extends Item {
             }
         });
 
-        if (this.system.value !== this.system.max) {
-            await this.update({ ["system.value"]: this.system.max });
+        if (this.system.value !== undefined && this.system.value !== this.system.LEVELS) {
+            await this.update({ ["system.value"]: this.system.LEVELS });
         }
 
         if (this.type === "maneuver" && this.system.active) {
@@ -3827,9 +3827,9 @@ export class HeroSystem6eItem extends Item {
                     const ENDURANCERESERVEREC = this.findModsByXmlid("ENDURANCERESERVEREC");
                     if (ENDURANCERESERVEREC) {
                         if (parseInt(system.LEVELS) === parseInt(system.max)) {
-                            description += ` (${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
+                            description += ` (${system.LEVELS} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
                         } else {
-                            description += ` (${system.LEVELS}/${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
+                            description += ` (${system.value}/${system.LEVELS} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
                         }
                     }
                 }

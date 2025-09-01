@@ -178,7 +178,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.max, 2);
+                    assert.equal(item.system.LEVELS, 2);
                 });
 
                 it("end", function () {
@@ -226,7 +226,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 0);
+                    assert.equal(item.system.LEVELS, 0);
                 });
 
                 it("end", function () {
@@ -279,7 +279,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -333,7 +333,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -389,7 +389,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -439,7 +439,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -498,7 +498,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -551,7 +551,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -610,7 +610,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -663,7 +663,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -727,7 +727,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 22);
+                            assert.equal(item.system.LEVELS, 22);
                         });
 
                         it("end", function () {
@@ -792,7 +792,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 22);
+                            assert.equal(item.system.LEVELS, 22);
                         });
 
                         it("end", function () {
@@ -848,7 +848,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -904,7 +904,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -966,7 +966,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
 
                         it("end", function () {
@@ -1022,7 +1022,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 3);
+                            assert.equal(item.system.LEVELS, 3);
                         });
 
                         it("end", function () {
@@ -1076,7 +1076,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 1);
+                        assert.equal(item.system.LEVELS, 1);
                     });
 
                     it("end", function () {
@@ -1126,7 +1126,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 1);
+                        assert.equal(item.system.LEVELS, 1);
                     });
 
                     it("end", function () {
@@ -1179,7 +1179,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 1);
+                        assert.equal(item.system.LEVELS, 1);
                     });
 
                     it("end", function () {
@@ -1228,7 +1228,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 3);
+                    assert.equal(item.system.LEVELS, 3);
                 });
 
                 it("end", function () {
@@ -1296,7 +1296,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 62);
+                    assert.equal(item.system.LEVELS, 62);
                 });
 
                 it("damage", function () {
@@ -2825,7 +2825,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("LEVELS", function () {
-                    assert.equal(item.system.value, 10);
+                    assert.equal(item.system.LEVELS, 10);
                 });
             });
 
@@ -3099,7 +3099,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 11);
+                        assert.equal(item.system.LEVELS, 11);
                     });
                 }),
                     describe("1 level", async function () {
@@ -3151,7 +3151,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("levels", function () {
-                            assert.equal(item.system.value, 1);
+                            assert.equal(item.system.LEVELS, 1);
                         });
                     });
             }),
@@ -3216,7 +3216,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 39);
+                        assert.equal(item.system.LEVELS, 39);
                     });
                 }),
                 describe("MINDSCAN", async function () {
@@ -3286,7 +3286,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 1);
+                        assert.equal(item.system.LEVELS, 1);
                     });
                 });
 
@@ -3330,7 +3330,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", async function () {
-                        assert.equal(item.system.value, 0);
+                        assert.equal(item.system.LEVELS, 0);
                     });
 
                     it("realCost", function () {
@@ -3391,7 +3391,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", async function () {
-                        assert.equal(item.system.value, 2);
+                        assert.equal(item.system.LEVELS, 2);
                     });
 
                     it("realCost", function () {
@@ -3450,7 +3450,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", async function () {
-                        assert.equal(item.system.value, 0);
+                        assert.equal(item.system.LEVELS, 0);
                     });
 
                     it("realCost", function () {
@@ -3510,7 +3510,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", async function () {
-                        assert.equal(item.system.value, 3);
+                        assert.equal(item.system.LEVELS, 3);
                     });
 
                     it("realCost", function () {
@@ -3566,7 +3566,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", async function () {
-                        assert.equal(item.system.value, 0);
+                        assert.equal(item.system.LEVELS, 0);
                     });
 
                     it("realCost", function () {
@@ -3622,7 +3622,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", async function () {
-                        assert.equal(item.system.value, 0);
+                        assert.equal(item.system.LEVELS, 0);
                     });
 
                     it("realCost", function () {
@@ -3686,7 +3686,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", async function () {
-                        assert.equal(item.system.value, 2);
+                        assert.equal(item.system.LEVELS, 2);
                     });
                 });
 
@@ -3733,7 +3733,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", async function () {
-                        assert.equal(item.system.value, 9);
+                        assert.equal(item.system.LEVELS, 9);
                     });
                 });
             });
@@ -3785,7 +3785,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 9);
+                        assert.equal(item.system.LEVELS, 9);
                     });
                 });
 
@@ -3835,7 +3835,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 9);
+                        assert.equal(item.system.LEVELS, 9);
                     });
                 });
             });
@@ -3900,7 +3900,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 15);
+                        assert.equal(item.system.LEVELS, 15);
                     });
                 });
 
@@ -3948,7 +3948,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 15);
+                        assert.equal(item.system.LEVELS, 15);
                     });
                 });
             });
@@ -3997,7 +3997,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 21);
+                        assert.equal(item.system.LEVELS, 21);
                     });
                 });
 
@@ -4050,7 +4050,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("levels", function () {
-                        assert.equal(item.system.value, 21);
+                        assert.equal(item.system.LEVELS, 21);
                     });
                 });
             });
@@ -4110,7 +4110,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 475);
+                    assert.equal(item.system.LEVELS, 475);
                 });
             });
 
@@ -4177,7 +4177,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("power levels", function () {
-                        assert.equal(item.system.value, 1);
+                        assert.equal(item.system.LEVELS, 1);
                     });
 
                     it("multipower description", function () {
@@ -4261,7 +4261,7 @@ export function registerUploadTests(quench) {
                     });
 
                     it("power levels", function () {
-                        assert.equal(item.system.value, 2);
+                        assert.equal(item.system.LEVELS, 2);
                     });
 
                     it("multipower description", function () {
@@ -4348,7 +4348,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("power levels", function () {
-                            assert.equal(item.system.value, 2);
+                            assert.equal(item.system.LEVELS, 2);
                         });
 
                         it("elemental control description", function () {
@@ -4441,7 +4441,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("power levels", function () {
-                            assert.equal(item.system.value, 32);
+                            assert.equal(item.system.LEVELS, 32);
                         });
 
                         it("elemental control description", function () {
@@ -4763,7 +4763,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 5);
+                    assert.equal(item.system.LEVELS, 5);
                 });
             });
 
@@ -4825,7 +4825,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 3);
+                    assert.equal(item.system.LEVELS, 3);
                 });
             });
 
@@ -4875,7 +4875,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 5);
+                    assert.equal(item.system.LEVELS, 5);
                 });
             });
 
@@ -4946,7 +4946,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 0);
+                    assert.equal(item.system.LEVELS, 0);
                 });
             });
 
@@ -4999,7 +4999,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 0);
+                    assert.equal(item.system.LEVELS, 0);
                 });
             });
 
@@ -5061,7 +5061,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 0);
+                    assert.equal(item.system.LEVELS, 0);
                 });
             });
 
@@ -5111,7 +5111,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 0);
+                    assert.equal(item.system.LEVELS, 0);
                 });
             });
 
@@ -5154,7 +5154,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 18);
+                    assert.equal(item.system.LEVELS, 18);
                 });
             });
 
@@ -5630,7 +5630,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 0);
+                    assert.equal(item.system.LEVELS, 0);
                 });
 
                 it("end", function () {
@@ -6522,7 +6522,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 0);
+                    assert.equal(item.system.LEVELS, 0);
                 });
 
                 it("end", function () {
@@ -6629,7 +6629,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 0);
+                    assert.equal(item.system.LEVELS, 0);
                 });
 
                 it("end", function () {
@@ -6984,7 +6984,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 1);
+                    assert.equal(item.system.LEVELS, 1);
                 });
 
                 it("end", function () {
@@ -7065,7 +7065,7 @@ export function registerUploadTests(quench) {
                 });
 
                 it("levels", function () {
-                    assert.equal(item.system.value, 8);
+                    assert.equal(item.system.LEVELS, 8);
                 });
 
                 it("end", function () {
