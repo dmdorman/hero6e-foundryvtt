@@ -2800,6 +2800,7 @@ export class HeroSystem6eActor extends Actor {
                 if (child.attributes.length > 0) {
                     try {
                         jsonChild.xmlTag = tagName;
+                        //jsonChild._hdc = new XMLSerializer().serializeToString(child);
                     } catch (e) {
                         console.error(e);
                     }
@@ -3103,7 +3104,7 @@ export class HeroSystem6eActor extends Actor {
         await this.calcCharacteristicsCost();
         await this.CalcActorRealAndActivePoints();
 
-        this.render();
+        //this.render();
 
         // Update actor sidebar (needed when name is changed)
         ui.actors.render();

@@ -304,6 +304,20 @@ export class HeroSystem6eItem extends Item {
     }
 
     prepareData() {
+        if (this.system.debugModelProps) {
+            this.system.debugModelProps();
+        } else {
+            if (this.type === "attack") {
+                console.error(`Invalid item.type = ${this.type} for ${this.actor?.name}`, this);
+                return;
+            }
+            if (this.type === "misc") {
+                return; // don't care about misc
+            }
+            debugger;
+        }
+    }
+    XprepareData() {
         super.prepareData();
         window.prepareData ??= {};
         this.system._active ??= {};
@@ -326,8 +340,8 @@ export class HeroSystem6eItem extends Item {
                 );
             }
             try {
-                this.setAoeModifier();
-                this.updateItemDescription();
+                //this.setAoeModifier();
+                //this.getUpdateItemDescription();
             } catch (e) {
                 console.error(e);
             }
@@ -365,7 +379,7 @@ export class HeroSystem6eItem extends Item {
         this.buildRangeParameters();
         this.setAoeModifier();
         this.setCombatSkillLevels();
-        this.updateItemDescription();
+        //this.getUpdateItemDescription();
 
         // Preparing for HeroSystem6eItemTypeDataModel
         for (const key of Object.keys(this.system).filter((o) => o.match(/^[A-Z]+$/))) {
@@ -798,15 +812,13 @@ export class HeroSystem6eItem extends Item {
         }
     }
 
-    setDescription() {
-        const startDate = Date.now();
+    // setDescription() {
+    //     const startDate = Date.now();
 
-        window.prepareData.startDate = (window.prepareData.startDate || 0) + (Date.now() - startDate);
-    }
+    //     window.prepareData.startDate = (window.prepareData.startDate || 0) + (Date.now() - startDate);
+    // }
 
     setCombatSkillLevels() {
-        const startDate = Date.now();
-
         if (this.system.XMLID == "COMBAT_LEVELS") {
             // Make sure CSLs are defined; but don't override them if they are already present
             this.system.csl ??= {};
@@ -1064,19 +1076,16 @@ export class HeroSystem6eItem extends Item {
             //     );
             // }
         }
-
-        window.prepareData.setCombatSkillLevels =
-            (window.prepareData.setCombatSkillLevels || 0) + (Date.now() - startDate);
     }
 
-    setAoeModifier() {
-        const startDate = Date.now();
-        const aoeModifier = this.getAoeModifier();
-        if (aoeModifier) {
-            this.buildAoeAttackParameters(aoeModifier);
-        }
-        window.prepareData.setAoeModifier = (window.prepareData.setAoeModifier || 0) + (Date.now() - startDate);
-    }
+    // setAoeModifier() {
+    //     const startDate = Date.now();
+    //     const aoeModifier = this.getAoeModifier();
+    //     if (aoeModifier) {
+    //         this.buildAoeAttackParameters(aoeModifier);
+    //     }
+    //     window.prepareData.setAoeModifier = (window.prepareData.setAoeModifier || 0) + (Date.now() - startDate);
+    // }
 
     get heroValidation() {
         const _heroValidation = [];
@@ -1123,7 +1132,6 @@ export class HeroSystem6eItem extends Item {
     }
 
     setAttack() {
-        const startDate = Date.now();
         // ATTACK
         if (this.causesDamageEffect()) {
             // TODO: NOTE: This shouldn't just be for attack type. Should probably get rid of the subType approach.
@@ -1139,20 +1147,16 @@ export class HeroSystem6eItem extends Item {
             // text description of damage
             this.system.damage = getFullyQualifiedEffectFormulaFromItem(this, {});
         }
-        window.prepareData.setAttack = (window.prepareData.setAttack || 0) + (Date.now() - startDate);
     }
 
     setToHit() {
-        const startDate = Date.now();
         // TO HIT
         if (this.rollsToHit()) {
             this.makeToHit();
         }
-        window.prepareData.setToHit = (window.prepareData.setToHit || 0) + (Date.now() - startDate);
     }
 
     setSkills() {
-        const startDate = Date.now();
         // SKILLS
         if (this.baseInfo?.type.includes("skill")) {
             const skill = "skill";
@@ -1160,11 +1164,9 @@ export class HeroSystem6eItem extends Item {
                 this.system.subType = skill;
             }
         }
-        window.prepareData.setSkills = (window.prepareData.setSkills || 0) + (Date.now() - startDate);
     }
 
     setMovement() {
-        const startDate = Date.now();
         // MOVEMENT
         if (this.baseInfo?.type.includes("movement")) {
             const movement = "movement";
@@ -1182,11 +1184,9 @@ export class HeroSystem6eItem extends Item {
                 }
             }
         }
-        window.prepareData.setMovement = (window.prepareData.setMovement || 0) + (Date.now() - startDate);
     }
 
     setShowToggleActiveDefault() {
-        const startDate = Date.now();
         // ShowToggles & Activatable & default active
         // TODO: NOTE: This shouldn't just be for defense type. Should probably get rid of the subType approach.
         if (
@@ -1217,26 +1217,20 @@ export class HeroSystem6eItem extends Item {
                 }
             }
         }
-        window.prepareData.setShowToggleActiveDefault =
-            (window.prepareData.setShowToggleActiveDefault || 0) + (Date.now() - startDate);
     }
 
     setCarried() {
-        const startDate = Date.now();
         if (this.system.CARRIED && this.system.active === undefined && this.system.end === 0) {
             this.system.active ??= true;
         }
-        window.prepareData.setCarried = (window.prepareData.setCarried || 0) + (Date.now() - startDate);
     }
 
     setShowToggle() {
-        const startDate = Date.now();
         if (this.baseInfo?.behaviors.includes("activatable")) {
             if (!this.system.showToggle) {
                 this.system.showToggle = true;
             }
         }
-        window.prepareData.setShowToggle = (window.prepareData.setShowToggle || 0) + (Date.now() - startDate);
     }
 
     setCharges() {
@@ -1561,7 +1555,7 @@ export class HeroSystem6eItem extends Item {
     }
 
     async chat() {
-        this.updateItemDescription();
+        //this.getUpdateItemDescription();
 
         let content = `<div class="item-chat">`;
 
@@ -2238,9 +2232,10 @@ export class HeroSystem6eItem extends Item {
 
     // An attempt to cache getPowerInfo for performance reasons.
     get baseInfo() {
+        return this.system.baseInfo;
         // cache getPowerInfo
-        this._baseInfo ??= getPowerInfo({ item: this, xmlTag: this.system.xmlTag });
-        return this._baseInfo;
+        // this._baseInfo ??= getPowerInfo({ item: this, xmlTag: this.system.xmlTag });
+        // return this._baseInfo;
     }
 
     get is5e() {
@@ -2260,103 +2255,103 @@ export class HeroSystem6eItem extends Item {
      * @param {Modifier} aoeModifier - Must be AOE or EXPLOSION modifier.
      * @returns
      */
-    buildAoeAttackParameters(aoeModifier) {
-        const is5e = !!this.actor?.system?.is5e;
+    // buildAoeAttackParameters(aoeModifier) {
+    //     const is5e = !!this.actor?.system?.is5e;
 
-        let changed = false;
+    //     let changed = false;
 
-        const widthDouble = parseInt(
-            (aoeModifier.ADDER || []).find((adder) => adder.XMLID === "DOUBLEWIDTH")?.LEVELS || 0,
-        );
-        const heightDouble = parseInt(
-            (aoeModifier.ADDER || []).find((adder) => adder.XMLID === "DOUBLEHEIGHT")?.LEVELS || 0,
-        );
-        // In 6e, widthDouble and heightDouble are the actual size and not instructions to double like 5e
-        const width = is5e ? Math.pow(2, widthDouble) : widthDouble || 2;
-        const height = is5e ? Math.pow(2, heightDouble) : heightDouble || 2;
-        let levels = 1;
-        let dcFalloff = 0;
+    //     const widthDouble = parseInt(
+    //         (aoeModifier.ADDER || []).find((adder) => adder.XMLID === "DOUBLEWIDTH")?.LEVELS || 0,
+    //     );
+    //     const heightDouble = parseInt(
+    //         (aoeModifier.ADDER || []).find((adder) => adder.XMLID === "DOUBLEHEIGHT")?.LEVELS || 0,
+    //     );
+    //     // In 6e, widthDouble and heightDouble are the actual size and not instructions to double like 5e
+    //     const width = is5e ? Math.pow(2, widthDouble) : widthDouble || 2;
+    //     const height = is5e ? Math.pow(2, heightDouble) : heightDouble || 2;
+    //     let levels = 1;
+    //     let dcFalloff = 0;
 
-        // 5e has a calculated size
-        if (is5e) {
-            const activePointsWithoutAoeAdvantage = this._activePointsWithoutAoe;
-            if (aoeModifier.XMLID === "AOE") {
-                switch (aoeModifier.OPTIONID) {
-                    case "CONE":
-                        levels = RoundFavorPlayerUp(1 + activePointsWithoutAoeAdvantage / 5);
-                        break;
+    //     // 5e has a calculated size
+    //     if (is5e) {
+    //         const activePointsWithoutAoeAdvantage = this._activePointsWithoutAoe;
+    //         if (aoeModifier.XMLID === "AOE") {
+    //             switch (aoeModifier.OPTIONID) {
+    //                 case "CONE":
+    //                     levels = RoundFavorPlayerUp(1 + activePointsWithoutAoeAdvantage / 5);
+    //                     break;
 
-                    case "HEX":
-                        levels = 1;
-                        break;
+    //                 case "HEX":
+    //                     levels = 1;
+    //                     break;
 
-                    case "LINE":
-                        levels = RoundFavorPlayerUp((2 * activePointsWithoutAoeAdvantage) / 5);
-                        break;
+    //                 case "LINE":
+    //                     levels = RoundFavorPlayerUp((2 * activePointsWithoutAoeAdvantage) / 5);
+    //                     break;
 
-                    case "ANY":
-                    case "RADIUS":
-                        levels = Math.max(1, RoundFavorPlayerUp(activePointsWithoutAoeAdvantage / 10));
-                        break;
+    //                 case "ANY":
+    //                 case "RADIUS":
+    //                     levels = Math.max(1, RoundFavorPlayerUp(activePointsWithoutAoeAdvantage / 10));
+    //                     break;
 
-                    default:
-                        console.error(`Unhandled 5e AOE OPTIONID ${aoeModifier.OPTIONID} for ${this.detailedName()}`);
-                        break;
-                }
+    //                 default:
+    //                     console.error(`Unhandled 5e AOE OPTIONID ${aoeModifier.OPTIONID} for ${this.detailedName()}`);
+    //                     break;
+    //             }
 
-                // Modify major dimension (radius, length, etc). Line is different from all others.
-                const majorDimensionDoubles = (aoeModifier?.ADDER || []).find(
-                    (adder) => adder.XMLID === "DOUBLEAREA" || adder.XMLID === "DOUBLELENGTH",
-                );
-                if (majorDimensionDoubles) {
-                    levels *= Math.pow(2, parseInt(majorDimensionDoubles.LEVELS));
-                }
-            } else {
-                // Explosion DC falloff has different defaults based on shape. When
-                // LEVELS are provided they are the absolute value and not additive to the default.
-                if (aoeModifier.OPTIONID === "CONE") {
-                    dcFalloff = 2;
-                } else if (aoeModifier.OPTIONID === "LINE") {
-                    dcFalloff = 3;
-                } else {
-                    dcFalloff = 1;
-                }
-                dcFalloff = aoeModifier.LEVELS ? parseInt(aoeModifier.LEVELS) : dcFalloff;
+    //             // Modify major dimension (radius, length, etc). Line is different from all others.
+    //             const majorDimensionDoubles = (aoeModifier?.ADDER || []).find(
+    //                 (adder) => adder.XMLID === "DOUBLEAREA" || adder.XMLID === "DOUBLELENGTH",
+    //             );
+    //             if (majorDimensionDoubles) {
+    //                 levels *= Math.pow(2, parseInt(majorDimensionDoubles.LEVELS));
+    //             }
+    //         } else {
+    //             // Explosion DC falloff has different defaults based on shape. When
+    //             // LEVELS are provided they are the absolute value and not additive to the default.
+    //             if (aoeModifier.OPTIONID === "CONE") {
+    //                 dcFalloff = 2;
+    //             } else if (aoeModifier.OPTIONID === "LINE") {
+    //                 dcFalloff = 3;
+    //             } else {
+    //                 dcFalloff = 1;
+    //             }
+    //             dcFalloff = aoeModifier.LEVELS ? parseInt(aoeModifier.LEVELS) : dcFalloff;
 
-                // The description in FRed is poorly written as it talks about AP of the power but it doesn't exclude
-                // the contribution of the explosion advantage itself although its example does. We will remove the explosion contribution to
-                // the power's DC.
-                const effectiveDc = Math.floor(activePointsWithoutAoeAdvantage / 5);
-                levels = effectiveDc * dcFalloff;
-            }
-        } else {
-            levels = parseInt(aoeModifier.LEVELS || 0);
-        }
+    //             // The description in FRed is poorly written as it talks about AP of the power but it doesn't exclude
+    //             // the contribution of the explosion advantage itself although its example does. We will remove the explosion contribution to
+    //             // the power's DC.
+    //             const effectiveDc = Math.floor(activePointsWithoutAoeAdvantage / 5);
+    //             levels = effectiveDc * dcFalloff;
+    //         }
+    //     } else {
+    //         levels = parseInt(aoeModifier.LEVELS || 0);
+    //     }
 
-        // 5e has HEX and RADIUS but they're the same template. 5e explosion radius template is called NORMAL for some reason.
-        const type =
-            aoeModifier.OPTIONID === "HEX" || aoeModifier.OPTIONID === "NORMAL" ? "RADIUS" : aoeModifier.OPTIONID;
-        const newAoe = {
-            type: type.toLowerCase(),
-            value: levels,
-            width: width,
-            height: height,
+    //     // 5e has HEX and RADIUS but they're the same template. 5e explosion radius template is called NORMAL for some reason.
+    //     const type =
+    //         aoeModifier.OPTIONID === "HEX" || aoeModifier.OPTIONID === "NORMAL" ? "RADIUS" : aoeModifier.OPTIONID;
+    //     const newAoe = {
+    //         type: type.toLowerCase(),
+    //         value: levels,
+    //         width: width,
+    //         height: height,
 
-            isExplosion: this.hasExplosionAdvantage(),
-            dcFalloff: dcFalloff,
-        };
+    //         isExplosion: this.hasExplosionAdvantage(),
+    //         dcFalloff: dcFalloff,
+    //     };
 
-        if (!foundry.utils.objectsEqual(this.system.areaOfEffect, newAoe)) {
-            this.system.areaOfEffect = {
-                ...this.system.areaOfEffect,
-                ...newAoe,
-            };
+    //     if (!foundry.utils.objectsEqual(this.system.areaOfEffect, newAoe)) {
+    //         this.system.areaOfEffect = {
+    //             ...this.system.areaOfEffect,
+    //             ...newAoe,
+    //         };
 
-            changed = true;
-        }
+    //         changed = true;
+    //     }
 
-        return changed;
-    }
+    //     return changed;
+    // }
 
     buildRangeParameters() {
         const originalRange = this.system.range;
@@ -2644,7 +2639,7 @@ export class HeroSystem6eItem extends Item {
 
         // Defense
         // if (item.type === "defense") {
-        //     item.system.description =
+        //     item.description =
         //         CONFIG.HERO.defenseTypes[item.system.defenseType] ||
         //         CONFIG.HERO.defenseTypes5e[item.system.defenseType];
         // }
@@ -3157,58 +3152,63 @@ export class HeroSystem6eItem extends Item {
 
     static _modifiersCache = HeroSystemGenericSharedCache.create("modifiers");
     get modifiers() {
+        if (!this.system?.MODIFIER) {
+            console.warn(`${this.actor?.name}/${this.detailedName()} has no MODIFIER`);
+            return [];
+        }
+        return this.system.MODIFIER;
         // Caching for performance
-        if (this.id) {
-            const cachedValue = HeroSystem6eItem._modifiersCache.getCachedValue(this.id);
-            if (cachedValue) {
-                return cachedValue;
-            }
-        }
+        // if (this.id) {
+        //     const cachedValue = HeroSystem6eItem._modifiersCache.getCachedValue(this.id);
+        //     if (cachedValue) {
+        //         return cachedValue;
+        //     }
+        // }
 
-        let _modifiers = [];
-        for (const _mod of this.system.MODIFIER || []) {
-            _modifiers.push(new HeroSystem6eModifier(_mod, { item: this, _itemUuid: this.uuid }));
-        }
+        // let _modifiers = [];
+        // for (const _mod of this.system.MODIFIER || []) {
+        //     _modifiers.push(new HeroSystem6eModifier(_mod, { item: this, _itemUuid: this.uuid }));
+        // }
 
-        if (this.parentItem) {
-            // Include common modifiers from parent that are not private.
-            // <i>Crossbow:</i>  Multipower, 50-point reserve,  (50 Active Points); all slots OAF (-1)
-            for (const pMod of this.parentItem.modifiers.filter((mod) => mod.PRIVATE === false)) {
-                // Add parent mod if we don't already have it
-                if (!_modifiers.find((mod) => mod.ID === pMod.ID)) {
-                    // We may want the parent reference at some point (like for ingame editing of items)
-                    //pMod.parentId ??= this.parentItem.system.ID;
+        // if (this.parentItem) {
+        //     // Include common modifiers from parent that are not private.
+        //     // <i>Crossbow:</i>  Multipower, 50-point reserve,  (50 Active Points); all slots OAF (-1)
+        //     for (const pMod of this.parentItem.modifiers.filter((mod) => mod.PRIVATE === false)) {
+        //         // Add parent mod if we don't already have it
+        //         if (!_modifiers.find((mod) => mod.ID === pMod.ID)) {
+        //             // We may want the parent reference at some point (like for ingame editing of items)
+        //             //pMod.parentId ??= this.parentItem.system.ID;
 
-                    // Sometimes the same modifiers is applied to item and items parent, we keep the most expensive one
-                    const mod = _modifiers.find((mod) => mod.XMLID === pMod.XMLID);
+        //             // Sometimes the same modifiers is applied to item and items parent, we keep the most expensive one
+        //             const mod = _modifiers.find((mod) => mod.XMLID === pMod.XMLID);
 
-                    // Cannot use mod.cost because we may trigger a stack overflow due to recursion.
-                    // Instead we will use a rough cost estimate using BASECOST
-                    const pCost = parseFloat(pMod.BASECOST || 0);
-                    const mCost = parseFloat(mod?.BASECOST || 0);
-                    if (mod && pCost === 0 && mCost === 0) {
-                        // Do we really care, likely not, leave warn code commented out as we may want it later.
-                        // console.warn(`inconclusive parent/child mod BASECOST for ${this.actor?.name}:${this.name}`),
-                        //     this;
-                    }
-                    if (!mod || (pCost < 0 && pCost < mCost)) {
-                        // Keeping parent modifier
-                        _modifiers = _modifiers.filter((mod) => mod.XMLID !== pMod.XMLID);
-                        _modifiers.push(new HeroSystem6eModifier(pMod._original || pMod, { item: this }));
-                    } else {
-                        // Keeping child modifier
-                        console.debug("Keeping child modifier instead of parent", pMod, mod);
-                    }
-                }
-            }
-        }
+        //             // Cannot use mod.cost because we may trigger a stack overflow due to recursion.
+        //             // Instead we will use a rough cost estimate using BASECOST
+        //             const pCost = parseFloat(pMod.BASECOST || 0);
+        //             const mCost = parseFloat(mod?.BASECOST || 0);
+        //             if (mod && pCost === 0 && mCost === 0) {
+        //                 // Do we really care, likely not, leave warn code commented out as we may want it later.
+        //                 // console.warn(`inconclusive parent/child mod BASECOST for ${this.actor?.name}:${this.name}`),
+        //                 //     this;
+        //             }
+        //             if (!mod || (pCost < 0 && pCost < mCost)) {
+        //                 // Keeping parent modifier
+        //                 _modifiers = _modifiers.filter((mod) => mod.XMLID !== pMod.XMLID);
+        //                 _modifiers.push(new HeroSystem6eModifier(pMod._original || pMod, { item: this }));
+        //             } else {
+        //                 // Keeping child modifier
+        //                 console.debug("Keeping child modifier instead of parent", pMod, mod);
+        //             }
+        //         }
+        //     }
+        // }
 
-        // Cache modifiers if this is a non temporary item
-        if (this.id) {
-            HeroSystem6eItem._modifiersCache.setCachedValue(this.id, _modifiers);
-        }
+        // // Cache modifiers if this is a non temporary item
+        // if (this.id) {
+        //     HeroSystem6eItem._modifiersCache.setCachedValue(this.id, _modifiers);
+        // }
 
-        return _modifiers;
+        // return _modifiers;
     }
 
     get advantages() {
@@ -3221,70 +3221,80 @@ export class HeroSystem6eItem extends Item {
 
     static _addersCache = HeroSystemGenericSharedCache.create("adders");
     get adders() {
-        // Caching for performance
-        if (this.id) {
-            const cachedValue = HeroSystem6eItem._addersCache.getCachedValue(this.id);
-            if (cachedValue) {
-                return cachedValue;
-            }
+        if (!this.system?.ADDER) {
+            console.warn(`${this.actor?.name}/${this.detailedName()} has no ADDER`);
+            return [];
         }
+        return this.system.ADDER;
+        // // Caching for performance
+        // if (this.id) {
+        //     const cachedValue = HeroSystem6eItem._addersCache.getCachedValue(this.id);
+        //     if (cachedValue) {
+        //         return cachedValue;
+        //     }
+        // }
 
-        const _adders = [];
-        for (const _adderJson of this.system.ADDER || []) {
-            _adders.push(new HeroSystem6eAdder(_adderJson, { item: this, parent: this }));
-        }
+        // const _adders = [];
+        // for (const _adderJson of this.system.ADDER || []) {
+        //     _adders.push(new HeroSystem6eAdder(_adderJson, { item: this, parent: this }));
+        // }
 
-        // Cache adders if this is a non temporary item
-        if (this.id) {
-            HeroSystem6eItem._addersCache.setCachedValue(this.id, _adders);
-        }
+        // // Cache adders if this is a non temporary item
+        // if (this.id) {
+        //     HeroSystem6eItem._addersCache.setCachedValue(this.id, _adders);
+        // }
 
-        return _adders;
+        // return _adders;
     }
 
     static #powersCache = HeroSystemGenericSharedCache.create("powers");
     get powers() {
-        // Caching for performance
-        if (this.id) {
-            const cachedValue = HeroSystem6eItem.#powersCache.getCachedValue(this.id);
-            if (cachedValue) {
-                return cachedValue;
-            }
-        }
-
-        // ENDURANCERESERVE uses a POWER "modifier"
-        // This can get confusing with COMPOUNDPOWERS that have POWERs.
-        // uploadFromXml has been improved to remove these duplciate POWER entries as of 1/18/1025.
-        // A quick sanity check warns of this issue and removes the offending POWER from the array.
-        // There was an issue where findModsByXmlid(, "STRMINIMUM") would return the COMPOUNDPOWER instead of the RKA (Oceana Silverheart.HDC)
-        let powersList = this.system.POWER || [];
-        try {
-            for (let p of powersList) {
-                const childDuplicate = this.childItems.find((c) => c.system.ID === p.ID);
-                if (childDuplicate) {
-                    console.warn(
-                        `${this.actor.name}:${p.ALIAS} is an ITEM (${this.name}). It also has a POWER modifier entry that shouldn't be there. The offending POWER modifier has been temporarily removed and should not cause any issues. Re-uploading the HDC file should resolve this issue.`,
-                    );
-                    this.system.POWER = powersList.filter((p) => !this.childItems.find((c) => c.system.ID === p.ID));
-                }
-            }
-            powersList = powersList.filter((p) => !this.childItems.find((c) => c.system.ID === p.ID));
-
-            const _powers = [];
-            for (const _powerJson of powersList) {
-                _powers.push(new HeroSystem6eConnectingPower(_powerJson, { item: this, parent: this }));
-            }
-
-            // Cache powers if this is a non temporary item
-            if (this.id) {
-                HeroSystem6eItem.#powersCache.setCachedValue(this.id, _powers);
-            }
-
-            return _powers;
-        } catch (e) {
-            console.error(e);
+        if (!this.system?.POWER) {
+            console.warn(`${this.actor?.name}/${this.detailedName()} has no POWER`);
             return [];
         }
+        return this.system.POWER;
+        // Caching for performance
+        // if (this.id) {
+        //     const cachedValue = HeroSystem6eItem.#powersCache.getCachedValue(this.id);
+        //     if (cachedValue) {
+        //         return cachedValue;
+        //     }
+        // }
+
+        // // ENDURANCERESERVE uses a POWER "modifier"
+        // // This can get confusing with COMPOUNDPOWERS that have POWERs.
+        // // uploadFromXml has been improved to remove these duplciate POWER entries as of 1/18/1025.
+        // // A quick sanity check warns of this issue and removes the offending POWER from the array.
+        // // There was an issue where findModsByXmlid(, "STRMINIMUM") would return the COMPOUNDPOWER instead of the RKA (Oceana Silverheart.HDC)
+        // let powersList = this.system.POWER || [];
+        // try {
+        //     for (let p of powersList) {
+        //         const childDuplicate = this.childItems.find((c) => c.system.ID === p.ID);
+        //         if (childDuplicate) {
+        //             console.warn(
+        //                 `${this.actor.name}:${p.ALIAS} is an ITEM (${this.name}). It also has a POWER modifier entry that shouldn't be there. The offending POWER modifier has been temporarily removed and should not cause any issues. Re-uploading the HDC file should resolve this issue.`,
+        //             );
+        //             this.system.POWER = powersList.filter((p) => !this.childItems.find((c) => c.system.ID === p.ID));
+        //         }
+        //     }
+        //     powersList = powersList.filter((p) => !this.childItems.find((c) => c.system.ID === p.ID));
+
+        //     const _powers = [];
+        //     for (const _powerJson of powersList) {
+        //         _powers.push(new HeroSystem6eConnectingPower(_powerJson, { item: this, parent: this }));
+        //     }
+
+        //     // Cache powers if this is a non temporary item
+        //     if (this.id) {
+        //         HeroSystem6eItem.#powersCache.setCachedValue(this.id, _powers);
+        //     }
+
+        //     return _powers;
+        // } catch (e) {
+        //     console.error(e);
+        //     return [];
+        // }
     }
 
     /**
@@ -3316,13 +3326,13 @@ export class HeroSystem6eItem extends Item {
         return Math.max(1, endCost);
     }
 
-    updateItemDescription() {
+    getUpdateItemDescription() {
         // Description (eventual goal is to largely match Hero Designer)
         const system = this.system;
         const is5e = !!this.actor?.system.is5e;
 
         // Reset the description and build it up again.
-        system.description = "";
+        let description = "";
 
         const configPowerInfo = this.baseInfo;
         const powerXmlId = system.XMLID;
@@ -3332,73 +3342,69 @@ export class HeroSystem6eItem extends Item {
                 // Growth6e (+15 STR, +5 CON, +5 PRE, +3 PD, +3 ED, +3 BODY, +6 STUN, +1m Reach, +12m Running, -6m KB, 101-800 kg, +2 to OCV to hit, +2 to PER Rolls to perceive character, 2-4m tall, 1-2m wide) // Growth5e (+5 STR, +1 BODY, +1 STUN, -1" KB, 200 kg, +0 DCV, +0 PER Rolls to perceive character, 2 m tall, 1 m wide)
                 // Growth6e is a static template.  LEVELS are ignored, instead use OPTIONID.
                 const details = configPowerInfo?.details(this) || {};
-                system.description = `${system.ALIAS} (`;
-                system.description += `+${details.str} STR`;
+                description = `${system.ALIAS} (`;
+                description += `+${details.str} STR`;
                 if (!this.is5e) {
-                    system.description += `, +${details.con} CON`;
+                    description += `, +${details.con} CON`;
                 }
                 if (!this.is5e) {
-                    system.description += `, +${details.pre} PRE`;
+                    description += `, +${details.pre} PRE`;
                 }
                 if (!this.is5e) {
-                    system.description += `, +${details.pd} PD`;
+                    description += `, +${details.pd} PD`;
                 }
                 if (!this.is5e) {
-                    system.description += `, +${details.ed} ED`;
+                    description += `, +${details.ed} ED`;
                 }
-                system.description += `, +${details.body} BODY`;
-                system.description += `, +${details.stun} STUN`;
-                system.description += `, +${details.reach}${this.is5e ? '"' : "m"} Reach`;
+                description += `, +${details.body} BODY`;
+                description += `, +${details.stun} STUN`;
+                description += `, +${details.reach}${this.is5e ? '"' : "m"} Reach`;
                 if (!this.is5e) {
-                    system.description += `, +${details.running}m Running`;
+                    description += `, +${details.running}m Running`;
                 }
-                system.description += `, -${details.kb}${this.is5e ? '"' : "m"}
+                description += `, -${details.kb}${this.is5e ? '"' : "m"}
                 KB`;
-                system.description += `, ${details.mass}`;
-                system.description += `, -${details.dcv} DCV`;
-                system.description += `, +${details.perception} to PER Rolls to perceive character`;
-                system.description += `, ${details.tall}m tall`;
-                system.description += `, ${details.wide}m wide`;
-                system.description += `)`;
+                description += `, ${details.mass}`;
+                description += `, -${details.dcv} DCV`;
+                description += `, +${details.perception} to PER Rolls to perceive character`;
+                description += `, ${details.tall}m tall`;
+                description += `, ${details.wide}m wide`;
+                description += `)`;
                 break;
             }
 
             case "SHRINKING":
                 // 6e Shrinking (1 m tall, 12.5 kg mass, -2 PER Rolls to perceive character, +2 DCV, takes +6m KB)
                 // 5e Shrinking (1 m tall, 12.5 kg mass, -2 PER Rolls to perceive character, +2 DCV) -- Also +3" KB which is not in HD
-                system.description = `${system.ALIAS} (`;
-                system.description += `${(2 / Math.pow(2, parseInt(system.value)))
+                description = `${system.ALIAS} (`;
+                description += `${(2 / Math.pow(2, parseInt(system.value)))
                     .toPrecision(3)
                     .replace(/\.?0+$/, "")} m tall`;
-                system.description += `, ${(100 / Math.pow(8, parseInt(system.value)))
-                    .toPrecision(4)
-                    .replace(/\.?0+$/, "")}
+                description += `, ${(100 / Math.pow(8, parseInt(system.value))).toPrecision(4).replace(/\.?0+$/, "")}
                 kg mass`;
-                system.description += `, -${system.value * 2} PER Rolls to perceive character`;
-                system.description += `, +${system.value * 2} DCV`;
-                system.description += `, takes +${
-                    system.value * (this.is5e ? 3 : 6) + getSystemDisplayUnits(this.is5e)
-                } KB)`;
+                description += `, -${system.value * 2} PER Rolls to perceive character`;
+                description += `, +${system.value * 2} DCV`;
+                description += `, takes +${system.value * (this.is5e ? 3 : 6) + getSystemDisplayUnits(this.is5e)} KB)`;
 
                 break;
 
             case "MENTALDEFENSE":
             case "POWERDEFENSE":
-                system.description = `${system.ALIAS} ${system.value} points`;
+                description = `${system.ALIAS} ${system.value} points`;
                 break;
 
             case "FLASHDEFENSE":
-                system.description = `${system.OPTION_ALIAS} ${system.ALIAS} (${system.value} points)`;
+                description = `${system.OPTION_ALIAS} ${system.ALIAS} (${system.value} points)`;
                 break;
 
             case "FOLLOWER":
-                system.description = system.ALIAS.replace("Followers: ", "");
+                description = system.ALIAS.replace("Followers: ", "");
                 break;
 
             case "MINDSCAN":
                 {
                     const diceFormula = getEffectFormulaFromItem(this, { ignoreDeadlyBlow: true });
-                    system.description = `${diceFormula} ${system.ALIAS}`;
+                    description = `${diceFormula} ${system.ALIAS}`;
                 }
                 break;
 
@@ -3406,7 +3412,7 @@ export class HeroSystem6eItem extends Item {
             case "ARMOR":
             case "DAMAGERESISTANCE":
                 {
-                    system.description = system.ALIAS + " (";
+                    description = system.ALIAS + " (";
 
                     let ary = [];
                     if (parseInt(system.PDLEVELS)) ary.push(system.PDLEVELS + " rPD");
@@ -3414,13 +3420,13 @@ export class HeroSystem6eItem extends Item {
                     if (parseInt(system.MDLEVELS)) ary.push(system.MDLEVELS + " rMD");
                     if (parseInt(system.POWDLEVELS)) ary.push(system.POWDLEVELS + " rPOW");
 
-                    system.description += ary.join("/") + ")";
+                    description += ary.join("/") + ")";
                 }
                 break;
 
             case "FORCEWALL":
                 {
-                    system.description = system.ALIAS + " ";
+                    description = system.ALIAS + " ";
 
                     let aryFW = [];
                     if (parseInt(system.PDLEVELS)) aryFW.push(system.PDLEVELS + " rPD");
@@ -3429,8 +3435,8 @@ export class HeroSystem6eItem extends Item {
                     if (parseInt(system.POWDLEVELS)) aryFW.push(system.POWDLEVELS + " rPOW");
                     if (parseInt(system.BODYLEVELS)) aryFW.push(system.BODYLEVELS + " BODY");
 
-                    system.description += aryFW.join("/");
-                    system.description += `(up to ${parseInt(system.LENGTHLEVELS) + 1}m long, and ${
+                    description += aryFW.join("/");
+                    description += `(up to ${parseInt(system.LENGTHLEVELS) + 1}m long, and ${
                         parseInt(system.HEIGHTLEVELS) + 1
                     }m tall, and ${parseFloat(system.WIDTHLEVELS) + 0.5}m thick)`;
                 }
@@ -3441,7 +3447,7 @@ export class HeroSystem6eItem extends Item {
                     const reduceAndEnhanceTargets = this.splitAdjustmentSourceAndTarget();
                     const diceFormula = getEffectFormulaFromItem(this, { ignoreDeadlyBlow: true });
 
-                    system.description = `${system.ALIAS} ${is5e ? `${diceFormula}` : `${system.value} BODY`} (${
+                    description = `${system.ALIAS} ${is5e ? `${diceFormula}` : `${system.value} BODY`} (${
                         system.OPTION_ALIAS
                     }) to ${
                         reduceAndEnhanceTargets.valid
@@ -3461,7 +3467,7 @@ export class HeroSystem6eItem extends Item {
                     const reduceAndEnhanceTargets = this.splitAdjustmentSourceAndTarget();
                     const diceFormula = getEffectFormulaFromItem(this, { ignoreDeadlyBlow: true });
 
-                    system.description = `${system.ALIAS} ${
+                    description = `${system.ALIAS} ${
                         reduceAndEnhanceTargets.valid
                             ? reduceAndEnhanceTargets.enhances || reduceAndEnhanceTargets.reduces
                             : "unknown"
@@ -3476,7 +3482,7 @@ export class HeroSystem6eItem extends Item {
                     const reduceAndEnhanceTargets = this.splitAdjustmentSourceAndTarget();
                     const diceFormula = getEffectFormulaFromItem(this, { ignoreDeadlyBlow: true });
 
-                    system.description = `${system.ALIAS} ${diceFormula} from ${
+                    description = `${system.ALIAS} ${diceFormula} from ${
                         reduceAndEnhanceTargets.valid ? reduceAndEnhanceTargets.reduces : "unknown"
                     } to ${reduceAndEnhanceTargets.valid ? reduceAndEnhanceTargets.enhances : "unknown"}`;
                 }
@@ -3485,26 +3491,26 @@ export class HeroSystem6eItem extends Item {
             case "TRANSFORM":
                 {
                     const diceFormula = getEffectFormulaFromItem(this, { ignoreDeadlyBlow: true });
-                    system.description = `${system.OPTION_ALIAS} ${system.ALIAS} ${diceFormula}`;
+                    description = `${system.OPTION_ALIAS} ${system.ALIAS} ${diceFormula}`;
                 }
                 break;
 
             case "STRETCHING":
-                system.description = `${system.ALIAS} ${system.value}${getSystemDisplayUnits(this.is5e)}`;
+                description = `${system.ALIAS} ${system.value}${getSystemDisplayUnits(this.is5e)}`;
                 break;
 
             case "LEAPING":
             case "RUNNING":
             case "SWIMMING":
                 // Running +25m (12m/37m total)
-                system.description = `${system.ALIAS} +${system.value}${getSystemDisplayUnits(this.is5e)}`;
+                description = `${system.ALIAS} +${system.value}${getSystemDisplayUnits(this.is5e)}`;
                 break;
 
             case "GLIDING":
             case "FLIGHT":
             case "TELEPORTATION":
             case "SWINGING":
-                system.description = `${system.ALIAS} ${system.value}${getSystemDisplayUnits(this.is5e)}`;
+                description = `${system.ALIAS} ${system.value}${getSystemDisplayUnits(this.is5e)}`;
                 break;
             case "TUNNELING":
                 {
@@ -3517,7 +3523,7 @@ export class HeroSystem6eItem extends Item {
                         pd = 1 + parseInt(defbonus?.LEVELS || 0);
                     }
 
-                    system.description = `${system.ALIAS} ${system.value}${getSystemDisplayUnits(
+                    description = `${system.ALIAS} ${system.value}${getSystemDisplayUnits(
                         this.is5e,
                     )} through ${pd} PD materials`;
                 }
@@ -3526,21 +3532,21 @@ export class HeroSystem6eItem extends Item {
             case "NAKEDMODIFIER":
                 // Area Of Effect (8m Radius; +1/2) for up to 53 Active Points of STR
                 // Naked Advantage: Reduced Endurance (0 END; +1/2) for up to 70 Active Points (35 Active Points); Gestures (Requires both hands; -1/2), Linked to Opening of the Blind, Third Eye (Opening of the Blind, Third Eye; -1/4), Visible (Tattoos of flames encompass the biceps and shoulders.  When this power is active, these flames appear to burn, emitting firelight.  ; -1/4)
-                system.description = `${system.ALIAS} for up to ${system.value} Active points`;
+                description = `${system.ALIAS} for up to ${system.value} Active points`;
                 if (system.INPUT) {
-                    system.description += ` of ${system.INPUT}`;
+                    description += ` of ${system.INPUT}`;
                 }
                 break;
 
             case "DEFENSE_MANEUVER":
-                system.description = system.ALIAS + " " + system.OPTION_ALIAS;
+                description = system.ALIAS + " " + system.OPTION_ALIAS;
                 break;
 
             case "LANGUAGES":
                 //English:  Language (basic conversation) (1 Active Points)
-                system.description = system.INPUT || system.ALIAS;
+                description = system.INPUT || system.ALIAS;
                 if (system.OPTION_ALIAS) {
-                    system.description += " (" + system.OPTION_ALIAS + ")";
+                    description += " (" + system.OPTION_ALIAS + ")";
                 }
                 break;
 
@@ -3551,9 +3557,7 @@ export class HeroSystem6eItem extends Item {
                 {
                     // KS: types of brain matter 11-, PS: Appraise 11-, or SS: tuna batteries 28-
                     const { roll } = this._getSkillRollComponents(system);
-                    system.description = `${system.ALIAS ? system.ALIAS + ": " : ""}${
-                        system.INPUT || system.TYPE
-                    } ${roll}`;
+                    description = `${system.ALIAS ? system.ALIAS + ": " : ""}${system.INPUT || system.TYPE} ${roll}`;
                     this.name = system.NAME || `${this.system.ALIAS}: ${(this.system.INPUT || system.TYPE)?.trim()}`;
                 }
                 break;
@@ -3561,7 +3565,7 @@ export class HeroSystem6eItem extends Item {
             case "CONTACT":
                 {
                     const levels = parseInt(system.LEVELS || 1);
-                    system.description = `${system.ALIAS} ${levels === 1 ? "8-" : `${9 + levels}-`}`;
+                    description = `${system.ALIAS} ${levels === 1 ? "8-" : `${9 + levels}-`}`;
                 }
                 break;
 
@@ -3579,28 +3583,26 @@ export class HeroSystem6eItem extends Item {
             case "SUSCEPTIBILITY":
             case "VULNERABILITY":
                 // Disadvantage: blah blah blah
-                system.description = `${system.ALIAS}: `;
+                description = `${system.ALIAS}: `;
                 break;
 
             case "LUCK":
                 {
                     const levels = parseInt(system.LEVELS || 1);
-                    system.description = `${system.ALIAS} ${levels}d6`;
+                    description = `${system.ALIAS} ${levels}d6`;
                 }
                 break;
 
             case "UNLUCK":
-                system.description = `${system.ALIAS}`;
+                description = `${system.ALIAS}`;
                 break;
 
             case "REPUTATION":
                 // There are 2 types of reputation - positive, a perk, and negative, a disadvantage. Both share an XMLID.
                 if (this.type === "disadvantage") {
-                    system.description = `${system.ALIAS}: `;
+                    description = `${system.ALIAS}: `;
                 } else {
-                    system.description = `${system.ALIAS}: ${
-                        system.LEVELS ? `+${system.LEVELS}/+${system.LEVELS}d6 ` : ""
-                    }`;
+                    description = `${system.ALIAS}: ${system.LEVELS ? `+${system.LEVELS}/+${system.LEVELS}d6 ` : ""}`;
                 }
 
                 break;
@@ -3608,19 +3610,16 @@ export class HeroSystem6eItem extends Item {
             case "TRANSPORT_FAMILIARITY":
                 //TF:  Custom Adder, Small Motorized Ground Vehicles
                 //TF:  Equines, Small Motorized Ground Vehicles
-                system.description = `${system.ALIAS}: `;
+                description = `${system.ALIAS}: `;
                 break;
 
             case "PENALTY_SKILL_LEVELS":
-                system.description = (system.NAME || system.ALIAS) + ": +" + system.LEVELS + " " + system.OPTION_ALIAS;
+                description = (system.NAME || system.ALIAS) + ": +" + system.LEVELS + " " + system.OPTION_ALIAS;
 
                 // Penalty details
                 switch (system.penalty) {
                     case "range":
-                        system.description = system.description.replace(
-                            "a specific negative OCV modifier",
-                            "range OCV penalties",
-                        );
+                        description = description.replace("a specific negative OCV modifier", "range OCV penalties");
                         break;
                 }
                 break;
@@ -3632,31 +3631,31 @@ export class HeroSystem6eItem extends Item {
             case "MINDCONTROL":
                 {
                     const diceFormula = getEffectFormulaFromItem(this, { ignoreDeadlyBlow: true });
-                    system.description = `${system.ALIAS} ${diceFormula}`;
+                    description = `${system.ALIAS} ${diceFormula}`;
                 }
                 break;
 
             case "HANDTOHANDATTACK":
                 {
                     const diceFormula = getEffectFormulaFromItem(this, { ignoreDeadlyBlow: true });
-                    system.description = `${system.ALIAS} +${diceFormula}${diceFormula === "1" || diceFormula === "0" ? " point" : ""}`;
+                    description = `${system.ALIAS} +${diceFormula}${diceFormula === "1" || diceFormula === "0" ? " point" : ""}`;
                 }
                 break;
 
             case "KBRESISTANCE":
-                system.description =
+                description =
                     (system.INPUT ? system.INPUT + " " : "") +
                     (system.OPTION_ALIAS || system.ALIAS) +
                     ` -${system.value}m`;
                 break;
 
             case "ENTANGLE":
-                system.description = `${system.ALIAS} ${system.value}d6, ${this.baseInfo.defense(this).string}`;
+                description = `${system.ALIAS} ${system.value}d6, ${this.baseInfo.defense(this).string}`;
                 break;
 
             case "ELEMENTAL_CONTROL":
                 // Elemental Control, 12-point powers
-                system.description = `${system.ALIAS}, ${parseInt(system.BASECOST) * 2}-point powers`;
+                description = `${system.ALIAS}, ${parseInt(system.BASECOST) * 2}-point powers`;
                 break;
 
             // Generic maneuvers and the ones that are not in Hero Designer (freebees)
@@ -3693,19 +3692,19 @@ export class HeroSystem6eItem extends Item {
             case "TRIP":
             case "MANEUVER":
                 {
-                    system.description = "";
+                    description = "";
 
                     // Offensive Strike:  1/2 Phase, -2 OCV, +1 DCV, 8d6 Strike
                     // Killing Strike:  1/2 Phase, -2 OCV, +0 DCV, HKA 1d6 +1
-                    if (system.PHASE) system.description += ` ${system.PHASE} Phase`;
+                    if (system.PHASE) description += ` ${system.PHASE} Phase`;
                     const ocv = parseInt(system.ocv || system.OCV);
                     const dcv = parseInt(system.dcv || system.DCV);
                     if (isNaN(ocv)) {
-                        system.description += `, -- OCV`;
+                        description += `, -- OCV`;
                     } else {
-                        system.description += `, ${ocv.signedStringHero()} OCV`;
+                        description += `, ${ocv.signedStringHero()} OCV`;
                     }
-                    system.description += `, ${dcv.signedStringHero()} DCV`;
+                    description += `, ${dcv.signedStringHero()} DCV`;
 
                     const maneuverEffect = getManeuverEffect(this);
                     if (maneuverEffect) {
@@ -3765,7 +3764,7 @@ export class HeroSystem6eItem extends Item {
 
                         system._effect = effectString;
 
-                        system.description += `, ${effectString}${rangeString}${dcsString}`;
+                        description += `, ${effectString}${rangeString}${dcsString}`;
                     }
                 }
                 break;
@@ -3774,10 +3773,10 @@ export class HeroSystem6eItem extends Item {
                 //Psychokinesis:  Telekinesis (62 STR), Alternate Combat Value (uses OMCV against DCV; +0)
                 // (93 Active Points); Limited Range (-1/4), Only In Alternate Identity (-1/4),
                 // Extra Time (Delayed Phase, -1/4), Requires A Roll (14- roll; -1/4)
-                system.description = `${system.ALIAS} (${system.value} STR)`;
+                description = `${system.ALIAS} (${system.value} STR)`;
                 const strDetails = this.actor?.strDetails(parseInt(system.value));
                 if (strDetails) {
-                    system.description += ` Throw ${strDetails.strThrow}${getSystemDisplayUnits(this.actor.is5e)}`;
+                    description += ` Throw ${strDetails.strThrow}${getSystemDisplayUnits(this.actor.is5e)}`;
                 }
                 break;
             }
@@ -3785,40 +3784,40 @@ export class HeroSystem6eItem extends Item {
             case "MENTAL_COMBAT_LEVELS":
             case "COMBAT_LEVELS":
                 // +1 with any single attack
-                system.description = `${system.ALIAS}: +${system.value} ${system.OPTION_ALIAS}`;
+                description = `${system.ALIAS}: +${system.value} ${system.OPTION_ALIAS}`;
                 break;
 
             case "WEAPON_MASTER":
                 // Weapon Master:  +1d6 (all Ranged Killing Damage weapons)
                 system.ALIAS = "Weapon Master";
-                system.description = `${system.ALIAS}: +${parseInt(system.LEVELS) * 3}DC (${system.OPTION_ALIAS})`;
+                description = `${system.ALIAS}: +${parseInt(system.LEVELS) * 3}DC (${system.OPTION_ALIAS})`;
                 break;
 
             case "DEADLYBLOW":
                 // Deadly Blow:  +1d6 ([very limited circumstances])
                 system.ALIAS = "Deadly Blow";
-                system.description = `${system.ALIAS}: +${parseInt(system.LEVELS) * 3}DC (${system.OPTION_ALIAS})`;
+                description = `${system.ALIAS}: +${parseInt(system.LEVELS) * 3}DC (${system.OPTION_ALIAS})`;
                 break;
 
             case "RESISTANCE":
-                system.description = `Resistance (+${parseInt(system.LEVELS)} to roll)`;
-                system.ALIAS = system.description;
+                description = `Resistance (+${parseInt(system.LEVELS)} to roll)`;
+                system.ALIAS = description;
                 if (this.name.match(/Resistance \(\+\d+ to roll\)/)) {
                     this.name = system.NAME || system.ALIAS;
                 }
                 break;
 
             case "COMBAT_LUCK":
-                system.description = `Combat Luck (${3 * system.value} rPD/${3 * system.value} rED)`;
+                description = `Combat Luck (${3 * system.value} rPD/${3 * system.value} rED)`;
                 // Check to make sure ALIAS is largely folling default format before overriding
                 if (this.name.trim().length <= 1 || this.name.match(/Combat Luck \(\d+ rPD\/\d+ rED\)/)) {
-                    system.ALIAS = system.description;
+                    system.ALIAS = description;
                     this.name = system.NAME || system.ALIAS;
                 }
                 break;
 
             case "LIGHTNING_REFLEXES_ALL":
-                system.description = `${system.ALIAS}${system.OPTION_ALIAS ? `: ${system.OPTION_ALIAS}` : ``}`;
+                description = `${system.ALIAS}${system.OPTION_ALIAS ? `: ${system.OPTION_ALIAS}` : ``}`;
                 system.name = `${system.NAME || system.ALIAS}`;
                 break;
 
@@ -3830,14 +3829,14 @@ export class HeroSystem6eItem extends Item {
             case "ENDURANCERESERVE":
                 {
                     // Endurance Reserve  (20 END, 5 REC) (9 Active Points)
-                    system.description = system.ALIAS || system.XMLID;
+                    description = system.ALIAS || system.XMLID;
 
                     const ENDURANCERESERVEREC = this.findModsByXmlid("ENDURANCERESERVEREC");
                     if (ENDURANCERESERVEREC) {
                         if (parseInt(system.value) === parseInt(system.max)) {
-                            system.description += ` (${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
+                            description += ` (${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
                         } else {
-                            system.description += ` (${system.value}/${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
+                            description += ` (${system.value}/${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
                         }
                     }
                 }
@@ -3845,16 +3844,16 @@ export class HeroSystem6eItem extends Item {
 
             case "SKILL_LEVELS":
                 //<i>Martial Practice:</i>  +10 with single Skill or Characteristic Roll
-                system.description = `${parseInt(system.value).signedStringHero()} ${system.OPTION_ALIAS}`;
+                description = `${parseInt(system.value).signedStringHero()} ${system.OPTION_ALIAS}`;
                 break;
 
             case "VPP":
-                system.description = `${system.ALIAS}, ${parseInt(system.LEVELS)} base + ${parseInt(this.findModsByXmlid("CONTROLCOST")?.LEVELS || RoundFavorPlayerDown(parseInt(system.LEVELS) / 2))} control cost`;
+                description = `${system.ALIAS}, ${parseInt(system.LEVELS)} base + ${parseInt(this.findModsByXmlid("CONTROLCOST")?.LEVELS || RoundFavorPlayerDown(parseInt(system.LEVELS) / 2))} control cost`;
                 break;
 
             case "MULTIPOWER":
                 // <i>Repligun:</i>  Multipower, 60-point reserve, all slots Reduced Endurance (0 END; +1/2) (90 Active Points); all slots OAF Durable Expendable (Difficult to obtain new Focus; Ray gun; -1 1/4)
-                system.description = `${system.ALIAS}, ${parseInt(system.BASECOST)}-point reserve`;
+                description = `${system.ALIAS}, ${parseInt(system.BASECOST)}-point reserve`;
                 break;
 
             case "FLASH":
@@ -3867,13 +3866,13 @@ export class HeroSystem6eItem extends Item {
                         _groups.push(addr.ALIAS);
                     }
                     if (_groups.length === 1) {
-                        system.description = _groups[0];
+                        description = _groups[0];
                     } else {
-                        system.description = _groups
+                        description = _groups
                             .slice(0, -1)
                             .join(", ")
                             .replace(/ Group/g, "");
-                        system.description += " and " + _groups.slice(-1) + "s";
+                        description += " and " + _groups.slice(-1) + "s";
                     }
 
                     // singles
@@ -3886,35 +3885,35 @@ export class HeroSystem6eItem extends Item {
                         _singles.push(addr.ALIAS);
                     }
                     if (_singles.length === 1) {
-                        system.description += ", " + _singles[0];
+                        description += ", " + _singles[0];
                     } else if (_singles.length > 1) {
-                        system.description += ", " + _singles.slice(0, -1).join(", ");
-                        system.description += " and " + _singles.slice(-1);
+                        description += ", " + _singles.slice(0, -1).join(", ");
+                        description += " and " + _singles.slice(-1);
                     }
 
                     const damageFormula = getEffectFormulaFromItem(this, { ignoreDeadlyBlow: true });
-                    system.description += ` ${system.ALIAS} ${damageFormula}`;
+                    description += ` ${system.ALIAS} ${damageFormula}`;
                 }
                 break;
 
             case "EXTRADIMENSIONALMOVEMENT":
-                system.description = `${system.ALIAS} ${system.OPTION_ALIAS}`;
+                description = `${system.ALIAS} ${system.OPTION_ALIAS}`;
                 break;
 
             case "PERCEPTION":
                 // Skill added by system and not in HDC
-                system.description = "Perception";
+                description = "Perception";
                 break;
 
             case "CLINGING":
                 {
                     if (!this.actor) {
-                        system.description = `${system.ALIAS}`;
+                        description = `${system.ALIAS}`;
                     } else {
                         const baseStr = this.actor.system.characteristics.str.value;
                         const additionalClingingStr = system.value;
                         const totalStr = baseStr + additionalClingingStr;
-                        system.description = `${system.ALIAS} (${baseStr} + ${additionalClingingStr} = ${totalStr} STR)`;
+                        description = `${system.ALIAS} (${baseStr} + ${additionalClingingStr} = ${totalStr} STR)`;
                     }
                 }
                 break;
@@ -3925,29 +3924,29 @@ export class HeroSystem6eItem extends Item {
             case "MONEY":
             case "SHAPECHANGING":
             case "SKILLMASTER":
-                system.description = `${system.ALIAS} (${system.OPTION_ALIAS})`;
+                description = `${system.ALIAS} (${system.OPTION_ALIAS})`;
                 break;
 
             case "ENVIRONMENTAL_MOVEMENT":
-                system.description = `${system.ALIAS} (${system.INPUT})`;
+                description = `${system.ALIAS} (${system.INPUT})`;
                 break;
 
             case "DUPLICATION":
                 {
                     const points = parseInt(system.POINTS);
-                    system.description = `${system.ALIAS} (creates ${points}-point form)`;
+                    description = `${system.ALIAS} (creates ${points}-point form)`;
                 }
                 break;
 
             case "SHAPESHIFT":
-                system.description = `${system.ALIAS} (${system.OPTION_ALIAS})`;
+                description = `${system.ALIAS} (${system.OPTION_ALIAS})`;
                 break;
 
             case "FINDWEAKNESS":
                 {
                     const { roll } = this._getNonCharacteristicsBasedRollComponents(system);
 
-                    system.description = `${system.ALIAS} ${roll} with ${system.OPTION_ALIAS}`;
+                    description = `${system.ALIAS} ${roll} with ${system.OPTION_ALIAS}`;
                 }
                 break;
 
@@ -3955,7 +3954,7 @@ export class HeroSystem6eItem extends Item {
                 {
                     const { roll } = this._getNonCharacteristicsBasedRollComponents(system);
 
-                    system.description = `${system.ALIAS} ${roll}`;
+                    description = `${system.ALIAS} ${roll}`;
                 }
                 break;
 
@@ -3969,38 +3968,38 @@ export class HeroSystem6eItem extends Item {
             case "SPATIALAWARENESS":
             case "ULTRASONICPERCEPTION":
             case "ULTRAVIOLETPERCEPTION":
-                system.description = `${system.ALIAS} (${system.GROUP})`;
+                description = `${system.ALIAS} (${system.GROUP})`;
                 break;
 
             case "DETECT":
-                system.description = `${system.ALIAS} ${system.OPTION_ALIAS} (${system.GROUP})`;
+                description = `${system.ALIAS} ${system.OPTION_ALIAS} (${system.GROUP})`;
                 break;
 
             case "ENHANCEDPERCEPTION":
                 {
                     const levels = parseInt(system.LEVELS || 0);
-                    system.description = `${system.ALIAS} +${levels} PER with ${system.OPTION_ALIAS}`;
+                    description = `${system.ALIAS} +${levels} PER with ${system.OPTION_ALIAS}`;
                 }
                 break;
 
             case "TELESCOPIC":
                 {
                     const levels = parseInt(system.LEVELS || 0);
-                    system.description = `${system.ALIAS} +${levels} range modifier for ${system.OPTION_ALIAS}`;
+                    description = `${system.ALIAS} +${levels} range modifier for ${system.OPTION_ALIAS}`;
                 }
                 break;
 
             case "CONCEALED":
                 {
                     const levels = parseInt(system.LEVELS || 0);
-                    system.description = `${system.ALIAS} (-${levels} PER to ${system.OPTION_ALIAS})`;
+                    description = `${system.ALIAS} (-${levels} PER to ${system.OPTION_ALIAS})`;
                 }
                 break;
 
             case "RAPID":
                 {
                     const factor = Math.pow(10, parseInt(system.LEVELS || 1));
-                    system.description = `${system.ALIAS} (x${factor}) with ${system.OPTION_ALIAS})`;
+                    description = `${system.ALIAS} (x${factor}) with ${system.OPTION_ALIAS})`;
                 }
                 break;
 
@@ -4018,27 +4017,27 @@ export class HeroSystem6eItem extends Item {
             case "TARGETINGSENSE":
             case "TRACKINGSENSE":
             case "TRANSMIT":
-                system.description = `${system.ALIAS} with ${system.OPTION_ALIAS}`;
+                description = `${system.ALIAS} with ${system.OPTION_ALIAS}`;
                 break;
 
             case "MENTALAWARENESS":
             case "NIGHTVISION":
-                system.description = `${system.ALIAS}`;
+                description = `${system.ALIAS}`;
                 break;
 
             case "STRIKING_APPEARANCE": {
                 const levels = parseInt(system.LEVELS);
-                system.description = `+${levels}/+${levels}d6 ${system.ALIAS} (${system.OPTION_ALIAS})`;
+                description = `+${levels}/+${levels}d6 ${system.ALIAS} (${system.OPTION_ALIAS})`;
                 break;
             }
 
             case "CHANGEENVIRONMENT":
-                system.description = `${system.ALIAS}`;
+                description = `${system.ALIAS}`;
                 break;
 
             case "POSSESSION":
                 {
-                    system.description = `${system.ALIAS}`;
+                    description = `${system.ALIAS}`;
                 }
 
                 break;
@@ -4046,40 +4045,40 @@ export class HeroSystem6eItem extends Item {
             default:
                 {
                     if (this.baseInfo?.descriptionFactory) {
-                        system.description = this.baseInfo.descriptionFactory(this);
+                        description = this.baseInfo.descriptionFactory(this);
                         break;
                     }
 
                     if (configPowerInfo?.type?.includes("characteristic")) {
-                        system.description = "+" + system.value + " " + system.ALIAS;
+                        description = "+" + system.value + " " + system.ALIAS;
                         break;
                     }
 
                     if (configPowerInfo?.type?.includes("skill")) {
                         const { roll } = this._getSkillRollComponents(system);
-                        system.description = system.ALIAS || system.XMLID;
+                        description = system.ALIAS || system.XMLID;
                         this.name = system.NAME || system.ALIAS;
                         if (system?.INPUT) {
-                            system.description += `: ${system.INPUT}`;
+                            description += `: ${system.INPUT}`;
                             this.name += `: ${system.INPUT}`;
                         }
                         // Skill enhancer?
                         if (roll) {
-                            system.description += ` ${roll}`;
+                            description += ` ${roll}`;
                         }
                         break;
                     }
 
                     // Provide a basic description
                     const _desc = system.OPTION_ALIAS || system.ALIAS || system.EFFECT || "";
-                    system.description = (system.INPUT ? system.INPUT + " " : "") + _desc;
+                    description = (system.INPUT ? system.INPUT + " " : "") + _desc;
 
                     // Provide dice if this is an attack
                     if (this.baseInfo?.behaviors.includes("dice")) {
                         const damageFormula = getEffectFormulaFromItem(this, { ignoreDeadlyBlow: true });
                         if (damageFormula !== "0") {
-                            if (system.description.indexOf(damageFormula) === -1) {
-                                system.description = ` ${damageFormula} ${system.class || ""}`;
+                            if (description.indexOf(damageFormula) === -1) {
+                                description = ` ${damageFormula} ${system.class || ""}`;
                             }
                         }
                     }
@@ -4092,7 +4091,7 @@ export class HeroSystem6eItem extends Item {
                                 `${this.actor?.name}: ${this.detailedName()} has a success behavior but no CHARACTERISTIC specified`,
                             );
                         }
-                        system.description += ` ${system.roll}`;
+                        description += ` ${system.roll}`;
                     }
                 }
                 break;
@@ -4125,7 +4124,7 @@ export class HeroSystem6eItem extends Item {
 
                 case "VULNERABILITY":
                     // Vulnerability:  Mental (Common)
-                    system.description += `${system.INPUT}`;
+                    description += `${system.INPUT}`;
                     break;
 
                 default:
@@ -4147,7 +4146,7 @@ export class HeroSystem6eItem extends Item {
                     break;
 
                 case "DIMENSIONS":
-                    system.description += `, ${adder.ALIAS}`;
+                    description += `, ${adder.ALIAS}`;
                     break;
 
                 case "ATTACK":
@@ -4159,7 +4158,7 @@ export class HeroSystem6eItem extends Item {
                 case "SLEEPING":
                 case "USEFUL":
                     if (system.XMLID === "VULNERABILITY") {
-                        system.description += ` (${adder.OPTION_ALIAS})`.replace("((", "("); // Unclear why there is a parand in the OPTION_ALIAS
+                        description += ` (${adder.OPTION_ALIAS})`.replace("((", "("); // Unclear why there is a parand in the OPTION_ALIAS
                         break;
                     }
                     _adderArray.push(`${adder.ALIAS} ${adder.OPTION_ALIAS}`);
@@ -4249,7 +4248,7 @@ export class HeroSystem6eItem extends Item {
                 case "INCREASEDMAX":
                     // Typical ALIAS would be "Increased Maximum (+34 points)". Provide total as well.
                     // Can Add Maximum Of 34 Points
-                    system.description += `, Can Add Maximum Of ${determineMaxAdjustment(this)} Points`;
+                    description += `, Can Add Maximum Of ${determineMaxAdjustment(this)} Points`;
                     break;
 
                 case "ADDER":
@@ -4293,61 +4292,61 @@ export class HeroSystem6eItem extends Item {
         if (_adderArray.length > 0) {
             switch (powerXmlId) {
                 case "TRANSPORT_FAMILIARITY":
-                    system.description += _adderArray.sort().join(", ");
+                    description += _adderArray.sort().join(", ");
                     break;
 
                 case "DARKNESS":
                 case "INVISIBILITY":
                     {
-                        system.description += system.ALIAS + " to ";
+                        description += system.ALIAS + " to ";
                         // Groups
                         let _groups = _adderArray.filter((o) => o.indexOf("Group") > -1);
                         if (_groups.length === 1) {
-                            system.description += _groups[0];
+                            description += _groups[0];
                         } else {
-                            system.description += _groups
+                            description += _groups
                                 .slice(0, -1)
                                 .join(", ")
                                 .replace(/ Group/g, "");
-                            system.description += " and " + _groups.slice(-1) + "s";
+                            description += " and " + _groups.slice(-1) + "s";
                         }
 
                         // singles
                         let _singles = _adderArray.filter((o) => o.indexOf("Group") === -1);
                         // spacing
                         if (_groups.length > 0 && _singles.length > 0) {
-                            system.description += ", ";
+                            description += ", ";
                         }
 
                         if (_singles.length === 1) {
-                            system.description += _singles[0];
+                            description += _singles[0];
                         } else if (_singles.length > 1) {
-                            system.description += _singles.slice(0, -1).join(", ");
-                            system.description += " and " + _singles.slice(-1);
+                            description += _singles.slice(0, -1).join(", ");
+                            description += " and " + _singles.slice(-1);
                         }
                     }
 
                     // DARKNESS radius
                     // Darkness to Hearing Group 16m radius
                     if (powerXmlId === "DARKNESS") {
-                        system.description += ` ${system.LEVELS}${getSystemDisplayUnits(this.is5e)} radius`;
+                        description += ` ${system.LEVELS}${getSystemDisplayUnits(this.is5e)} radius`;
                     }
 
                     break;
 
                 case "FLASH":
                     // The senses are already in the description
-                    system.description +=
+                    description +=
                         " (" +
                         _adderArray
                             .filter((o) => !o.match(/(GROUP|NORMAL|SENSE|MINDSCAN|HRRP|RADAR|RADIO|MIND|AWARENESS)/i))
                             .join("; ") +
                         ")";
-                    system.description = system.description.replace("()", "");
+                    description = description.replace("()", "");
                     break;
 
                 default:
-                    system.description += " (" + _adderArray.join("; ") + ")";
+                    description += " (" + _adderArray.join("; ") + ")";
                     break;
             }
         }
@@ -4367,9 +4366,9 @@ export class HeroSystem6eItem extends Item {
             }
 
             if (configPowerInfo?.type.includes("adjustment")) {
-                system.description += " (standard effect: " + parseInt(system.value * 3) + " points)";
+                description += " (standard effect: " + parseInt(system.value * 3) + " points)";
             } else {
-                system.description += ` (standard effect: ${stun} STUN, ${body} BODY)`;
+                description += ` (standard effect: ${stun} STUN, ${body} BODY)`;
             }
         }
 
@@ -4381,13 +4380,13 @@ export class HeroSystem6eItem extends Item {
             .sort((a, b) => {
                 return a.cost - b.cost;
             })) {
-            system.description += this.createPowerDescriptionModifier(modifier);
+            description += this.createPowerDescriptionModifier(modifier);
         }
 
         // Active Points show if there are limitations or the real cost is not equal to the displayed cost
         if (this._activePoints !== this._realCost || system.realCost !== system.characterPointCost) {
             if (system.activePoints) {
-                system.description += " (" + this.activePointCostForDisplay + " Active Points);";
+                description += " (" + this.activePointCostForDisplay + " Active Points);";
             }
         }
 
@@ -4402,10 +4401,10 @@ export class HeroSystem6eItem extends Item {
 
         // Disadvantages sorted low to high
         for (const modifier of modifiers) {
-            system.description += this.createPowerDescriptionModifier(modifier);
+            description += this.createPowerDescriptionModifier(modifier);
         }
 
-        system.description = (system.description || "")
+        description = (description || "")
             .replace(";,", ";")
             .replace("; ,", ";")
             .replace("; ;", ";")
@@ -4427,9 +4426,11 @@ export class HeroSystem6eItem extends Item {
         }
 
         // Some names should include modifiers
-        if (this.type.includes("disadvantage")) {
-            this.name = system.description;
-        }
+        // if (this.type.includes("disadvantage")) {
+        //     this.name = description;
+        // }
+
+        return description;
     }
 
     createPowerDescriptionModifier(modifier) {
@@ -4523,8 +4524,9 @@ export class HeroSystem6eItem extends Item {
         }
 
         if (modifier.XMLID === "AOE") {
-            if (item.system.areaOfEffect.value > 0) {
-                result += `${item.system.areaOfEffect.value}${
+            const areaOfEffect = item.aoeAttackParameters();
+            if (areaOfEffect.value > 0) {
+                result += `${areaOfEffect.value}${
                     modifier.OPTION_ALIAS === "Any Area" && !item.actor?.system?.is5e
                         ? ""
                         : getSystemDisplayUnits(item.is5e)
@@ -4839,7 +4841,6 @@ export class HeroSystem6eItem extends Item {
 
         window.prepareData.makeAttack ??= {};
 
-        let startDate = Date.now();
         const xmlid = this.system.XMLID;
         this.system.subType = "attack";
         this.system.killing = false;
@@ -4848,11 +4849,9 @@ export class HeroSystem6eItem extends Item {
         this.system.piercing = 0;
         this.system.penetrating = 0;
         this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunbody;
-        window.prepareData.makeAttack.init = (window.prepareData.makeAttack.init || 0) + (Date.now() - startDate);
 
         // Maneuvers and martial arts may allow strength to be added or have extra effects.
         // PH: FIXME: Weapons?
-        startDate = Date.now();
         if (["maneuver", "martialart"].includes(this.type)) {
             if (this.system.ADDSTR != undefined) {
                 this.system.usesStrength = this.system.ADDSTR;
@@ -4869,10 +4868,8 @@ export class HeroSystem6eItem extends Item {
                 this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunonly;
             }
         }
-        window.prepareData.makeAttack.effect = (window.prepareData.makeAttack.effect || 0) + (Date.now() - startDate);
 
         // Specific power overrides
-        startDate = Date.now();
         if (xmlid === "ENTANGLE") {
             this.system.knockbackMultiplier = 0;
             this.system.usesStrength = false;
@@ -4936,44 +4933,32 @@ export class HeroSystem6eItem extends Item {
         } else if (xmlid === "LUCK" || xmlid === "UNLUCK") {
             this.system.usesStrength = false;
         }
-        window.prepareData.makeAttack.overrides =
-            (window.prepareData.makeAttack.overrides || 0) + (Date.now() - startDate);
 
         // AVAD
-        startDate = Date.now();
         const avad = this.findModsByXmlid("AVAD");
         if (avad) {
             this.system.class = "avad";
         }
-        window.prepareData.makeAttack.avad = (window.prepareData.makeAttack.avad || 0) + (Date.now() - startDate);
 
         // Armor Piercing
-        startDate = Date.now();
         const armorPiercing = this.findModsByXmlid("ARMORPIERCING");
         if (armorPiercing) {
             this.system.piercing = parseInt(armorPiercing.LEVELS);
         }
-        window.prepareData.makeAttack.ap = (window.prepareData.makeAttack.ap || 0) + (Date.now() - startDate);
 
         // Penetrating
-        startDate = Date.now();
         const penetrating = this.findModsByXmlid("PENETRATING");
         if (penetrating) {
             this.system.penetrating = parseInt(penetrating.LEVELS);
         }
-        window.prepareData.makeAttack.penetrating =
-            (window.prepareData.makeAttack.penetrating || 0) + (Date.now() - startDate);
 
         // No Knockback
-        startDate = Date.now();
         const noKb = this.findModsByXmlid("NOKB");
         if (noKb) {
             this.system.knockbackMultiplier = 0;
         }
-        window.prepareData.makeAttack.noKb = (window.prepareData.makeAttack.noKb || 0) + (Date.now() - startDate);
 
         // Double Knockback
-        startDate = Date.now();
         const doubleKb = this.findModsByXmlid("DOUBLEKB");
         if (doubleKb) {
             const cost = doubleKb.cost;
@@ -4992,42 +4977,29 @@ export class HeroSystem6eItem extends Item {
                 this.system.knockbackMultiplier = multiplier;
             }
         }
-        window.prepareData.makeAttack.doubleKb =
-            (window.prepareData.makeAttack.doubleKb || 0) + (Date.now() - startDate);
 
-        startDate = Date.now();
         if (xmlid === "HKA" || this.system.EFFECT?.indexOf("KILLING") > -1) {
             this.system.killing = true;
         } else if (xmlid === "TELEKINESIS") {
             this.system.usesStrength = false;
             this.system.usesTk = true;
         }
-        window.prepareData.makeAttack.killing = (window.prepareData.makeAttack.killing || 0) + (Date.now() - startDate);
 
         // Damage effect/type modifiers
-        startDate = Date.now();
         const noStrBonus = this.findModsByXmlid("NOSTRBONUS");
         if (noStrBonus) {
             this.system.usesStrength = false;
         }
-        window.prepareData.makeAttack.noStrBonus =
-            (window.prepareData.makeAttack.noStrBonus || 0) + (Date.now() - startDate);
 
-        startDate = Date.now();
         const stunOnly = this.findModsByXmlid("STUNONLY");
         if (stunOnly) {
             this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunonly;
         }
-        window.prepareData.makeAttack.stunOnly =
-            (window.prepareData.makeAttack.stunOnly || 0) + (Date.now() - startDate);
 
-        startDate = Date.now();
         const doesBody = this.findModsByXmlid("DOESBODY");
         if (doesBody) {
             this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunbody;
         }
-        window.prepareData.makeAttack.doesBody =
-            (window.prepareData.makeAttack.doesBody || 0) + (Date.now() - startDate);
     }
 
     updateRoll() {

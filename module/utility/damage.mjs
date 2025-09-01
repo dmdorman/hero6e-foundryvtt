@@ -4,7 +4,6 @@ import { RoundFavorPlayerUp } from "./round.mjs";
 import { getSystemDisplayUnits } from "./units.mjs";
 
 export function combatSkillLevelsForAttack(item) {
-    let startDate = Date.now();
     const results = [];
 
     if (!item.actor) return results;
@@ -17,10 +16,7 @@ export function combatSkillLevelsForAttack(item) {
     const originalItemId = item.system._active?.__originalUuid
         ? foundry.utils.parseUuid(item.system._active.__originalUuid).id
         : item.id;
-    window.prepareData.combatSkillLevelsForAttackInit =
-        (window.prepareData.combatSkillLevelsForAttackInit || 0) + (Date.now() - startDate);
 
-    startDate = Date.now();
     const cslSkills = item.actor.items.filter(
         (o) =>
             ["MENTAL_COMBAT_LEVELS", "COMBAT_LEVELS"].includes(o.system.XMLID) &&
@@ -31,10 +27,7 @@ export function combatSkillLevelsForAttack(item) {
             ) &&
             o.isActive != false,
     );
-    window.prepareData.combatSkillLevelsForAttackFilter =
-        (window.prepareData.combatSkillLevelsForAttackFilter || 0) + (Date.now() - startDate);
 
-    startDate = Date.now();
     for (const cslSkill of cslSkills) {
         const result = {
             ocv: 0,
@@ -57,9 +50,6 @@ export function combatSkillLevelsForAttack(item) {
             results.push(result);
         }
     }
-    window.prepareData.combatSkillLevelsForAttackResults =
-        (window.prepareData.combatSkillLevelsForAttackResults || 0) + (Date.now() - startDate);
-
     return results;
 }
 
@@ -424,17 +414,13 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
     // EXTRADCs and RANGEDDCs
     // 5e EXTRADC and RANGEDDCs for armed killing attacks count at full DCs but do NOT count towards the base DC. FRed pg. 406.
     // 6e doesn't have the concept of base and added DCs but do the same in case they turn on the doubling rule.
-    let startDate = Date.now();
     if (item.type === "martialart" && (item.system._active.maWeaponItem || options.maWeaponItem)) {
         addExtraMartialDcsToBundle(item, addedDamageBundle);
     }
-    window.prepareData.addExtraMartialDcsToBundle =
-        (window.prepareData.addExtraMartialDcsToBundle || 0) + (Date.now() - startDate);
 
     // For Haymaker (with Strike presumably) and non killing Martial Maneuvers, STR is the main base (source of) damage and the maneuver is additional damage.
     // These maneuvers are added without consideration of advantages in 5e but not in 6e.
     // For maneuvers with a weapon, the weapon is the main base (source of) damage and the maneuver is additional damage.
-    startDate = Date.now();
     if (isNonKillingStrengthBasedManeuver(item) || isManeuverThatIsUsingAWeapon(item, options)) {
         const rawManeuverDc = parseInt(item.system.DC);
 
@@ -458,18 +444,13 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
             title: `${rawManeuverDc.signedStringHero()}DC${maneuverDC !== rawManeuverDc ? " (halved due to 5e killing attack)" : ""} -> ${formula}`,
         });
     }
-    window.prepareData.isNonKillingStrengthBasedManeuver =
-        (window.prepareData.isNonKillingStrengthBasedManeuver || 0) + (Date.now() - startDate);
 
     // Add in STR if it isn't the base damage type
-    startDate = Date.now();
     if (baseAttackItem.system.usesStrength) {
         addStrengthToBundle(baseAttackItem, options, addedDamageBundle, true);
     }
-    window.prepareData.addStrengthToBundle = (window.prepareData.addStrengthToBundle || 0) + (Date.now() - startDate);
 
     // Boostable Charges
-    startDate = Date.now();
     if (options.boostableCharges != undefined && options.boostableCharges > 0) {
         // Each used boostable charge, to a max of 4, increases the damage class by 1.
         const boostChargesDc = Math.min(4, parseInt(options.boostableCharges));
@@ -483,13 +464,11 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
             title: `${boostChargesDc}DC -> ${formula}`,
         });
     }
-    window.prepareData.boostableCharges = (window.prepareData.boostableCharges || 0) + (Date.now() - startDate);
 
     // Combat Skill Levels. These are added is added in without consideration of advantages in 5e but not in 6e.
     // PH: TODO: 5E Superheroic: Each 2 CSLs modify the killing attack BODY roll by +1 (cannot exceed the max possible roll). Obviously no +1/2 DC.
     // PH: TODO: 5E Superheroic: Each 2 CSLs modify the normal attack STUN roll by +3 (cannot exceed the max possible roll). Obviously no +1/2 DC.
     // PH: TODO: THE ABOVE 2 NEED NEW HERO ROLLER FUNCTIONALITY.
-    startDate = Date.now();
     for (const csl of combatSkillLevelsForAttack(item)) {
         if (csl.dc > 0) {
             // CSLs in 5e ignore advantages. In 6e they care about it.
@@ -504,13 +483,11 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
             });
         }
     }
-    window.prepareData.combatSkillLevelsForAttack =
-        (window.prepareData.combatSkillLevelsForAttack || 0) + (Date.now() - startDate);
 
     // Move By, Move By, etc - Maneuvers that add in velocity
     // [NORMALDC] +v/5 Strike, FMove
     // ((STR/2) + (v/10))d6; attacker takes 1/3 damage
-    startDate = Date.now();
+
     const velocityMatch = (item.system.EFFECT || "").match(/v\/(\d+)/);
     if (velocityMatch) {
         const velocity = parseInt(options.velocity || 0);
@@ -530,10 +507,8 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
             title: `${velocity}${getSystemDisplayUnits(item.is5e)}/${divisor} -> ${formula}`,
         });
     }
-    window.prepareData.velocityMatch = (window.prepareData.velocityMatch || 0) + (Date.now() - startDate);
 
     // Applied effects
-    startDate = Date.now();
     for (const ae of item.actor?.appliedEffects.filter(
         (ae) => !ae.disabled && ae.flags?.[game.system.id]?.target === item.uuid,
     ) || []) {
@@ -552,11 +527,9 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
             });
         }
     }
-    window.prepareData.appliedEffects = (window.prepareData.appliedEffects || 0) + (Date.now() - startDate);
 
     // Is there a haymaker active and thus part of this attack? Haymaker is added in without consideration of advantages in 5e but not in 6e.
     // Also in 5e killing haymakers get the DC halved.
-    startDate = Date.now();
     if (options.haymakerManeuverActiveItem) {
         // Can haymaker anything except for maneuvers because it is a maneuver itself. The strike maneuver is the 1 exception.
         // PH: FIXME: Implement the exceptions: See 6e v2 pg. 99. 5e has none?
@@ -585,11 +558,9 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
             });
         }
     }
-    window.prepareData.haymakerDC = (window.prepareData.haymakerDC || 0) + (Date.now() - startDate);
 
     // WEAPON MASTER (also check that item is present as a custom ADDER)
     // PH: FIXME: 6e only? Cost seems to indicate that this is additive to the actual base damage in the case of the damage doubling rule
-    startDate = Date.now();
     const weaponMaster = item.actor?.items.find((item) => item.system.XMLID === "WEAPON_MASTER");
     if (weaponMaster) {
         const weaponMatch = (weaponMaster.system.ADDER || []).find((o) => o.XMLID === "ADDER" && o.ALIAS === item.name);
@@ -610,12 +581,10 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
             });
         }
     }
-    window.prepareData.weaponMaster = (window.prepareData.weaponMaster || 0) + (Date.now() - startDate);
 
     // DEADLYBLOW
     // Only check if it has been turned off
     // FIXME: This function should not be changing the item.system. Please fix me by moving this to somewhere in the user flow.
-    startDate = Date.now();
     const deadlyBlows = item.actor?.items.filter((item) => item.system.XMLID === "DEADLYBLOW") || [];
     deadlyBlows.forEach((deadlyBlow) => {
         item.system.conditionalAttacks ??= {};
@@ -677,7 +646,6 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
             }
         }
     }
-    window.prepareData.deadlyBlow = (window.prepareData.deadlyBlow || 0) + (Date.now() - startDate);
 
     // FIXME: Environmental Movement: Aquatic Environments should actually counteract this.
     // FIXME: Not everything should be affected by this. For instance, should mental powers be affected? What about electricity based SFX?
@@ -686,7 +654,6 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
     // Skill Roll or have TF: SCUBA. A character who stands
     // in water while he fights is at -2 DCV (and typically also suffer
     // Poor Footing penalties) unless he makes a Breakfall roll.
-    startDate = Date.now();
     if (item.actor?.statuses?.has("underwater")) {
         const underwaterDc = 2; // NOTE: Working with 2 DC and then subtracting
         const underwaterDiceParts = calculateDicePartsFromDcForItem(baseAttackItem, underwaterDc);
@@ -703,7 +670,6 @@ export function calculateAddedDicePartsFromItem(item, baseAttackItem, options) {
             title: `-${underwaterDc}DC -> ${formula}`,
         });
     }
-    window.prepareData.underwaterDc = (window.prepareData.underwaterDc || 0) + (Date.now() - startDate);
 
     return {
         addedDamageBundle,
@@ -918,14 +884,11 @@ export function subtractDiceParts(item, firstDiceParts, secondDiceParts, useDieM
  * @returns {HeroSystemFormulaDicePartsBundle}
  */
 export function calculateDicePartsForItem(item, options) {
-    let startDate = Date.now();
     const {
         diceParts: baseDiceParts,
         tags: baseTags,
         baseAttackItem,
     } = item.baseInfo.baseEffectDicePartsBundle(item, options);
-    window.prepareData.calculateDicePartsForItem =
-        (window.prepareData.calculateDicePartsForItem || 0) + (Date.now() - startDate);
 
     // PH: FIXME: This can be removed when we don't create damage for things that aren't attacks.
     if (!baseAttackItem) {
@@ -939,23 +902,18 @@ export function calculateDicePartsForItem(item, options) {
         };
     }
 
-    startDate = Date.now();
     const {
         addedDamageBundle: { diceParts: addedDiceParts, tags: extraTags },
         velocityDamageBundle: { diceParts: velocityDiceParts, tags: velocityTags },
     } = calculateAddedDicePartsFromItem(item, baseAttackItem, options);
-    window.prepareData.calculateAddedDicePartsFromItem =
-        (window.prepareData.calculateAddedDicePartsFromItem || 0) + (Date.now() - startDate);
 
     // No idea if we should favour 1d6-1 or not. Try to make a guess.
-    startDate = Date.now();
     const useDieMinusOne = !!baseAttackItem.findModsByXmlid("MINUSONEPIP");
-    window.prepareData.minusOnePip = (window.prepareData.minusOnePip || 0) + (Date.now() - startDate);
 
     // Max Doubling Rules
     // 5e rule and 6e optional rule: A character cannot more than double the Damage Classes of their base attack, no
     // matter how many different methods they use to add damage.
-    startDate = Date.now();
+
     const doubleDamageLimitTags = [];
     let sumDiceParts = addDiceParts(baseAttackItem, baseDiceParts, addedDiceParts, useDieMinusOne);
     if (doubleDamageLimit()) {
@@ -984,15 +942,11 @@ export function calculateDicePartsForItem(item, options) {
             sumDiceParts = subtractDiceParts(baseAttackItem, sumDiceParts, excessDiceParts, useDieMinusOne);
         }
     }
-    window.prepareData.doubleDamageLimit = (window.prepareData.doubleDamageLimit || 0) + (Date.now() - startDate);
 
     // Add velocity contributions too which were excluded from doubling considerations
-    startDate = Date.now();
     sumDiceParts = addDiceParts(baseAttackItem, sumDiceParts, velocityDiceParts, useDieMinusOne);
-    window.prepareData.sumDiceParts = (window.prepareData.sumDiceParts || 0) + (Date.now() - startDate);
 
     // Doesn't really feel right to allow a total DC of less than 0 so cap it.
-    startDate = Date.now();
     const finalDc = Math.max(0, sumDiceParts.dc);
     let dcClampTags = [];
     if (finalDc !== sumDiceParts.dc) {
@@ -1009,7 +963,6 @@ export function calculateDicePartsForItem(item, options) {
         });
         sumDiceParts = zeroDiceParts;
     }
-    window.prepareData.finalDc = (window.prepareData.finalDc || 0) + (Date.now() - startDate);
 
     return {
         diceParts: sumDiceParts,
@@ -1031,26 +984,17 @@ export function getFullyQualifiedEffectFormulaFromItem(item, options) {
         return;
     }
 
-    let startDate = Date.now();
     const { diceParts, baseAttackItem } = calculateDicePartsForItem(item, options);
-    window.prepareData.calculateDicePartsForItem =
-        (window.prepareData.calculateDicePartsForItem || 0) + (Date.now() - startDate);
 
     if (!baseAttackItem) {
         console.error(
             `Actor=${item.actor?.name}. Actor.type=${item.actor?.type}. ${item.name} is missing required baseAttackItem`,
         );
-        startDate = Date.now();
-        window.prepareData.getFullyQualifiedEffectFormulaFromItem =
-            (window.prepareData.getFullyQualifiedEffectFormulaFromItem || 0) + (Date.now() - startDate);
 
         return;
     }
 
-    startDate = Date.now();
     const results = dicePartsToFullyQualifiedEffectFormula(baseAttackItem, diceParts);
-    window.prepareData.dicePartsToFullyQualifiedEffectFormula =
-        (window.prepareData.dicePartsToFullyQualifiedEffectFormula || 0) + (Date.now() - startDate);
 
     return results;
 }

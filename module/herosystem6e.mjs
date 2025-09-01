@@ -30,6 +30,17 @@ import { HeroSystemActiveEffectConfig } from "./actor/active-effect-config.mjs";
 
 import { HeroSystem6eItem, initializeItemHandlebarsHelpers } from "./item/item.mjs";
 import { HeroSystem6eItemTypeDataModelMisc } from "./item/HeroSystem6eItemTypeDataModelMisc.mjs";
+import {
+    HeroSystem6eItemPower,
+    HeroSystem6eItemEquipment,
+    HeroSystem6eItemSkill,
+    HeroSystem6eItemManeuver,
+    HeroSystem6eItemTalent,
+    HeroSystem6eItemPerk,
+    HeroSystem6eItemMartialArt,
+    HeroSystem6eItemDisadvantage,
+    HeroSystem6eItemComplication,
+} from "./item/HeroSystem6eItemTypeDataModel.mjs";
 import { HeroSystem6eItemSheet } from "./item/item-sheet.mjs";
 
 //import { HeroSystem6eCardHelpers } from "./card/card-helpers.mjs";
@@ -183,6 +194,15 @@ Hooks.once("init", async function () {
 
     Object.assign(CONFIG.Item.dataModels, {
         // The keys are the types defined in our template.json
+        power: HeroSystem6eItemPower,
+        equipment: HeroSystem6eItemEquipment,
+        skill: HeroSystem6eItemSkill,
+        maneuver: HeroSystem6eItemManeuver,
+        talent: HeroSystem6eItemTalent,
+        perk: HeroSystem6eItemPerk,
+        martialart: HeroSystem6eItemMartialArt,
+        disadvantage: HeroSystem6eItemDisadvantage,
+        complication: HeroSystem6eItemComplication,
         misc: HeroSystem6eItemTypeDataModelMisc,
     });
 

@@ -45,6 +45,7 @@ export class HeroSystemActorSheet extends FoundryVttActorSheet {
         window.actor = this.actor;
 
         const data = super.getData(options);
+
         data.token = options?.token;
         data.isOwner = this.object.isOwner;
         data.gameSystemId = game.system.id;
@@ -52,6 +53,7 @@ export class HeroSystemActorSheet extends FoundryVttActorSheet {
         if (data.actor.flags[game.system.id].uploading) {
             return data;
         }
+
         data.system = data.actor.system;
 
         // Unlinked actors can end up with duplicate items when prototype actor is re-uploaded.
