@@ -619,10 +619,10 @@ export class HeroSystem6eItemSheet extends FoundryVttItemSheet {
 
         // HD lite (currently only SKILL) uses generic _postUpload
         // TODO: Much of the above is likely not necessary as _postUpload does alot
-        await this.item._postUpload();
-        if (this.item.actor) {
-            await this.item.actor.CalcActorRealAndActivePoints();
-        }
+        // await this.item._postUpload();
+        // if (this.item.actor) {
+        //     await this.item.actor.CalcActorRealAndActivePoints();
+        // }
     }
 
     async _onEffectCreate(event) {

@@ -1,7 +1,7 @@
-import { RoundFavorPlayerDown, RoundFavorPlayerUp } from "../utility/round.mjs";
+//import { RoundFavorPlayerDown, RoundFavorPlayerUp } from "../utility/round.mjs";
 import { getPowerInfo } from "../utility/util.mjs";
 
-const { StringField, ObjectField, BooleanField, ArrayField, EmbeddedDataField } = foundry.data.fields;
+const { NumberField, StringField, ObjectField, BooleanField, ArrayField, EmbeddedDataField } = foundry.data.fields;
 
 class HeroItemAdderModCommonModel extends foundry.abstract.DataModel {
     /** @inheritdoc */
@@ -10,30 +10,30 @@ class HeroItemAdderModCommonModel extends foundry.abstract.DataModel {
             XMLID: new StringField(),
             ID: new StringField(),
             BASECOST: new StringField(),
-            LEVELS: new StringField(),
+            LEVELS: new NumberField({ integer: true }),
             ALIAS: new StringField(),
             POSITION: new StringField(),
             MULTIPLIER: new StringField(),
             GRAPHIC: new StringField(),
             COLOR: new StringField(),
             SFX: new StringField(),
-            SHOW_ACTIVE_COST: new StringField(),
+            SHOW_ACTIVE_COST: new BooleanField(),
             OPTION: new StringField(),
             OPTIONID: new StringField(),
             OPTION_ALIAS: new StringField(),
-            INCLUDE_NOTES_IN_PRINTOUT: new StringField(),
+            INCLUDE_NOTES_IN_PRINTOUT: new BooleanField(),
             NAME: new StringField(),
-            SHOWALIAS: new StringField(),
-            PRIVATE: new StringField(),
-            REQUIRED: new StringField(),
-            INCLUDEINBASE: new StringField(),
-            DISPLAYINSTRING: new StringField(),
-            GROUP: new StringField(),
-            SELECTED: new StringField(),
+            SHOWALIAS: new BooleanField(),
+            PRIVATE: new BooleanField(),
+            REQUIRED: new BooleanField(),
+            INCLUDEINBASE: new BooleanField(),
+            DISPLAYINSTRING: new BooleanField(),
+            GROUP: new BooleanField(),
+            SELECTED: new BooleanField(),
             _hdc: new StringField(),
             xmlTag: new StringField(),
             LVLCOST: new StringField(),
-            FORCEALLOW: new StringField(),
+            FORCEALLOW: new BooleanField(),
             COMMENTS: new StringField(),
             LVLVAL: new StringField(),
             // ADDER: new ArrayField(new EmbeddedDataField(HeroAdderModel)), // stack size exceeded
@@ -43,7 +43,7 @@ class HeroItemAdderModCommonModel extends foundry.abstract.DataModel {
     }
     get hdc() {
         try {
-            return new DOMParser().parseFromString(this._hdc, "text/xml");
+            return this._hdc ? new DOMParser().parseFromString(this._hdc, "text/xml") : null;
         } catch (e) {
             console.error(e);
         }
@@ -77,6 +77,22 @@ class HeroItemAdderModCommonModel extends foundry.abstract.DataModel {
         // cache getPowerInfo
         this.#baseInfo ??= getPowerInfo({ XMLID: this.XMLID, xmlTag: this.xmlTag });
         return this.#baseInfo;
+    }
+
+    get cost() {
+        return 0;
+    }
+
+    get adders() {
+        return this.ADDER || [];
+    }
+
+    get modifiers() {
+        return this.MODIFIER || [];
+    }
+
+    get powers() {
+        return this.POWER || [];
     }
 }
 
@@ -128,27 +144,34 @@ class HeroAdderModel extends HeroItemAdderModCommonModel {
         return _cost;
     }
 
-    get adders() {
-        return this.ADDERS || [];
-    }
-
     get BASECOST_total() {
         return this.cost;
     }
 }
 
-class HeroModifierModel extends HeroItemAdderModCommonModel {}
+class HeroModifierModel2 extends HeroItemAdderModCommonModel {}
+
+class HeroModifierModel extends HeroItemAdderModCommonModel {
+    static defineSchema() {
+        return {
+            ...super.defineSchema(),
+            ADDER: new ArrayField(new EmbeddedDataField(HeroAdderModel)),
+            MODIFIER: new ArrayField(new EmbeddedDataField(HeroModifierModel2)),
+            //POWER: new ArrayField(new EmbeddedDataField(HeroPowerModel)),
+        };
+    }
+}
 
 class HeroPowerModel extends HeroItemAdderModCommonModel {}
 
 export class HeroSystem6eItemTypeDataModelGetters extends foundry.abstract.TypeDataModel {
     get description() {
-        return this.parent.getUpdateItemDescription();
+        return this.parent.getItemDescription();
     }
 
     get hdc() {
         try {
-            return new DOMParser().parseFromString(this._hdc, "text/xml");
+            return this._hdc ? new DOMParser().parseFromString(this._hdc, "text/xml") : null;
         } catch (e) {
             console.error(e);
         }
@@ -183,12 +206,56 @@ export class HeroSystem6eItemTypeDataModelGetters extends foundry.abstract.TypeD
         this.#baseInfo ??= getPowerInfo({ item: this.parent, xmlTag: this.xmlTag });
         return this.#baseInfo;
     }
+
+    get activePoints() {
+        return this.parent.calcItemPoints().activePoints;
+    }
+
+    get characterPointCost() {
+        return this.parent.calcItemPoints().characterPointCost;
+    }
+
+    get realCost() {
+        return this.parent.calcItemPoints().realCost;
+    }
+
+    get _activePointsWithoutEndMods() {
+        return this.parent.calcItemPoints()._activePointsWithoutEndMods;
+    }
+
+    get _advantages() {
+        return this.parent.calcItemPoints()._advantages;
+    }
+
+    get killing() {
+        return this.parent.getMakeAttack().killing;
+    }
+
+    get knockbackMultiplier() {
+        return this.parent.getMakeAttack().knockbackMultiplier;
+    }
+
+    get usesStrength() {
+        return this.parent.getMakeAttack().usesStrength;
+    }
+
+    get piercing() {
+        return this.parent.getMakeAttack().piercing;
+    }
+
+    get penetrating() {
+        return this.parent.getMakeAttack().penetrating;
+    }
+
+    get stunBodyDamage() {
+        return this.parent.getMakeAttack().stunBodyDamage;
+    }
 }
 
 export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeDataModelGetters {
     static defineSchema() {
         return {
-            AFFECTS_TOTAL: new StringField(),
+            AFFECTS_TOTAL: new BooleanField(),
             ADD_MODIFIERS_TO_BASE: new StringField(),
             OPTION: new StringField(),
             OPTIONID: new StringField(),
@@ -200,7 +267,7 @@ export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeData
             GRAPHIC: new StringField(),
             ID: new StringField(),
             INPUT: new StringField(),
-            LEVELS: new StringField(),
+            LEVELS: new NumberField({ integer: true }),
             MODIFIER: new ArrayField(new EmbeddedDataField(HeroModifierModel)),
             MULTIPLIER: new StringField(),
             NAME: new StringField(),
@@ -210,10 +277,11 @@ export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeData
             POWER: new ArrayField(new EmbeddedDataField(HeroPowerModel)),
             SFX: new StringField(),
             XMLID: new StringField(),
-            SHOW_ACTIVE_COST: new StringField(),
-            INCLUDE_NOTES_IN_PRINTOUT: new StringField(),
+            SHOW_ACTIVE_COST: new BooleanField(),
+            INCLUDE_NOTES_IN_PRINTOUT: new BooleanField(),
             _active: new ObjectField(), // action
             _hdc: new StringField(),
+            is5e: new BooleanField(),
             xmlTag: new StringField(),
         };
     }
@@ -226,7 +294,7 @@ export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
         // Note that the return is just a simple object
         return {
             ...super.defineSchema(),
-            AFFECTS_PRIMARY: new StringField(),
+            AFFECTS_PRIMARY: new BooleanField(),
             ACTIVE: new StringField(),
             BODYLEVELS: new StringField(),
             DEFENSE: new StringField(),
@@ -260,18 +328,18 @@ export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
             STR: new StringField(),
             TARGET: new StringField(),
             USECUSTOMENDCOLUMN: new StringField(),
-            USESTANDARDEFFECT: new StringField(),
+            USESTANDARDEFFECT: new BooleanField(),
             ULTRA_SLOT: new StringField(),
             VISIBLE: new StringField(),
             WIDTHLEVELS: new StringField(),
 
             // Skill
             CHARACTERISTIC: new StringField(),
-            EVERYMAN: new StringField(),
-            FAMILIARITY: new StringField(),
+            EVERYMAN: new BooleanField(),
+            FAMILIARITY: new BooleanField(),
             INTBASED: new StringField(),
-            LEVELSONLY: new StringField(),
-            PROFICIENCY: new StringField(),
+            LEVELSONLY: new BooleanField(),
+            PROFICIENCY: new BooleanField(),
             ROLL: new StringField(),
             TEXT: new StringField(),
             TYPE: new StringField(),
@@ -316,14 +384,14 @@ export class HeroSystem6eItemSkill extends HeroSystem6eItemTypeDataModelProps {
         return {
             ...super.defineSchema(),
             CHARACTERISTIC: new StringField(),
-            EVERYMAN: new StringField(),
-            FAMILIARITY: new StringField(),
-            INTBASED: new StringField(),
-            LEVELSONLY: new StringField(),
+            EVERYMAN: new BooleanField(),
+            FAMILIARITY: new BooleanField(),
+            INTBASED: new BooleanField(),
+            LEVELSONLY: new BooleanField(),
             OPTION: new StringField(),
             OPTIONID: new StringField(),
             OPTION_ALIAS: new StringField(),
-            PROFICIENCY: new StringField(),
+            PROFICIENCY: new BooleanField(),
             ROLL: new StringField(),
             TEXT: new StringField(),
             TYPE: new StringField(),
@@ -357,14 +425,14 @@ export class HeroSystem6eItemManeuver extends HeroSystem6eItemTypeDataModelGette
         const { StringField } = foundry.data.fields;
         // Note that the return is just a simple object
         return {
-            ADDSTR: new StringField(),
+            ADDSTR: new BooleanField(),
             DC: new StringField(),
             DCV: new StringField(),
             DISPLAY: new StringField(),
             EFFECT: new StringField(),
             OCV: new StringField(),
             PHASE: new StringField(),
-            USEWEAPON: new StringField(),
+            USEWEAPON: new BooleanField(),
             WEAPONEFFECT: new StringField(),
             XMLID: new StringField(),
             _active: new ObjectField(), // action
@@ -382,7 +450,7 @@ export class HeroSystem6eItemMartialArt extends HeroSystem6eItemTypeDataModelPro
             ...super.defineSchema(),
 
             ACTIVECOST: new StringField(),
-            ADDSTR: new StringField(),
+            ADDSTR: new BooleanField(),
             CATEGORY: new StringField(),
             CUSTOM: new StringField(),
             DAMAGETYPE: new StringField(),
@@ -395,9 +463,33 @@ export class HeroSystem6eItemMartialArt extends HeroSystem6eItemTypeDataModelPro
             PHASE: new StringField(),
             RANGE: new StringField(),
             STRMULT: new StringField(),
-            USEWEAPON: new StringField(),
+            USEWEAPON: new BooleanField(),
             WEAPONEFFECT: new StringField(),
         };
+    }
+
+    get killing() {
+        return this.parent.getMakeAttack().killing;
+    }
+
+    get knockbackMultiplier() {
+        return this.parent.getMakeAttack().knockbackMultiplier;
+    }
+
+    get usesStrength() {
+        return this.parent.getMakeAttack().usesStrength;
+    }
+
+    get piercing() {
+        return this.parent.getMakeAttack().piercing;
+    }
+
+    get penetrating() {
+        return this.parent.getMakeAttack().penetrating;
+    }
+
+    get stunBodyDamage() {
+        return this.parent.getMakeAttack().stunBodyDamage;
     }
 }
 

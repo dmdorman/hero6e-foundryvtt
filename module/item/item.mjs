@@ -52,9 +52,9 @@ import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mj
 import { Attack } from "../utility/attack.mjs";
 import { getItemDefenseVsAttack } from "../utility/defense.mjs";
 import { overrideCanAct } from "../settings/settings-helpers.mjs";
-import { HeroSystem6eAdder } from "./adder.mjs";
-import { HeroSystem6eModifier } from "./modifier.mjs";
-import { HeroSystem6eConnectingPower } from "./connectingPower.mjs";
+// import { HeroSystem6eAdder } from "./adder.mjs";
+// import { HeroSystem6eModifier } from "./modifier.mjs";
+// import { HeroSystem6eConnectingPower } from "./connectingPower.mjs";
 import {
     HeroSystem6eItemPower,
     HeroSystem6eItemEquipment,
@@ -308,13 +308,13 @@ export class HeroSystem6eItem extends Item {
             this.system.debugModelProps();
         } else {
             if (this.type === "attack") {
-                console.error(`Invalid item.type = ${this.type} for ${this.actor?.name}`, this);
+                console.warn(`Invalid item.type = ${this.type} for ${this.actor?.name}`, this);
                 return;
             }
             if (this.type === "misc") {
                 return; // don't care about misc
             }
-            debugger;
+            console.error(`Invalid item.type = ${this.type} for ${this.actor?.name}`, this);
         }
     }
     XprepareData() {
@@ -557,9 +557,9 @@ export class HeroSystem6eItem extends Item {
 
         if (this.id && this.system.XMLID === "DENSITYINCREASE") {
             const noStrIncrease = this.modifiers.find((mod) => mod.XMLID === "NOSTRINCREASE");
-            const strAdd = noStrIncrease ? 0 : Math.floor(this.system.value) * 5;
-            const pdAdd = Math.floor(this.system.value);
-            const edAdd = Math.floor(this.system.value);
+            const strAdd = noStrIncrease ? 0 : Math.floor(this.system.LEVELS) * 5;
+            const pdAdd = Math.floor(this.system.LEVELS);
+            const edAdd = Math.floor(this.system.LEVELS);
 
             let activeEffect = Array.from(this.effects)?.[0] || {};
             activeEffect.name = (this.name ? `${this.name}: ` : "") + `${this.system.XMLID} ${this.system.value}`;
@@ -689,7 +689,7 @@ export class HeroSystem6eItem extends Item {
         // 6e Shrinking (1 m tall, 12.5 kg mass, -2 PER Rolls to perceive character, +2 DCV, takes +6m KB)
         // 5e Shrinking (1 m tall, 12.5 kg mass, -2 PER Rolls to perceive character, +2 DCV)
         if (this.id && this.system.XMLID === "SHRINKING") {
-            const dcvAdd = Math.floor(this.system.value) * 2;
+            const dcvAdd = Math.floor(this.system.LEVELS) * 2;
 
             let activeEffect = Array.from(this.effects)?.[0] || {};
             activeEffect.name = (this.name ? `${this.name}: ` : "") + `${this.system.XMLID} ${this.system.value}`;
@@ -1277,8 +1277,7 @@ export class HeroSystem6eItem extends Item {
     // }
 
     calcItemPoints() {
-        const performanceStart = new Date().getTime();
-        let changed = false;
+        //let changed = false;
         //super.prepareDerivedData();
 
         if (this.actor?.is5e === undefined) {
@@ -1288,41 +1287,39 @@ export class HeroSystem6eItem extends Item {
 
         // Base points plus adders
         const _basePointsPlusAdders = this._basePoints + this._addersCost;
-        if (_basePointsPlusAdders !== this.system.basePointsPlusAdders) {
-            changed = true;
-        }
+        // if (_basePointsPlusAdders !== this.system.basePointsPlusAdders) {
+        //     //changed = true;
+        // }
         this.system.basePointsPlusAdders = _basePointsPlusAdders;
         this.system.basePointsPlusAddersForActivePoints = _basePointsPlusAdders - this._negativeCustomAddersCost;
 
         // Active Points = (Base Points + cost of any Adders) x (1 + total value of all Advantages)
         const _activePoints = this._activePoints;
-        if (_activePoints !== this.system.activePoints) {
-            changed = true;
-        }
-        this.system.activePoints = _activePoints;
-        this.system._activePointsWithoutEndMods = this._activePointsForEnd;
-        this.system._advantages = this._advantageCost;
+        // if (_activePoints !== this.system.activePoints) {
+        //     //changed = true;
+        // }
+
+        const results = {
+            activePoints: _activePoints,
+            _activePointsWithoutEndMods: this._activePointsForEnd,
+            _advantages: this._advantageCost,
+        };
 
         // Real Cost = Active Points / (1 + total value of all limitations)
         const _realCost = this._realCost;
-        if (_realCost !== this.system.realCost) {
-            changed = true;
-            this.system.realCost = _realCost;
+        if (_realCost !== results.realCost) {
+            //changed = true;
+            results.realCost = _realCost;
         }
 
         // CharacterPointCost
-        const _characterPointCost = this._characterPointCost;
-        if (_characterPointCost !== this.system.characterPointCost) {
-            changed = true;
-        }
-        this.system.characterPointCost = this._characterPointCost;
+        //const _characterPointCost = this._characterPointCost;
+        // if (_characterPointCost !== this.system.characterPointCost) {
+        //     changed = true;
+        // }
+        results.characterPointCost = this._characterPointCost;
 
-        const performanceDuration = new Date().getTime() - performanceStart;
-        if (performanceDuration > 1000) {
-            console.warn(`Performance concern. Took ${performanceDuration} to prepareDerivedData`, this);
-        }
-
-        return changed;
+        return results;
     }
 
     async _onUpdate(changed, options, userId) {
@@ -3247,7 +3244,7 @@ export class HeroSystem6eItem extends Item {
         // return _adders;
     }
 
-    static #powersCache = HeroSystemGenericSharedCache.create("powers");
+    //static #powersCache = HeroSystemGenericSharedCache.create("powers");
     get powers() {
         if (!this.system?.POWER) {
             console.warn(`${this.actor?.name}/${this.detailedName()} has no POWER`);
@@ -3326,7 +3323,7 @@ export class HeroSystem6eItem extends Item {
         return Math.max(1, endCost);
     }
 
-    getUpdateItemDescription() {
+    getItemDescription() {
         // Description (eventual goal is to largely match Hero Designer)
         const system = this.system;
         const is5e = !!this.actor?.system.is5e;
@@ -3377,14 +3374,14 @@ export class HeroSystem6eItem extends Item {
                 // 6e Shrinking (1 m tall, 12.5 kg mass, -2 PER Rolls to perceive character, +2 DCV, takes +6m KB)
                 // 5e Shrinking (1 m tall, 12.5 kg mass, -2 PER Rolls to perceive character, +2 DCV) -- Also +3" KB which is not in HD
                 description = `${system.ALIAS} (`;
-                description += `${(2 / Math.pow(2, parseInt(system.value)))
+                description += `${(2 / Math.pow(2, parseInt(system.LEVELS)))
                     .toPrecision(3)
                     .replace(/\.?0+$/, "")} m tall`;
-                description += `, ${(100 / Math.pow(8, parseInt(system.value))).toPrecision(4).replace(/\.?0+$/, "")}
+                description += `, ${(100 / Math.pow(8, parseInt(system.LEVELS))).toPrecision(4).replace(/\.?0+$/, "")}
                 kg mass`;
-                description += `, -${system.value * 2} PER Rolls to perceive character`;
-                description += `, +${system.value * 2} DCV`;
-                description += `, takes +${system.value * (this.is5e ? 3 : 6) + getSystemDisplayUnits(this.is5e)} KB)`;
+                description += `, -${system.LEVELS * 2} PER Rolls to perceive character`;
+                description += `, +${system.LEVELS * 2} DCV`;
+                description += `, takes +${system.LEVELS * (this.is5e ? 3 : 6) + getSystemDisplayUnits(this.is5e)} KB)`;
 
                 break;
 
@@ -3503,21 +3500,21 @@ export class HeroSystem6eItem extends Item {
             case "RUNNING":
             case "SWIMMING":
                 // Running +25m (12m/37m total)
-                description = `${system.ALIAS} +${system.value}${getSystemDisplayUnits(this.is5e)}`;
+                description = `${system.ALIAS} +${system.LEVELS}${getSystemDisplayUnits(this.is5e)}`;
                 break;
 
             case "GLIDING":
             case "FLIGHT":
             case "TELEPORTATION":
             case "SWINGING":
-                description = `${system.ALIAS} ${system.value}${getSystemDisplayUnits(this.is5e)}`;
+                description = `${system.ALIAS} ${system.LEVELS}${getSystemDisplayUnits(this.is5e)}`;
                 break;
             case "TUNNELING":
                 {
                     // Tunneling 22m through 10 PD materials
                     let pd;
                     if (this.actor?.system.is5e) {
-                        pd = parseInt(system.value);
+                        pd = parseInt(system.LEVELS);
                     } else {
                         const defbonus = (system.ADDER || []).find((o) => o.XMLID == "DEFBONUS");
                         pd = 1 + parseInt(defbonus?.LEVELS || 0);
@@ -3774,7 +3771,7 @@ export class HeroSystem6eItem extends Item {
                 // (93 Active Points); Limited Range (-1/4), Only In Alternate Identity (-1/4),
                 // Extra Time (Delayed Phase, -1/4), Requires A Roll (14- roll; -1/4)
                 description = `${system.ALIAS} (${system.value} STR)`;
-                const strDetails = this.actor?.strDetails(parseInt(system.value));
+                const strDetails = this.actor?.strDetails(parseInt(system.LEVELS));
                 if (strDetails) {
                     description += ` Throw ${strDetails.strThrow}${getSystemDisplayUnits(this.actor.is5e)}`;
                 }
@@ -3833,7 +3830,7 @@ export class HeroSystem6eItem extends Item {
 
                     const ENDURANCERESERVEREC = this.findModsByXmlid("ENDURANCERESERVEREC");
                     if (ENDURANCERESERVEREC) {
-                        if (parseInt(system.value) === parseInt(system.max)) {
+                        if (parseInt(system.LEVELS) === parseInt(system.max)) {
                             description += ` (${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
                         } else {
                             description += ` (${system.value}/${system.max} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
@@ -3844,7 +3841,7 @@ export class HeroSystem6eItem extends Item {
 
             case "SKILL_LEVELS":
                 //<i>Martial Practice:</i>  +10 with single Skill or Characteristic Roll
-                description = `${parseInt(system.value).signedStringHero()} ${system.OPTION_ALIAS}`;
+                description = `${parseInt(system.LEVELS).signedStringHero()} ${system.OPTION_ALIAS}`;
                 break;
 
             case "VPP":
@@ -4353,8 +4350,8 @@ export class HeroSystem6eItem extends Item {
 
         // Standard Effect
         if (system.USESTANDARDEFFECT) {
-            let stun = parseInt(system.value * 3);
-            let body = parseInt(system.value);
+            let stun = parseInt(system.LEVELS * 3);
+            let body = parseInt(system.LEVELS);
 
             if (
                 this.findModsByXmlid("PLUSONEHALFDIE") ||
@@ -4535,19 +4532,19 @@ export class HeroSystem6eItem extends Item {
         }
 
         if (modifier.XMLID === "CUMULATIVE" && parseInt(modifier.LEVELS) > 0) {
-            result += parseInt(system.value) * 6 * (parseInt(modifier.LEVELS) + 1) + " points; ";
+            result += parseInt(system.LEVELS) * 6 * (parseInt(modifier.LEVELS) + 1) + " points; ";
         }
 
         if (modifier.OPTION_ALIAS && !["VISIBLE", "CHARGES", "AVAD", "ABLATIVE"].includes(modifier.XMLID)) {
             switch (modifier.XMLID) {
                 case "AOE":
-                    if (modifier.OPTION_ALIAS === "One Hex" && item.system.areaOfEffect.value > 1) {
+                    if (modifier.OPTION_ALIAS === "One Hex" && item.aoeAttackParameters().value > 1) {
                         result += "Radius; ";
                     } else if (modifier.OPTION_ALIAS === "Any Area" && !item.actor?.system?.is5e) {
                         result += "2m Areas; ";
                     } else if (modifier.OPTION_ALIAS === "Line") {
-                        const width = item.system.areaOfEffect.width;
-                        const height = item.system.areaOfEffect.height;
+                        const width = item.aoeAttackParameters().width;
+                        const height = item.aoeAttackParameters().height;
 
                         result += `Long, ${height}${getSystemDisplayUnits(
                             item.actor.is5e,
@@ -4560,7 +4557,7 @@ export class HeroSystem6eItem extends Item {
                 case "EXPLOSION":
                     {
                         const shape = modifier.OPTION_ALIAS === "Normal (Radius)" ? "Radius" : modifier.OPTION_ALIAS;
-                        result += `${shape}; -1 DC/${item.system.areaOfEffect.dcFalloff}"; `;
+                        result += `${shape}; -1 DC/${item.aoeAttackParameters().dcFalloff}"; `;
                     }
                     break;
                 case "EXTRATIME":
@@ -4835,71 +4832,71 @@ export class HeroSystem6eItem extends Item {
         }
     }
 
-    makeAttack() {
+    getMakeAttack() {
         // AARON: Do we really need makeAttack?
         // Many of these properties can converted into get properties on the item and calculated on the fly.
 
-        window.prepareData.makeAttack ??= {};
-
         const xmlid = this.system.XMLID;
-        this.system.subType = "attack";
-        this.system.killing = false;
-        this.system.knockbackMultiplier = 1;
-        this.system.usesStrength = true;
-        this.system.piercing = 0;
-        this.system.penetrating = 0;
-        this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunbody;
+
+        const results = {
+            killing: false,
+            knockbackMultiplier: 1,
+            usesStrength: true,
+            piercing: 0,
+            penetrating: 0,
+            stunBodyDamage: CONFIG.HERO.stunBodyDamages.stunbody,
+        };
 
         // Maneuvers and martial arts may allow strength to be added or have extra effects.
         // PH: FIXME: Weapons?
         if (["maneuver", "martialart"].includes(this.type)) {
             if (this.system.ADDSTR != undefined) {
-                this.system.usesStrength = this.system.ADDSTR;
+                results.usesStrength = this.system.ADDSTR;
             } else if (
                 this.system.EFFECT &&
                 (this.system.EFFECT.search(/\[FLASHDC\]/) > -1 || this.system.EFFECT.search(/\[NNDDC\]/) > -1)
             ) {
-                this.system.usesStrength = false;
+                results.usesStrength = false;
             }
 
             if (this.system.EFFECT && this.system.EFFECT.search(/\[FLASHDC\]/) > -1) {
-                this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
+                results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
             } else if (this.system.EFFECT && this.system.EFFECT.search(/\[NNDDC\]/) > -1) {
-                this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunonly;
+                results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunonly;
             }
         }
 
         // Specific power overrides
         if (xmlid === "ENTANGLE") {
-            this.system.knockbackMultiplier = 0;
-            this.system.usesStrength = false;
-            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
+            results.knockbackMultiplier = 0;
+            results.usesStrength = false;
+            results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
         } else if (xmlid === "DARKNESS") {
-            this.system.knockbackMultiplier = 0;
-            this.system.usesStrength = false;
-            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
+            results.knockbackMultiplier = 0;
+            results.usesStrength = false;
+            results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
         } else if (xmlid === "IMAGES") {
-            this.system.knockbackMultiplier = 0;
-            this.system.usesStrength = false;
-            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
+            results.knockbackMultiplier = 0;
+            results.usesStrength = false;
+            results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
         } else if (xmlid === "ABSORPTION") {
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         } else if (xmlid === "AID" || xmlid === "SUCCOR") {
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         } else if (xmlid === "DISPEL") {
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         } else if (xmlid === "DRAIN") {
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         } else if (xmlid === "HEALING") {
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         } else if (xmlid === "SUPPRESS") {
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         } else if (xmlid === "TRANSFER") {
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         } else if (xmlid === "EGOATTACK") {
-            this.system.knockbackMultiplier = 0;
-            this.system.usesStrength = false;
-            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunonly;
+            results.knockbackMultiplier = 0;
+            results.usesStrength = false;
+            results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunonly;
         } else if (
             xmlid === "MINDCONTROL" ||
             xmlid === "MENTALILLUSIONS" ||
@@ -4907,55 +4904,55 @@ export class HeroSystem6eItem extends Item {
             xmlid === "TELEPATHY" ||
             xmlid === "POSSESSION"
         ) {
-            this.system.knockbackMultiplier = 0;
-            this.system.usesStrength = false;
-            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
+            results.knockbackMultiplier = 0;
+            results.usesStrength = false;
+            results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
         } else if (xmlid === "CHANGEENVIRONMENT") {
-            this.system.knockbackMultiplier = 0;
-            this.system.usesStrength = false;
-            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
+            results.knockbackMultiplier = 0;
+            results.usesStrength = false;
+            results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
         } else if (xmlid === "FLASH") {
-            this.system.knockbackMultiplier = 0;
-            this.system.usesStrength = false;
-            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
+            results.knockbackMultiplier = 0;
+            results.usesStrength = false;
+            results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
         } else if (xmlid === "ENERGYBLAST") {
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         } else if (xmlid === "RKA") {
-            this.system.killing = true;
-            this.system.usesStrength = false;
+            results.killing = true;
+            results.usesStrength = false;
         } else if (xmlid === "TRANSFORM") {
-            this.system.knockbackMultiplier = 0;
-            this.system.usesStrength = false;
-            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
+            results.knockbackMultiplier = 0;
+            results.usesStrength = false;
+            results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.effectonly;
         } else if (xmlid === "__STRENGTHDAMAGE") {
             // This is strength damage so it doesn't double up and add itself.
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         } else if (xmlid === "LUCK" || xmlid === "UNLUCK") {
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         }
 
         // AVAD
         const avad = this.findModsByXmlid("AVAD");
         if (avad) {
-            this.system.class = "avad";
+            results.class = "avad";
         }
 
         // Armor Piercing
         const armorPiercing = this.findModsByXmlid("ARMORPIERCING");
         if (armorPiercing) {
-            this.system.piercing = parseInt(armorPiercing.LEVELS);
+            results.piercing = parseInt(armorPiercing.LEVELS);
         }
 
         // Penetrating
         const penetrating = this.findModsByXmlid("PENETRATING");
         if (penetrating) {
-            this.system.penetrating = parseInt(penetrating.LEVELS);
+            results.penetrating = parseInt(penetrating.LEVELS);
         }
 
         // No Knockback
         const noKb = this.findModsByXmlid("NOKB");
         if (noKb) {
-            this.system.knockbackMultiplier = 0;
+            results.knockbackMultiplier = 0;
         }
 
         // Double Knockback
@@ -4966,40 +4963,41 @@ export class HeroSystem6eItem extends Item {
             if (this.actor.system.is5e) {
                 // There are 2 types of knockback multipliers with the same XMLID for 5e.
                 if (cost === 0.5) {
-                    this.system.knockbackMultiplier = 1.5;
+                    results.knockbackMultiplier = 1.5;
                 } else {
-                    this.system.knockbackMultiplier = 2;
+                    results.knockbackMultiplier = 2;
                 }
             } else {
                 // 6e allows it to be purchased in several multiples although HD doesn't support it in a single
                 // modifier. The code is here just in case things change.
                 const multiplier = 4 * cost;
-                this.system.knockbackMultiplier = multiplier;
+                results.knockbackMultiplier = multiplier;
             }
         }
 
         if (xmlid === "HKA" || this.system.EFFECT?.indexOf("KILLING") > -1) {
-            this.system.killing = true;
+            results.killing = true;
         } else if (xmlid === "TELEKINESIS") {
-            this.system.usesStrength = false;
-            this.system.usesTk = true;
+            results.usesStrength = false;
+            results.usesTk = true;
         }
 
         // Damage effect/type modifiers
         const noStrBonus = this.findModsByXmlid("NOSTRBONUS");
         if (noStrBonus) {
-            this.system.usesStrength = false;
+            results.usesStrength = false;
         }
 
         const stunOnly = this.findModsByXmlid("STUNONLY");
         if (stunOnly) {
-            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunonly;
+            results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunonly;
         }
 
         const doesBody = this.findModsByXmlid("DOESBODY");
         if (doesBody) {
-            this.system.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunbody;
+            results.stunBodyDamage = CONFIG.HERO.stunBodyDamages.stunbody;
         }
+        return results;
     }
 
     updateRoll() {
@@ -5252,9 +5250,9 @@ export class HeroSystem6eItem extends Item {
             roll = `${rollValue}-`;
         } else if (skillData.XMLID === "DANGER_SENSE") {
             const level = parseInt(skillData.LEVELS || 0);
-            if (!skillData.LEVELS) {
-                console.error(`unknown levels ${skillData.LEVELS} for DANGER_SENSE`);
-            }
+            // if (skillData.LEVELS) {
+            //     console.warn(`unknown levels ${skillData.LEVELS} LEVEL for DANGER_SENSE`);
+            // }
 
             const perceptionItem = (this.actor?.items || []).find((power) => power.system.XMLID === "PERCEPTION");
             const perceptionRoll = parseInt(perceptionItem?.system.roll?.replace("-", "") || 11);

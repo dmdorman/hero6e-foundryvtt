@@ -303,6 +303,10 @@ export function getManeuverEffect(item) {
 export function isManeuverThatDoesReplaceableDamageType(item) {
     const effect = getManeuverEffect(item);
 
+    if (!effect) {
+        debugger;
+    }
+
     return (
         effect.search(/\[NORMALDC\]/) > -1 ||
         effect.search(/\[NNDDC\]/) > -1 ||

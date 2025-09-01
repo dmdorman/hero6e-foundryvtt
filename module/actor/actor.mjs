@@ -3101,8 +3101,8 @@ export class HeroSystem6eActor extends Actor {
             }
         }
 
-        await this.calcCharacteristicsCost();
-        await this.CalcActorRealAndActivePoints();
+        //await this.calcCharacteristicsCost();
+        //await this.CalcActorRealAndActivePoints();
 
         //this.render();
 
@@ -3135,21 +3135,21 @@ export class HeroSystem6eActor extends Actor {
         return undefined;
     }
 
-    async CalcActorRealAndActivePoints() {
+    async getActorRealAndActivePoints() {
         // Calculate realCost & Active Points for bought as characteristics
         let characterPointCost = 0;
         let activePoints = 0;
 
-        this.system.pointsDetail = {};
-        this.system.activePointsDetail = {};
+        let pointsDetail = {};
+        let activePointsDetail = {};
 
         const powers = getCharacteristicInfoArrayForActor(this);
         for (const powerInfo of powers) {
             characterPointCost += parseFloat(this.system.characteristics[powerInfo.key.toLowerCase()]?.realCost || 0);
             activePoints += parseFloat(this.system.characteristics[powerInfo.key.toLowerCase()]?.activePoints || 0);
         }
-        this.system.pointsDetail.characteristics = characterPointCost;
-        this.system.activePointsDetail.characteristics = characterPointCost;
+        pointsDetail.characteristics = characterPointCost;
+        activePointsDetail.characteristics = characterPointCost;
 
         // ActivePoints are the same a RealCosts for base CHARACTERISTICS
         activePoints = characterPointCost;
@@ -3175,11 +3175,11 @@ export class HeroSystem6eActor extends Actor {
                     activePoints += _activePoints;
                 }
 
-                this.system.pointsDetail[item.parentItem?.type || item.type] ??= 0;
-                this.system.activePointsDetail[item.parentItem?.type || item.type] ??= 0;
+                pointsDetail[item.parentItem?.type || item.type] ??= 0;
+                activePointsDetail[item.parentItem?.type || item.type] ??= 0;
 
-                this.system.pointsDetail[item.parentItem?.type || item.type] += _characterPointCost;
-                this.system.activePointsDetail[item.parentItem?.type || item.type] += _activePoints;
+                pointsDetail[item.parentItem?.type || item.type] += _characterPointCost;
+                activePointsDetail[item.parentItem?.type || item.type] += _activePoints;
             }
         }
 
@@ -3187,14 +3187,14 @@ export class HeroSystem6eActor extends Actor {
         const DISAD_POINTS = parseFloat(this.system.CHARACTER?.BASIC_CONFIGURATION?.DISAD_POINTS || 0);
         const _disadPoints = Math.min(DISAD_POINTS, this.system.pointsDetail?.disadvantage || 0);
         if (_disadPoints !== 0) {
-            this.system.pointsDetail.MatchingDisads = _disadPoints;
-            this.system.activePointsDetail.MatchingDisads = _disadPoints;
+            pointsDetail.MatchingDisads = _disadPoints;
+            activePointsDetail.MatchingDisads = _disadPoints;
             // characterPointCost -= _disadPoints;
             // activePoints -= _disadPoints;
         }
 
-        this.system.realCost = characterPointCost;
-        this.system.activePoints = activePoints;
+        let realCost = characterPointCost;
+        //this.system.activePoints = activePoints;
         if (this.id) {
             await this.update(
                 {
@@ -3207,9 +3207,17 @@ export class HeroSystem6eActor extends Actor {
                 { hideChatMessage: true },
             );
         } else {
-            this.system.points = characterPointCost;
-            this.system.activePoints = activePoints;
+            //points = characterPointCost;
+            //this.system.activePoints = activePoints;
         }
+
+        return {
+            activePoints,
+            characterPointCost,
+            pointsDetail,
+            activePointsDetail,
+            realCost,
+        };
     }
 
     pslPentaltyItems(penaltyType) {
