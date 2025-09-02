@@ -1821,7 +1821,7 @@ export class HeroSystem6eActor extends Actor {
                     (item) =>
                         item.system.charges &&
                         (item.system.charges.max != item.system.charges.value ||
-                            item.system.charges.max != item.system.charges.value),
+                            item.system.charges.max != item.system.LEVELS), //charges.value),
                 )
                 .map((o) => o.system),
         };
@@ -2277,8 +2277,8 @@ export class HeroSystem6eActor extends Actor {
                 if (clipsUsed) {
                     await item.update({ "system.clips.value": Math.max(0, item.system.clipsMax - clipsUsed) });
                 }
-                item.updateItemDescription();
-                await item.update({ "system.description": item.system.description });
+                //item.updateItemDescription();
+                //await item.update({ "system.description": item.system.description });
             } else {
                 await ui.notifications.warn(
                     `Unable to locate ${chargeData.NAME}/${chargeData.ALIAS} to consume charges after upload.`,
@@ -2802,7 +2802,7 @@ export class HeroSystem6eActor extends Actor {
                 if (child.attributes.length > 0) {
                     try {
                         jsonChild.xmlTag = tagName;
-                        jsonChild._hdcXml = new XMLSerializer().serializeToString(child.cloneNode());
+                        jsonChild._hdcXml = new XMLSerializer().serializeToString(child); //new XMLSerializer().serializeToString(child.cloneNode());
                     } catch (e) {
                         console.error(e);
                     }

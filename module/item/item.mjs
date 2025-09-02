@@ -1239,14 +1239,14 @@ export class HeroSystem6eItem extends Item {
         const CHARGES = this.findModsByXmlid("CHARGES");
         if (CHARGES) {
             this.system.charges = {
-                max: parseInt(CHARGES.OPTION_ALIAS),
+                //max: parseInt(CHARGES.OPTION_ALIAS),
                 value: parseInt(CHARGES.OPTION_ALIAS),
-                clipsMax: Math.pow(parseInt((CHARGES.ADDER || []).find((o) => o.XMLID === "CLIPS")?.LEVELS || 1), 2),
+                //clipsMax: Math.pow(parseInt((CHARGES.ADDER || []).find((o) => o.XMLID === "CLIPS")?.LEVELS || 1), 2),
                 clips: Math.pow(parseInt((CHARGES.ADDER || []).find((o) => o.XMLID === "CLIPS")?.LEVELS || 1), 2),
-                recoverable: !!(CHARGES.ADDER || []).find((o) => o.XMLID === "RECOVERABLE"),
-                continuing: !!(CHARGES.ADDER || []).find((o) => o.XMLID === "CONTINUING")?.OPTIONID,
-                boostable: !!(CHARGES.ADDER || []).find((o) => o.XMLID === "BOOSTABLE"),
-                fuel: !!(CHARGES.ADDER || []).find((o) => o.XMLID === "FUEL"),
+                // recoverable: !!(CHARGES.ADDER || []).find((o) => o.XMLID === "RECOVERABLE"),
+                // continuing: !!(CHARGES.ADDER || []).find((o) => o.XMLID === "CONTINUING")?.OPTIONID,
+                // boostable: !!(CHARGES.ADDER || []).find((o) => o.XMLID === "BOOSTABLE"),
+                // fuel: !!(CHARGES.ADDER || []).find((o) => o.XMLID === "FUEL"),
                 ...this.system.charges,
             };
         }
@@ -1367,9 +1367,9 @@ export class HeroSystem6eItem extends Item {
      */
     async resetToOriginal() {
         // Set Charges to max
-        if (this.system.charges && this.system.charges.value !== this.system.charges.max) {
+        if (this.system.charges && this.system.charges.value !== this.system.LEVELS) {
             await this.update({
-                [`system.charges.value`]: this.system.charges.max,
+                [`system.charges.value`]: this.system.LEVELS, //charges.max,
             });
             await this._postUpload();
         }
@@ -2219,15 +2219,15 @@ export class HeroSystem6eItem extends Item {
         return changed;
     }
 
-    setInitialRange(power) {
-        if (power) {
-            this.system.range = power.range;
-        } else {
-            // This should never happen, missing something from CONFIG.mjs?  Perhaps with super old actors?
-            this.system.range = CONFIG.HERO.RANGE_TYPES.SELF;
-        }
-        return true;
-    }
+    // setInitialRange(power) {
+    //     if (power) {
+    //         this.system.range = power.range;
+    //     } else {
+    //         // This should never happen, missing something from CONFIG.mjs?  Perhaps with super old actors?
+    //         this.system.range = CONFIG.HERO.RANGE_TYPES.SELF;
+    //     }
+    //     return true;
+    // }
 
     // determinePointCosts() {
     //     let changed = false;
@@ -2358,73 +2358,73 @@ export class HeroSystem6eItem extends Item {
     //     return changed;
     // }
 
-    buildRangeParameters() {
-        const originalRange = this.system.range;
+    // buildRangeParameters() {
+    //     const originalRange = this.system.range;
 
-        // Range Modifiers "self", "no range", "standard", or "los" based on base power.
-        // It is the modified up or down but the only other types that should be added are:
-        // "range based on str" or "limited range"
-        const ranged = !!this.findModsByXmlid("RANGED");
-        const noRange = !!this.findModsByXmlid("NORANGE");
-        const limitedRange =
-            this.findModsByXmlid("RANGED")?.OPTIONID === "LIMITEDRANGE" || // Advantage form
-            !!this.findModsByXmlid("LIMITEDRANGE"); // Limitation form
-        const rangeBasedOnStrength =
-            this.findModsByXmlid("RANGED")?.OPTIONID === "RANGEBASEDONSTR" || // Advantage form
-            !!this.findModsByXmlid("RANGEBASEDONSTR"); // Limitation form
-        const los = !!this.findModsByXmlid("LOS");
-        const normalRange = !!this.findModsByXmlid("NORMALRANGE");
-        const usableOnOthers = !!this.findModsByXmlid("UOO");
-        const boecv = !!this.findModsByXmlid("BOECV");
+    //     // Range Modifiers "self", "no range", "standard", or "los" based on base power.
+    //     // It is the modified up or down but the only other types that should be added are:
+    //     // "range based on str" or "limited range"
+    //     const ranged = !!this.findModsByXmlid("RANGED");
+    //     const noRange = !!this.findModsByXmlid("NORANGE");
+    //     const limitedRange =
+    //         this.findModsByXmlid("RANGED")?.OPTIONID === "LIMITEDRANGE" || // Advantage form
+    //         !!this.findModsByXmlid("LIMITEDRANGE"); // Limitation form
+    //     const rangeBasedOnStrength =
+    //         this.findModsByXmlid("RANGED")?.OPTIONID === "RANGEBASEDONSTR" || // Advantage form
+    //         !!this.findModsByXmlid("RANGEBASEDONSTR"); // Limitation form
+    //     const los = !!this.findModsByXmlid("LOS");
+    //     const normalRange = !!this.findModsByXmlid("NORMALRANGE");
+    //     const usableOnOthers = !!this.findModsByXmlid("UOO");
+    //     const boecv = !!this.findModsByXmlid("BOECV");
 
-        // Based on EGO combat value comes with line of sight
-        if (boecv) {
-            this.system.range = CONFIG.HERO.RANGE_TYPES.LINE_OF_SIGHT;
-        }
+    //     // Based on EGO combat value comes with line of sight
+    //     if (boecv) {
+    //         this.system.range = CONFIG.HERO.RANGE_TYPES.LINE_OF_SIGHT;
+    //     }
 
-        // Self only powers cannot be bought to have range unless they become usable on others at which point
-        // they gain no range.
-        if (this.system.range === CONFIG.HERO.RANGE_TYPES.SELF) {
-            if (usableOnOthers) {
-                this.system.range = CONFIG.HERO.RANGE_TYPES.NO_RANGE;
-            }
-        }
+    //     // Self only powers cannot be bought to have range unless they become usable on others at which point
+    //     // they gain no range.
+    //     if (this.system.range === CONFIG.HERO.RANGE_TYPES.SELF) {
+    //         if (usableOnOthers) {
+    //             this.system.range = CONFIG.HERO.RANGE_TYPES.NO_RANGE;
+    //         }
+    //     }
 
-        // No range can be bought to have range.
-        if (this.system.range === CONFIG.HERO.RANGE_TYPES.NO_RANGE) {
-            if (ranged) {
-                this.system.range = CONFIG.HERO.RANGE_TYPES.STANDARD;
-            }
-        }
+    //     // No range can be bought to have range.
+    //     if (this.system.range === CONFIG.HERO.RANGE_TYPES.NO_RANGE) {
+    //         if (ranged) {
+    //             this.system.range = CONFIG.HERO.RANGE_TYPES.STANDARD;
+    //         }
+    //     }
 
-        // Standard range can be bought up or bought down.
-        if (this.system.range === CONFIG.HERO.RANGE_TYPES.STANDARD) {
-            if (noRange) {
-                this.system.range = CONFIG.HERO.RANGE_TYPES.NO_RANGE;
-            } else if (los) {
-                this.system.range = CONFIG.HERO.RANGE_TYPES.LINE_OF_SIGHT;
-            } else if (limitedRange) {
-                this.system.range = CONFIG.HERO.RANGE_TYPES.LIMITED_RANGE;
-            } else if (rangeBasedOnStrength) {
-                this.system.range = CONFIG.HERO.RANGE_TYPES.RANGE_BASED_ON_STR;
-            }
-        }
+    //     // Standard range can be bought up or bought down.
+    //     if (this.system.range === CONFIG.HERO.RANGE_TYPES.STANDARD) {
+    //         if (noRange) {
+    //             this.system.range = CONFIG.HERO.RANGE_TYPES.NO_RANGE;
+    //         } else if (los) {
+    //             this.system.range = CONFIG.HERO.RANGE_TYPES.LINE_OF_SIGHT;
+    //         } else if (limitedRange) {
+    //             this.system.range = CONFIG.HERO.RANGE_TYPES.LIMITED_RANGE;
+    //         } else if (rangeBasedOnStrength) {
+    //             this.system.range = CONFIG.HERO.RANGE_TYPES.RANGE_BASED_ON_STR;
+    //         }
+    //     }
 
-        // Line of sight can be bought down
-        if (this.system.range === CONFIG.HERO.RANGE_TYPES.LINE_OF_SIGHT) {
-            if (normalRange) {
-                this.system.range = CONFIG.HERO.RANGE_TYPES.STANDARD;
-            } else if (rangeBasedOnStrength) {
-                this.system.range = CONFIG.HERO.RANGE_TYPES.RANGE_BASED_ON_STR;
-            } else if (limitedRange) {
-                this.system.range = CONFIG.HERO.RANGE_TYPES.LIMITED_RANGE;
-            } else if (noRange) {
-                this.system.range = CONFIG.HERO.RANGE_TYPES.NO_RANGE;
-            }
-        }
+    //     // Line of sight can be bought down
+    //     if (this.system.range === CONFIG.HERO.RANGE_TYPES.LINE_OF_SIGHT) {
+    //         if (normalRange) {
+    //             this.system.range = CONFIG.HERO.RANGE_TYPES.STANDARD;
+    //         } else if (rangeBasedOnStrength) {
+    //             this.system.range = CONFIG.HERO.RANGE_TYPES.RANGE_BASED_ON_STR;
+    //         } else if (limitedRange) {
+    //             this.system.range = CONFIG.HERO.RANGE_TYPES.LIMITED_RANGE;
+    //         } else if (noRange) {
+    //             this.system.range = CONFIG.HERO.RANGE_TYPES.NO_RANGE;
+    //         }
+    //     }
 
-        return originalRange === this.system.range;
-    }
+    //     return originalRange === this.system.range;
+    // }
 
     // FIXME: Take this function out back and kill it. It's too similar to buildAoeAttackParameters
     aoeAttackParameters() {
@@ -3698,14 +3698,15 @@ export class HeroSystem6eItem extends Item {
                     // Offensive Strike:  1/2 Phase, -2 OCV, +1 DCV, 8d6 Strike
                     // Killing Strike:  1/2 Phase, -2 OCV, +0 DCV, HKA 1d6 +1
                     if (system.PHASE) description += ` ${system.PHASE} Phase`;
-                    const ocv = parseInt(system.ocv || system.OCV);
-                    const dcv = parseInt(system.dcv || system.DCV);
-                    if (isNaN(ocv)) {
-                        description += `, -- OCV`;
-                    } else {
-                        description += `, ${ocv.signedStringHero()} OCV`;
-                    }
-                    description += `, ${dcv.signedStringHero()} DCV`;
+                    // const ocv = parseInt(system.ocv || system.OCV);
+                    // const dcv = parseInt(system.dcv || system.DCV);
+                    // if (isNaN(ocv)) {
+                    //     description += `, -- OCV`;
+                    // } else {
+                    //     description += `, ${ocv.signedStringHero()} OCV`;
+                    // }
+                    // description += `, ${dcv.signedStringHero()} DCV`;
+                    description += `, ${system.OCV} OCV, ${system.DCV} DCV`;
 
                     const maneuverEffect = getManeuverEffect(this);
                     if (maneuverEffect) {
@@ -4447,12 +4448,12 @@ export class HeroSystem6eItem extends Item {
                     result += ", ";
 
                     const maxCharges = parseInt(modifier.OPTION_ALIAS);
-                    if (maxCharges !== parseInt(system.charges?.max)) {
-                        console.warn(
-                            `CHARGES mismatch ${item.actor?.name}:${item.name} is it ${maxCharges} or ${parseInt(system.charges?.max)}. Check parent ${item.parentItem?.name}.`,
-                            item,
-                        );
-                    }
+                    // if (maxCharges !== parseInt(system.LEVELS)) {
+                    //     console.warn(
+                    //         `CHARGES mismatch ${item.actor?.name}:${item.name} is it ${maxCharges} or ${parseInt(system.charges?.max)}. Check parent ${item.parentItem?.name}.`,
+                    //         item,
+                    //     );
+                    // }
                     const currentCharges = parseInt(this.system.charges?.value);
                     if (currentCharges != maxCharges) {
                         result += `${currentCharges}/`;

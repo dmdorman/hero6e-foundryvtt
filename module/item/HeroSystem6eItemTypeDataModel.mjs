@@ -4,7 +4,7 @@ import { HeroSystem6eItem } from "./item.mjs";
 
 const { NumberField, StringField, ObjectField, BooleanField, ArrayField, EmbeddedDataField } = foundry.data.fields;
 
-class HeroItemAdderModCommonModel extends foundry.abstract.DataModel {
+class HeroItemModCommonModel extends foundry.abstract.DataModel {
     // constructor(data, context) {
     //     super(data, context);
 
@@ -104,7 +104,7 @@ class HeroItemAdderModCommonModel extends foundry.abstract.DataModel {
     }
 
     get cost() {
-        console.error(`Unhandled cost`);
+        console.error(`Unhandled cost in ${this.constructor.toString()}`);
         return 0;
     }
 
@@ -125,7 +125,7 @@ class HeroItemAdderModCommonModel extends foundry.abstract.DataModel {
     }
 }
 
-export class HeroAdderModel extends HeroItemAdderModCommonModel {
+export class HeroAdderModelCommon extends HeroItemModCommonModel {
     get cost() {
         let _cost = 0;
         if (this.SELECTED !== false) {
@@ -174,7 +174,20 @@ export class HeroAdderModel extends HeroItemAdderModCommonModel {
     }
 }
 
-class HeroModifierModelCommon extends HeroItemAdderModCommonModel {
+export class HeroAdderModel2 extends HeroAdderModelCommon {}
+
+export class HeroAdderModel extends HeroAdderModelCommon {
+    static defineSchema() {
+        return {
+            ...super.defineSchema(),
+            ADDER: new ArrayField(new EmbeddedDataField(HeroAdderModel2)),
+            //MODIFIER: new ArrayField(new EmbeddedDataField(HeroModifierModel2)),
+            //POWER: new ArrayField(new EmbeddedDataField(HeroPowerModel)),
+        };
+    }
+}
+
+class HeroModifierModelCommon extends HeroItemModCommonModel {
     get cost() {
         let _cost = 0;
         // Custom costs calculations
@@ -243,7 +256,7 @@ export class HeroModifierModel extends HeroModifierModelCommon {
     }
 }
 
-class HeroPowerModel extends HeroItemAdderModCommonModel {
+class HeroPowerModel extends HeroItemModCommonModel {
     get cost() {
         let _cost = 0;
 
@@ -290,6 +303,83 @@ export class HeroSystem6eItemTypeDataModelGetters extends foundry.abstract.TypeD
 
     get hdcJson() {
         return HeroSystem6eItem.itemDataFromXml(this._hdcXml, this.parent.actor);
+    }
+
+    get range() {
+        let _range = this.baseInfo?.range;
+        try {
+            if (!_range) {
+                // This should never happen, missing something from CONFIG.mjs?  Perhaps with super old actors?
+                console.error(`Missing range`, this);
+                this.system.range = CONFIG.HERO.RANGE_TYPES.SELF;
+            }
+
+            // Range Modifiers "self", "no range", "standard", or "los" based on base power.
+            // It is the modified up or down but the only other types that should be added are:
+            // "range based on str" or "limited range"
+            const RANGED = this.MODIFIER.find((o) => o.XMLID === "RANGED");
+            const NORANGE = this.MODIFIER.find((o) => o.XMLID === "NORANGE");
+            const limitedRange =
+                RANGED?.OPTIONID === "LIMITEDRANGE" || // Advantage form
+                !!this.MODIFIER.find((o) => o.XMLID === "LIMITEDRANGE"); // Limitation form
+            const rangeBasedOnStrength =
+                RANGED?.OPTIONID === "RANGEBASEDONSTR" || // Advantage form
+                !!this.MODIFIER.find((o) => o.XMLID === "RANGEBASEDONSTR"); // Limitation form
+            const LOS = this.MODIFIER.find((o) => o.XMLID === "LOS");
+            const NORMALRANGE = this.MODIFIER.find((o) => o.XMLID === "NORMALRANGE");
+            const UOO = this.MODIFIER.find((o) => o.XMLID === "UOO");
+            const BOECV = this.MODIFIER.find((o) => o.XMLID === "BOECV");
+
+            // Based on EGO combat value comes with line of sight
+            if (BOECV) {
+                _range = CONFIG.HERO.RANGE_TYPES.LINE_OF_SIGHT;
+            }
+
+            // Self only powers cannot be bought to have range unless they become usable on others at which point
+            // they gain no range.
+            if (_range === CONFIG.HERO.RANGE_TYPES.SELF) {
+                if (UOO) {
+                    _range = CONFIG.HERO.RANGE_TYPES.NO_RANGE;
+                }
+            }
+
+            // No range can be bought to have range.
+            if (_range === CONFIG.HERO.RANGE_TYPES.NO_RANGE) {
+                if (RANGED) {
+                    _range = CONFIG.HERO.RANGE_TYPES.STANDARD;
+                }
+            }
+
+            // Standard range can be bought up or bought down.
+            if (_range === CONFIG.HERO.RANGE_TYPES.STANDARD) {
+                if (NORANGE) {
+                    _range = CONFIG.HERO.RANGE_TYPES.NO_RANGE;
+                } else if (LOS) {
+                    _range = CONFIG.HERO.RANGE_TYPES.LINE_OF_SIGHT;
+                } else if (limitedRange) {
+                    _range = CONFIG.HERO.RANGE_TYPES.LIMITED_RANGE;
+                } else if (rangeBasedOnStrength) {
+                    _range = CONFIG.HERO.RANGE_TYPES.RANGE_BASED_ON_STR;
+                }
+            }
+
+            // Line of sight can be bought down
+            if (_range === CONFIG.HERO.RANGE_TYPES.LINE_OF_SIGHT) {
+                if (NORMALRANGE) {
+                    _range = CONFIG.HERO.RANGE_TYPES.STANDARD;
+                } else if (rangeBasedOnStrength) {
+                    _range = CONFIG.HERO.RANGE_TYPES.RANGE_BASED_ON_STR;
+                } else if (limitedRange) {
+                    _range = CONFIG.HERO.RANGE_TYPES.LIMITED_RANGE;
+                } else if (NORANGE) {
+                    _range = CONFIG.HERO.RANGE_TYPES.NO_RANGE;
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        return _range;
     }
 
     // Make sure all the attributes in the HDC XML are in our data model
@@ -412,6 +502,47 @@ export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeData
     }
 }
 
+export class HeroSystem6eItemCharges extends foundry.abstract.DataModel {
+    constructor(data, context) {
+        super(data, context);
+
+        // set initial value
+        if (data.value === undefined) {
+            const CHARGES = this.parent.MODIFIER.find((m) => m.XMLID === "CHARGES");
+            if (CHARGES) {
+                this.value = parseInt(CHARGES.OPTION_ALIAS);
+            }
+        }
+    }
+
+    static defineSchema() {
+        // Note that the return is just a simple object
+        return {
+            value: new NumberField({ integer: true }),
+            clips: new NumberField({ integer: true }),
+        };
+    }
+
+    get CHARGES() {
+        return this.parent.MODIFIER.find((o) => o.XMLID === "CHARGES");
+    }
+
+    get recoverable() {
+        return !!this.CHARGES.ADDER.find((o) => o.XMLID === "RECOVERABLE");
+    }
+
+    get continuing() {
+        return !!this.CHARGES.ADDER.find((o) => o.XMLID === "CONTINUING")?.OPTIONID;
+    }
+
+    get boostable() {
+        return !!this.CHARGES.ADDER.find((o) => o.XMLID === "BOOSTABLE");
+    }
+    get fuel() {
+        return !!this.CHARGES.ADDER.find((o) => o.XMLID === "FUEL");
+    }
+}
+
 export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
     /// https://foundryvtt.wiki/en/development/api/DataModel
 
@@ -474,14 +605,7 @@ export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
             BASEPOINTS: new StringField(),
             DISADPOINTS: new StringField(),
 
-            // Talent
-            //CHARACTERISTIC: new StringField(),
-            //GROUP: new StringField(),
-            //OPTIONID: new StringField(),
-            //POWER: new StringField(),
-            //QUANTITY: new StringField(),
-            //ROLL: new StringField(),
-            //TEXT: new StringField(),
+            charges: new EmbeddedDataField(HeroSystem6eItemCharges),
         };
     }
 }
