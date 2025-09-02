@@ -2667,6 +2667,7 @@ export function registerUploadTests(quench) {
                             parent: actor,
                         });
                         await item._postUpload();
+                        await item.resetToOriginal();
                         actor.items.set(item.system.XMLID, item);
                     });
 
@@ -2714,6 +2715,7 @@ export function registerUploadTests(quench) {
                             parent: actor,
                         });
                         await item._postUpload();
+                        await item.resetToOriginal();
                         actor.items.set(item.system.XMLID, item);
                     });
 

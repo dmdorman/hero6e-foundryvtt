@@ -1374,6 +1374,10 @@ export class HeroSystem6eItem extends Item {
             await this._postUpload();
         }
 
+        // if (this.baseInfo?.resetToOriginalChanges) {
+        //     await this.update(this.baseInfo.resetToOriginalChanges(this));
+        // }
+
         // Remove temporary effects that have an origin.
         // Actor items with built in effects should have no origin and we want to keep those (POWER STR +30 for example)
         this.effects.map(async (effect) => {
@@ -1393,8 +1397,12 @@ export class HeroSystem6eItem extends Item {
             }
         });
 
-        if (this.system.value !== undefined && this.system.value !== this.system.LEVELS) {
-            await this.update({ ["system.value"]: this.system.LEVELS });
+        if (["ENDURANCERESERVE"].includes(this.system.XMLID)) {
+            if (this.id) {
+                await this.update({ ["system.value"]: this.system.LEVELS });
+            } else {
+                this.system.value = this.system.LEVELS;
+            }
         }
 
         if (this.type === "maneuver" && this.system.active) {
@@ -3826,7 +3834,7 @@ export class HeroSystem6eItem extends Item {
 
                     const ENDURANCERESERVEREC = this.findModsByXmlid("ENDURANCERESERVEREC");
                     if (ENDURANCERESERVEREC) {
-                        if (parseInt(system.LEVELS) === parseInt(system.max)) {
+                        if (parseInt(system.value) === parseInt(system.LEVELS)) {
                             description += ` (${system.LEVELS} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
                         } else {
                             description += ` (${system.value}/${system.LEVELS} END, ${ENDURANCERESERVEREC.LEVELS} REC)`;
