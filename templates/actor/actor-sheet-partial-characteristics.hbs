@@ -11,60 +11,71 @@
             <th>{{localize "ActorSheet.Roll"}}</th>
             <th title="{{localize 'ActorSheet.NoteTitle'}}">{{localize "ActorSheet.Notes"}}</th>
         </tr>
-        {{#each characteristicSet as |characteristic key|}}
-        <tr class="characteristic">
-            <td data-tooltip="{{{characteristic.valueTitle}}}"
-                class="{{#if characteristic.valueTitle}}characteristic-locked{{/if}}">
-                <input name="system.characteristics.{{characteristic.key}}.value" type="number"
-                    value="{{characteristic.value}}" data-dtype="Number"
-                    class="{{#if (gt characteristic.value characteristic.max)}}over-max{{/if}}{{#if (lt characteristic.value characteristic.max)}} under-max{{/if}}"
-                    {{#if characteristic.valueTitle}}disabled{{/if}}
-                >
-            </td>
-            <td data-tooltip="{{{characteristic.maxTitle}}}"
-                class="{{#if characteristic.maxTitle}}characteristic-locked{{/if}}">
-                <input name="system.characteristics.{{characteristic.key}}.max" type="number"
-                    class="{{#if (gt characteristic.delta 0)}}over-max{{/if}}{{#if (lt characteristic.delta 0)}}under-max{{/if}}"
-                    value="{{characteristic.max}}" data-dtype="Number" {{#if
-                    characteristic.maxTitle}}disabled{{/if}}>
-            </td>
-            <td>
-                {{#unless (eq characteristic.core null)}}
-                <input name="system.characteristics.{{characteristic.key}}.core" type="number"
-                    value="{{characteristic.core}}" data-dtype="Number" 
-                    {{#if (and (eq @root/system.is5e true) (or (includes characteristic.behaviors "calculated") (includes characteristic.behaviors "figured")))}}disabled{{/if}}>
-                {{/unless}}
-            </td>
-            <td title="{{characteristic.name}}">
-                {{toUpperCase characteristic.key}}
-                
-            <td>
-                {{#if characteristic.base}}
-                    {{characteristic.base}}
-                {{/if}}
-            </td>
-            <td class="{{#if (and characteristic.characteristicMax (gt characteristic.core characteristic.characteristicMax) )}}characteristic-max{{/if}}" 
-                {{#if (and characteristic.characteristicMax (gt characteristic.core characteristic.characteristicMax) )}}title="{{characteristic.core}} exceeds Characteristic Maximum of {{characteristic.characteristicMax}}. Costs double for excess."{{/if}}
-                {{#if characteristic.costTitle}}title="{{characteristic.costTitle}}" {{/if}}>
-                {{#unless (eq characteristic.core null)}}
-                {{characteristic.realCost}}
-                {{/unless}}
-            </td>
-            <td>
-                {{#if characteristic.roll}}
-                    <div class="flexrow">
-                        <button type="button" class="characteristic-roll"
-                            data-label="{{characteristic.key}}" title="{{characteristic.name}} Roll">{{numberFormat characteristic.roll decimals=0
-                            sign=false}}-</button>
-                        <button type="button" class="characteristic-full"
-                            data-label="{{characteristic.key}}" title="Full {{characteristic.name}}">F</button>
-                        <button type="button" class="characteristic-casual"
-                            data-label="{{characteristic.key}}" title="Casual {{characteristic.name}}">C</button>
-                    </div>
-                {{/if}}
-            </td>
-            <td>{{characteristic.notes}}</td>
-        </tr>
+        {{#each characteristics as |characteristic|}}
+            <tr class="characteristic">
+                {{!-- value --}}
+                <td data-tooltip="{{{characteristic.valueTitle}}}"
+                    class="{{#if characteristic.valueTitle}}characteristic-locked{{/if}}">
+                    <input name="system.characteristics.{{characteristic.key}}.value" type="number"
+                        value="{{characteristic.value}}" data-dtype="Number"
+                        class="{{#if (gt characteristic.value characteristic.max)}}over-max{{/if}}{{#if (lt characteristic.value characteristic.max)}} under-max{{/if}}"
+                        {{#if characteristic.valueTitle}}disabled{{/if}}
+                    >
+                </td>
+
+                {{!-- max --}}
+                <td data-tooltip="{{{characteristic.maxTitle}}}"
+                    class="{{#if characteristic.maxTitle}}characteristic-locked{{/if}}">
+                    <input name="system.characteristics.{{characteristic.key}}.max" type="number"
+                        class="{{#if (gt characteristic.delta 0)}}over-max{{/if}}{{#if (lt characteristic.delta 0)}}under-max{{/if}}"
+                        value="{{characteristic.max}}" data-dtype="Number" {{#if
+                        characteristic.maxTitle}}disabled{{/if}}>
+                </td>
+
+                {{!-- core --}}
+                <td>
+                    {{#unless (eq characteristic.core null)}}
+                    <input name="system.characteristics.{{characteristic.key}}.core" type="number"
+                        value="{{characteristic.core}}" data-dtype="Number" 
+                        {{#if (and (eq @root/system.is5e true) (or (includes characteristic.behaviors "calculated") (includes characteristic.behaviors "figured")))}}disabled{{/if}}>
+                    {{/unless}}
+                </td>
+
+                {{!-- XMLID --}}
+                <td title="{{characteristic.baseInfo.name}}">
+                    {{toUpperCase characteristic.XMLID}}
+                </td>
+                    
+                {{!-- base    --}}
+                <td>
+                    {{#if characteristic.baseInfo.base}}
+                        {{characteristic.baseInfo.base}}
+                    {{/if}}
+                </td>
+
+                <td class="{{#if (and characteristic.characteristicMax (gt characteristic.core characteristic.characteristicMax) )}}characteristic-max{{/if}}" 
+                    {{#if (and characteristic.characteristicMax (gt characteristic.core characteristic.characteristicMax) )}}title="{{characteristic.core}} exceeds Characteristic Maximum of {{characteristic.characteristicMax}}. Costs double for excess."{{/if}}
+                    {{#if characteristic.costTitle}}title="{{characteristic.costTitle}}" {{/if}}>
+                    {{#unless (eq characteristic.core null)}}
+                    {{characteristic.realCost}}
+                    {{/unless}}
+                </td>
+
+                <td>
+                    {{#if characteristic.roll}}
+                        <div class="flexrow">
+                            <button type="button" class="characteristic-roll"
+                                data-label="{{characteristic.key}}" title="{{characteristic.name}} Roll">{{numberFormat characteristic.roll decimals=0
+                                sign=false}}-</button>
+                            <button type="button" class="characteristic-full"
+                                data-label="{{characteristic.key}}" title="Full {{characteristic.name}}">F</button>
+                            <button type="button" class="characteristic-casual"
+                                data-label="{{characteristic.key}}" title="Casual {{characteristic.name}}">C</button>
+                        </div>
+                    {{/if}}
+                </td>
+                <td>{{characteristic.notes}}</td>
+            </tr>
         {{/each}}
 
     </table>

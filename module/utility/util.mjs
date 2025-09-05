@@ -13,6 +13,10 @@ export function getPowerInfo(options) {
         options.item?.system?.xmlid ||
         options.item?.system?.id;
 
+    if (xmlid === "DEX") {
+        //debugger;
+    }
+
     const actor = options?.actor || options?.item?.actor;
 
     // Legacy init of an item (we now include xmlTag during upload process)
@@ -141,11 +145,13 @@ export function getCharacteristicInfoArrayForActor(actor) {
     const powerList = actor?.system?.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
 
     let powers = powerList.filter(isCharOrMovePowerForActor);
-    const AUTOMATON = !!actor.items.find(
-        (power) =>
-            power.system.XMLID === "AUTOMATON" &&
-            (power.system.OPTION === "NOSTUN1" || power.system.OPTION === "NOSTUN2"),
-    );
+    const AUTOMATON =
+        actor.type === "automaton" ||
+        !!actor.items.find(
+            (power) =>
+                power.system.XMLID === "AUTOMATON" &&
+                (power.system.OPTION === "NOSTUN1" || power.system.OPTION === "NOSTUN2"),
+        );
     if (AUTOMATON && powers.find((o) => o.key === "STUN")) {
         if (["pc", "npc"].includes(actor.type)) {
             console.debug(`${actor.name} has the wrong actor type ${actor.type}`, actor);

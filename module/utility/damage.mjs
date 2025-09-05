@@ -179,7 +179,7 @@ export function effectiveStrength(item, options) {
         return options.effectiveStr;
     }
 
-    return parseInt(item.actor?.system.characteristics.str.value || 0);
+    return parseInt(item.actor?.system.characteristics.str?.value || 0);
 }
 
 export function calculateStrengthMinimumForItem(itemWithStrengthMinimum, strengthMinimumModifier) {

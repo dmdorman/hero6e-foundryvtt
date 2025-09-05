@@ -185,7 +185,7 @@ async function skillRoll(item, actor, target) {
         }
     }
 
-    item.updateRoll();
+    //item.updateRoll();
 
     let tags = foundry.utils.deepClone(item.system.tags);
 

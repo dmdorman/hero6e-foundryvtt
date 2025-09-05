@@ -407,7 +407,8 @@
             "defense",
             "maneuver",
             "movement",
-            "misc"
+            "misc",
+            "characteristic"
         ],
         "templates": {
             "base": {

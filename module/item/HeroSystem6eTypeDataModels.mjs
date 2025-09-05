@@ -1,5 +1,7 @@
 //import { RoundFavorPlayerDown, RoundFavorPlayerUp } from "../utility/round.mjs";
+import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { getPowerInfo } from "../utility/util.mjs";
+//import { getSystemDisplayUnits } from "../utility/units.mjs";
 import { HeroSystem6eItem } from "./item.mjs";
 
 const { NumberField, StringField, ObjectField, BooleanField, ArrayField, EmbeddedDataField } = foundry.data.fields;
@@ -65,22 +67,28 @@ class HeroItemModCommonModel extends foundry.abstract.DataModel {
 
     // Make sure all the attributes in the HDC XML are in our data model
     debugModelProps() {
-        if (this._hdcXml) {
-            for (const attribute of this.hdcHTMLCollection.firstChild.attributes) {
-                if (this[attribute.name] === undefined) {
-                    console.error(`${this.xmlTag} HeroItemAdderModCommonModel is missing ${attribute.name} property.`);
+        try {
+            if (this._hdcXml) {
+                for (const attribute of this.hdcHTMLCollection.firstChild.attributes) {
+                    if (this[attribute.name] === undefined) {
+                        console.error(
+                            `${this.xmlTag} HeroItemAdderModCommonModel is missing ${attribute.name} property.`,
+                        );
+                    }
+                }
+
+                for (const adder of this.ADDER || []) {
+                    adder.debugModelProps();
+                }
+                for (const modifier of this.MODIFIER || []) {
+                    modifier.debugModelProps();
+                }
+                for (const power of this.POWER || []) {
+                    power.debugModelProps();
                 }
             }
-
-            for (const adder of this.ADDER || []) {
-                adder.debugModelProps();
-            }
-            for (const modifier of this.MODIFIER || []) {
-                modifier.debugModelProps();
-            }
-            for (const power of this.POWER || []) {
-                power.debugModelProps();
-            }
+        } catch (e) {
+            console.error(e);
         }
     }
 
@@ -89,6 +97,9 @@ class HeroItemModCommonModel extends foundry.abstract.DataModel {
     get baseInfo() {
         // cache getPowerInfo
         this.#baseInfo ??= getPowerInfo({ XMLID: this.XMLID, is5e: this.item?.is5e, xmlTag: this.xmlTag });
+        // if (!this.#baseInfo) {
+        //     debugger;
+        // }
         return this.#baseInfo;
     }
 
@@ -382,26 +393,61 @@ export class HeroSystem6eItemTypeDataModelGetters extends foundry.abstract.TypeD
         return _range;
     }
 
+    get #rollProps() {
+        if (!this.item.hasSuccessRoll()) {
+            return {};
+        }
+
+        // TODO: Can this be simplified. Should we add some test cases?
+        // TODO: Luck and unluck...
+
+        // No Characteristic = no roll (Skill Enhancers for example) except for FINDWEAKNESS
+        const { roll, tags } = !this.CHARACTERISTIC
+            ? this.item._getNonCharacteristicsBasedRollComponents(this)
+            : this.item._getSkillRollComponents(this);
+        return { roll, tags };
+    }
+
+    get roll() {
+        return this.#rollProps.roll;
+    }
+
+    get tags() {
+        return this.#rollProps.tags;
+    }
+
     // Make sure all the attributes in the HDC XML are in our data model
     debugModelProps() {
-        if (this._hdcXml) {
-            for (const attribute of this.hdcHTMLCollection.firstChild.attributes) {
-                if (this[attribute.name] === undefined) {
-                    console.error(
-                        `${this.parent.type} HeroSystem6eItemTypeDataModelGetters is missing ${attribute.name} property.`,
-                    );
-                }
+        try {
+            if (this._hdcXml) {
+                for (const attribute of this.hdcHTMLCollection.firstChild.attributes) {
+                    if (this[attribute.name] === undefined) {
+                        console.error(
+                            `${this.parent.type} HeroSystem6eItemTypeDataModelGetters is missing ${attribute.name} property.`,
+                        );
+                    }
 
-                for (const adder of this.ADDER) {
-                    adder.debugModelProps();
-                }
-                for (const modifier of this.MODIFIER) {
-                    modifier.debugModelProps();
-                }
-                for (const power of this.POWER) {
-                    power.debugModelProps();
+                    if (this.ADDER) {
+                        for (const adder of this.ADDER) {
+                            adder.debugModelProps();
+                        }
+                    }
+
+                    if (this.MODIFIER) {
+                        for (const modifier of this.MODIFIER) {
+                            modifier.debugModelProps();
+                        }
+                    }
+
+                    if (this.POWER) {
+                        for (const power of this.POWER) {
+                            power.debugModelProps();
+                        }
+                    }
                 }
             }
+        } catch (e) {
+            console.error(e);
         }
     }
 
@@ -410,6 +456,9 @@ export class HeroSystem6eItemTypeDataModelGetters extends foundry.abstract.TypeD
     get baseInfo() {
         // cache getPowerInfo
         this.#baseInfo ??= getPowerInfo({ item: this.parent, xmlTag: this.xmlTag });
+        if (!this.#baseInfo) {
+            console.warn(`${this.item.name}/${this.XMLID} has no baseInfo`);
+        }
         return this.#baseInfo;
     }
 
@@ -460,6 +509,13 @@ export class HeroSystem6eItemTypeDataModelGetters extends foundry.abstract.TypeD
     get stunBodyDamage() {
         return this.parent.getMakeAttack().stunBodyDamage;
     }
+
+    get endEstimate() {
+        // STR (or any other characteristic only cost end when the native STR is used)
+        if (this.item.baseInfo?.type.includes("characteristic")) return null;
+
+        return this.item.end || null;
+    }
 }
 
 export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeDataModelGetters {
@@ -507,8 +563,11 @@ export class HeroSystem6eItemCharges extends foundry.abstract.DataModel {
         super(data, context);
 
         // set initial value
+        const CHARGES = this.parent.MODIFIER.find((m) => m.XMLID === "CHARGES");
+        if (!CHARGES && data.value !== undefined) {
+            this.value = undefined;
+        }
         if (data.value === undefined) {
-            const CHARGES = this.parent.MODIFIER.find((m) => m.XMLID === "CHARGES");
             if (CHARGES) {
                 this.value = parseInt(CHARGES.OPTION_ALIAS);
             }
@@ -527,6 +586,13 @@ export class HeroSystem6eItemCharges extends foundry.abstract.DataModel {
         return this.parent.MODIFIER.find((o) => o.XMLID === "CHARGES");
     }
 
+    get item() {
+        if (this.parent.parent instanceof HeroSystem6eItem) {
+            return this.parent.parent;
+        }
+        return null;
+    }
+
     get recoverable() {
         return !!this.CHARGES.ADDER.find((o) => o.XMLID === "RECOVERABLE");
     }
@@ -541,6 +607,13 @@ export class HeroSystem6eItemCharges extends foundry.abstract.DataModel {
     get fuel() {
         return !!this.CHARGES.ADDER.find((o) => o.XMLID === "FUEL");
     }
+
+    get max() {
+        if (this.CHARGES) {
+            return parseInt(this.CHARGES?.OPTION_ALIAS);
+        }
+        return null;
+    }
 }
 
 export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
@@ -552,7 +625,7 @@ export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
             ...super.defineSchema(),
             AFFECTS_PRIMARY: new BooleanField(),
             AFFECTS_TOTAL: new BooleanField(),
-            ACTIVE: new StringField(),
+            ACTIVE: new StringField(), // XMLID=DETECT
             BODYLEVELS: new StringField(),
             DEFENSE: new StringField(),
             DOESBODY: new StringField(),
@@ -606,6 +679,7 @@ export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
             DISADPOINTS: new StringField(),
 
             charges: new EmbeddedDataField(HeroSystem6eItemCharges),
+            active: new BooleanField(),
         };
     }
 }
@@ -792,5 +866,339 @@ export class HeroSystem6eItemMisc extends HeroSystem6eItemTypeDataModelProps {
         //const { ObjectField, StringField, ArrayField, EmbeddedDataField } = foundry.data.fields;
         // Note that the return is just a simple object
         return { ...super.defineSchema() };
+    }
+}
+
+export class HeroItemCharacteristic extends foundry.abstract.DataModel {
+    static defineSchema() {
+        return {
+            XMLID: new StringField(),
+            ID: new StringField(),
+            BASECOST: new NumberField({ integer: false }),
+            LEVELS: new NumberField({ integer: true }),
+            ALIAS: new StringField(),
+            POSITION: new NumberField({ integer: true }),
+            MULTIPLIER: new NumberField({ integer: false }),
+            GRAPHIC: new StringField(),
+            COLOR: new StringField(),
+            SFX: new StringField(),
+            SHOW_ACTIVE_COST: new BooleanField(),
+            INCLUDE_NOTES_IN_PRINTOUT: new BooleanField(),
+            NAME: new StringField(),
+            AFFECTS_PRIMARY: new BooleanField(),
+            AFFECTS_TOTAL: new BooleanField(),
+            _hdcXml: new StringField(),
+            is5e: new BooleanField(),
+            xmlTag: new StringField(),
+            // value: new NumberField({ integer: true }),
+            // core: new NumberField({ integer: true }),
+            // max: new NumberField({ integer: true }),
+        };
+    }
+
+    // native characteristics don't use _active as we don't currently allow
+    // them to be modified, although perhaps _STRENGTHDAMAGE can be reworked to do so.
+    get _active() {
+        return {};
+    }
+
+    get active() {
+        return true;
+    }
+
+    #baseInfo = null;
+
+    get baseInfo() {
+        // cache getPowerInfo
+        this.#baseInfo ??= getPowerInfo({ item: this, xmlTag: this.xmlTag });
+        // if (!this.#baseInfo) {
+        //     debugger;
+        // }
+        return this.#baseInfo;
+    }
+
+    get actor() {
+        if (this.parent instanceof HeroSystem6eActor) {
+            return this.parent;
+        }
+        if (this.parent.parent instanceof HeroSystem6eActor) {
+            return this.parent.parent;
+        }
+        return null;
+    }
+
+    get hdcHTMLCollection() {
+        try {
+            return this._hdcXml ? new DOMParser().parseFromString(this._hdcXml, "text/xml") : null;
+        } catch (e) {
+            console.error(e);
+        }
+        return null;
+    }
+
+    debugModelProps() {
+        try {
+            if (this._hdcXml) {
+                for (const attribute of this.hdcHTMLCollection.firstChild.attributes) {
+                    if (this[attribute.name] === undefined) {
+                        console.error(`${this.xmlTag} HeroItemCharacteristic is missing ${attribute.name} property.`);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+}
+
+export class HeroActorCharacteristic extends foundry.abstract.DataModel {
+    static defineSchema() {
+        return {
+            core: new NumberField({ integer: true }),
+            max: new NumberField({ integer: true }),
+            //realCost: new NumberField({ integer: true }),
+            //roll: new NumberField({ integer: true }),
+            value: new NumberField({ integer: true }),
+            characteristicMax: new NumberField({ integer: true }),
+        };
+    }
+
+    // get core() {
+    //     const key = this.schema.name?.toUpperCase();
+    //     if (!key) {
+    //         console.error(`key is undefined`);
+    //     }
+    //     if (!this.item?.baseInfo) {
+    //         debugger;
+    //     }
+    //     return parseInt(this.item.LEVELS);
+    // }
+    // set core(value) {
+    //     if (this.schema?.validationError) {
+    //         console.error(this.schema.validationError);
+    //     }
+    //     const key = this.schema.name?.toUpperCase();
+    //     if (!key) {
+    //         console.error(`key is undefined`);
+    //     }
+    //     if (this.parent.parent[key]?.LEVELS === undefined) {
+    //         console.error(`${key}.LEVELS is undefined`);
+    //         //debugger;
+    //     } else {
+    //         this.parent.parent[key].LEVELS = value;
+    //     }
+    // }
+
+    // get max() {
+    //     const key = this.schema.name?.toUpperCase();
+    //     if (!key) {
+    //         console.error(`key is undefined`);
+    //     }
+    //     return parseInt(this.parent.parent[key]?.LEVELS);
+    // }
+    // set max(value) {
+    //     //if (this.parent.)
+    //     //debugger;
+    // }
+
+    get realCost() {
+        const cost = Math.round(this.core * (this.baseInfo?.costPerLevel(this.item) || 0));
+        return cost;
+    }
+
+    get roll() {
+        if (this.baseInfo?.behaviors.includes("success")) {
+            const newRoll = Math.round(9 + this.value * 0.2);
+            if (!this.actor.is5e && this.value < 0) {
+                return 9;
+            }
+            return newRoll;
+        }
+        return null;
+    }
+
+    get valueTitle() {
+        // Active Effects may be blocking updates
+        const ary = [];
+        const activeEffects = Array.from(this.actor.allApplicableEffects()).filter(
+            (ae) => ae.changes.find((p) => p.key === `system.characteristics.${this.key}.value`) && !ae.disabled,
+        );
+        let _valueTitle = "";
+        for (const ae of activeEffects) {
+            ary.push(`<li>${ae.name}</li>`);
+        }
+        if (ary.length > 0) {
+            _valueTitle = "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
+            _valueTitle += ary.join("\n ");
+            _valueTitle += "</ul>";
+            _valueTitle += "<small><i>Click to unblock</i></small>";
+        }
+        return _valueTitle;
+    }
+
+    get maxTitle() {
+        // Active Effects may be blocking updates
+        const ary = [];
+        const activeEffects = Array.from(this.actor.allApplicableEffects()).filter(
+            (ae) => ae.changes.find((p) => p.key === `system.characteristics.${this.key}.max`) && !ae.disabled,
+        );
+
+        for (const ae of activeEffects) {
+            ary.push(`<li>${ae.name}</li>`);
+            // if (ae._prepareDuration().duration) {
+            //     const change = ae.changes.find((o) => o.key === `system.characteristics.${this.key}.max`);
+            //     if (change.mode === CONST.ACTIVE_EFFECT_MODES.ADD) {
+            //         characteristic.delta += parseInt(change.value);
+            //     }
+            //     if (change.mode === CONST.ACTIVE_EFFECT_MODES.MULTIPLY) {
+            //         characteristic.delta += parseInt(this.max) * parseInt(change.value) - parseInt(this.max);
+            //     }
+            // }
+        }
+        let _maxTitle = "";
+        if (ary.length > 0) {
+            _maxTitle = "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
+            _maxTitle += ary.join("\n ");
+            _maxTitle += "</ul>";
+            _maxTitle += "<small><i>Click to unblock</i></small>";
+        }
+        return _maxTitle;
+    }
+
+    get notes() {
+        if (this.baseInfo?.notes) {
+            return this.baseInfo.notes(this);
+        }
+        return null;
+    }
+
+    get XMLID() {
+        return this.key?.toUpperCase();
+    }
+
+    get key() {
+        return this.schema.name;
+    }
+
+    get item() {
+        if (this.parent instanceof HeroActorCharacteristic) {
+            return this.parent;
+        }
+        if (this.parent.parent[this.XMLID]) {
+            return this.parent.parent[this.XMLID];
+        }
+        return null;
+    }
+
+    #baseInfo = null;
+    get baseInfo() {
+        // cache getPowerInfo
+        const key = this.schema.name?.toUpperCase();
+        this.#baseInfo ??= getPowerInfo({ XMLID: key, is5e: this.actor?.is5e, xmlTag: key });
+        return this.#baseInfo;
+    }
+
+    get actor() {
+        if (this.parent.parent.parent instanceof HeroSystem6eActor) {
+            return this.parent.parent.parent;
+        }
+        return null;
+    }
+}
+
+export class HeroCharacteristicsModel extends foundry.abstract.DataModel {
+    static defineSchema() {
+        return {
+            str: new EmbeddedDataField(HeroActorCharacteristic),
+            dex: new EmbeddedDataField(HeroActorCharacteristic),
+            con: new EmbeddedDataField(HeroActorCharacteristic),
+            int: new EmbeddedDataField(HeroActorCharacteristic),
+            ego: new EmbeddedDataField(HeroActorCharacteristic),
+            pre: new EmbeddedDataField(HeroActorCharacteristic),
+            com: new EmbeddedDataField(HeroActorCharacteristic),
+            ocv: new EmbeddedDataField(HeroActorCharacteristic),
+            dcv: new EmbeddedDataField(HeroActorCharacteristic),
+            omcv: new EmbeddedDataField(HeroActorCharacteristic),
+            dmcv: new EmbeddedDataField(HeroActorCharacteristic),
+            spd: new EmbeddedDataField(HeroActorCharacteristic), // 5e can be float values
+            pd: new EmbeddedDataField(HeroActorCharacteristic),
+            ed: new EmbeddedDataField(HeroActorCharacteristic),
+            rec: new EmbeddedDataField(HeroActorCharacteristic),
+            end: new EmbeddedDataField(HeroActorCharacteristic),
+            body: new EmbeddedDataField(HeroActorCharacteristic),
+            stun: new EmbeddedDataField(HeroActorCharacteristic),
+            running: new EmbeddedDataField(HeroActorCharacteristic),
+            swimming: new EmbeddedDataField(HeroActorCharacteristic),
+            leaping: new EmbeddedDataField(HeroActorCharacteristic),
+
+            flight: new EmbeddedDataField(HeroActorCharacteristic),
+            ftl: new EmbeddedDataField(HeroActorCharacteristic), // Faster Than Light
+            swinging: new EmbeddedDataField(HeroActorCharacteristic),
+            gliding: new EmbeddedDataField(HeroActorCharacteristic),
+            teleportation: new EmbeddedDataField(HeroActorCharacteristic),
+            tunneling: new EmbeddedDataField(HeroActorCharacteristic),
+        };
+    }
+}
+
+// class HeroActorCharacteristicSpd extends HeroCharacteristicsModel {
+//     static defineSchema() {
+//         return {
+//             value: new NumberField({ integer: false }),
+//         };
+//     }
+// }
+
+export class HeroActorModel extends foundry.abstract.DataModel {
+    static defineSchema() {
+        //const { ObjectField, StringField, ArrayField, EmbeddedDataField } = foundry.data.fields;
+        // Note that the return is just a simple object
+        return {
+            CHARACTER: new ObjectField(),
+
+            // Plan is to eventually use the Actor.Item version of these
+            STR: new EmbeddedDataField(HeroItemCharacteristic),
+            DEX: new EmbeddedDataField(HeroItemCharacteristic),
+            CON: new EmbeddedDataField(HeroItemCharacteristic),
+            INT: new EmbeddedDataField(HeroItemCharacteristic),
+            EGO: new EmbeddedDataField(HeroItemCharacteristic),
+            PRE: new EmbeddedDataField(HeroItemCharacteristic),
+            COM: new EmbeddedDataField(HeroItemCharacteristic),
+            OCV: new EmbeddedDataField(HeroItemCharacteristic),
+            DCV: new EmbeddedDataField(HeroItemCharacteristic),
+            OMCV: new EmbeddedDataField(HeroItemCharacteristic),
+            DMCV: new EmbeddedDataField(HeroItemCharacteristic),
+            SPD: new EmbeddedDataField(HeroItemCharacteristic),
+            PD: new EmbeddedDataField(HeroItemCharacteristic),
+            ED: new EmbeddedDataField(HeroItemCharacteristic),
+            REC: new EmbeddedDataField(HeroItemCharacteristic),
+            END: new EmbeddedDataField(HeroItemCharacteristic),
+            BODY: new EmbeddedDataField(HeroItemCharacteristic),
+            STUN: new EmbeddedDataField(HeroItemCharacteristic),
+            RUNNING: new EmbeddedDataField(HeroItemCharacteristic),
+            SWIMMING: new EmbeddedDataField(HeroItemCharacteristic),
+            LEAPING: new EmbeddedDataField(HeroItemCharacteristic),
+
+            characteristics: new EmbeddedDataField(HeroCharacteristicsModel),
+            versionHeroSystem6eUpload: new StringField(),
+            is5e: new BooleanField(),
+            _hdcXml: new StringField(),
+        };
+    }
+
+    debugModelProps() {
+        try {
+            if (this._hdcXml) {
+                for (const attribute of this.hdcHTMLCollection.firstChild.attributes) {
+                    if (this[attribute.name] === undefined) {
+                        console.error(
+                            `${this.xmlTag} HeroItemAdderModCommonModel is missing ${attribute.name} property.`,
+                        );
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
     }
 }

@@ -64,8 +64,8 @@ import {
     HeroSystem6eItemTalent,
     HeroSystem6eItemMartialArt,
     HeroSystem6eItemDisadvantage,
-} from "./HeroSystem6eItemTypeDataModel.mjs";
-import { HeroAdderModel } from "./HeroSystem6eItemTypeDataModel.mjs";
+} from "./HeroSystem6eTypeDataModels.mjs";
+import { HeroAdderModel } from "./HeroSystem6eTypeDataModels.mjs";
 
 export function initializeItemHandlebarsHelpers() {
     Handlebars.registerHelper("itemFullDescription", itemFullDescription);
@@ -525,15 +525,16 @@ export class HeroSystem6eItem extends Item {
             }
         }
 
-        if (this.id && this.baseInfo?.type?.includes("characteristic")) {
+        if (this.id && this.type !== "characteristic" && this.baseInfo?.type?.includes("characteristic")) {
             const activeEffect = Array.from(this.effects)?.[0] || {};
-            activeEffect.name = (this.name ? `${this.name}: ` : "") + `${this.system.XMLID} +${this.system.value}`;
+            const value = this.system.LEVELS;
+            activeEffect.name = (this.name ? `${this.name}: ` : "") + `${this.system.XMLID} +${value}`;
             activeEffect.img = "icons/svg/upgrade.svg";
             activeEffect.description = this.system.description;
             activeEffect.changes = [
                 {
                     key: `system.characteristics.${this.system.XMLID.toLowerCase()}.max`,
-                    value: this.system.value,
+                    value: value,
                     mode: CONST.ACTIVE_EFFECT_MODES.ADD,
                 },
             ];
@@ -547,9 +548,9 @@ export class HeroSystem6eItem extends Item {
                     changes: activeEffect.changes,
                 });
                 const deltaMax = this.actor.system.characteristics[this.system.XMLID.toLowerCase()].max - oldMax;
+                const newValue = this.actor.system.characteristics[this.system.XMLID.toLowerCase()].value + deltaMax;
                 await this.actor.update({
-                    [`system.characteristics.${this.system.XMLID.toLowerCase()}.value`]:
-                        this.actor.system.characteristics[this.system.XMLID.toLowerCase()].value + deltaMax,
+                    [`system.characteristics.${this.system.XMLID.toLowerCase()}.value`]: newValue,
                 });
             } else {
                 await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
@@ -1366,12 +1367,28 @@ export class HeroSystem6eItem extends Item {
      * Reset an item back to its default state.
      */
     async resetToOriginal() {
+        // Default active status
+        if (
+            ["power", "equipment"].includes(this.type) &&
+            this.isActivatable() &&
+            !this.system.endEstimate &&
+            this.system.charges?.value === undefined &&
+            this.baseInfo.duration !== "instant" &&
+            !(this.parentItem?.system.XMLID === "MULTIPOWER")
+        ) {
+            await this.update({ [`system.active`]: true });
+            const effect = this.effects[0];
+            if (effect) {
+                await effect.update({ disabled: false });
+            }
+        }
+
         // Set Charges to max
         if (this.system.charges && this.system.charges.value !== this.system.LEVELS) {
             await this.update({
                 [`system.charges.value`]: this.system.LEVELS, //charges.max,
             });
-            await this._postUpload();
+            //await this._postUpload();
         }
 
         // if (this.baseInfo?.resetToOriginalChanges) {
@@ -1543,7 +1560,7 @@ export class HeroSystem6eItem extends Item {
             const isSkill = powerInfo?.type.includes("skill");
 
             if (hasSuccessRoll && isSkill) {
-                this.updateRoll();
+                //this.updateRoll();
                 if (!(await requiresASkillRollCheck(this))) return;
                 return createSkillPopOutFromItem(this, this.actor);
             } else if (hasSuccessRoll) {
@@ -2244,9 +2261,9 @@ export class HeroSystem6eItem extends Item {
     }
 
     get is5e() {
-        if (this.system.is5e !== undefined && this.actor && this.actor.system.is5e !== this.system.is5e) {
+        if (this.system.is5e !== undefined && this.actor && this.actor.is5e !== this.system.is5e) {
             console.warn(
-                `${this.actor?.name}/${this.name} has is5e=${this.system.is5e} does not match actor=${this.actor.system.is5e}`,
+                `${this.actor?.name}/${this.name} has is5e=${this.system.is5e} does not match actor=${this.actor.is5e}`,
                 this,
             );
         }
@@ -2569,6 +2586,10 @@ export class HeroSystem6eItem extends Item {
 
     // FIXME: This should be trimmed down
     isActivatable() {
+        if (this.type === "characteristic") {
+            return false;
+        }
+
         const itemEffects = this.effects.find((ae) => ae.flags[game.system.id]?.type !== "adjustment");
         if (itemEffects) {
             return true;
@@ -2637,7 +2658,7 @@ export class HeroSystem6eItem extends Item {
         }
 
         // Endurance
-        item.system.endEstimate = parseInt(item.end) || 0;
+        //item.system.endEstimate = parseInt(item.end) || 0;
 
         // Effect
         this.configureAttackParameters();
@@ -2650,7 +2671,7 @@ export class HeroSystem6eItem extends Item {
         // }
 
         // This seems to still be required. See #2624.
-        item.updateRoll();
+        //item.updateRoll();
 
         // Charges
         // Not sure why we do CHARGES here and in setCharges();
@@ -2921,6 +2942,10 @@ export class HeroSystem6eItem extends Item {
             // Compendium?
             if (this.pack) {
                 console.log(`skipping _postUpload for ${this.pack}.${this.name}`, this);
+                return;
+            }
+
+            if (this.type === "characteristic") {
                 return;
             }
 
@@ -3317,11 +3342,11 @@ export class HeroSystem6eItem extends Item {
         const endUnitSize =
             this.system.XMLID === "__STRENGTHDAMAGE" && game.settings.get(HEROSYS.module, "StrEnd") === "five" ? 5 : 10;
 
-        const activePoints = this.system._active.originalActivePoints ?? this._activePoints;
+        const activePoints = this.system._active?.originalActivePoints ?? this._activePoints;
 
         // NOTE: When we push we are altering the actual active points, via LEVELS and modifiers, so we have to back it out.
         const unpushedActivePoints =
-            activePoints - (this.system._active.pushedRealPoints || 0) * (1 + this._limitationCost);
+            activePoints - (this.system._active?.pushedRealPoints || 0) * (1 + this._limitationCost);
         const endCost = RoundFavorPlayerDown(unpushedActivePoints / endUnitSize);
 
         return Math.max(1, endCost);
@@ -5006,26 +5031,28 @@ export class HeroSystem6eItem extends Item {
     }
 
     updateRoll() {
-        const skillData = this.system;
+        console.error("Depricated updateRoll");
+        return;
+        // const skillData = this.system;
 
-        skillData.tags = [];
+        // skillData.tags = [];
 
-        if (!this.hasSuccessRoll()) {
-            skillData.roll = null;
-            return;
-        }
+        // if (!this.hasSuccessRoll()) {
+        //     skillData.roll = null;
+        //     return;
+        // }
 
-        // TODO: Can this be simplified. Should we add some test cases?
-        // TODO: Luck and unluck...
+        // // TODO: Can this be simplified. Should we add some test cases?
+        // // TODO: Luck and unluck...
 
-        // No Characteristic = no roll (Skill Enhancers for example) except for FINDWEAKNESS
-        const characteristicBased = skillData.CHARACTERISTIC;
-        const { roll, tags } = !characteristicBased
-            ? this._getNonCharacteristicsBasedRollComponents(skillData)
-            : this._getSkillRollComponents(skillData);
+        // // No Characteristic = no roll (Skill Enhancers for example) except for FINDWEAKNESS
+        // const characteristicBased = skillData.CHARACTERISTIC;
+        // const { roll, tags } = !characteristicBased
+        //     ? this._getNonCharacteristicsBasedRollComponents(skillData)
+        //     : this._getSkillRollComponents(skillData);
 
-        skillData.roll = roll;
-        skillData.tags = tags;
+        // skillData.roll = roll;
+        // skillData.tags = tags;
     }
 
     _getNonCharacteristicsBasedRollComponents(skillData) {
@@ -5168,7 +5195,7 @@ export class HeroSystem6eItem extends Item {
             roll = `${rollValue}-`;
         } else if (skillData.XMLID === "PSYCHOLOGICALLIMITATION") {
             // Intensity is based on an EGO roll
-            const egoRoll = this.actor.system.characteristics.ego.roll || 0;
+            const egoRoll = this.actor.system.characteristics.ego?.roll || 0;
             const intensity = skillData.ADDER.find((adder) => adder.XMLID === "INTENSITY")?.OPTIONID;
             let intensityValue;
 
@@ -5260,7 +5287,7 @@ export class HeroSystem6eItem extends Item {
             // }
 
             const perceptionItem = (this.actor?.items || []).find((power) => power.system.XMLID === "PERCEPTION");
-            const perceptionRoll = parseInt(perceptionItem?.system.roll?.replace("-", "") || 11);
+            const perceptionRoll = parseInt(perceptionItem?.system.roll || 11);
 
             tags.push({
                 value: perceptionRoll + level,
@@ -5317,7 +5344,7 @@ export class HeroSystem6eItem extends Item {
             const baseRollValue = skillData.CHARACTERISTIC === "GENERAL" ? 11 : 9;
             const characteristicValue =
                 characteristic !== "general" && characteristic != ""
-                    ? this.actor?.system.characteristics?.[`${characteristic}`].value || 0
+                    ? this.actor?.system.characteristics?.[characteristic]?.value || 0
                     : 0;
             const characteristicAdjustment = Math.round(characteristicValue / 5);
             const levelsAdjustment = parseInt(skillData.LEVELS?.value || skillData.LEVELS || skillData.levels) || 0;

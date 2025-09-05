@@ -10,7 +10,7 @@ import { onManageActiveEffect } from "../utility/effects.mjs";
 import { getPowerInfo, getCharacteristicInfoArrayForActor, whisperUserTargetsForActor } from "../utility/util.mjs";
 import { characteristicValueToDiceParts } from "../utility/damage.mjs";
 import { HeroRoller } from "../utility/dice.mjs";
-import { getSystemDisplayUnits } from "../utility/units.mjs";
+//import { getSystemDisplayUnits } from "../utility/units.mjs";
 import { RoundFavorPlayerUp } from "../utility/round.mjs";
 
 // v13 has namespaced these. When we remove this backwards compatibility then the eslint exception can be cleaned up.
@@ -144,156 +144,164 @@ export class HeroSystemActorSheet extends FoundryVttActorSheet {
 
             // FIXME: This is the cost of a major amount of rework done that should be calculated once when either the HDC or the system changes.
             // override actor.items (which is a map) to an array with some custom properties
-            for (let item of data.actor.items) {
-                // Update Attack Details (estimateOCV, DCV, Damage)
-                item._postUploadDetails();
+            // for (let item of data.actor.items) {
+            //     // Update Attack Details (estimateOCV, DCV, Damage)
+            //     item._postUploadDetails();
 
-                if (item.type === "martialart") {
-                    data.hasMartialArts = true;
-                } else if (item.type === "equipment") {
-                    data.hasEquipment = true;
-                }
-            }
+            //     if (item.type === "martialart") {
+            //         data.hasMartialArts = true;
+            //     } else if (item.type === "equipment") {
+            //         data.hasEquipment = true;
+            //     }
+            // }
 
-            if (data.hasEquipment) {
-                data.weightTotal = `${this.actor.encumbrance} kg`;
-                data.priceTotal = `$${this.actor.netWorth}`;
-            }
+            // if (data.hasEquipment) {
+            //     data.weightTotal = `${this.actor.encumbrance} kg`;
+            //     data.priceTotal = `$${this.actor.netWorth}`;
+            // }
 
             // Characteristics
-            const characteristicSet = [];
-
-            const powers = getCharacteristicInfoArrayForActor(this.actor);
-            const isAutomatonWithNoStun = !!this.actor.items.find(
-                (power) =>
-                    power.system.XMLID === "AUTOMATON" &&
-                    (power.system.OPTION === "NOSTUN1" || power.system.OPTION === "NOSTUN2"),
+            data.characteristics = getCharacteristicInfoArrayForActor(this.actor).map(
+                (o) => this.actor.system.characteristics[o.key.toLowerCase()],
             );
+            //console.log(data.characteristics);
+            // const characteristicSet = [];
 
-            for (const powerInfo of powers) {
-                const characteristic = {
-                    ...data.actor.system.characteristics[powerInfo.key.toLowerCase()],
-                };
+            // const powers = getCharacteristicInfoArrayForActor(this.actor);
+            // const isAutomatonWithNoStun = !!this.actor.items.find(
+            //     (power) =>
+            //         power.system.XMLID === "AUTOMATON" &&
+            //         (power.system.OPTION === "NOSTUN1" || power.system.OPTION === "NOSTUN2"),
+            // );
 
-                characteristic.key = powerInfo.key.toLowerCase();
-                characteristic.value = parseInt(characteristic.value) || 0;
-                characteristic.max = parseInt(characteristic.max) || 0;
+            // for (const powerInfo of powers) {
+            //     if (!data.actor.system.characteristics[powerInfo.key.toLowerCase()]) {
+            //         console.error(`actor.system.characteristics.${powerInfo.key.toLowerCase()} is undefined`);
+            //         continue;
+            //     }
+            //     const characteristic = {
+            //         ...data.actor.system.characteristics[powerInfo.key.toLowerCase()],
+            //     };
 
-                characteristic.base = this.actor.getCharacteristicBase(powerInfo.key.toUpperCase());
+            //     characteristic.key = powerInfo.key.toLowerCase();
+            //     characteristic.value = parseInt(characteristic.value) || 0;
+            //     characteristic.max = parseInt(characteristic.max) || 0;
 
-                characteristic.name = powerInfo.name || powerInfo.key.toUpperCase();
-                characteristic.costTitle = powerInfo.cost
-                    ? `${powerInfo.cost} * (${characteristic.core} - ${characteristic.base})`
-                    : null;
-                characteristic.behaviors = powerInfo.behaviors;
+            //     characteristic.base = this.actor.getCharacteristicBase(powerInfo.key.toUpperCase());
 
-                // Notes
-                if (powerInfo.key === "STR") {
-                    const strDetails = this.actor.strDetails();
-                    characteristic.notes = `lift ${strDetails.strLiftText}, running throw ${
-                        strDetails.strThrow
-                    }${getSystemDisplayUnits(data.actor.is5e)}`;
-                }
+            //     characteristic.name = powerInfo.name || powerInfo.key.toUpperCase();
+            //     characteristic.costTitle = powerInfo.cost
+            //         ? `${powerInfo.cost} * (${characteristic.core} - ${characteristic.base})`
+            //         : null;
+            //     characteristic.behaviors = powerInfo.behaviors;
 
-                if (powerInfo.key === "LEAPING") {
-                    characteristic.notes = `${Math.max(0, characteristic.value)}${getSystemDisplayUnits(
-                        data.actor.system.is5e,
-                    )} forward, ${Math.max(0, Math.round(characteristic.value / 2))}${getSystemDisplayUnits(
-                        data.actor.system.is5e,
-                    )} upward`;
-                }
+            //     // Notes
+            //     if (powerInfo.key === "STR") {
+            //         const strDetails = this.actor.strDetails();
+            //         characteristic.notes = `lift ${strDetails.strLiftText}, running throw ${
+            //             strDetails.strThrow
+            //         }${getSystemDisplayUnits(data.actor.is5e)}`;
+            //     }
 
-                if (["SIZE", "BASESIZE"].includes(powerInfo.key)) {
-                    const sizeDetails = this.actor.sizeDetails();
-                    characteristic.notes = sizeDetails.description;
-                }
+            //     if (powerInfo.key === "LEAPING") {
+            //         characteristic.notes = `${Math.max(0, characteristic.value)}${getSystemDisplayUnits(
+            //             data.actor.system.is5e,
+            //         )} forward, ${Math.max(0, Math.round(characteristic.value / 2))}${getSystemDisplayUnits(
+            //             data.actor.system.is5e,
+            //         )} upward`;
+            //     }
 
-                characteristic.delta = characteristic.max - characteristic.core;
-                if (data.actor.system.is5e) {
-                    if (powerInfo.key.toLowerCase() === "pd") {
-                        characteristic.notes = `5e figured STR/5${isAutomatonWithNoStun ? " and /3 again" : ""}`;
-                    }
+            //     if (["SIZE", "BASESIZE"].includes(powerInfo.key)) {
+            //         const sizeDetails = this.actor.sizeDetails();
+            //         characteristic.notes = sizeDetails.description;
+            //     }
 
-                    if (powerInfo.key.toLowerCase() === "ed") {
-                        characteristic.notes = `5e figured CON/5${isAutomatonWithNoStun ? " and /3 again" : ""}`;
-                    }
+            //     characteristic.delta = characteristic.max - characteristic.core;
+            //     if (data.actor.system.is5e) {
+            //         if (powerInfo.key.toLowerCase() === "pd") {
+            //             characteristic.notes = `5e figured STR/5${isAutomatonWithNoStun ? " and /3 again" : ""}`;
+            //         }
 
-                    if (powerInfo.key.toLowerCase() === "spd") {
-                        characteristic.notes = "5e figured 1 + DEX/10";
-                    }
+            //         if (powerInfo.key.toLowerCase() === "ed") {
+            //             characteristic.notes = `5e figured CON/5${isAutomatonWithNoStun ? " and /3 again" : ""}`;
+            //         }
 
-                    if (powerInfo.key.toLowerCase() === "rec") {
-                        characteristic.notes = "5e figured STR/5 + CON/5";
-                    }
+            //         if (powerInfo.key.toLowerCase() === "spd") {
+            //             characteristic.notes = "5e figured 1 + DEX/10";
+            //         }
 
-                    if (powerInfo.key.toLowerCase() === "end") {
-                        characteristic.notes = "5e figured 2 x CON";
-                    }
+            //         if (powerInfo.key.toLowerCase() === "rec") {
+            //             characteristic.notes = "5e figured STR/5 + CON/5";
+            //         }
 
-                    if (powerInfo.key.toLowerCase() === "stun") {
-                        characteristic.notes = "5e figured BODY+STR/2+CON/2";
-                    }
+            //         if (powerInfo.key.toLowerCase() === "end") {
+            //             characteristic.notes = "5e figured 2 x CON";
+            //         }
 
-                    if (["ocv", "dcv"].includes(powerInfo.key.toLowerCase())) {
-                        characteristic.notes = "5e calculated DEX/3";
-                        characteristic.delta = characteristic.max - characteristic.base;
-                    }
+            //         if (powerInfo.key.toLowerCase() === "stun") {
+            //             characteristic.notes = "5e figured BODY+STR/2+CON/2";
+            //         }
 
-                    if (["omcv", "dmcv"].includes(powerInfo.key.toLowerCase())) {
-                        characteristic.notes = "5e calculated EGO/3";
-                    }
-                }
+            //         if (["ocv", "dcv"].includes(powerInfo.key.toLowerCase())) {
+            //             characteristic.notes = "5e calculated DEX/3";
+            //             characteristic.delta = characteristic.max - characteristic.base;
+            //         }
 
-                // Active Effects may be blocking updates
-                let ary = [];
-                let activeEffects = Array.from(this.actor.allApplicableEffects()).filter(
-                    (ae) =>
-                        ae.changes.find(
-                            (p) => p.key === `system.characteristics.${powerInfo.key.toLowerCase()}.value`,
-                        ) && !ae.disabled,
-                );
-                for (const ae of activeEffects) {
-                    ary.push(`<li>${ae.name}</li>`);
-                }
-                if (ary.length > 0) {
-                    characteristic.valueTitle = "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
-                    characteristic.valueTitle += ary.join("\n ");
-                    characteristic.valueTitle += "</ul>";
-                    characteristic.valueTitle += "<small><i>Click to unblock</i></small>";
-                }
+            //         if (["omcv", "dmcv"].includes(powerInfo.key.toLowerCase())) {
+            //             characteristic.notes = "5e calculated EGO/3";
+            //         }
+            //     }
 
-                ary = [];
-                activeEffects = Array.from(this.actor.allApplicableEffects()).filter(
-                    (ae) =>
-                        ae.changes.find((p) => p.key === `system.characteristics.${powerInfo.key.toLowerCase()}.max`) &&
-                        !ae.disabled,
-                );
+            //     // Active Effects may be blocking updates
+            //     let ary = [];
+            //     let activeEffects = Array.from(this.actor.allApplicableEffects()).filter(
+            //         (ae) =>
+            //             ae.changes.find(
+            //                 (p) => p.key === `system.characteristics.${powerInfo.key.toLowerCase()}.value`,
+            //             ) && !ae.disabled,
+            //     );
+            //     for (const ae of activeEffects) {
+            //         ary.push(`<li>${ae.name}</li>`);
+            //     }
+            //     if (ary.length > 0) {
+            //         characteristic.valueTitle = "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
+            //         characteristic.valueTitle += ary.join("\n ");
+            //         characteristic.valueTitle += "</ul>";
+            //         characteristic.valueTitle += "<small><i>Click to unblock</i></small>";
+            //     }
 
-                for (const ae of activeEffects) {
-                    ary.push(`<li>${ae.name}</li>`);
-                    if (ae._prepareDuration().duration) {
-                        const change = ae.changes.find(
-                            (o) => o.key === `system.characteristics.${powerInfo.key.toLowerCase()}.max`,
-                        );
-                        if (change.mode === CONST.ACTIVE_EFFECT_MODES.ADD) {
-                            characteristic.delta += parseInt(change.value);
-                        }
-                        if (change.mode === CONST.ACTIVE_EFFECT_MODES.MULTIPLY) {
-                            characteristic.delta +=
-                                parseInt(characteristic.max) * parseInt(change.value) - parseInt(characteristic.max);
-                        }
-                    }
-                }
-                if (ary.length > 0) {
-                    characteristic.maxTitle = "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
-                    characteristic.maxTitle += ary.join("\n ");
-                    characteristic.maxTitle += "</ul>";
-                    characteristic.maxTitle += "<small><i>Click to unblock</i></small>";
-                }
+            //     ary = [];
+            //     activeEffects = Array.from(this.actor.allApplicableEffects()).filter(
+            //         (ae) =>
+            //             ae.changes.find((p) => p.key === `system.characteristics.${powerInfo.key.toLowerCase()}.max`) &&
+            //             !ae.disabled,
+            //     );
 
-                characteristicSet.push(characteristic);
-            }
-            data.characteristicSet = characteristicSet;
+            //     for (const ae of activeEffects) {
+            //         ary.push(`<li>${ae.name}</li>`);
+            //         if (ae._prepareDuration().duration) {
+            //             const change = ae.changes.find(
+            //                 (o) => o.key === `system.characteristics.${powerInfo.key.toLowerCase()}.max`,
+            //             );
+            //             if (change.mode === CONST.ACTIVE_EFFECT_MODES.ADD) {
+            //                 characteristic.delta += parseInt(change.value);
+            //             }
+            //             if (change.mode === CONST.ACTIVE_EFFECT_MODES.MULTIPLY) {
+            //                 characteristic.delta +=
+            //                     parseInt(characteristic.max) * parseInt(change.value) - parseInt(characteristic.max);
+            //             }
+            //         }
+            //     }
+            //     if (ary.length > 0) {
+            //         characteristic.maxTitle = "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
+            //         characteristic.maxTitle += ary.join("\n ");
+            //         characteristic.maxTitle += "</ul>";
+            //         characteristic.maxTitle += "<small><i>Click to unblock</i></small>";
+            //     }
+
+            //     characteristicSet.push(characteristic);
+            // }
+            // data.characteristicSet = characteristicSet;
 
             // Defense (create fake attacks and get defense results)
             let defense = {};
@@ -530,8 +538,8 @@ export class HeroSystemActorSheet extends FoundryVttActorSheet {
             data.useHAP = game.settings.get(game.system.id, "HAP");
 
             // Not all actor types have END & STUN
-            data.hasEND = powers.find((o) => o.key === "END");
-            data.hasSTUN = powers.find((o) => o.key === "STUN");
+            // data.hasEND = getCharacteristicInfoArrayForActor(this.actor).find((o) => o.key === "END");
+            // data.hasSTUN = getCharacteristicInfoArrayForActor(this.actor).find((o) => o.key === "STUN");
 
             // Endurance Reserve
             data.endReserve = this.actor.items.find((o) => o.system.XMLID === "ENDURANCERESERVE");

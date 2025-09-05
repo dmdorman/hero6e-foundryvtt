@@ -31,6 +31,7 @@ import { HeroSystemActiveEffectConfig } from "./actor/active-effect-config.mjs";
 import { HeroSystem6eItem, initializeItemHandlebarsHelpers } from "./item/item.mjs";
 import { HeroSystem6eItemTypeDataModelMisc } from "./item/HeroSystem6eItemTypeDataModelMisc.mjs";
 import {
+    HeroActorModel,
     HeroSystem6eItemPower,
     HeroSystem6eItemEquipment,
     HeroSystem6eItemSkill,
@@ -40,7 +41,8 @@ import {
     HeroSystem6eItemMartialArt,
     HeroSystem6eItemDisadvantage,
     HeroSystem6eItemComplication,
-} from "./item/HeroSystem6eItemTypeDataModel.mjs";
+    HeroItemCharacteristic,
+} from "./item/HeroSystem6eTypeDataModels.mjs";
 import { HeroSystem6eItemSheet } from "./item/item-sheet.mjs";
 
 //import { HeroSystem6eCardHelpers } from "./card/card-helpers.mjs";
@@ -192,6 +194,13 @@ Hooks.once("init", async function () {
         base: HeroSystem6eActorActiveEffectsSystemData,
     });
 
+    Object.assign(CONFIG.Actor.dataModels, {
+        automaton: HeroActorModel,
+        computer: HeroActorModel,
+        pc: HeroActorModel,
+        npc: HeroActorModel,
+    });
+
     Object.assign(CONFIG.Item.dataModels, {
         // The keys are the types defined in our template.json
         power: HeroSystem6eItemPower,
@@ -204,6 +213,7 @@ Hooks.once("init", async function () {
         disadvantage: HeroSystem6eItemDisadvantage,
         complication: HeroSystem6eItemComplication,
         misc: HeroSystem6eItemTypeDataModelMisc,
+        characteristic: HeroItemCharacteristic,
     });
 
     HeroRuler.initialize();
@@ -668,7 +678,7 @@ Hooks.on("renderActorSheet", (dialog, html, data) => {
             actor.changeType();
         });
 
-        element.innerHTML = `<i class="fal fa-user-robot"></i>Type`;
+        element.innerHTML = `<i class="fal fa-user-robot"></i>${data.actor?.system?.CHARACTER?.TEMPLATE?.replace("builtIn.", "").replace(".hdt", "") || "Type"}`;
 
         html.find("header h4").after(element);
     }
