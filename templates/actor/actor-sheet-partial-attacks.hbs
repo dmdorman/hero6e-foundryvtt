@@ -30,10 +30,10 @@
                         {{{itemName item}}}
                     </td>
                     <td title="{{{getScopedFlagValue item @root/gameSystemId "tags" "ocv"}}}">
-                        {{item.system.ocvEstimated}}
+                        {{signedString 0}}
                     </td>
                     <td title="{{{getScopedFlagValue item @root/gameSystemId "tags" "dcv"}}}">
-                        {{item.system.dcvEstimated}}
+                        {{signedString item.system.dcvEstimated}}
                     </td>
                     <td>
                         {{item.system.uses}} vs {{item.system.targets}}

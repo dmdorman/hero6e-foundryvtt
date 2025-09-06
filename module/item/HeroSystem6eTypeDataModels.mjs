@@ -516,6 +516,46 @@ export class HeroSystem6eItemTypeDataModelGetters extends foundry.abstract.TypeD
 
         return this.item.end || null;
     }
+
+    get ocvEstimated() {
+        return parseInt(this.OCV) || 0;
+    }
+
+    get dcvEstimated() {
+        return parseInt(this.DCV) || 0;
+    }
+
+    get uses() {
+        let _uses = "ocv";
+
+        if (this.baseInfo.type.includes("mental")) {
+            _uses = "omcv";
+        }
+
+        // Alternate Combat Value (uses OMCV against DCV)
+        const acv = this.item.findModsByXmlid("ACV");
+        if (acv) {
+            _uses = (acv.OPTION_ALIAS.match(/uses (\w+)/)?.[1] || _uses).toLowerCase();
+        }
+
+        return _uses;
+    }
+
+    get targets() {
+        let _targets = "dcv";
+
+        if (this.baseInfo.type.includes("mental")) {
+            _targets = "dmcv";
+        }
+
+        // Alternate Combat Value (uses OMCV against DCV)
+        const acv = this.item.findModsByXmlid("ACV");
+        if (acv) {
+            _targets = (acv.OPTION_ALIAS.match(/against (\w+)/)?.[1] || _targets).toLowerCase();
+        }
+
+        return _targets;
+    }
 }
 
 export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeDataModelGetters {

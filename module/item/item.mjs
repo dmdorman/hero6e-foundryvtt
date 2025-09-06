@@ -2710,6 +2710,8 @@ export class HeroSystem6eItem extends Item {
     }
 
     configureAttackParameters() {
+        console.error("depricated configureAttackParameters");
+
         const maneuver = ["maneuver", "martialart"].includes(this.type);
 
         // PH: FIXME: Kludge to stick in ocv & dcv

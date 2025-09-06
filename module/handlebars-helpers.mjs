@@ -25,6 +25,7 @@ export function initializeHandlebarsHelpers() {
     Handlebars.registerHelper("actorItemHeroValidation", actorItemHeroValidation);
     Handlebars.registerHelper("actorHeroValidationByItemType", actorHeroValidationByItemType);
     Handlebars.registerHelper("hasCharacteristic", hasCharacteristic);
+    Handlebars.registerHelper("signedString", signedString);
 }
 
 function indexOf(str, searchTerm) {
@@ -181,4 +182,13 @@ function actorHeroValidationByItemType(actor, itemType) {
 
 function hasCharacteristic(actor, characteristic) {
     return getCharacteristicInfoArrayForActor(actor).find((o) => o.key === characteristic);
+}
+
+function signedString(value) {
+    try {
+        return Number(value).signedStringHero() || value;
+    } catch (e) {
+        console.error(e);
+    }
+    return value;
 }
