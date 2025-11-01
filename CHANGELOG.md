@@ -4,6 +4,7 @@
 
 - Fixed tooltip truncation due to inch symbol [#3008](https://github.com/dmdorman/hero6e-foundryvtt/issues/3008)
 - Various VPP improvements, including the ability to choose VPP slots. Exceeding VPP pool is not enforced. [#2743](https://github.com/dmdorman/hero6e-foundryvtt/issues/2743) [#2869](https://github.com/dmdorman/hero6e-foundryvtt/issues/2869)
+- Add support for NODEFINCREASE modifier to DENSITYINCREASE. [#3012]
 
 ## Version 4.2.1 20251026
 

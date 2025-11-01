@@ -407,9 +407,14 @@ export class HeroSystem6eItem extends Item {
 
             if (this.id && this.system.XMLID === "DENSITYINCREASE") {
                 const noStrIncrease = this.modifiers.find((mod) => mod.XMLID === "NOSTRINCREASE");
+                const noDefIncrease = this.modifiers.find((mod) => mod.XMLID === "NODEFINCREASE");
+                // NODEFINCREASE allows for ED, PD, or EDPD as option.
+                const noDefIncreasePd = noDefIncrease?.OPTION.includes("PD");
+                const noDefIncreaseEd = noDefIncrease?.OPTION.includes("ED");
+
                 const strAdd = noStrIncrease ? 0 : Math.floor(this.system.LEVELS) * 5;
-                const pdAdd = Math.floor(this.system.LEVELS);
-                const edAdd = Math.floor(this.system.LEVELS);
+                const pdAdd = noDefIncreasePd ? 0 : Math.floor(this.system.LEVELS);
+                const edAdd = noDefIncreaseEd ? 0 : Math.floor(this.system.LEVELS);
 
                 let activeEffect = Array.from(this.effects)?.[0] || {};
                 activeEffect.name = (this.name ? `${this.name}: ` : "") + `${this.system.XMLID} ${this.system.LEVELS}`;
