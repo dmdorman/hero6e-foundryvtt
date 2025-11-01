@@ -8383,20 +8383,13 @@ export function registerUploadTests(quench) {
                         let item, actor;
 
                         before(async function () {
-                            actor = new HeroSystem6eActor(
-                                {
-                                    name: "Quench Actor",
-                                    type: "pc",
-                                },
-                                {},
-                            );
-                            actor.system.is5e = true;
-
-                            item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
 
-                            actor.items.set(item.system.XMLID, item);
+                            await actor.FullHealth();
+                            await item.toggle();
                         });
 
                         it("description", function () {
@@ -8415,7 +8408,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("does not increase STR", function () {
-                            assert.equal(undefined, actor.system.characteristics.str.value);
+                            assert.equal(actor.system.characteristics.str.core, actor.system.characteristics.str.value);
                         });
                     });
 
@@ -8431,20 +8424,13 @@ export function registerUploadTests(quench) {
                         let item, actor;
 
                         before(async function () {
-                            actor = new HeroSystem6eActor(
-                                {
-                                    name: "Quench Actor",
-                                    type: "pc",
-                                },
-                                {},
-                            );
-                            actor.system.is5e = true;
-
-                            item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
 
-                            actor.items.set(item.system.XMLID, item);
+                            await actor.FullHealth();
+                            await item.toggle();
                         });
 
                         it("description", function () {
@@ -8463,7 +8449,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("does not increase PD", function () {
-                            assert.equal(undefined, actor.system.characteristics.pd.value);
+                            assert.equal(actor.system.characteristics.pd.core, actor.system.characteristics.pd.value);
                         });
 
                         it("does increase ED", function () {
@@ -8486,20 +8472,13 @@ export function registerUploadTests(quench) {
                         let item, actor;
 
                         before(async function () {
-                            actor = new HeroSystem6eActor(
-                                {
-                                    name: "Quench Actor",
-                                    type: "pc",
-                                },
-                                {},
-                            );
-                            actor.system.is5e = true;
-
-                            item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
 
-                            actor.items.set(item.system.XMLID, item);
+                            await actor.FullHealth();
+                            await item.toggle();
                         });
 
                         it("description", function () {
@@ -8525,7 +8504,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("does not increase ED", function () {
-                            assert.equal(undefined, actor.system.characteristics.ed.value);
+                            assert.equal(actor.system.characteristics.ed.core, actor.system.characteristics.ed.value);
                         });
                     });
 
@@ -8541,20 +8520,13 @@ export function registerUploadTests(quench) {
                         let item, actor;
 
                         before(async function () {
-                            actor = new HeroSystem6eActor(
-                                {
-                                    name: "Quench Actor",
-                                    type: "pc",
-                                },
-                                {},
-                            );
-                            actor.system.is5e = true;
-
-                            item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
 
-                            actor.items.set(item.system.XMLID, item);
+                            await actor.FullHealth();
+                            await item.toggle();
                         });
 
                         it("description", function () {
@@ -8573,11 +8545,11 @@ export function registerUploadTests(quench) {
                         });
 
                         it("does not increase PD", function () {
-                            assert.equal(undefined, actor.system.characteristics.pd.value);
+                            assert.equal(actor.system.characteristics.pd.core, actor.system.characteristics.pd.value);
                         });
 
                         it("does not increase ED", function () {
-                            assert.equal(undefined, actor.system.characteristics.ed.value);
+                            assert.equal(actor.system.characteristics.ed.core, actor.system.characteristics.ed.value);
                         });
                     });
                 });
