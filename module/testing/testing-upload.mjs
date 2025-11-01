@@ -8369,52 +8369,220 @@ export function registerUploadTests(quench) {
                 });
             });
 
-            describe("Density Increase", function () {
-                describe("5e", function () {
-                    const contents = `
-                        <POWER XMLID="DENSITYINCREASE" ID="1748706662356" BASECOST="0.0" LEVELS="5" ALIAS="Density Increase" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            <MODIFIER XMLID="NOSTRINCREASE" ID="1748707048387" BASECOST="-0.5" LEVELS="0" ALIAS="No STR Increase" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+            describe("Density Increase", async function () {
+                describe("5e", async function () {
+                    describe("NOSTRINCREASE", async function () {
+                        const contents = `
+                            <POWER XMLID="DENSITYINCREASE" ID="1748706662356" BASECOST="0.0" LEVELS="5" ALIAS="Density Increase" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
                                 <NOTES />
-                            </MODIFIER>
-                        </POWER>
-                    `;
-                    let item;
+                                <MODIFIER XMLID="NOSTRINCREASE" ID="1748707048387" BASECOST="-0.5" LEVELS="0" ALIAS="No STR Increase" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                    <NOTES />
+                                </MODIFIER>
+                            </POWER>
+                        `;
+                        let item, actor;
 
-                    before(async function () {
-                        const actor = new HeroSystem6eActor(
-                            {
-                                name: "Quench Actor",
-                                type: "pc",
-                            },
-                            {},
-                        );
-                        actor.system.is5e = true;
+                        before(async function () {
+                            actor = new HeroSystem6eActor(
+                                {
+                                    name: "Quench Actor",
+                                    type: "pc",
+                                },
+                                {},
+                            );
+                            actor.system.is5e = true;
 
-                        item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
-                            parent: actor,
+                            item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                parent: actor,
+                            });
+
+                            actor.items.set(item.system.XMLID, item);
                         });
 
-                        actor.items.set(item.system.XMLID, item);
+                        it("description", function () {
+                            assert.equal(
+                                item.system.description,
+                                `Density Increase (3200 kg mass, +0 STR, +5 PD/ED, -5" KB) (25 Active Points); No STR Increase (-1/2)`,
+                            );
+                        });
+
+                        it("realCost", function () {
+                            assert.equal(item.realCost, 17);
+                        });
+
+                        it("activePoints", function () {
+                            assert.equal(item.activePoints, 25);
+                        });
+
+                        it("does not increase STR", function () {
+                            assert.equal(undefined, actor.system.characteristics.str.value);
+                        });
                     });
 
-                    it("description", function () {
-                        assert.equal(
-                            item.system.description,
-                            `Density Increase (3200 kg mass, +0 STR, +5 PD/ED, -5" KB) (25 Active Points); No STR Increase (-1/2)`,
-                        );
+                    describe("NODEFINCREASE - PD", async function () {
+                        const contents = `
+                            <POWER XMLID="DENSITYINCREASE" ID="1748706662356" BASECOST="0.0" LEVELS="5" ALIAS="Density Increase" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                <MODIFIER XMLID="NODEFINCREASE" ID="1762006319549" BASECOST="-0.25" LEVELS="0" ALIAS="No Defense Increase" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="PD" OPTIONID="PD" OPTION_ALIAS="does not provide PD" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                  <NOTES />
+                                </MODIFIER>
+                            </POWER>
+                        `;
+                        let item, actor;
+
+                        before(async function () {
+                            actor = new HeroSystem6eActor(
+                                {
+                                    name: "Quench Actor",
+                                    type: "pc",
+                                },
+                                {},
+                            );
+                            actor.system.is5e = true;
+
+                            item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                parent: actor,
+                            });
+
+                            actor.items.set(item.system.XMLID, item);
+                        });
+
+                        it("description", function () {
+                            assert.equal(
+                                item.system.description,
+                                `Density Increase (3200 kg mass, +25 STR, +0 PD, +5 ED, -5" KB) (25 Active Points); No Defense Increase (does not provide PD; -1/4)`,
+                            );
+                        });
+
+                        it("realCost", function () {
+                            assert.equal(item.realCost, 20);
+                        });
+
+                        it("activePoints", function () {
+                            assert.equal(item.activePoints, 25);
+                        });
+
+                        it("does not increase PD", function () {
+                            assert.equal(undefined, actor.system.characteristics.pd.value);
+                        });
+
+                        it("does increase ED", function () {
+                            assert.notEqual(
+                                actor.system.characteristics.ed.core,
+                                actor.system.characteristics.ed.value,
+                            );
+                        });
                     });
 
-                    it("realCost", function () {
-                        assert.equal(item.realCost, 17);
+                    describe("NODEFINCREASE - ED", async function () {
+                        const contents = `
+                            <POWER XMLID="DENSITYINCREASE" ID="1748706662356" BASECOST="0.0" LEVELS="5" ALIAS="Density Increase" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                <MODIFIER XMLID="NODEFINCREASE" ID="1762006319549" BASECOST="-0.25" LEVELS="0" ALIAS="No Defense Increase" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="ED" OPTIONID="ED" OPTION_ALIAS="does not provide ED" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                  <NOTES />
+                                </MODIFIER>
+                            </POWER>
+                        `;
+                        let item, actor;
+
+                        before(async function () {
+                            actor = new HeroSystem6eActor(
+                                {
+                                    name: "Quench Actor",
+                                    type: "pc",
+                                },
+                                {},
+                            );
+                            actor.system.is5e = true;
+
+                            item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                parent: actor,
+                            });
+
+                            actor.items.set(item.system.XMLID, item);
+                        });
+
+                        it("description", function () {
+                            assert.equal(
+                                item.system.description,
+                                `Density Increase (3200 kg mass, +25 STR, +5 PD, +0 ED, -5" KB) (25 Active Points); No Defense Increase (does not provide ED; -1/4)`,
+                            );
+                        });
+
+                        it("realCost", function () {
+                            assert.equal(item.realCost, 20);
+                        });
+
+                        it("activePoints", function () {
+                            assert.equal(item.activePoints, 25);
+                        });
+
+                        it("does increase PD", function () {
+                            assert.notEqual(
+                                actor.system.characteristics.pd.core,
+                                actor.system.characteristics.pd.value,
+                            );
+                        });
+
+                        it("does not increase ED", function () {
+                            assert.equal(undefined, actor.system.characteristics.ed.value);
+                        });
                     });
 
-                    it("activePoints", function () {
-                        assert.equal(item.activePoints, 25);
+                    describe("NODEFINCREASE - PDED", async function () {
+                        const contents = `
+                            <POWER XMLID="DENSITYINCREASE" ID="1748706662356" BASECOST="0.0" LEVELS="5" ALIAS="Density Increase" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                <MODIFIER XMLID="NODEFINCREASE" ID="1762006319549" BASECOST="-0.5" LEVELS="0" ALIAS="No Defense Increase" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="PDED" OPTIONID="PDED" OPTION_ALIAS="does not provide PD or ED" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                  <NOTES />
+                                </MODIFIER>
+                            </POWER>
+                        `;
+                        let item, actor;
+
+                        before(async function () {
+                            actor = new HeroSystem6eActor(
+                                {
+                                    name: "Quench Actor",
+                                    type: "pc",
+                                },
+                                {},
+                            );
+                            actor.system.is5e = true;
+
+                            item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                parent: actor,
+                            });
+
+                            actor.items.set(item.system.XMLID, item);
+                        });
+
+                        it("description", function () {
+                            assert.equal(
+                                item.system.description,
+                                `Density Increase (3200 kg mass, +25 STR, +0 PD/ED, -5" KB) (25 Active Points); No Defense Increase (does not provide PD or ED; -1/2)`,
+                            );
+                        });
+
+                        it("realCost", function () {
+                            assert.equal(item.realCost, 17);
+                        });
+
+                        it("activePoints", function () {
+                            assert.equal(item.activePoints, 25);
+                        });
+
+                        it("does not increase PD", function () {
+                            assert.equal(undefined, actor.system.characteristics.pd.value);
+                        });
+
+                        it("does not increase ED", function () {
+                            assert.equal(undefined, actor.system.characteristics.ed.value);
+                        });
                     });
                 });
 
-                describe("6e", function () {
+                describe("6e", async function () {
                     const contents = `
                         <POWER XMLID="DENSITYINCREASE" ID="1748707197339" BASECOST="0.0" LEVELS="7" ALIAS="Density Increase" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
                             <NOTES />
