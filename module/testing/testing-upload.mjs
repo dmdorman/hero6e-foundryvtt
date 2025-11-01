@@ -8450,7 +8450,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                `Density Increase (3200 kg mass, +25 STR, +0 PD, +5 ED, -5" KB) (25 Active Points); No Defense Increase (does not provide PD; -1/4)`,
+                                `Density Increase (3200 kg mass, +25 STR, +5 ED, -5" KB) (25 Active Points); No Defense Increase (does not provide PD; -1/4)`,
                             );
                         });
 
@@ -8505,7 +8505,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                `Density Increase (3200 kg mass, +25 STR, +5 PD, +0 ED, -5" KB) (25 Active Points); No Defense Increase (does not provide ED; -1/4)`,
+                                `Density Increase (3200 kg mass, +25 STR, +5 PD, -5" KB) (25 Active Points); No Defense Increase (does not provide ED; -1/4)`,
                             );
                         });
 
@@ -8560,7 +8560,7 @@ export function registerUploadTests(quench) {
                         it("description", function () {
                             assert.equal(
                                 item.system.description,
-                                `Density Increase (3200 kg mass, +25 STR, +0 PD/ED, -5" KB) (25 Active Points); No Defense Increase (does not provide PD or ED; -1/2)`,
+                                `Density Increase (3200 kg mass, +25 STR, -5" KB) (25 Active Points); No Defense Increase (does not provide PD or ED; -1/2)`,
                             );
                         });
 

@@ -5771,15 +5771,19 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 const massDisplay = `${Math.pow(2, item.system.LEVELS) * 100} kg mass`;
                 const kbDisplay = `-${hexDistanceToSystemDisplayString(item.system.LEVELS, item.actor)} KB`;
                 // NODEFINCREASE allows for ED, PD, or EDPD as option.
-                const armorDisplay = {
-                    // Map for readability, this looks a bit rough as an if-else chain
-                    "true-true": "+0 PD/ED",
-                    "false-false": `+${item.system.LEVELS} PD/ED`,
-                    "true-false": `+0 PD, +${item.system.LEVELS} ED`,
-                    "false-true": `+${item.system.LEVELS} PD, +0 ED`,
-                }[`${noDefIncrease?.OPTION.includes("PD") || false}-${noDefIncrease?.OPTION.includes("ED") || false}`];
+                const armorDisplay = (() => {
+                    const noPdIncrease = noDefIncrease?.OPTION.includes("PD");
+                    const noEdIncrease = noDefIncrease?.OPTION.includes("ED");
 
-                return `${item.system.ALIAS} (${massDisplay}, ${strDisplay}, ${armorDisplay}, ${kbDisplay})`;
+                    if (noPdIncrease && noEdIncrease) return "";
+
+                    const displayTypes = [noPdIncrease ? "" : "PD", noEdIncrease ? "" : "ED"].filter(Boolean).join("/");
+                    return `+${item.system.LEVELS} ${displayTypes}`;
+                })();
+
+                const details = [massDisplay, strDisplay, armorDisplay, kbDisplay].filter(Boolean).join(", ");
+
+                return `${item.system.ALIAS} (${details})`;
             },
             xml: `<POWER XMLID="DENSITYINCREASE" ID="1709333874268" BASECOST="0.0" LEVELS="1" ALIAS="Density Increase" POSITION="31" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes"></POWER>`,
         },
