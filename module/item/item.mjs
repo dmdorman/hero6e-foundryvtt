@@ -5661,107 +5661,94 @@ export async function rollRequiresASkillRollCheck(item, options = {}) {
     if (!rar) {
         return true;
     }
-    function logAttributes(items, filterFn, attributesToLog = []) {
-        const matches = items.filter(filterFn);
-
-        matches.forEach(item => {
-            const logData = {};
-
-            attributesToLog.forEach(attr => {
-                // allows nested paths like "system.XMLID"
-                const value = attr.split('.').reduce((obj, key) => obj?.[key], item);
-                logData[attr] = value;
-            });
-
-            console.log("Item:", item.name || "(no name)", logData);
-        });
-
-        return matches; // return matching items in case caller needs them
-    }
-
-
     const RAR_OPTION_ALIAS = rar.OPTION_ALIAS;
     let OPTION_ALIAS = RAR_OPTION_ALIAS;
 
     // Requires A Roll (generic) default to 11
     let value = parseInt(rar.OPTIONID);
-    if (isNaN(value)) { // if the RaR is an Activation roll, then we have the value we need
+    if (isNaN(value)) {
+        // if the RaR is an Activation roll, then we have the value we need
         // From the "Options" field. ex: 'Magic roll, -1 per 20 Active Points modifier'
-        const RAR_OPTION_ALIAS_SUBSTRING = RAR_OPTION_ALIAS?.toUpperCase().split(",")[0].replace(/ROLL/i, "").trim() ?? "";
+        const RAR_OPTION_ALIAS_SUBSTRING =
+            RAR_OPTION_ALIAS?.toUpperCase().split(",")[0].replace(/ROLL/i, "").trim() ?? "";
         const RAR_ALIAS = rar.ALIAS?.toUpperCase() ?? ""; // From the "Display" field. ex: "Requires A Magic Roll"
         const RAR_COMMENTS = rar.COMMENTS?.toUpperCase() ?? ""; // From the "Comments" field. ex: might just say "Magic"
 
-        const matchRequiredSkillRoll = o => {
+        const matchRequiredSkillRoll = (o) => {
             const aliasUpper = o.system.ALIAS?.toUpperCase() ?? "";
             const nameUpper = o.name?.toUpperCase() ?? "";
 
-            if(o.system.XMLID === RAR_OPTION_ALIAS_SUBSTRING ){
+            if (o.system.XMLID === RAR_OPTION_ALIAS_SUBSTRING) {
                 OPTION_ALIAS = RAR_OPTION_ALIAS_SUBSTRING;
                 return true;
             }
 
-            if( RAR_OPTION_ALIAS_SUBSTRING === aliasUpper ||
+            if (
+                RAR_OPTION_ALIAS_SUBSTRING === aliasUpper ||
                 RAR_COMMENTS === aliasUpper ||
-                RAR_ALIAS.includes(aliasUpper) ){
+                RAR_ALIAS.includes(aliasUpper)
+            ) {
                 OPTION_ALIAS = o.system.ALIAS;
                 return true;
             }
 
-            if( RAR_OPTION_ALIAS_SUBSTRING === nameUpper  ||
+            if (
+                RAR_OPTION_ALIAS_SUBSTRING === nameUpper ||
                 RAR_COMMENTS === nameUpper ||
-                RAR_ALIAS.includes(nameUpper)){
+                RAR_ALIAS.includes(nameUpper)
+            ) {
                 OPTION_ALIAS = o.name;
                 return true;
-            };
+            }
 
             return false;
         };
-        
-        const matchBackgroundSkillRoll = o => {
-            if (rar.OPTIONID !== o.system.ALIAS && !(rar.OPTIONID === "SS" && o.system.XMLID === "SCIENCE_SKILL")){
+
+        const matchBackgroundSkillRoll = (o) => {
+            if (rar.OPTIONID !== o.system.ALIAS && !(rar.OPTIONID === "SS" && o.system.XMLID === "SCIENCE_SKILL")) {
                 return false;
             }
             const inputUpper = o.system.INPUT?.toUpperCase() ?? "";
 
-            if( RAR_OPTION_ALIAS_SUBSTRING === inputUpper  ||
+            if (
+                RAR_OPTION_ALIAS_SUBSTRING === inputUpper ||
                 RAR_COMMENTS === inputUpper ||
-                RAR_ALIAS.includes(inputUpper)){
+                RAR_ALIAS.includes(inputUpper)
+            ) {
                 OPTION_ALIAS = o.system.INPUT;
                 return true;
-            };
+            }
 
             return matchRequiredSkillRoll(o);
         };
 
-        const characteristicKeys = Object.keys(item.actor.system.characteristics).map(k => k.toLowerCase());
+        const characteristicKeys = Object.keys(item.actor.system.characteristics).map((k) => k.toLowerCase());
         const rarDisplayMaybeHasCharKey = RAR_ALIAS.toLowerCase();
         const rarOptionMaybeIsCharKey = RAR_OPTION_ALIAS_SUBSTRING.toLowerCase();
-        
+
         const getRequiredCharacteristicKey = () => {
             const maybeCharacteristicKey = RAR_COMMENTS.toLowerCase(); // pre or presence
-            if (characteristicKeys.includes(maybeCharacteristicKey)) { // finds pre, not presence
+            if (characteristicKeys.includes(maybeCharacteristicKey)) {
+                // finds pre, not presence
                 return maybeCharacteristicKey;
             }
-            const matchedKeyInComment = characteristicKeys.find(key => maybeCharacteristicKey.includes(key));
+            const matchedKeyInComment = characteristicKeys.find((key) => maybeCharacteristicKey.includes(key));
             if (matchedKeyInComment) {
                 return matchedKeyInComment;
             }
-            const matchedKeyInName = characteristicKeys.find(key => rarDisplayMaybeHasCharKey.includes(key));
+            const matchedKeyInName = characteristicKeys.find((key) => rarDisplayMaybeHasCharKey.includes(key));
             if (matchedKeyInName) {
                 return matchedKeyInName;
             }
-            const matchedKeyInOption = characteristicKeys.find(key =>  rarOptionMaybeIsCharKey.includes(key));
+            const matchedKeyInOption = characteristicKeys.find((key) => rarOptionMaybeIsCharKey.includes(key));
             return matchedKeyInOption ?? "";
         };
 
-        const filterSkillRollItems = o => (
-            o.baseInfo?.type?.includes("skill") && // is a skill 
+        const filterSkillRollItems = (o) =>
+            o.baseInfo?.type?.includes("skill") && // is a skill
             !o.baseInfo?.type?.includes("enhancer") && // is not an enhancer (scholar, scientist, etc.)
             o.system.XMLID !== "SKILL_LEVELS" && // is not a bonus to skills
-            o.system.XMLID !== "COMBAT_LEVELS" // is not a bonus to combat
-        );
-
-        logAttributes([rar], () => true, ["XMLID", "OPTIONID", "ALIAS", "OPTION_ALIAS", "COMMENTS"]);
+            o.system.XMLID !== "COMBAT_LEVELS"; // is not a bonus to combat
 
         switch (rar.OPTIONID) {
             case "SKILL":
@@ -5775,16 +5762,13 @@ export async function rollRequiresASkillRollCheck(item, options = {}) {
                 {
                     OPTION_ALIAS = RAR_OPTION_ALIAS_SUBSTRING;
 
-                    // logAttributes(item.actor.items, o => o.baseInfo?.type?.includes("skill"), ["baseInfo.type", "name", "system.XMLID", "system.ALIAS"]);
-                    logAttributes(item.actor.items, filterSkillRollItems, ["baseInfo.type", "name", "system.XMLID", "system.ALIAS"]);
-
                     let skill = undefined;
-                    if(["SS","KS","PS"].includes(rar.OPTIONID)){
-                        skill = item.actor.items.find( (o) => ( filterSkillRollItems(o) && matchBackgroundSkillRoll(o) ));
-                    }else if(rar.OPTIONID === "PER"){
-                        skill = item.actor.items.find( (o) => (o.system.XMLID === "PERCEPTION") );
-                    }else{
-                        skill = item.actor.items.find( (o) => (filterSkillRollItems(o) && matchRequiredSkillRoll(o)) );
+                    if (["SS", "KS", "PS"].includes(rar.OPTIONID)) {
+                        skill = item.actor.items.find((o) => filterSkillRollItems(o) && matchBackgroundSkillRoll(o));
+                    } else if (rar.OPTIONID === "PER") {
+                        skill = item.actor.items.find((o) => o.system.XMLID === "PERCEPTION");
+                    } else {
+                        skill = item.actor.items.find((o) => filterSkillRollItems(o) && matchRequiredSkillRoll(o));
                     }
                     if (!skill) {
                         const charKey = getRequiredCharacteristicKey();
@@ -5796,11 +5780,10 @@ export async function rollRequiresASkillRollCheck(item, options = {}) {
                             );
                             // Lets try anyway
                             value = parseInt(char.roll);
-                            if (isNaN(value)){
+                            if (isNaN(value)) {
                                 value = 11;
                             }
                             OPTION_ALIAS += ` ${value}-`;
-
                         }
                     }
                     if (skill) {
@@ -5851,7 +5834,7 @@ export async function rollRequiresASkillRollCheck(item, options = {}) {
                         OPTION_ALIAS = charKey.toUpperCase();
                         item.actor.updateRollable(RAR_OPTION_ALIAS.toLowerCase());
                         value = parseInt(char.roll);
-                        if (isNaN(value)){
+                        if (isNaN(value)) {
                             value = 11;
                         }
                         OPTION_ALIAS += ` ${value}-`;
@@ -5865,14 +5848,15 @@ export async function rollRequiresASkillRollCheck(item, options = {}) {
 
             default:
                 if (!value) {
-                    ui.notifications.warn(`${item.actor.name} has a power ${item.name}. ${OPTION_ALIAS} is not supported.`);
+                    ui.notifications.warn(
+                        `${item.actor.name} has a power ${item.name}. ${OPTION_ALIAS} is not supported.`,
+                    );
                     value = 11;
                     OPTION_ALIAS += ` ${value}-`;
                 }
                 break;
         }
     }
-
 
     const successValue = parseInt(value);
     const activationRoller = new HeroRoller().makeSuccessRoll(true, successValue).addDice(3);
@@ -5882,8 +5866,9 @@ export async function rollRequiresASkillRollCheck(item, options = {}) {
     const total = activationRoller.getSuccessTotal();
     const margin = successValue - total;
 
-    const flavor = `${item.name.toUpperCase()} (${OPTION_ALIAS}) activation ${succeeded ? "succeeded" : "failed"
-        } by ${autoSuccess === undefined ? `${Math.abs(margin)}` : `rolling ${total}`}`;
+    const flavor = `${item.name.toUpperCase()} (${OPTION_ALIAS}) activation ${
+        succeeded ? "succeeded" : "failed"
+    } by ${autoSuccess === undefined ? `${Math.abs(margin)}` : `rolling ${total}`}`;
     let cardHtml = await activationRoller.render(flavor);
 
     // FORCE success
