@@ -1,5 +1,9 @@
 # Releases
 
+## Version 4.2.3 20251109 So far...
+
+- Resolves charge powers not showing up in the attack tab after HDC upload. [#3068](https://github.com/dmdorman/hero6e-foundryvtt/issues/3068)
+
 ## Version 4.2.2 20251108 [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
 
 - Various VPP improvements, including the ability to choose VPP slots. Exceeding VPP pool is not enforced. [#2743](https://github.com/dmdorman/hero6e-foundryvtt/issues/2743) [#2869](https://github.com/dmdorman/hero6e-foundryvtt/issues/2869)

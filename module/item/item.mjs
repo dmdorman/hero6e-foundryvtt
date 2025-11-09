@@ -796,9 +796,6 @@ export class HeroSystem6eItem extends Item {
                 ["system.charges.value"]: this.system.charges.max,
                 ["system.charges.clips"]: this.system.charges.clipsMax,
             });
-            if (this.isActive) {
-                await this.toggle();
-            }
         }
 
         if (this.system.XMLID === "ENDURANCERESERVE" && this.system.value !== this.system.LEVELS) {
