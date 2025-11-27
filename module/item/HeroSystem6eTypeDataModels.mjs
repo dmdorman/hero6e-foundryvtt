@@ -37,7 +37,8 @@ class TimeClearedCache {
     }
 }
 
-const { StringField, ObjectField, BooleanField, ArrayField, EmbeddedDataField, SchemaField } = foundry.data.fields;
+const { ArrayField, BooleanField, EmbeddedDataField, NumberField, ObjectField, StringField, SchemaField } =
+    foundry.data.fields;
 
 class HeroNumberField extends foundry.data.fields.NumberField {
     _applyChangeMultiply(value, delta) {
@@ -366,22 +367,6 @@ class HeroPowerModel extends HeroItemModCommonModel {
 }
 
 export class HeroSystem6eItemCharges extends foundry.abstract.DataModel {
-    // constructor(data, context) {
-    //     super(data, context);
-
-    //     // set initial value
-    //     const CHARGES = this.parent.MODIFIER.find((m) => m.XMLID === "CHARGES");
-    //     if (!CHARGES && data.value !== undefined) {
-    //         this.value = undefined;
-    //     }
-    //     if (data.value === undefined) {
-    //         if (CHARGES) {
-    //             this.value = parseInt(CHARGES.OPTION_ALIAS);
-    //             this.clips = Math.pow(2, parseInt((CHARGES.ADDER || []).find((o) => o.XMLID === "CLIPS")?.LEVELS || 0));
-    //         }
-    //     }
-    // }
-
     static defineSchema() {
         // Note that the return is just a simple object
         return {
@@ -420,15 +405,43 @@ export class HeroSystem6eItemCharges extends foundry.abstract.DataModel {
         if (this.CHARGES) {
             return parseInt(this.CHARGES?.OPTION_ALIAS);
         }
+
         return null;
     }
 
     get CLIPS() {
-        return this.CHARGES?.ADDER?.find((o) => o.XMLID === "CLIPS");
+        return this.CHARGES?.ADDER?.find((o) => o.XMLID === "CLIPS") || 0;
     }
 
     get clipsMax() {
         return Math.pow(2, this.CLIPS?.LEVELS || 0);
+    }
+}
+
+export class HeroSystem6eItemAblative extends foundry.abstract.DataModel {
+    static defineSchema() {
+        // Note that the return is just a simple object
+        return {
+            timesThresholdExceeded: new HeroNumberField({ integer: true, min: 0, nullable: false }),
+            thresholdDefenseType: new StringField({ nullable: false }),
+        };
+    }
+
+    // PH: FIXME: This seem like a pretty basic mixin/composition. Refactor.
+    get item() {
+        if (this.parent.parent instanceof HeroSystem6eItem) {
+            return this.parent.parent;
+        }
+
+        return null;
+    }
+
+    get ablativeModifier() {
+        return this.item.modifiers.find((m) => m.XMLID === "ABLATIVE");
+    }
+
+    get thresholdDefense() {
+        return this.ablativeModifier?.OPTIONID ?? "NOT ABLATIVE";
     }
 }
 
@@ -857,8 +870,26 @@ export class HeroSystem6eItemTypeDataModelGetters extends foundry.abstract.TypeD
 }
 
 export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeDataModelGetters {
+    static migrateData(source) {
+        // Initialize ablative if appropriate
+        if (source.ablative && source.ablative.timesThresholdExceeded == null) {
+            const ablativeMod = source.MODIFIER?.find((mod) => mod.XMLID === "ABLATIVE");
+            if (ablativeMod) {
+                source.ablative.timesThresholdExceeded = 0;
+                source.ablative.thresholdDefenseType = ablativeMod.OPTIONID;
+            } else {
+                source.ablative.timesThresholdExceeded = 0;
+                source.ablative.thresholdDefenseType = "NOT ABLATIVE";
+            }
+        }
+
+        return super.migrateData(source);
+    }
+
     static defineSchema() {
         return {
+            itemSchemaVersion: new NumberField({ initial: 0 }),
+
             AFFECTS_TOTAL: new BooleanField({ initial: null, nullable: true }),
             ADD_MODIFIERS_TO_BASE: new StringField(),
             OPTION: new StringField(),
@@ -894,6 +925,7 @@ export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeData
             value: new HeroNumberField({ integer: true }), // ENEDURANCERESERVE
             //max: new HeroNumberField({ integer: true }), // ENEDURANCERESERVE (use LEVELS instead)
             active: new BooleanField({ initial: true, nullable: true }), // is power,skill,equipment active (consider renaming)
+            ablative: new EmbeddedDataField(HeroSystem6eItemAblative),
             charges: new EmbeddedDataField(HeroSystem6eItemCharges),
             collapse: new BooleanField({ initial: false }), // TODO: Make collapsing items per use, not part of DB
             csl: new ArrayField(new StringField()), // Combat Skill levels
@@ -965,7 +997,7 @@ export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
             BASEPOINTS: new StringField(),
             DISADPOINTS: new StringField(),
 
-            charges: new EmbeddedDataField(HeroSystem6eItemCharges),
+            charges: new EmbeddedDataField(HeroSystem6eItemCharges), // PH: FIXME: Isn't this redundant since it's a part of HeroSystem6eItemTypeDataModelProps?
         };
     }
 }

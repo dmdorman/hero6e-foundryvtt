@@ -1920,6 +1920,11 @@ export class HeroSystem6eActor extends Actor {
                                 item.system.charges.clipsMax !== item.system.charges.clips),
                     )
                     .map((o) => ({ id: o.id, charges: foundry.utils.deepClone(o.system.charges._source) })),
+                ablative: this.items
+                    .filter((item) => item.isAblative)
+                    .map((item) => {
+                        return { id: item.id, timesThresholdExceeded: item.system.ablative.timesThresholdExceeded };
+                    }),
 
                 was5e: this.is5e,
             };
@@ -2175,7 +2180,7 @@ export class HeroSystem6eActor extends Actor {
             // ITEMS
             uploadProgressBar.advance(`${this.name}: Evaluating items`, 0);
 
-            let itemsToCreate = [];
+            let itemsInHdc = [];
             let sortBase = 0;
             for (const itemTag of HeroSystem6eItem.ItemXmlTags) {
                 sortBase += 1000;
@@ -2282,7 +2287,7 @@ export class HeroSystem6eActor extends Actor {
                                     this.itemDataDefaults(itemData2);
 
                                     if (this.id) {
-                                        itemsToCreate.push(itemData2);
+                                        itemsInHdc.push(itemData2);
                                     } else {
                                         const item = new HeroSystem6eItem(itemData2, {
                                             parent: this,
@@ -2293,7 +2298,7 @@ export class HeroSystem6eActor extends Actor {
                             }
 
                             if (this.id) {
-                                itemsToCreate.push(itemData);
+                                itemsInHdc.push(itemData);
                             } else {
                                 const item = new HeroSystem6eItem(itemData, {
                                     parent: this,
@@ -2321,13 +2326,13 @@ export class HeroSystem6eActor extends Actor {
             // Add existing item.id (if it exists), which we will use for the pending update.
             // There may be an item that was converted to equipment/power
             // Also note that system.ID is natively a string from HDC, which we coerce into INT so use == instead of ===
-            itemsToCreate = itemsToCreate.map((m) =>
+            itemsInHdc = itemsInHdc.map((m) =>
                 foundry.utils.mergeObject(m, {
                     _id: this.items.find((i) => i.system.ID == m.system.ID)?.id,
                 }),
             );
-            const itemsToUpdate = itemsToCreate.filter((o) => o._id);
-            itemsToCreate = itemsToCreate.filter((o) => !o._id);
+            const itemsToUpdate = itemsInHdc.filter((o) => o._id);
+            const itemsToCreate = itemsInHdc.filter((o) => !o._id);
 
             // Sanity check for item.type and
             // invalidate the item caches for anything we're going to update
@@ -2435,6 +2440,23 @@ export class HeroSystem6eActor extends Actor {
                     );
                 }
             }
+
+            // retainValuesOnUpload Ablative
+            uploadProgressBar.advance(`${this.name}: retainValuesOnUpload ablative`, 0);
+            for (const ablativeData of retainValuesOnUpload.ablative) {
+                // Careful: the HDC ID is intially a string, but coerced to Number in dataModel thus ==
+                const item = this.items.find((i) => i.id === ablativeData.id);
+                if (item) {
+                    await item.update({
+                        "system.ablative.timesThresholdExceeded": ablativeData.timesThresholdExceeded,
+                    });
+                } else {
+                    console.warn(
+                        `Unable to locate ${ablativeData.NAME}/${ablativeData.ALIAS} to adjust number of times ablative defense penetrated after upload.`,
+                    );
+                }
+            }
+
             uploadPerformance.postUpload = new Date().getTime() - uploadPerformance._d;
             uploadPerformance._d = new Date().getTime();
 
@@ -2628,19 +2650,6 @@ export class HeroSystem6eActor extends Actor {
                 }
             }
 
-            // // Set newly created items to be non-active when uses END/CHARGES/MP
-            // for (const item of this.items) {
-            //     if (
-            //         item.system.end > 0 ||
-            //         (item.system.charges.max > 0 && !item.parentItem?.system.XMLID === "MULTIPOWER")
-            //     ) {
-            //         item.system.active = false;
-            //         if (this.id) {
-            //             await item.update({ [`system.active`]: item.system.active });
-            //         }
-            //     }
-            // }
-
             uploadPerformance.actorPostUpload = new Date().getTime() - uploadPerformance._d;
             uploadPerformance._d = new Date().getTime();
 
@@ -2767,7 +2776,7 @@ export class HeroSystem6eActor extends Actor {
                 const itemsToDelete = this.items.filter(
                     (item) =>
                         !itemsToUpdate.find((o) => item.id === o._id) &&
-                        !itemsToCreate.find((p) => item.system.ID == p.system.ID) &&
+                        !itemsInHdc.find((p) => item.system.ID == p.system.ID) &&
                         item.type !== "maneuver" &&
                         item.system.XMLID !== "PERCEPTION",
                 );

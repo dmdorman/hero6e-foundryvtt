@@ -334,3 +334,14 @@
     </div>
     {{/if}}
 {{/if}}
+
+{{#if (notEqual system.ablative.thresholdDefenseType "NOT ABLATIVE")}}
+    <div class="form-group">
+        <label>Ablative Threshold Exceeded Count</label>
+        <input type="text" name="system.ablative.timesThresholdExceeded" value="{{system.ablative.timesThresholdExceeded}}" data-dtype="Number" />
+    </div>
+    <div class="form-group">
+        <label>Ablative Threshold Type</label>
+        <input type="text" name="system.ablative.thresholdDefenseType" value="{{system.ablative.thresholdDefenseType}}" data-dtype="String" />
+    </div>
+{{/if}}
