@@ -421,6 +421,7 @@ export class HeroRoller {
                             _hrTag: {
                                 name: HeroRoller.WORK_AROUND_STRING,
                                 value: 0,
+                                title: null,
                             },
                         },
                     }),
@@ -438,7 +439,7 @@ export class HeroRoller {
         this._formulaTerms.push(new OperatorTerm({ operator: operator }));
     }
 
-    addDice(numDice, description) {
+    addDice(numDice, description, tooltip) {
         if (!numDice) {
             return this;
         }
@@ -457,6 +458,7 @@ export class HeroRoller {
                         : {
                               name: description,
                               value: numDice,
+                              title: tooltip,
                           },
                 },
             }),
@@ -465,7 +467,7 @@ export class HeroRoller {
         return this;
     }
 
-    addHalfDice(numHalfDice, description) {
+    addHalfDice(numHalfDice, description, tooltip) {
         if (!numHalfDice) {
             return this;
         }
@@ -488,6 +490,7 @@ export class HeroRoller {
                         : {
                               name: description,
                               value: numHalfDice,
+                              title: tooltip,
                           },
                 },
             }),
@@ -496,7 +499,7 @@ export class HeroRoller {
         return this;
     }
 
-    addDiceMinus1(numDiceMinusOne, description) {
+    addDiceMinus1(numDiceMinusOne, description, tooltip) {
         if (!numDiceMinusOne) {
             return this;
         }
@@ -519,6 +522,7 @@ export class HeroRoller {
                         : {
                               name: description,
                               value: numDiceMinusOne,
+                              title: tooltip,
                           },
                 },
             }),
@@ -527,7 +531,7 @@ export class HeroRoller {
         return this;
     }
 
-    addDieMinus1Min1(numDice, description) {
+    addDieMinus1Min1(numDice, description, tooltip) {
         if (!numDice) {
             return this;
         }
@@ -550,6 +554,7 @@ export class HeroRoller {
                         : {
                               name: description,
                               value: numDice,
+                              title: tooltip,
                           },
                 },
             }),
@@ -558,7 +563,7 @@ export class HeroRoller {
         return this;
     }
 
-    addNumber(value, description) {
+    addNumber(value, description, tooltip) {
         if (!value) {
             return this;
         }
@@ -586,6 +591,7 @@ export class HeroRoller {
                         : {
                               name: description,
                               value: value,
+                              title: tooltip,
                           },
                 },
             }),

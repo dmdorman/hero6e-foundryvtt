@@ -454,7 +454,7 @@ export function registerDiceTests(quench) {
                         const roller = new HeroRoller({}).addNumber(number, description);
                         await roller.roll();
 
-                        expect(roller.tags()).to.deep.equal([{ name: description, value: number }]);
+                        expect(roller.tags()).to.deep.equal([{ name: description, value: number, title: undefined }]);
                     });
 
                     it("should generate tags for a negative number term", async function () {
@@ -463,7 +463,7 @@ export function registerDiceTests(quench) {
                         const roller = new HeroRoller({}).addNumber(number, description);
                         await roller.roll();
 
-                        expect(roller.tags()).to.deep.equal([{ name: description, value: number }]);
+                        expect(roller.tags()).to.deep.equal([{ name: description, value: number, title: undefined }]);
                     });
 
                     it("should generate tags for multiple negative number term", async function () {
@@ -477,9 +477,115 @@ export function registerDiceTests(quench) {
                         await roller.roll();
 
                         expect(roller.tags()).to.deep.equal([
-                            { name: description, value: number },
-                            { name: description2, value: number2 },
+                            { name: description, value: number, title: undefined },
+                            { name: description2, value: number2, title: undefined },
                         ]);
+                    });
+
+                    it("should provide an undefined tooltip if not provided", async function () {
+                        const description = "tag test no tooltip";
+                        const number = -7;
+                        const description2 = description + " #2";
+                        const number2 = -8;
+                        const roller = new HeroRoller({})
+                            .addNumber(number, description)
+                            .addNumber(number2, description2);
+                        await roller.roll();
+
+                        expect(roller.tags()).to.deep.equal([
+                            { name: description, value: number, title: undefined },
+                            { name: description2, value: number2, title: undefined },
+                        ]);
+                    });
+
+                    it("should pass through tooltips", async function () {
+                        const description = "tag test negative number";
+                        const tooltip = "tag test tooltip ... this space for rent";
+                        const number = -7;
+                        const description2 = description + " #2";
+                        const tooltip2 = "tag test tooltip ... this space for rent" + " #2";
+                        const number2 = -8;
+                        const roller = new HeroRoller({})
+                            .addNumber(number, description, tooltip)
+                            .addNumber(number2, description2, tooltip2);
+                        await roller.roll();
+
+                        expect(roller.tags()).to.deep.equal([
+                            { name: description, value: number, title: tooltip },
+                            { name: description2, value: number2, title: tooltip2 },
+                        ]);
+                    });
+
+                    it("should generate tags for addDice with no tooltip", async function () {
+                        const description = "tag test positive number";
+                        const number = 7;
+                        const roller = new HeroRoller({}).addDice(number, description);
+                        await roller.roll();
+
+                        expect(roller.tags()).to.deep.equal([{ name: description, value: number, title: undefined }]);
+                    });
+                    it("should generate tags for addDice with tooltip", async function () {
+                        const description = "tag test positive number";
+                        const tooltip = "test positive number tooltip";
+                        const number = 7;
+                        const roller = new HeroRoller({}).addDice(number, description, tooltip);
+                        await roller.roll();
+
+                        expect(roller.tags()).to.deep.equal([{ name: description, value: number, title: tooltip }]);
+                    });
+
+                    it("should generate tags for addHalfDice with no tooltip", async function () {
+                        const description = "tag test positive number";
+                        const number = 7;
+                        const roller = new HeroRoller({}).addHalfDice(number, description);
+                        await roller.roll();
+
+                        expect(roller.tags()).to.deep.equal([{ name: description, value: number, title: undefined }]);
+                    });
+                    it("should generate tags for addHalfDice with tooltip", async function () {
+                        const description = "tag test positive number";
+                        const tooltip = "test positive number tooltip";
+                        const number = 7;
+                        const roller = new HeroRoller({}).addHalfDice(number, description, tooltip);
+                        await roller.roll();
+
+                        expect(roller.tags()).to.deep.equal([{ name: description, value: number, title: tooltip }]);
+                    });
+
+                    it("should generate tags for addDiceMinus1 with no tooltip", async function () {
+                        const description = "tag test positive number";
+                        const number = 7;
+                        const roller = new HeroRoller({}).addDiceMinus1(number, description);
+                        await roller.roll();
+
+                        expect(roller.tags()).to.deep.equal([{ name: description, value: number, title: undefined }]);
+                    });
+                    it("should generate tags for addDiceMinus1 with tooltip", async function () {
+                        const description = "tag test positive number";
+                        const tooltip = "test positive number tooltip";
+                        const number = 7;
+                        const roller = new HeroRoller({}).addDiceMinus1(number, description, tooltip);
+                        await roller.roll();
+
+                        expect(roller.tags()).to.deep.equal([{ name: description, value: number, title: tooltip }]);
+                    });
+
+                    it("should generate tags for addDieMinus1Min1 with no tooltip", async function () {
+                        const description = "tag test positive number";
+                        const number = 7;
+                        const roller = new HeroRoller({}).addDiceMinus1(number, description);
+                        await roller.roll();
+
+                        expect(roller.tags()).to.deep.equal([{ name: description, value: number, title: undefined }]);
+                    });
+                    it("should generate tags for addDieMinus1Min1 with tooltip", async function () {
+                        const description = "tag test positive number";
+                        const tooltip = "test positive number tooltip";
+                        const number = 7;
+                        const roller = new HeroRoller({}).addDiceMinus1(number, description, tooltip);
+                        await roller.roll();
+
+                        expect(roller.tags()).to.deep.equal([{ name: description, value: number, title: tooltip }]);
                     });
                 });
 
