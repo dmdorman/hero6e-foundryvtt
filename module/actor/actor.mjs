@@ -1624,33 +1624,12 @@ export class HeroSystem6eActor extends Actor {
         if (end - start > tDelta) {
             console.warn("FullHealth performance concern: Set Characteristics VALUE to MAX", end - start);
         }
-
-        // 5e calculated LEVELS (shouldn't be necessary, just making sure)
-        // start = Date.now();
-        // if (this.is5e) {
-        //     const characteristic5eChangesValue = {};
-        //     for (const char of ["OCV", "DCV", "OMCV", "DMCV"]) {
-        //         if (this.system[char] && this.system[char].LEVELS !== 0) {
-        //             characteristic5eChangesValue[`system.${char}.LEVELS`] = 0;
-        //         }
-        //     }
-        //     if (this._id && Object.keys(characteristic5eChangesValue).length > 0) {
-        //         await this.update(characteristic5eChangesValue);
-        //     }
-        // }
-        // end = Date.now();
-        // if (end - start > tDelta) {
-        //     console.warn("FullHealth performance concern: 5e calculated LEVELS", end - start);
-        // }
-
-        // We just cleared encumbrance, check if it applies again
-        //await this.applyEncumbrancePenalty();
     }
 
     // Raw base is insufficient for 5e characters
     getCharacteristicBase(key) {
         const powerInfo = getPowerInfo({ xmlid: key.toUpperCase(), actor: this, xmlTag: key.toUpperCase() });
-        const base = parseInt(powerInfo?.base) || 0;
+        const base = powerInfo?.base(this) || 0;
 
         if (!this.system.is5e) return base;
 
@@ -1730,17 +1709,15 @@ export class HeroSystem6eActor extends Actor {
         // TODO: FIXME: This is, but should never be, called with this.system[characteristic] being undefined. Need to reorder the loading
         //        mechanism to ensure that we do something more similar to a load, transform, and extract pipeline so that we
         //        not invoked way too many times and way too early.
-        const charBase = (characteristicUpperCase) => {
-            return (
-                parseInt(this.system[characteristicUpperCase]?.LEVELS || 0) +
-                parseInt(
-                    getPowerInfo({
-                        xmlid: characteristicUpperCase,
-                        actor: this,
-                        xmlTag: characteristicUpperCase,
-                    })?.base || 0,
-                )
-            );
+        const charBase = function (characteristicUpperCase) {
+            const base =
+                this.system[characteristicUpperCase]?.LEVELS +
+                getPowerInfo({
+                    xmlid: characteristicUpperCase,
+                    actor: this,
+                    xmlTag: characteristicUpperCase,
+                })?.base(this);
+            return base;
         };
 
         switch (key.toLowerCase()) {
@@ -3231,7 +3208,7 @@ export class HeroSystem6eActor extends Actor {
                 continue;
             }
 
-            const value = parseInt(this.system[KEY].LEVELS || 0) + parseInt(char.baseInfo.base || 0);
+            const value = (this.system[KEY].LEVELS || 0) + (char.baseInfo.base?.(this) || 0);
             changes[`system.characteristics.${key.toLowerCase()}.max`] = value;
             changes[`system.characteristics.${key.toLowerCase()}.value`] = value;
         }

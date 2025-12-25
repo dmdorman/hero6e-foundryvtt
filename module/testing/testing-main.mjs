@@ -1,4 +1,5 @@
 import { registerAutomatonTests } from "./testing-automaton.mjs";
+import { registerBaseTests } from "./testing-base.mjs";
 import { registerCslTests } from "./testing-csl.mjs";
 import { registerDamageFunctionTests } from "./testing-damage-functions.mjs";
 import { registerDefenseTests } from "./testing-defense.mjs";
@@ -27,6 +28,7 @@ Hooks.on("quenchReady", async (quench) => {
     registerGlobalSetup(quench);
 
     registerAutomatonTests(quench);
+    registerBaseTests(quench);
     registerCslTests(quench);
     registerDamageFunctionTests(quench);
     registerDefenseTests(quench);

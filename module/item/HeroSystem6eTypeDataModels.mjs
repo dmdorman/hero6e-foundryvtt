@@ -1443,9 +1443,6 @@ export class HeroItemCharacteristic extends foundry.abstract.DataModel {
             _hdcXml: new StringField(),
             is5e: new BooleanField({ initial: null, nullable: true }),
             xmlTag: new StringField(),
-            // value: new HeroNumberField({ integer: true }),
-            // core: new HeroNumberField({ integer: true }),
-            // max: new HeroNumberField({ integer: true }),
         };
     }
 
@@ -1502,7 +1499,7 @@ export class HeroItemCharacteristic extends foundry.abstract.DataModel {
     }
 
     get description() {
-        return `${this.LEVELS + this.#baseInfo.base} ${this.baseInfo?.name}`;
+        return `${this.LEVELS + this.#baseInfo.base(this.actor)} ${this.baseInfo?.name}`;
     }
 
     // Allows HeroItemCharacteristic to be accessed like an item.
@@ -1542,47 +1539,15 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
         return this.actor.system[this.KEY]?.LEVELS || 0;
     }
 
-    get core() {
-        console.error("The 'core' characteristic attribut is depricated");
-        return 0;
-        // core is base or calculated
-        // try {
-        //     // Some 5e characteristics are calcuated or figured
-        //     if (this.actor.is5e) {
-        //         if (this.baseInfo?.behaviors.includes("calculated")) {
-        //             if (this.#baseInfo.calculated5eCharacteristic) {
-        //                 return this.#baseInfo.calculated5eCharacteristic(this.actor, "core");
-        //             }
-        //         } else if (this.baseInfo?.behaviors.includes("figured")) {
-        //             return (
-        //                 (this.actor.system[this.KEY].LEVELS || 0) +
-        //                 this.baseInfo.figured5eCharacteristic(this.actor, "core")
-        //             );
-        //         }
-        //     }
-        //     //return parseInt(this.item?.LEVELS || 0) + this.base;
-        //     return this.base;
-        // } catch (e) {
-        //     console.error(e);
-        // }
-        // return 0;
-    }
-
     get baseInt() {
         // Only expected to be used for 5e SPD as we need the integer version
         return Math.floor(this.base);
     }
 
+    /**
+     * base is the starting points you get for free
+     */
     get base() {
-        // base is the starting points you get for free
-
-        // KLUGE OVERRIDEs
-        if (this.actor.type === "base2") {
-            if (this.key === "body") {
-                return 2;
-            }
-        }
-
         // Some 5e characteristics are calcuated or figured
         if (this.actor.is5e) {
             if (this.baseInfo?.behaviors.includes("calculated")) {
@@ -1597,17 +1562,12 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
         // Not every actor will have all characteristics
         // return null when this characteristic isn't valid
 
-        return this.baseInfo?.base ?? null;
+        return this.baseInfo.base?.(this.actor) ?? null;
     }
 
     get basePlusLevels() {
         // Need to add in LEVELS
-        try {
-            return this.base + (this.item?.LEVELS ?? 0);
-        } catch (e) {
-            console.error(e);
-        }
-        return 0;
+        return (this.base ?? 0) + (this.item?.LEVELS ?? 0);
     }
 
     get baseItemsContributingToFiguredCharacteristics() {

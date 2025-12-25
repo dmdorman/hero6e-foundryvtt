@@ -227,7 +227,7 @@ function signedString(value) {
 
 function calculated5eCharacteristic(actor, characteristic) {
     try {
-        return characteristic.baseInfo.calculated5eCharacteristic(actor, "core");
+        return characteristic.baseInfo.calculated5eCharacteristic(actor);
     } catch (e) {
         console.error(e);
     }
@@ -236,7 +236,7 @@ function calculated5eCharacteristic(actor, characteristic) {
 
 function figured5eCharacteristic(actor, characteristic) {
     try {
-        return characteristic.baseInfo.figured5eCharacteristic(actor, "core");
+        return characteristic.baseInfo.figured5eCharacteristic(actor);
     } catch (e) {
         console.error(e);
     }

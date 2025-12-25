@@ -425,7 +425,7 @@ export async function getConditionalDefenses(token, item, avad) {
             if (!char.baseInfo) {
                 console.error(`missing baseInfo for "${key}", skipping conditional defense check`);
             } else {
-                const value = char.baseInfo.base + char.LEVELS;
+                const value = char.baseInfo.base(item.actor) + char.LEVELS;
                 if (value > 0) {
                     conditionalDefenses.push(char);
                 }

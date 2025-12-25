@@ -205,6 +205,10 @@ export function registerVehicleTests(quench) {
                         expect(!!getCharacteristicInfoArrayForActor(actor).find((o) => o.key === "STUN")).to.be.false;
                     });
 
+                    it("should have 0m of leaping", function () {
+                        expect(actor.system.characteristics.leaping.value).to.equal(0);
+                    });
+
                     it("should have Flight power", function () {
                         const hasFlightPower = !!actor.items.find((item) => item.system.XMLID === "FLIGHT");
                         expect(hasFlightPower).to.be.true;
@@ -481,6 +485,10 @@ export function registerVehicleTests(quench) {
 
                     it("should NOT have the STUN characteristic", function () {
                         expect(!!getCharacteristicInfoArrayForActor(actor).find((o) => o.key === "STUN")).to.be.false;
+                    });
+
+                    it('should have 0" of leaping', function () {
+                        expect(actor.system.characteristics.leaping.value).to.equal(0);
                     });
 
                     it("should have Flight power", function () {
