@@ -11,7 +11,12 @@ import {
 } from "../utility/damage.mjs";
 import { performAdjustment, renderAdjustmentChatCards } from "../utility/adjustment.mjs";
 import { getRoundedDownDistanceInSystemUnits, getSystemDisplayUnits } from "../utility/units.mjs";
-import { HeroSystem6eItem, rollRequiresASkillRollCheck, RequiresACharacteristicRollCheck } from "../item/item.mjs";
+import {
+    HeroSystem6eItem,
+    RequiresACharacteristicRollCheck,
+    rollRequiresASkillRollCheck,
+    rollAblativeActivationCheck,
+} from "../item/item.mjs";
 import { ItemAttackFormApplication, getAoeTemplateForBaseItem } from "../item/item-attack-application.mjs";
 import { DICE_SO_NICE_CUSTOM_SETS, HeroRoller } from "../utility/dice.mjs";
 import { clamp } from "../utility/compatibility.mjs";
@@ -2415,24 +2420,34 @@ export async function _onApplyDamageToSpecificToken(item, _damageData, action, t
         return;
     }
 
-    // Some defenses require a roll not just to activate, but on each use: 6e EVERYPHASE & 5e ACTIVATIONROLL
-    const defenseEveryPhase = token.actor.items.filter(
-        (o) =>
-            o.isActive &&
-            (o.findModsByXmlid("EVERYPHASE") || o.findModsByXmlid("ACTIVATIONROLL")) &&
-            o.baseInfo.behaviors.includes("defense"),
-    );
+    // Some defenses require a roll not just to activate, but on each use: 6e EVERYPHASE, 5e ACTIVATIONROLL, and 5e & 6e ABLATIVE
+    const activatableDefenses = token.actor.items
+        .filter(
+            (o) =>
+                o.isActive &&
+                (o.findModsByXmlid("EVERYPHASE") ||
+                    o.findModsByXmlid("ACTIVATIONROLL") ||
+                    o.findModsByXmlid("ABLATIVE")) &&
+                o.baseInfo.behaviors.includes("defense"),
+        )
+        .filter((defense) => !ignoreDefenseIds.includes(defense.id))
+        .filter((defense) => getItemDefenseVsAttack(defense, item, { attackDefenseVs: item.attackDefenseVs }) !== null);
 
-    for (const defense of defenseEveryPhase) {
-        if (!ignoreDefenseIds.includes(defense.id)) {
-            if (getItemDefenseVsAttack(defense, item, { attackDefenseVs: item.attackDefenseVs }) !== null) {
-                const success = await rollRequiresASkillRollCheck(defense);
-                if (!success) {
-                    ignoreDefenseIds.push(defense.id);
-                }
-            } else {
-                console.log(`requiresASkillRollCheck was not made for ${defense.name}`, defense, item);
-            }
+    for (const defense of activatableDefenses) {
+        const rar = defense.findModsByXmlid("EVERYPHASE") || defense.findModsByXmlid("ACTIVATIONROLL");
+        let rarSuccess = true;
+        if (rar) {
+            rarSuccess = await rollRequiresASkillRollCheck(defense);
+        }
+
+        const ablative = defense.findModsByXmlid("ABLATIVE");
+        let ablativeActivated = true;
+        if (rarSuccess && ablative) {
+            ablativeActivated = await rollAblativeActivationCheck(defense);
+        }
+
+        if (!rarSuccess || !ablativeActivated) {
+            ignoreDefenseIds.push(defense.id);
         }
     }
 
@@ -2550,6 +2565,47 @@ export async function _onApplyDamageToSpecificToken(item, _damageData, action, t
         return _onApplyAdjustmentToSpecificToken(item, token, damageDetail, defense, defenseTags, action);
     } else if (isSenseAffecting) {
         return _onApplySenseAffectingToSpecificToken(item, token, damageDetail);
+    }
+
+    // PH: FIXME: Need to consider damage before damage negation for ablative? Check rules.
+
+    // Were one or more of the activated defenses ablative? If so, check if they get ablated.
+    // Ablative defenses must apply first with the lowest ablative defense first.
+    const remainingDamage = { stun: damageDetail.stunDamage, body: damageDetail.bodyDamage };
+    const ablativeDefensesObj = foundry.utils
+        .deepClone(defenseTags)
+        .map((defenseTag) => {
+            return {
+                item: token.actor.items.find((item) => item.id === defenseTag.defenseItemId),
+                defenseTag: defenseTag,
+            };
+        })
+        .filter((defenseObj) => defenseObj.item?.findModsByXmlid("ABLATIVE"))
+        .sort((defenseA, defenseB) => defenseA.defenseTag.value - defenseB.defenseTag.value);
+
+    for (const ablativeDefenseObj of ablativeDefensesObj) {
+        const defenseTags = getItemDefenseVsAttack(ablativeDefenseObj.item, item, {});
+        const ablativeDefense = foundry.utils
+            .deepClone(defenseTags)
+            .filter((defenseTag) => defenseTag.operation === "add")
+            .reduce((accum, defenseTag) => accum + defenseTag.value, 0);
+        const ablationType = ablativeDefenseObj.item.ablativeType;
+
+        // PH: FIXME: Need to handle all the damage tag operations properly. Need to extract a function for that.
+
+        // Did the remaining damage exceed this item's capacity to absorb damage? If so, ablate it.
+        if (
+            (ablationType === "BODYONLY" && remainingDamage.body > ablativeDefense) ||
+            (ablationType === "BODYORSTUN" &&
+                (remainingDamage.body > ablativeDefense || remainingDamage.stun > ablativeDefense))
+        ) {
+            await ablativeDefenseObj.item.update({
+                "system.ablative": ablativeDefenseObj.item.system.ablative + 1,
+            });
+        }
+
+        remainingDamage.stun = Math.max(0, remainingDamage.stun - ablativeDefense);
+        remainingDamage.body = Math.max(0, remainingDamage.body - ablativeDefense);
     }
 
     // AUTOMATION immune to mental powers

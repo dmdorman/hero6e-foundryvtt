@@ -3170,7 +3170,7 @@ export function registerUploadTests(quench) {
                 it("description", function () {
                     assert.equal(
                         item.system.description,
-                        "Mental Defense 39 points, Inherent (+1/4) (49 Active Points); Extra Time (20 Minutes, -2 1/2), Ablative BODY or STUN (-1), Always On (-1/2), Requires A Roll (Skill roll; CON; -1/2)",
+                        "Mental Defense 39 points, Inherent (+1/4) (49 Active Points); Extra Time (20 Minutes, -2 1/2), Ablative (Full Protection) BODY or STUN (-1), Always On (-1/2), Requires A Roll (Skill roll; CON; -1/2)",
                     );
                 });
 
@@ -4361,7 +4361,7 @@ export function registerUploadTests(quench) {
                         it("power description", function () {
                             assert.equal(
                                 item.system.description,
-                                "Armor (16 rPD/16 rED) (48 Active Points); Ablative BODY Only (-1/2), Costs Endurance (Only Costs END to Activate; -1/4)",
+                                "Armor (16 rPD/16 rED) (48 Active Points); Ablative (Full Protection) BODY Only (-1/2), Costs Endurance (Only Costs END to Activate; -1/4)",
                             );
                         });
 

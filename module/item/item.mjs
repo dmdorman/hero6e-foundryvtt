@@ -895,6 +895,10 @@ export class HeroSystem6eItem extends Item {
             }
         }
 
+        if (this.isAblativeDefense) {
+            await this.resetAblativeDefense();
+        }
+
         if (this.system.XMLID === "ENDURANCERESERVE" && this.system.value !== this.system.LEVELS) {
             await this.update({
                 ["system.value"]: this.system.LEVELS,
@@ -907,6 +911,7 @@ export class HeroSystem6eItem extends Item {
                 for (let idx = 0; idx < csl.length; idx++) {
                     csl[idx] = this.system.csl?.[idx] || Object.keys(this.cslChoices)[0];
                 }
+
                 await this.update({ "system.csl": csl });
             }
         }
@@ -927,49 +932,8 @@ export class HeroSystem6eItem extends Item {
                         }
                     }
                 }
-            } else {
-                // if (!this.isActive) {
-                //     await this.toggle();
-                // }
             }
         }
-
-        // Turn off all maneuvers
-        // if (this.type === "maneuver") {
-        //     if (this.system.active) {
-        //         this.system.active = false;
-        //         if (this.id) {
-        //             await this.update({ [`system.active`]: this.system.active });
-        //         }
-        //     }
-        // }
-
-        // Remove temporary effects that have an origin.
-        // Actor items with built in effects should have no origin and we want to keep those (POWER STR +30 for example)
-        // this.effects.map(async (effect) => {
-        //     if (effect.origin) {
-        //         await effect.delete();
-        //     } else {
-        //         // Some effects like purchasing characteristics, should remain
-        //         // unless they are part of a multipower
-        //         if (effect.parent?.parentItem?.system?.XMLID === "MULIPOWER") {
-        //             await effect.update({ disabled: true });
-        //         } else {
-        //             // Otherwise turn it on if it has no charges and uses no endurance
-        //             if (!effect.parent?.end && effect.parent?.system.charges === undefined) {
-        //                 await effect.update({ disabled: false });
-        //             }
-        //         }
-        //     }
-        // });
-
-        // if (["ENDURANCERESERVE"].includes(this.system.XMLID)) {
-        //     if (this.id) {
-        //         await this.update({ ["system.value"]: this.system.LEVELS });
-        //     } else {
-        //         this.system.value = this.system.LEVELS;
-        //     }
-        // }
 
         if (this.type === "maneuver" && this.system.active) {
             await this.update({ ["system.active"]: false });
@@ -1608,6 +1572,25 @@ export class HeroSystem6eItem extends Item {
             myToken.release();
             myToken.control();
         }
+    }
+
+    isAblativeDefense() {
+        return !!this.findModsByXmlid("ABLATIVE");
+    }
+
+    /**
+     * Only valid if called on an ablative defense.
+     *
+     * @returns {string} - BODYONLY or BODYORSTUN
+     */
+    get ablativeType() {
+        return this.findModsByXmlid("ABLATIVE").OPTIONID;
+    }
+
+    async resetAblativeDefense() {
+        return this.update({
+            "system.ablative": 0,
+        });
     }
 
     get showClipsReload() {
@@ -3661,7 +3644,16 @@ export class HeroSystem6eItem extends Item {
                 break;
 
             case "ABLATIVE":
-                result += `, ${modifier.ALIAS} ${modifier.OPTION_ALIAS}`;
+                {
+                    const tresholdRoll =
+                        this.system.ablative === 0
+                            ? "Full Protection"
+                            : this.system.ablative > 8
+                              ? "No Protection"
+                              : `Partial Protection w/ Activation Roll ${16 - this.system.ablative}-`;
+                    result += `, ${modifier.ALIAS} (${tresholdRoll}) ${modifier.OPTION_ALIAS}`;
+                }
+
                 break;
 
             default:
@@ -6451,6 +6443,62 @@ export async function rollRequiresASkillRollCheck(item, options = {}) {
     if (!succeeded && options.showUi) {
         ui.notifications.warn(cardHtml);
     }
+    return succeeded;
+}
+
+export async function rollAblativeActivationCheck(item) {
+    const ablative = item.modifiers.find((o) => o.XMLID === "ABLATIVE");
+    if (!ablative) {
+        return true;
+    }
+
+    // Must be ablative
+    let cardHtml;
+    let rawRolls;
+    let succeeded;
+    const thresholdExceeded = item.system.ablative;
+    if (thresholdExceeded > 0 && thresholdExceeded < 9) {
+        const successValue = 16 - thresholdExceeded;
+
+        //TODO what about additional skill levels used to influence the activation roll?
+        const ablativeActivationRoller = new HeroRoller().makeSuccessRoll(true, successValue).addDice(3);
+
+        await ablativeActivationRoller.roll();
+        rawRolls = ablativeActivationRoller.rawRolls();
+
+        succeeded = ablativeActivationRoller.getSuccess();
+        const autoSuccess = ablativeActivationRoller.getAutoSuccess();
+        const total = ablativeActivationRoller.getSuccessTotal();
+        const margin = successValue - total;
+
+        const flavor = `Ablative ${item.name} activation ${
+            succeeded ? "succeeded" : "failed"
+        } by ${autoSuccess === undefined ? `${Math.abs(margin)}` : `rolling ${total}`}`;
+
+        cardHtml = await ablativeActivationRoller.render(flavor);
+    } else if (thresholdExceeded === 0) {
+        // Defense has not yet been ablated so it always works.
+        cardHtml = `Unablated ${item.name} auto activation`;
+        succeeded = true;
+    } else {
+        // Defense has been fully ablated so it never works.
+        cardHtml = `Fully ablated ${item.name} never activates`;
+        succeeded = false;
+    }
+
+    const actor = item.actor;
+    const token = actor.token;
+    const speaker = ChatMessage.getSpeaker({ actor: actor, token });
+    const chatData = {
+        style: CONST.CHAT_MESSAGE_STYLES.IC,
+        rolls: rawRolls,
+        author: game.user._id,
+        content: cardHtml,
+        speaker: speaker,
+    };
+
+    await ChatMessage.create(chatData);
+
     return succeeded;
 }
 

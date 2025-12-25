@@ -3,33 +3,36 @@ import { getCharacteristicInfoArrayForActor } from "./utility/util.mjs";
 
 export function initializeHandlebarsHelpers() {
     Handlebars.registerHelper("abs", abs);
-    Handlebars.registerHelper("concat", concat);
-    Handlebars.registerHelper("gameConfigValue", gameConfigValue);
-    Handlebars.registerHelper("getModulePath", getModulePath);
-    Handlebars.registerHelper("includes", includes);
-    Handlebars.registerHelper("toJSON", toJSON);
-    Handlebars.registerHelper("toArray", toArray);
-    Handlebars.registerHelper("toJsonArray", toJsonArray);
-    Handlebars.registerHelper("increment", increment);
-    Handlebars.registerHelper("indexOf", indexOf);
-    Handlebars.registerHelper("is_active_segment", isActiveSegment);
-    Handlebars.registerHelper("isdefined", isDefined);
-    Handlebars.registerHelper("toLowerCase", toLowerCase);
-    Handlebars.registerHelper("toUpperCase", toUpperCase);
-    Handlebars.registerHelper("appliesTo", appliesTo);
-    Handlebars.registerHelper("checkInit", checkInit);
-    Handlebars.registerHelper("objectNumKeys", objectNumKeys);
-    Handlebars.registerHelper("getScopedFlagValue", getScopedFlagValue);
-    Handlebars.registerHelper("expandSegment", expandSegment);
     Handlebars.registerHelper("activeSegment", activeSegment);
     Handlebars.registerHelper("actorItemHeroValidation", actorItemHeroValidation);
     Handlebars.registerHelper("actorItemHeroValidationCss", actorItemHeroValidationCss);
     Handlebars.registerHelper("actorHeroValidationCssByItemType", actorHeroValidationCssByItemType);
-    Handlebars.registerHelper("hasCharacteristic", hasCharacteristic);
-    Handlebars.registerHelper("signedString", signedString);
+    Handlebars.registerHelper("actorItemHeroValidation", actorItemHeroValidation);
+    Handlebars.registerHelper("appliesTo", appliesTo);
+    Handlebars.registerHelper("checkInit", checkInit);
     Handlebars.registerHelper("calculated5eCharacteristic", calculated5eCharacteristic);
+    Handlebars.registerHelper("concat", concat);
+    Handlebars.registerHelper("expandSegment", expandSegment);
+    Handlebars.registerHelper("equal", equal);
     Handlebars.registerHelper("figured5eCharacteristic", figured5eCharacteristic);
+    Handlebars.registerHelper("gameConfigValue", gameConfigValue);
+    Handlebars.registerHelper("getModulePath", getModulePath);
+    Handlebars.registerHelper("getScopedFlagValue", getScopedFlagValue);
     Handlebars.registerHelper("getUploadLastModifiedDate", getUploadLastModifiedDate);
+    Handlebars.registerHelper("hasCharacteristic", hasCharacteristic);
+    Handlebars.registerHelper("includes", includes);
+    Handlebars.registerHelper("increment", increment);
+    Handlebars.registerHelper("indexOf", indexOf);
+    Handlebars.registerHelper("isdefined", isDefined);
+    Handlebars.registerHelper("is_active_segment", isActiveSegment);
+    Handlebars.registerHelper("notEqual", notEqual);
+    Handlebars.registerHelper("signedString", signedString);
+    Handlebars.registerHelper("toArray", toArray);
+    Handlebars.registerHelper("toJsonArray", toJsonArray);
+    Handlebars.registerHelper("toJSON", toJSON);
+    Handlebars.registerHelper("toLowerCase", toLowerCase);
+    Handlebars.registerHelper("toUpperCase", toUpperCase);
+    Handlebars.registerHelper("objectNumKeys", objectNumKeys);
 }
 
 function indexOf(str, searchTerm) {
@@ -113,6 +116,10 @@ function appliesTo(power, attack) {
 function checkInit(value) {
     let myValue = Number(value) || 0;
     return myValue > 0;
+}
+
+function equal(value1, value2) {
+    return value1 === value2;
 }
 
 function objectNumKeys(obj) {
@@ -214,6 +221,10 @@ function actorHeroValidationCssByItemType(actor, itemType) {
 
 function hasCharacteristic(actor, characteristic) {
     return getCharacteristicInfoArrayForActor(actor).find((o) => o.key === characteristic);
+}
+
+function notEqual(value1, value2) {
+    return value1 !== value2;
 }
 
 function signedString(value) {

@@ -1,5 +1,9 @@
 # Releases
 
+## Version 4.2.6 so far... [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+
+- Ablative defenses now supported. [#231](https://github.com/dmdorman/hero6e-foundryvtt/issues/231)
+
 ## Version 4.2.5 so far... [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
 
 - Reworked charges for power frameworks. Charges on a MultiPower reserve for "all slots" now correctly share the charges amongst all the slots. [#3226](https://github.com/dmdorman/hero6e-foundryvtt/issues/3226) [#3167](https://github.com/dmdorman/hero6e-foundryvtt/issues/3167)

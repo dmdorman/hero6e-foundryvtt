@@ -200,7 +200,7 @@ Our support ratings:
 
 | POWER MODIFIERS                                | Support | Comments                                                                                      |
 | :--------------------------------------------- | :-----: | :-------------------------------------------------------------------------------------------- |
-| ABLATIVE                                       |    D    |                                                                                               |
+| ABLATIVE                                       |    A    |                                                                                               |
 | AFFECTED AS ANOTHER SENSE                      |    D    |                                                                                               |
 | AFFECTED AS MORE THAN ONE SENSE                |    D    |                                                                                               |
 | AFFECTS DESOLIDIFIED                           |    D    |                                                                                               |
