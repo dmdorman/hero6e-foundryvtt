@@ -1716,10 +1716,10 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
             ary.push(`<li>${ae.name}</li>`);
             // if (ae._prepareDuration().duration) {
             //     const change = ae.changes.find((o) => o.key === `system.characteristics.${this.key}.max`);
-            //     if (change.mode === CONST.ACTIVE_EFFECT_MODES.ADD) {
+            //     if (change.mode === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD) {
             //         characteristic.delta += parseInt(change.value);
             //     }
-            //     if (change.mode === CONST.ACTIVE_EFFECT_MODES.MULTIPLY) {
+            //     if (change.mode === CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY) {
             //         characteristic.delta += parseInt(this.max) * parseInt(change.value) - parseInt(this.max);
             //     }
             // }

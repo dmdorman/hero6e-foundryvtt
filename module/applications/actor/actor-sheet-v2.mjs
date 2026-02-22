@@ -15,6 +15,9 @@ const FoundryVttDragDrop = foundry.applications.ux?.DragDrop || DragDrop; // V12
 // REF: https://foundryvtt.wiki/en/development/guides/converting-to-appv2
 // REF: https://foundryvtt.wiki/en/development/guides/applicationV2-conversion-guide
 
+// v13 has namespaced these. When we remove this backwards compatibility then the eslint exception can be cleaned up.
+const FoundryVttTextEditor = foundry.applications.ux?.TextEditor.implementation || TextEditor;
+
 export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorSheetV2) {
     // Dynamic PARTS based on system.id
     static {
@@ -347,7 +350,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                     break;
                 case "background":
                     context.enriched ??= {};
-                    context.enriched.BACKGROUND = await TextEditor.enrichHTML(
+                    context.enriched.BACKGROUND = await FoundryVttTextEditor.enrichHTML(
                         this.actor.system.CHARACTER.CHARACTER_INFO.BACKGROUND,
                         {
                             relativeTo: this.document,
@@ -813,7 +816,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
      */
     async _onDrop(event) {
         console.log(event);
-        const data = TextEditor.getDragEventData(event);
+        const data = FoundryVttTextEditor.getDragEventData(event);
         // Handle different data types
         switch (data?.type) {
             case "Item":
@@ -1417,10 +1420,9 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
 
             if (status.rule) {
                 const page = await fromUuid(status.rule);
-                statusInfo[status.id].tooltip = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
-                    page.text.content,
-                    { relativeTo: this.actor },
-                );
+                statusInfo[status.id].tooltip = await FoundryVttTextEditor.enrichHTML(page.text.content, {
+                    relativeTo: this.actor,
+                });
             }
         }
 

@@ -61,7 +61,7 @@ import "./utility/chat-dice.mjs";
 import "./testing/testing-main.mjs";
 import { HeroSystem6eEndToEndTest } from "./testing/end-to-end.mjs";
 
-import { isGameV13OrLater } from "./utility/compatibility.mjs";
+import { isGameV13OrLater, isGameV14OrLater } from "./utility/compatibility.mjs";
 import { HeroSocketHandler } from "./heroSocketHandler.mjs";
 import { HeroSystem6eChatMessage } from "./heroChatMessage.mjs";
 
@@ -232,6 +232,18 @@ Hooks.once("init", async function () {
     HeroRuler.initialize();
 
     SettingsHelpers.initLevelSettings();
+
+    if (isGameV14OrLater()) {
+        // Prosemirror is the default and it needs to have some information about initialization
+        // PH: FIXME: Should we still be setting CONFIG.TextEditor.implementation? Presumably yes...
+        CONFIG.TextEditor.implementation ??= foundry.applications.ux.ProseMirrorEditor;
+        CONFIG.TextEditor.engines = {
+            prosemirror: {
+                create: foundry.applications.ux.ProseMirrorEditor.create,
+                render: foundry.applications.ux.ProseMirrorEditor.render,
+            },
+        };
+    }
 
     initializeHandlebarsHelpers();
     initializeItemHandlebarsHelpers();

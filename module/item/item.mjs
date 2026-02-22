@@ -365,7 +365,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         {
                             key: `system.characteristics.${this.system.XMLID.toLowerCase()}.max`,
                             value: parseInt(this.system.LEVELS),
-                            mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                            mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                             priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                         },
                     ];
@@ -381,7 +381,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                                 changes.push({
                                     key: `system.characteristics.${movementKey.toLowerCase()}.max`,
                                     value: parseInt(this.system.LEVELS),
-                                    mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                                    mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                                     priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                                 });
                                 foundMatch = true;
@@ -423,7 +423,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     {
                         key: `system.characteristics.${this.system.XMLID.toLowerCase()}.max`,
                         value: value,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                 ];
@@ -471,19 +471,19 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     {
                         key: "system.characteristics.str.max",
                         value: strAdd,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                     {
                         key: "system.characteristics.pd.max",
                         value: pdAdd,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                     {
                         key: "system.characteristics.ed.max",
                         value: edAdd,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                 ];
@@ -546,7 +546,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     {
                         key: "system.characteristics.dcv.max",
                         value: dcvAdd,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                 ];
@@ -584,7 +584,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         {
                             key: "system.characteristics.dcv.max",
                             value: dcvValue,
-                            mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
                             priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
                         },
                     ];
@@ -672,13 +672,13 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     {
                         key: "ATL.light.bright",
                         value: parseFloat(this.system.QUANTITY),
-                        mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
                     },
                     {
                         key: "ATL.light.color",
                         value: generateUniqueLightColor(this.uuid),
-                        mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
                     },
                 ];
