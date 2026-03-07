@@ -956,7 +956,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                         {
                             key: "system.characteristics.dcv.max",
                             value: 0.5,
-                            mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
                             priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
                         },
                     ],
@@ -1348,7 +1348,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             sizeActiveEffect.changes.push({
                 key: "system.characteristics.dcv.max",
                 value: _sizeDetails.dcv,
-                mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                 priority: this.is5e
                     ? CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD
                     : CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE, // 6e don't allow this to be halved - see note above
@@ -1357,19 +1357,19 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             sizeActiveEffect.changes.push({
                 key: "system.characteristics.str.max",
                 value: _sizeDetails.str,
-                mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                 priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
             });
             sizeActiveEffect.changes.push({
                 key: "kbResistance",
                 value: _sizeDetails.kbResistance,
-                mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                 priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
             });
             sizeActiveEffect.changes.push({
                 key: "system.characteristics.body.max",
                 value: _sizeDetails.body,
-                mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                 priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
             });
 
@@ -1457,55 +1457,55 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                     {
                         key: "system.characteristics.dcv.max",
                         value: dcvDex,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                     {
                         key: "system.characteristics.dex.max",
                         value: dcvDex,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                     {
                         key: "system.characteristics.running.max",
                         value: move,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                     {
                         key: "system.characteristics.swimming.max",
                         value: move,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                     {
                         key: "system.characteristics.leaping.max",
                         value: move,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                     {
                         key: "system.characteristics.flight.max",
                         value: move,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                     {
                         key: "system.characteristics.swinging.max",
                         value: move,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                     {
                         key: "system.characteristics.teleportation.max",
                         value: move,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                     {
                         key: "system.characteristics.tunneling.max",
                         value: move,
-                        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
                     },
                 ],
@@ -1572,37 +1572,37 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                     {
                         key: "system.characteristics.dcv.max",
                         value: 0.5,
-                        mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
                     },
                     {
                         key: "system.characteristics.running.max",
                         value: 0.5,
-                        mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
                     },
                     {
                         key: "system.characteristics.leaping.max",
                         value: 0.5,
-                        mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
                     },
                     {
                         key: "system.characteristics.swimming.max",
                         value: 0.5,
-                        mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
                     },
                     {
                         key: "system.characteristics.swinging.max",
                         value: 0.5,
-                        mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
                     },
                     {
                         key: "system.characteristics.tunneling.max",
                         value: 0.5,
-                        mode: CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
+                        mode: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
                         priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
                     },
                 ],
@@ -3966,10 +3966,10 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         return true;
     }
 
-    // HeroSystem is unique in that we only
-    // apply only one multiplier (whichever one reduces the most).
     /**
      * Apply any transformations to the Actor data which are caused by ActiveEffects.
+     *
+     * HeroSystem is unique in that we only apply only one multiplier (whichever one reduces the most).
      */
     applyActiveEffects() {
         const overrides = {};
@@ -3991,7 +3991,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         }
 
         // Filter out redundant multiplies, keeping lowest value
-        const mults = changes.filter((c) => c.mode === CONST.ACTIVE_EFFECT_MODES.MULTIPLY);
+        const mults = changes.filter((c) => c.mode === CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY);
         if (mults.length > 1) {
             const uniqueKeys = new Set();
             mults.forEach((obj) => {
@@ -4004,7 +4004,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                     const minValue = Math.min(...multsUniqueKey.map((c) => parseFloat(c.value)));
                     const keepMult = multsUniqueKey.find((c) => parseFloat(c.value) === minValue);
                     // remove all multsUniqueKey and add back in the keepMult
-                    changes = changes.filter((c) => c.key !== key || c.mode !== CONST.ACTIVE_EFFECT_MODES.MULTIPLY);
+                    changes = changes.filter(
+                        (c) => c.key !== key || c.mode !== CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                    );
                     changes.push(keepMult);
                 }
             }
