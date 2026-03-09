@@ -3,6 +3,20 @@ import { HeroSystem6eCardHelpers } from "./card/card-helpers.mjs";
 export class HeroSystem6eChatMessage extends ChatMessage {
     // REF: https://github.com/foundryvtt/pf2e/blob/acf49e6130dc43e80c9b1f63fcb58a1ab611b4ce/src/module/chat-message/document.ts#L23
 
+    /**
+     *
+     * @param {Object} chatData
+     *
+     * @returns {HeroSystem6eChatMessage}
+     */
+    static async createWithRollMode(chatData) {
+        if (chatData.rolls) {
+            ChatMessage.applyRollMode(chatData, "roll");
+        }
+
+        return ChatMessage.create(chatData);
+    }
+
     // V12
     async getHTML() {
         let html = await super.getHTML();
