@@ -1,7 +1,11 @@
 import { HEROSYS } from "./herosystem6e.mjs";
-import { actionToJSON, Attack } from "./utility/attack.mjs";
-import { dehydrateAttackItem } from "./item/item-attack.mjs";
+import { HeroSystem6eChatMessage } from "./heroChatMessage.mjs";
+
 import { HeroSystem6eActor } from "./actor/actor.mjs";
+
+import { dehydrateAttackItem } from "./item/item-attack.mjs";
+
+import { actionToJSON, Attack } from "./utility/attack.mjs";
 
 // v13 compatibility
 const foundryVttRenderTemplate = foundry.applications?.handlebars?.renderTemplate || renderTemplate;
@@ -9,24 +13,6 @@ const FoundryVttFormDataExtended = foundry.applications?.ux?.FormDataExtended ||
 
 export class GenericRoller {
     static Initialize() {
-        // Hooks.on("renderSidebar", async (_sidebar, html, _context, options) => {
-        //     if (!game.settings.get(HEROSYS.module, "ShowGenericRoller")) return;
-        //     if (options && !options.isFirstRender) return;
-
-        //     const $chat = $(html).find(".chat-form");
-        //     if ($chat.length === 0) {
-        //         console.warn(`unable to find dom element`);
-        //         return;
-        //     }
-        //     const content = await foundryVttRenderTemplate(`systems/${HEROSYS.module}/templates/system/hero-generic-roller.hbs`, {
-        //         css: `game-version-major-${game.version.split(".")[0]}`,
-        //     });
-        //     const $content = $(content);
-        //     $chat.after($content);
-
-        //     GenericRoller.activateListeners($content);
-        // });
-
         // V13
         Hooks.on("renderAbstractSidebarTab", async (_sidebar, html, _context, options) => {
             if (!game.settings.get(HEROSYS.module, "ShowGenericRoller")) return;
@@ -127,7 +113,7 @@ export class GenericRoller {
 
         await heroRoller.roll();
 
-        const cardHtml = await heroRoller.render("Attacker's OCV + 11 - 3d6");
+        const cardHtml = await heroRoller.render("Attacker's OCV + 11 - 3d6", true);
         const resultHtml = `Hits a DCV of ${heroRoller.getSuccessTotal()}`;
 
         const chatData = {
@@ -137,7 +123,7 @@ export class GenericRoller {
             content: `${cardHtml}${resultHtml}`,
         };
 
-        return ChatMessage.create(chatData);
+        return HeroSystem6eChatMessage.createWithRollMode(chatData);
     }
 
     static async damage() {
@@ -341,6 +327,6 @@ export class GenericRoller {
             content: `${cardHtml}`,
         };
 
-        return ChatMessage.create(chatData);
+        return HeroSystem6eChatMessage.createWithRollMode(chatData);
     }
 }
