@@ -681,18 +681,15 @@ export class HeroRoller {
     // TODO: May wish to consider our own custom chat template for this.
     // TODO: May wish to consider no flavour, but rather have it be the type of roll?
     // TODO: borderColor: margin >= 0 ? 0x00ff00 : 0xff0000, based on success/failure?
-    async render(flavor, isPrivate = false) {
-        // PH: FIXME: isPrivate should be provided everywhere explicitly
+    async render(flavor) {
         const template = this._buildRollClass.CHAT_TEMPLATE;
-        const chatData = isPrivate
-            ? { formula: "???", flavor: "???", user: game.user.id, tooltip: "", total: "???" }
-            : {
-                  formula: this.#buildFormula(),
-                  flavor: flavor,
-                  user: game.user.id,
-                  tooltip: this.#buildTooltip(),
-                  total: this.getTotalSummary(),
-              };
+        const chatData = {
+            formula: this.#buildFormula(),
+            flavor: flavor,
+            user: game.user.id,
+            tooltip: this.#buildTooltip(),
+            total: this.getTotalSummary(),
+        };
 
         return foundryVttRenderTemplate(template, chatData);
     }
