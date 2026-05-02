@@ -4431,8 +4431,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 },
             });
 
-            // Confirm with Peter we like this approach before persisting.
-            // tagObjectForPersistence(source);
+            tagObjectForPersistence(source);
         }
     }
 
