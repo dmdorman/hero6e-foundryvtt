@@ -4406,9 +4406,14 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         }
     }
 
+    // Add untrained skill data to all actors.
     static migrateData_4_3_5_UntrainedSkill(source) {
-        // Add untrained skill data to all actors.
-        const _untrainedSkillItem = source?.items?.find((item) => item.system.XMLID === "UNTRAINED");
+        // Make sure we have items
+        if (!source?.items) {
+            return;
+        }
+
+        const _untrainedSkillItem = source.items.find((item) => item.system.XMLID === "UNTRAINED");
 
         if (!_untrainedSkillItem) {
             source.items.push({
