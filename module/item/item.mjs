@@ -4713,6 +4713,11 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         // What are we effectively using for attack?
         const baseAttackItem = this.baseInfo.baseEffectDicePartsBundle(this, {}).baseAttackItem;
 
+        if (!baseAttackItem) {
+            console.error(`${this?.actor.name}/${this.detailedName()} baseAttackItem is missing`);
+            return "-";
+        }
+
         // CONFIG overrides for specific XMLIDs
         if (baseAttackItem.baseInfo?.attackDefenseVs) {
             return baseAttackItem.baseInfo.attackDefenseVs(baseAttackItem);
@@ -7006,6 +7011,12 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
     // The default deleteDialog doesn't prompt for children
     async deleteDialog(options = {}, operation = {}) {
+        // Do not allow deletion of PERCEPTION or other non-HD items
+        if (this.baseInfo.behaviors?.includes("non-hd") || this.type === "maneuver") {
+            ui.notifications.error("Cannot delete this item.");
+            return;
+        }
+
         // If no childItems use the built in Foundry Delete Prompt
         if (this.childItems.length === 0) {
             return super.deleteDialog(options, operation);
@@ -7115,6 +7126,101 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         );
 
         return null;
+    }
+    isValidTypeConversion(targetType, targetActor = this.actor) {
+        return this.validationTypeConversionFailures(targetType, targetActor).length === 0;
+    }
+
+    validationTypeConversionFailures(targetType, targetActor = this.actor) {
+        let validationFailureMessages = [];
+
+        // Make sure children are valid
+        for (const child of this.childItems) {
+            validationFailureMessages = validationFailureMessages.concat(
+                child.validationTypeConversionFailures(targetType),
+            );
+        }
+
+        // Maneuvers and martial arts cannot be converted to other types
+        if (this.isCombatManeuver || this.isMartialArt || this.baseInfo.behaviors?.includes("non-hd")) {
+            // In some unexpected cases, we might convert back to original type
+            if (!this.baseInfo?.type.includes(targetType)) {
+                validationFailureMessages.push(
+                    `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}`,
+                );
+            }
+            return validationFailureMessages;
+        }
+
+        // targetType is likely a targetTab, which isn't always a valid item.type
+        if (
+            [
+                "attack",
+                "defense",
+                "movement",
+                "characteristics",
+                "background",
+                "effect",
+                "condition",
+                "other",
+                "analysis",
+            ].includes(targetType)
+        ) {
+            validationFailureMessages.push(
+                `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, try POWER or EQUIPMENT instead.`,
+            );
+            return validationFailureMessages;
+        }
+
+        // Most items can be a power or equipment
+        if (["power", "equipment"].includes(targetType)) {
+            return validationFailureMessages;
+        }
+
+        // Base type is valid
+        if (this.baseInfo?.type.includes(targetType)) {
+            return validationFailureMessages;
+        }
+
+        // LIST can be most types
+        if (
+            this.baseInfo?.key === "LIST" &&
+            ["martialart", "skill", "perk", "talent", "power", "equipment"].includes(targetType)
+        ) {
+            return validationFailureMessages;
+        }
+
+        validationFailureMessages.push(
+            `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}`,
+        );
+
+        return validationFailureMessages;
+    }
+
+    async convertToType(targetType) {
+        // If the item is already of the correct type, return it
+        if (this.type === targetType) {
+            console.warn(`${this.detailedName()} for ${this.actor?.name} is already of type ${targetType}`);
+            return;
+        }
+
+        if (!this.isValidTypeConversion(targetType)) {
+            ui.notifications.error(
+                `${this.detailedName()} for ${this.actor?.name} cannot be converted to type ${targetType}.`,
+            );
+            return;
+        }
+
+        // Update item's type
+        await this.update({
+            type: targetType,
+            "==system": this.system,
+        });
+
+        // Update child items
+        for (const child of this.childItems) {
+            await child.convertToType(targetType);
+        }
     }
 }
 

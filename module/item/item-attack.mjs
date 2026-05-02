@@ -2248,7 +2248,7 @@ export async function _onRollBreakfall(event) {
 
         ChatMessage.create(chatData);
     } else {
-        // We have confirmed we have enough reources and spent them, now we need to roll the breakfall
+        // We have confirmed we have enough resources and spent them, now we need to roll the breakfall
         const skillRoller = new HeroRoller().addDice(3);
         let successValue = 0;
         const tags = foundry.utils.deepClone(breakFallItem.system.tags);
