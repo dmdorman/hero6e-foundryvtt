@@ -2559,11 +2559,15 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             if (options.rebuild) {
                 uploadProgressBar.advance(`${this.name}: Deleting existing items when rebuilding`, 0);
-                const turnOffPromises = [];
-                for (const item of this.items) {
-                    turnOffPromises.push(item.turnOff({ silent: true }));
+                try {
+                    const turnOffPromises = [];
+                    for (const item of this.items.filter((item) => item.isActivatable())) {
+                        turnOffPromises.push(item.turnOff({ silent: true }));
+                    }
+                    await Promise.all(turnOffPromises);
+                } catch (error) {
+                    console.error(`Error occurred while turning off existing items: ${error.message}`);
                 }
-                await Promise.all(turnOffPromises);
                 await this.deleteEmbeddedDocuments(
                     "Item",
                     this.items.map((o) => o.id),
@@ -3189,13 +3193,13 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             // Delete any old items that weren't updated, added or part of freeStuff
             if (this.id) {
-                // Careful: the HDC ID is intially a string, but coerced to Number in dataModel thus ==
+                // Careful: the HDC ID is initially a string, but coerced to Number in dataModel thus ==
                 const itemsToDelete = this.items.filter(
                     (item) =>
                         !itemsToUpdate.find((o) => item.id === o._id) &&
                         !itemsToCreate.find((p) => item.system.ID == p.system.ID) &&
                         !item.isCombatManeuver &&
-                        item.system.XMLID !== "PERCEPTION",
+                        !item.baseInfo.behaviors?.includes("non-hd"),
                 );
                 if (itemsToDelete.length > 0) {
                     const unorderedList =
@@ -4376,8 +4380,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
         this.migrateData_4_0_26(source);
         this.migrateData_4_1_13(source);
-        this.migrateData_4_3_5_UntrainedSkill(source);
-
         this.migrateData_XmlidCharacteristics(source);
 
         return super.migrateData(source);
@@ -4402,35 +4404,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         );
         if (_removePlaceholderWeaponItem) {
             source.items = source.items.filter((item) => item.name !== "__InternalManeuverPlaceholderWeapon");
-            tagObjectForPersistence(source);
-        }
-    }
-
-    // Add untrained skill data to all actors.
-    static migrateData_4_3_5_UntrainedSkill(source) {
-        // Make sure we have items
-        if (!source?.items) {
-            return;
-        }
-
-        const _untrainedSkillItem = source.items.find((item) => item.system.XMLID === "UNTRAINED");
-
-        if (!_untrainedSkillItem) {
-            source.items.push({
-                name: "Untrained",
-                type: "skill",
-                system: {
-                    XMLID: "UNTRAINED",
-                    ALIAS: "Untrained",
-                    CHARACTERISTIC: "GENERAL",
-                    state: "untrained",
-                    LEVELS: "0",
-                    is5e: source.system.is5e,
-                    xmlTag: "SKILL",
-                    active: true,
-                },
-            });
-
             tagObjectForPersistence(source);
         }
     }

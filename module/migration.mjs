@@ -301,6 +301,15 @@ export async function migrateWorld() {
     );
     console.log(`%c Took ${Date.now() - _start}ms to migrate to version 4.2.18`, "background: #1111FF; color: #FFFFFF");
 
+    await migrateToVersion(
+        "4.3.5",
+        lastMigration,
+        getAllActorsInGame(),
+        "Untrained Skill",
+        async (actor) => await migrateTo4_3_5(actor),
+    );
+    console.log(`%c Took ${Date.now() - _start}ms to migrate to version 4.3.5`, "background: #1111FF; color: #FFFFFF");
+
     // Because migrations are done by {Actor,Item}.migrateData for all the objects, we need to commit those changes to the DB.
     await migrateToVersion(
         game.system.version,
@@ -587,6 +596,20 @@ async function fixupPslChoices4_2_17(actor) {
     return itemUpdates.length > 0
         ? Item.implementation.updateDocuments(itemUpdates, { parent: actor })
         : Promise.resolve(true);
+}
+
+async function migrateTo4_3_5(actor) {
+    try {
+        // We only want to add the untrained skill for prototype actors, not unlinked actors.
+        if (!actor.token) {
+            const _untrainedSkillItem = actor.items.find((item) => item.system.XMLID === "UNTRAINED");
+            if (!_untrainedSkillItem) {
+                await actor.addUntrainedSkill();
+            }
+        }
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 async function migrateTo4_2_14(actor) {

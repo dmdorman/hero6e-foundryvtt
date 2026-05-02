@@ -1011,18 +1011,11 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
 
         const targetType = targetTab.replace(/s$/, "").replace("martial", "martialart");
 
-        const validItemTypeChanges = ["skill", "perk", "talent", "power", "equipment"];
-
         // Is this a valid target tab
-        if (!validItemTypeChanges?.includes(targetType)) {
-            return ui.notifications.error(
-                `"${item.name}" is a ${item.baseInfo?.xmlTag} and cannot be added to ${targetTab.toUpperCase()} items tab.`,
-            );
-        }
-
-        if (!validItemTypeChanges.includes(item.type)) {
-            console.error(`${item.name} has unsupported type= ${item.type}`);
-            return;
+        if (!item.isValidTypeConversion(targetType)) {
+            console.error(item.validationTypeConversionFailures(targetType, this.actor));
+            // Show only one validation failure to UI
+            return ui.notifications.error(item.validationTypeConversionFailures(targetType, this.actor).at(-1));
         }
 
         const sameActor = item.actor?.id === this.actor.id;
@@ -1048,40 +1041,21 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             return;
         }
 
-        // Most things can become a power or equipment.
-        // Or change from power/equipment to native type.
-        if (["power", "equipment"].includes(targetType) || item.baseInfo.type.includes(targetType)) {
-            const preType = item.type;
-            if (item.system.PARENTID) {
-                item.updateSource({ "system.PARENTID": null });
-            }
-            await item.update({
-                type: targetType,
-                "==system": item.system,
-            });
-
-            // change type of any children to match new parent type
-            async function changeChildType(item, newType) {
-                for (const child of item.childItems) {
-                    if (child.type !== newType) {
-                        await child.update({
-                            type: newType,
-                            "==system": child.system,
-                        });
-                        await changeChildType(child, newType);
-                    }
-                }
-            }
-            await changeChildType(item, targetType);
-
-            ui.notifications.info(`${item.name} was changed from type=${preType} to type=${item.type}`);
-            return;
+        // Update The Type of the Item
+        try {
+            await item.convertToType(targetType);
+        } catch (error) {
+            console.error(error);
+            ui.notifications.error(
+                `${item.detailedName()} for ${this.actor.name} failed to be converted to type ${targetType}`,
+            );
         }
-
-        console.error(`Failed to change ${item.name} type.`);
     }
 
     async _onDropItem(event, data) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
         if (!this.actor.isOwner) {
             console.warn(`not owner`);
             return false;
@@ -1093,7 +1067,8 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             return;
         }
 
-        const target = event.currentTarget;
+        // For some reason currentTarget is sometimes null, so we fall back to target
+        const target = event.currentTarget ?? event.target;
         const targetTab = target?.closest("[data-tab]")?.dataset?.tab;
         if (targetTab) {
             return this._onDropItemOnTab(event, data, item, targetTab);
@@ -1166,39 +1141,29 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         // Create new system.ID
         itemData.system.ID = new Date().getTime();
 
+        // Try to drop item on the active tab
+        const targetType = options.type ?? this.tabGroups.primary.replace(/s$/, "").replace("martial", "martialart");
+        if (item.isValidTypeConversion(targetType)) {
+            itemData.type = targetType;
+        } else {
+            console.error(item.validationTypeConversionFailures(targetType));
+
+            if (options.type) {
+                // Show only one validation failure to UI
+                return ui.notifications.error(item.validationTypeConversionFailures(targetType).at(-1));
+            } else {
+                // Show only one validation failure to UI
+                ui.notifications.warn(
+                    `${item.validationTypeConversionFailures(targetType).at(-1)}. Creating item as ${itemData.type}.`,
+                );
+            }
+        }
+
         const baseInfoCheck = getPowerInfo({
             xmlid: itemData.system.XMLID,
             is5e: this.actor.is5e,
             xmlTag: itemData.system.xmlTag,
         });
-
-        // Override type
-        if (options.type) {
-            // Need to validate new type
-
-            if (["power", "equipment"].includes(options.type) || baseInfoCheck?.xmlTag.toLowerCase() === options.type) {
-                itemData.type = options.type;
-            } else {
-                return ui.notifications.error(
-                    `"${item.name}" is a ${baseInfoCheck?.xmlTag} and cannot be added to ${options.type.toUpperCase()} items tab.`,
-                );
-            }
-        } else {
-            // Try to drop item on the active tab
-            const targetType = this.tabGroups.primary.replace(/s$/, "").replace("martial", "martialart");
-            if (
-                ["power", "equipment"].includes(targetType) ||
-                baseInfoCheck?.xmlTag.toLowerCase() === targetType ||
-                (["LIST"].includes(baseInfoCheck.xmlTag) &&
-                    ["martialart", "skill", "perk", "talent", "complication"].includes(targetType))
-            ) {
-                itemData.type = targetType;
-            } else {
-                ui.notifications.warn(
-                    `"${item.name}" is a ${baseInfoCheck?.xmlTag} and cannot be added to ${targetType.toUpperCase()} items tab.  Creating item as POWER.`,
-                );
-            }
-        }
 
         // Make sure we have xmlTag in itemData (some older items may be missing this)
         itemData.system.xmlTag ??= baseInfoCheck?.xmlTag;
