@@ -108,6 +108,8 @@ The command supports rolling all the expected types of rolls as you would expect
 - `[e]` for entangle rolls
 - `[s]` for success rolls
 - `[f]` for flash rolls
+- `[l]` for luck rolls
+- `[u]` for unluck rolls
 - anything else, or omitted, for basic rolls
 
 ### Optional Hit Location
@@ -122,6 +124,10 @@ Prefacing the the flavour with an `h` will give you a roll with hit locations. S
 - `/heroRoll 167d6[n]` to drop an atomic bomb on the PCs
 
 ![A nasty roll you don't want to be hit with](./media/big-bomb-roll.png)
+
+### Inline rolls
+
+`/heroRoll` is available for embedding into chat, journal, and the character sheets similiar to `/roll`. Just wrap the same `/heroRoll` expression in `[[` and `]]` to make it inline. For example, to make `/heroRoll 7d6-1[n]` into an inline roll, it becomes `[[/heroRoll 7d6-1[n]]]`.
 
 ### FoundryVTT Macros
 

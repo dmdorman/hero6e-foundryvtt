@@ -48,9 +48,6 @@ async function heroRollTextEditorEnricher(match /*, options*/) {
         const linkActionDescription = `${match[2].replace(/\[.*\]/, "")} ${heroRoller.getType()} roll ${heroRoller.hitLocationValid() ? " with hit location" : ""}`;
         a.innerHTML = `<i class="fas fa-dice-d6"></i> ${linkActionDescription}`;
 
-        // Evaluate roll when link is clicked. This will be stripped out in chat messages but presumably won't be elsewhere this might be used - but I'm actually not sure.
-        a.addEventListener("click", onInlineHeroRollClick);
-
         return a;
     }
 
@@ -64,11 +61,6 @@ Hooks.on("init", function () {
     CONFIG.TextEditor.enrichers.push({
         enricher: heroRollTextEditorEnricher,
         pattern: inlineHeroRollRegExp,
-
-        // Don't seem to need these, but they are there as options
-        // id?: string;
-        // onRender?: (arg0: HTMLEnrichedContentElement) => any;
-        // replaceParent?: boolean;
     });
 });
 
