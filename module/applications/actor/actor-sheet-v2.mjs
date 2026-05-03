@@ -1154,10 +1154,11 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
 
             if (options.type) {
                 // Show only one validation failure to UI
-                return ui.notifications.error(item.validationTypeConversionFailures(targetType, this.actor).at(-1));
+                return ui.notifications.error(item.validationTypeConversionFailures(targetType, this.actor).at(0));
             } else {
                 // Show only one validation failure to UI
-                ui.notifications.warn(
+                console.error("this needs review");
+                return ui.notifications.warn(
                     `${item.validationTypeConversionFailures(targetType, this.actor).at(0)} Creating item as ${itemData.type}.`,
                 );
             }

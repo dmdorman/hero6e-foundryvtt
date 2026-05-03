@@ -6047,6 +6047,20 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     }
 
     /**
+     * Is this item a Movement Power
+     */
+    get isMovement() {
+        return this.baseInfo.type.includes("movement");
+    }
+
+    /**
+     * Is this item a Characteristic Power
+     */
+    get isCharacteristic() {
+        return this.baseInfo.type.includes("characteristic");
+    }
+
+    /**
      * Link the item's custom adders to other items. This should only be invoked for
      * items which support linked custom adders (eg. CSL, PSL)
      *
@@ -7249,7 +7263,19 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         `Item ${this.detailedName()} is not valid because ${targetActor?.name} is an AI and cannot use skill enhancers.`,
                     );
                 }
+                if (this.isMovement) {
+                    validationFailureMessages.push(
+                        `Item ${this.detailedName()} is not valid because ${targetActor?.name} is an AI and cannot have movement powers.`,
+                    );
+                }
+                if (this.isCharacteristic && !targetActor.hasCharacteristic(this.system.XMLID)) {
+                    validationFailureMessages.push(
+                        `Item ${this.detailedName()} is not valid because ${targetActor?.name} is an AI and cannot have the ${this.system.XMLID} characteristic.`,
+                    );
+                }
                 break;
+
+            default: // TODO: we have more research to do here for other actor types
         }
 
         if (this.isFreeStuff) {
