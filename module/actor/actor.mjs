@@ -3337,9 +3337,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
         // Remove any is5e FreeStuff mis-matches (happens when you upload 5e over 6e actor, or vice versa)
         const mismatchItems = this.items.filter(
-            (item) =>
-                (item.system.XMLID === "PERCEPTION" || item.isCombatManeuver) &&
-                (item.system.is5e !== this.system.is5e || !item.baseInfo),
+            (item) => item.isFreeStuff && (item.system.is5e !== this.system.is5e || !item.baseInfo),
         );
 
         if (mismatchItems.length > 0) {
