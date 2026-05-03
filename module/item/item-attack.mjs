@@ -2200,10 +2200,8 @@ export async function _onRollBreakfall(event) {
         throw new Error("Target actor details are no longer available.");
     }
 
-    const knockbackResultTotal = button.dataset.knockbackResultTotal;
-    if (!knockbackResultTotal) {
-        throw new Error("Knockback details are not available.");
-    }
+    // If knockbackResultTotal exists then this is vs KB, if not then stand up from prone.
+    const knockbackResultTotal = button.dataset.knockbackResultTotal ?? 0;
 
     const breakFallItem = targetActor.items.find((o) => o.system.XMLID === "BREAKFALL" && o.isActive);
     if (!breakFallItem) {
@@ -2273,12 +2271,14 @@ export async function _onRollBreakfall(event) {
         const kbPenalty = targetActor.is5e
             ? -Math.floor(knockbackResultTotal / 2)
             : -Math.ceil(knockbackResultTotal / 2);
-        tags.push({
-            value: kbPenalty,
-            name: "KB Penalty",
-            title: `KB Penalty -1 per ${targetActor.is5e ? `2"` : `4m or fraction thereof`} of KB`,
-        });
-        successValue += kbPenalty;
+        if (kbPenalty !== 0) {
+            tags.push({
+                value: kbPenalty,
+                name: "KB Penalty",
+                title: `KB Penalty -1 per ${targetActor.is5e ? `2"` : `4m or fraction thereof`} of KB`,
+            });
+            successValue += kbPenalty;
+        }
 
         await skillRoller.makeSuccessRoll(true, successValue).roll();
 
@@ -2287,13 +2287,22 @@ export async function _onRollBreakfall(event) {
         const total = skillRoller.getSuccessTotal();
         const margin = successValue - total;
 
+        const successFlavor =
+            button.dataset.knockbackResultTotal == undefined
+                ? "You stand up and regain control as a <b>Zero Phase</b> action."
+                : "Regained control after Knockback (not possible if Knocked Back into something). No longer prone.";
+        const failFlavor =
+            button.dataset.knockbackResultTotal == undefined
+                ? "You stand up and regain control as a <b>Half Phase</b> action."
+                : "Failed to regain control. Remains prone.";
+
         const flavor = `${breakFallItem.name.toUpperCase()}
                         ${breakFallItem.system.INPUT && !breakFallItem.name.match(new RegExp(breakFallItem.system.INPUT, "i")) ? `: ${breakFallItem.system.INPUT}` : ``}
                         (${successValue}-) roll
                         <b class="dice-${succeeded ? "succeeded" : "failed"}">
                         ${succeeded ? "succeeded" : "failed"} by ${
                             autoSuccess === undefined ? `${Math.abs(margin)}` : `rolling ${total}`
-                        }</b>. ${succeeded ? "Regained control after Knockback (not possible if Knocked Back into something). No longer prone." : "Failed to regain control. Remains prone."}`;
+                        }</b>. ${succeeded ? successFlavor : failFlavor}`;
         const rollHtml = await skillRoller.render(flavor);
 
         // render card
