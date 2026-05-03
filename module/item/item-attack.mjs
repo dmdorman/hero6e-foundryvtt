@@ -698,7 +698,7 @@ export async function doAoeActionToHit(action, options) {
     //speaker.alias = actor.name;
 
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: attackHeroRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,
@@ -1241,7 +1241,7 @@ async function doSingleTargetActionToHit(action, options) {
     const speaker = ChatMessage.getSpeaker({ actor: actor, token });
 
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: targetData
             .map((target) => target.roller?.rawRolls())
             .flat()
@@ -1900,7 +1900,7 @@ async function _rollApplyKnockback(token, knockbackDice) {
     const speaker = ChatMessage.getSpeaker({ actor: actor, token });
 
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: damageRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,
@@ -1951,7 +1951,7 @@ export async function rollEffect(item) {
 
     const speaker = ChatMessage.getSpeaker();
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: effectRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,
@@ -1971,7 +1971,7 @@ export async function rollLuck(item) {
 
     const speaker = ChatMessage.getSpeaker();
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: luckRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,
@@ -1991,7 +1991,7 @@ export async function rollUnluck(item) {
 
     const speaker = ChatMessage.getSpeaker();
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: unluckRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,
@@ -2170,7 +2170,7 @@ export async function _onRollDamage(event) {
     const speaker = ChatMessage.getSpeaker({ actor: item.actor, token });
 
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: damageRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,
@@ -2322,7 +2322,7 @@ export async function _onRollBreakfall(event) {
         const cardHtml = await foundryVttRenderTemplate(template, cardData);
 
         const chatData = {
-            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             rolls: skillRoller.rawRolls(),
             author: game.user._id,
             content: cardHtml,
@@ -2526,7 +2526,7 @@ export async function _onRollMindScanEffectRoll(event) {
     const speaker = ChatMessage.getSpeaker({ actor: item.actor, token });
 
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: mindScanRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,
@@ -3138,6 +3138,11 @@ export async function _onApplyDamageToSpecificToken(item, _damageData, action, t
             (targetToken?.document ?? targetToken).actor.items.find(
                 (o) => o.system.XMLID === "BREAKFALL" && o.isActive,
             ),
+        canAcrobatics:
+            !damageDetail.preKnockBackProneStatus &&
+            (targetToken?.document ?? targetToken).actor.items.find(
+                (o) => o.system.XMLID === "ACROBATICS" && o.isActive,
+            ),
 
         // misc
         tags: defenseTags.filter((o) => !o.options?.knockback),
@@ -3153,7 +3158,7 @@ export async function _onApplyDamageToSpecificToken(item, _damageData, action, t
     const speaker = ChatMessage.getSpeaker({ actor: item.actor, token: targetToken });
 
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: damageDetail.knockbackRoller?.rawRolls(),
         author: game.user._id,
         content: cardHtml,
@@ -3304,7 +3309,7 @@ export async function _onApplyEntangleToSpecificToken(item, token, originalRoll)
         const speaker = ChatMessage.getSpeaker({ actor: item.actor, token });
 
         const chatData = {
-            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             author: game.user._id,
             content: cardHtml,
             speaker: speaker,
@@ -3405,7 +3410,7 @@ export async function _onApplyEntangleToSpecificToken(item, token, originalRoll)
     const speaker = ChatMessage.getSpeaker({ actor: item.actor, token });
 
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         author: game.user._id,
         content: cardHtml,
         speaker: speaker,
@@ -3536,7 +3541,7 @@ export async function _onApplyDamageToEntangle(attackItem, token, originalRoll, 
     const speaker = ChatMessage.getSpeaker({ actor: attackItem.actor, token });
 
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         author: game.user._id,
         content: cardHtml,
         speaker: speaker,
@@ -3590,7 +3595,7 @@ async function _performAbsorptionForToken(token, absorptionItems, damageDetail, 
                 });
 
                 const chatData = {
-                    style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+                    style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
                     rolls: absorptionRoller.rawRolls(),
                     author: game.user._id,
                     content: cardHtml,

@@ -130,7 +130,7 @@ export class ItemVppConfig extends HeroApplication {
 
             const chatData = {
                 author: game.user._id,
-                style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+                style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
                 content: `${this.item.name} slots were changed. Variable power pool points: ${this.vppSlottedCost} of ${this.item.vppPoolPoints}. <ul>${changeContent.join("")}</ul>`,
                 whisper: whisperUserTargetsForActor(this.item.actor),
                 speaker: ChatMessage.getSpeaker({ actor: this.item.actor, token: fromUuidSync(this.#tokenUuid) }),

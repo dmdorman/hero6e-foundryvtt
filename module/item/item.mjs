@@ -1273,7 +1273,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         const chatData = {
             author: game.user._id,
             speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             content: content,
             whisper: [game.user.id],
         };
@@ -1363,7 +1363,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             //         const speaker = ChatMessage.getSpeaker({ actor: this.actor, token });
             //         //speaker.alias = actor.name;
             //         const chatData = {
-            //             style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            //             style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             //             author: game.user._id,
             //             content: `Unable to activate ${item.name} because it would exceed the ${VPP.name} active point pool of ${VPP.system.LEVELS}RC.`,
             //             speaker: speaker,
@@ -1377,7 +1377,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             //         const speaker = ChatMessage.getSpeaker({ actor: this.actor, token });
             //         const overrideKeyText = game.keybindings.get(HEROSYS.module, "OverrideCanAct")?.[0].key;
             //         const chatData = {
-            //             style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            //             style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             //             author: game.user._id,
             //             content:
             //                 `Unable to activate ${item.name} because it would exceed the ${VPP.name} pool of ${VPP.system.LEVELS}RC.` +
@@ -1408,7 +1408,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             //         const speaker = ChatMessage.getSpeaker({ actor: this.actor, token });
             //         //speaker.alias = actor.name;
             //         const chatData = {
-            //             style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            //             style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             //             author: game.user._id,
             //             content: `${item.name} was activated even though it exceed the ${VPP.name} control cost`,
             //             speaker: speaker,
@@ -1423,7 +1423,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             //         const overrideKeyText = game.keybindings.get(HEROSYS.module, "OverrideCanAct")?.[0].key;
             //         //speaker.alias = actor.name;
             //         const chatData = {
-            //             style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            //             style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             //             author: game.user._id,
             //             content:
             //                 `Unable to activate ${item.name} because it would exceed the ${VPP.name} control cost of ${controlCost}AP. ` +
@@ -1684,7 +1684,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         const chatData = {
             author: game.user._id,
             speaker: ChatMessage.getSpeaker({ token: token, actor: this.actor }),
-            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             content: `Change clips on <b>${this.name}</b>. ${(token ?? this.actor).name} drops the clip with ${previousCharges} charges. Reloading with a new clip with ${this.system.numCharges} charges. ${this.system.clips} clip(s) remain.`,
             whisper: whisperUserTargetsForActor(this.actor),
         };
@@ -7421,7 +7421,7 @@ export async function requiresACharacteristicRollCheck(actor, characteristic, re
     speaker.alias = actor.name;
 
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: activationRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,
@@ -7477,7 +7477,7 @@ export async function rollAblativeActivationCheck(item) {
     const token = actor.token;
     const speaker = ChatMessage.getSpeaker({ actor: actor, token });
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: rawRolls,
         author: game.user._id,
         content: cardHtml,

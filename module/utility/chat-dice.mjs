@@ -212,7 +212,7 @@ async function rollAndGenerateChatMessage(heroRoller) {
 
     const speaker = ChatMessage.getSpeaker();
     const chatData = {
-        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: heroRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,

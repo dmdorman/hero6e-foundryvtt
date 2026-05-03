@@ -64,8 +64,8 @@ HERO.folderColors = {
     "Powers.Talents": "#ff6666",
 };
 
-// V13 & V14 differences in how chat messages are displayed (set in herosystem6e.mjs:init)
-HERO.CHAT_MESSAGE_DEFAULT_STYLE = CONST.CHAT_MESSAGE_STYLES.OOC;
+// V13 & V14 differences in how chat messages are displayed (set in herosystem6e.mjs)
+// HERO.CHAT_MESSAGE_DEFAULT_STYLE = CONST.CHAT_MESSAGE_STYLES.OOC;
 
 HERO.DEFENSE_ABBREVIATIONS = {
     FLASHDEFENSE: "FlashD",
