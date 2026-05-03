@@ -7,6 +7,7 @@
 - Power Frameworks are now included in the Hero Item Compendium. Items dropped onto an actor sheet now favor active item tab. [#4093](https://github.com/dmdorman/hero6e-foundryvtt/issues/4093)
 - Compendium packs created via HDP files should now work properly. [#4072](https://github.com/dmdorman/hero6e-foundryvtt/issues/4072)
 - Untrained skills can now be rolled. [#4096](https://github.com/dmdorman/hero6e-foundryvtt/issues/4096)
+- ActorSheet V2 is now the default sheet. You can adjust your theme to "Light" to get a similar look as before. The ActorSheet V1 sheet will eventually be deprecated.
 
 ### Version 4.3.4 20260426
 

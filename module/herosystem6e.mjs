@@ -62,7 +62,6 @@ import { expireEffects } from "./utility/util.mjs";
 import { HeroRoll } from "./utility/dice.mjs";
 import "./utility/adjustment.mjs";
 import "./utility/chat-dice.mjs";
-import { isGameV13OrLater } from "./utility/compatibility.mjs";
 
 // v13 has namespaced these. Remove when support is no longer provided. Also remove from eslint template.
 const FoundryVttActors = foundry.documents?.collections?.Actors || Actors;
@@ -231,22 +230,21 @@ Hooks.once("init", async function () {
     // Register sheet application classes
     FoundryVttActors.unregisterSheet("core", FoundryVttActorSheet);
     FoundryVttActors.registerSheet("herosystem6e", HeroSystemActorSheet, {
-        makeDefault: true,
-        label: "Default HeroSystem",
+        makeDefault: false,
+        label: "HeroSystem v1",
     });
-    if (isGameV13OrLater()) {
-        // V12 is missing ActorSheetV2._prepareTabs etal
-        FoundryVttActors.registerSheet("herosystem6e", HeroSystemActorSheetV2, {
-            makeDefault: false,
-            themes: {
-                "": "Default",
-                light: "Light",
-                dark: "Dark",
-                hc: "High Contrast",
-            },
-            label: "HeroSystem v2",
-        });
-    }
+
+    FoundryVttActors.registerSheet("herosystem6e", HeroSystemActorSheetV2, {
+        makeDefault: true,
+        themes: {
+            "": "Default",
+            light: "Light",
+            dark: "Dark",
+            hc: "High Contrast",
+        },
+        label: "HeroSystem v2",
+    });
+
     FoundryVttActors.registerSheet("herosystem6e", HeroSystemActorSavuoriSheet, {
         makeDefault: false,
         label: "Savuori",
