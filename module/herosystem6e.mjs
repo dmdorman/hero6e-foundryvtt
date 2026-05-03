@@ -118,6 +118,11 @@ Hooks.once("init", async function () {
     // CONFIG.debug.hooks = true;
     CONFIG.debug.combat = true;
 
+    // V13 & V14 differences in how chat messages are displayed
+    HERO.CHAT_MESSAGE_DEFAULT_STYLE = game.version.startsWith("13")
+        ? CONST.CHAT_MESSAGE_STYLES.IC
+        : CONST.CHAT_MESSAGE_STYLES.OOC;
+
     // Custom HeroSystem VisionMode
     setPerceptionModes();
 

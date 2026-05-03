@@ -57,7 +57,7 @@ export class ItemAttackV2 {
         const cardHtml = await foundryVttRenderTemplate(template, cardData);
 
         const chatData = {
-            style: CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
             author: game.user._id,
             content: cardHtml,
             speaker: ChatMessage.getSpeaker({ actor: attackAction.actor, token: attackAction.attackerToken }),

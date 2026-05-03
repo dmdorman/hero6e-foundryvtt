@@ -211,7 +211,7 @@ export class PresenceAttackApplication extends HeroApplication {
         const cardHtml = await foundryVttRenderTemplate(template, cardData);
 
         const chatData = {
-            style: CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
             rolls: preAttackRoller.rawRolls(),
             author: game.user._id,
             content: cardHtml,
