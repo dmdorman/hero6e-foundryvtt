@@ -937,12 +937,28 @@ export class HeroSystem6eCombat extends Combat {
                     content = startContent;
                 }
 
+                // BREAKFALL from prone?
+                if (combatant.actor.statuses.has("prone")) {
+                    const breakFallItem = combatant.actor.items.find(
+                        (o) => o.system.XMLID === "BREAKFALL" && o.isActive,
+                    );
+                    if (breakFallItem) {
+                        content += `
+                            <button class="roll-breakfall" 
+                                data-actor-uuid="${combatant.actor.uuid}" 
+                                data-target-token-id="${combatant.tokenId}"
+                                title="You can use BREAKFALL to regain control from being prone without the need to take a Half Phase action.">
+                                Roll Breakfall
+                            </button>
+                        `;
+                    }
+                }
+
                 const token = combatant.token;
                 const speaker = ChatMessage.getSpeaker({
                     actor: combatant.actor,
                     token,
                 });
-                speaker["alias"] = combatant.actor.name;
 
                 const chatData = {
                     author: game.user._id,
