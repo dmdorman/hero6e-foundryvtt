@@ -160,7 +160,6 @@ export async function createSkillPopOutFromItem(item, actor) {
 async function skillRoll(item, actor, target) {
     const token = actor.token;
     const speaker = ChatMessage.getSpeaker({ actor: actor, token });
-    speaker.alias = actor.name;
 
     // Make sure there are enough resources and consume them
     const {
@@ -332,7 +331,7 @@ async function skillRoll(item, actor, target) {
     const cardHtml = await foundryVttRenderTemplate(template, cardData);
 
     const chatData = {
-        style: CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
         rolls: skillRoller.rawRolls(),
         author: game.user._id,
         content: cardHtml,

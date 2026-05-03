@@ -395,7 +395,7 @@ async function isActivatedForThisUseInternal(item, rollClass, options = {}) {
             // PH: FIXME: The chat message should not be burried down in here.
             // Success or failure message
             const chatData = {
-                style: CONST.CHAT_MESSAGE_STYLES.OOC,
+                style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
                 author: game.user._id,
                 content: `The sectional defense from <b>${item.name}</b> ${sectionalDefenseApply ? "successfully applied" : "failed to apply"}`,
                 speaker: speaker,
@@ -444,7 +444,7 @@ async function isActivatedForThisUseInternal(item, rollClass, options = {}) {
                     const overrideKeyText = game.keybindings.get(HEROSYS.module, "OverrideCanAct")?.[0].key;
 
                     const chatData = {
-                        style: CONST.CHAT_MESSAGE_STYLES.OOC,
+                        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
                         author: game.user._id,
                         content:
                             `<div class="dice-roll"><div class="dice-flavor">${item.name} (${item.system.OPTION_ALIAS || item.system.COMMENTS}) activation failed because the appropriate skill is not owned.</div></div>` +
@@ -544,7 +544,7 @@ async function isActivatedForThisUseInternal(item, rollClass, options = {}) {
     }
 
     const chatData = {
-        style: CONST.CHAT_MESSAGE_STYLES.OOC,
+        style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
         rolls: roller.rawRolls(),
         author: game.user._id,
         content: cardHtml,
