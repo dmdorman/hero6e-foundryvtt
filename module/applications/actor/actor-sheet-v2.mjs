@@ -557,9 +557,9 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                 attacks: this.actor.items.filter((item) => item.showAttack),
                 defenses: this.actor.items.filter((item) => item.baseInfo?.behaviors.includes("defense")),
                 movements: this.actor.items.filter((item) => item.baseInfo?.type.includes("movement")),
-                martial: this.actor.items.filter((item) => item.isMartialManeuver && !item.parentItem),
+                martial: this.actor.items.filter((item) => item.type === "martialart" && !item.parentItem),
                 skills: this.actor.items.filter((item) => item.type === "skill" && !item.parentItem),
-                maneuvers: this.actor.items.filter((item) => item.isCombatManeuver && !item.parentItem),
+                maneuvers: this.actor.items.filter((item) => item.type === "maneuver" && !item.parentItem),
                 powers: this.actor.items.filter((item) => item.type === "power" && !item.parentItem),
                 equipment: this.actor.items.filter((item) => item.type === "equipment" && !item.parentItem),
                 characteristics: getCharacteristicInfoArrayForActor(this.actor)
@@ -1012,10 +1012,10 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         const targetType = targetTab.replace(/s$/, "").replace("martial", "martialart");
 
         // Is this a valid target tab
-        if (!item.isValidTypeConversion(targetType)) {
+        if (!item.isValidTypeConversion(targetType, this.actor)) {
             console.error(item.validationTypeConversionFailures(targetType, this.actor));
             // Show only one validation failure to UI
-            return ui.notifications.error(item.validationTypeConversionFailures(targetType, this.actor).at(-1));
+            return ui.notifications.error(item.validationTypeConversionFailures(targetType, this.actor).at(0));
         }
 
         const sameActor = item.actor?.id === this.actor.id;
@@ -1043,6 +1043,10 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
 
         // Update The Type of the Item
         try {
+            // Ensure there is no parent ID
+            await item.update({ "system.-=PARENTID": null });
+
+            // Convert the item & children to targetType
             await item.convertToType(targetType);
         } catch (error) {
             console.error(error);
@@ -1143,18 +1147,18 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
 
         // Try to drop item on the active tab
         const targetType = options.type ?? this.tabGroups.primary.replace(/s$/, "").replace("martial", "martialart");
-        if (item.isValidTypeConversion(targetType)) {
+        if (item.isValidTypeConversion(targetType, this.actor)) {
             itemData.type = targetType;
         } else {
-            console.error(item.validationTypeConversionFailures(targetType));
+            console.error(item.validationTypeConversionFailures(targetType, this.actor));
 
             if (options.type) {
                 // Show only one validation failure to UI
-                return ui.notifications.error(item.validationTypeConversionFailures(targetType).at(-1));
+                return ui.notifications.error(item.validationTypeConversionFailures(targetType, this.actor).at(-1));
             } else {
                 // Show only one validation failure to UI
                 ui.notifications.warn(
-                    `${item.validationTypeConversionFailures(targetType).at(-1)}. Creating item as ${itemData.type}.`,
+                    `${item.validationTypeConversionFailures(targetType, this.actor).at(0)} Creating item as ${itemData.type}.`,
                 );
             }
         }

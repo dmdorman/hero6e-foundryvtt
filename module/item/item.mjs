@@ -1623,8 +1623,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         // Free items don't have a system.ID
         if (
             this.system?.ID === undefined &&
-            (this.type === "maneuver" ||
-                (this.type === "skill" && ["PERCEPTION", "UNTRAINED"].includes(this.system?.XMLID)))
+            (this.type === "maneuver" || this.baseInfo.behaviors?.includes("non-hd"))
         ) {
             return true;
         }
@@ -2359,7 +2358,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         if (!pack) return [];
         const documents = await pack.getDocuments(); // query not working and undocumented { "system.PARENTID": this.system.ID });
         return documents.filter(
-            (item) => item.system.PARENTID === this.system.ID && item.folder.uuid === this.folder.uuid,
+            (item) => item.system.PARENTID === this.system.ID && item.folder?.uuid === this.folder?.uuid,
         );
     }
 
@@ -4723,11 +4722,6 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         // What are we effectively using for attack?
         const baseAttackItem = this.baseInfo.baseEffectDicePartsBundle(this, {}).baseAttackItem;
 
-        if (!baseAttackItem) {
-            console.error(`${this?.actor.name}/${this.detailedName()} baseAttackItem is missing`);
-            return "-";
-        }
-
         // CONFIG overrides for specific XMLIDs
         if (baseAttackItem.baseInfo?.attackDefenseVs) {
             return baseAttackItem.baseInfo.attackDefenseVs(baseAttackItem);
@@ -4834,9 +4828,14 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         return !!this.baseInfo?.isContainer;
     }
 
+    get isList() {
+        // We decided against excluding SEPARATOR items from being considered as lists.
+        return this.system.XMLID === "LIST";
+    }
+
     get isSeparator() {
-        // It appears that some seperators can have childItems. Not sure why this is the case.
-        return this.system.XMLID === "LIST" && this.system.ALIAS.trim() === "" && this.system.NAME === "";
+        // It appears that some separators can have childItems. Not sure why this is the case.
+        return this.isList && this.system.ALIAS.trim() === "" && this.system.NAME === "";
     }
 
     get isRangedSense() {
@@ -5942,14 +5941,109 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
      * Is this item a martial art maneuver
      */
     get isMartialManeuver() {
-        return this.type === "martialart";
+        if (
+            this.type === "martialart" &&
+            !this.baseInfo.type.includes("martial") &&
+            !this.isList &&
+            !this.isSeparator
+        ) {
+            console.error(`${this.detailedName()} has inconsistent isMartialManeuver information`);
+        }
+        return this.baseInfo.type.includes("martial");
     }
 
     /**
      * Is this item a combat maneuver
      */
     get isCombatManeuver() {
-        return this.type === "maneuver";
+        if (this.type === "maneuver" && !this.baseInfo.type.includes("maneuver") && !this.isList && !this.isSeparator) {
+            console.error(`${this.detailedName()} has inconsistent isCombatManeuver information`);
+        }
+        return this.baseInfo.type.includes("maneuver");
+    }
+
+    /**
+     * Is this item a Skill
+     */
+    get isSkill() {
+        return this.baseInfo.type.includes("skill") && !this.isSkillEnhancer;
+    }
+
+    /**
+     * Is this item a Skill Enhancer
+     */
+    get isSkillEnhancer() {
+        return this.baseInfo.type.includes("skill") && this.baseInfo.type.includes("enhancer");
+    }
+
+    /**
+     * Is this item a Power
+     */
+    get isPower() {
+        //TODO: Should we add something to CONFIG to be more explicit about what constitutes a Power?
+        return (
+            !this.isMartialManeuver &&
+            !this.isCombatManeuver &&
+            !this.isSkill &&
+            !this.isSkillEnhancer &&
+            !this.isPerk &&
+            !this.isPerkEnhancer &&
+            !this.isTalent &&
+            !this.isDisadvantage &&
+            !this.isPowerFramework &&
+            !this.isList &&
+            !this.isSeparator &&
+            !this.isCompoundPower
+        );
+    }
+
+    /**
+     * Is this item a Equipment
+     */
+    get isEquipment() {
+        return this.type === "equipment";
+    }
+
+    /**
+     * Is this item a Perk
+     */
+    get isPerk() {
+        return this.baseInfo.type.includes("perk") && !this.isPerkEnhancer;
+    }
+
+    /**
+     * Is this item a Perk Enhancer
+     */
+    get isPerkEnhancer() {
+        return this.baseInfo.type.includes("perk") && this.baseInfo.type.includes("enhancer");
+    }
+
+    /**
+     * Is this item a Talent
+     */
+    get isTalent() {
+        return this.baseInfo.type.includes("talent");
+    }
+
+    /**
+     * Is this item a Disadvantage
+     */
+    get isDisadvantage() {
+        return this.baseInfo.type.includes("disadvantage");
+    }
+
+    /**
+     * Is this item a Compound Power
+     */
+    get isCompoundPower() {
+        return this.system.XMLID === "COMPOUNDPOWER";
+    }
+
+    /**
+     * Is this item a Power Framework
+     */
+    get isPowerFramework() {
+        return this.baseInfo.type.includes("framework");
     }
 
     /**
@@ -7021,9 +7115,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
     // The default deleteDialog doesn't prompt for children
     async deleteDialog(options = {}, operation = {}) {
-        // Do not allow deletion of PERCEPTION or other non-HD items
-        if (this.baseInfo.behaviors?.includes("non-hd") || this.type === "maneuver") {
-            ui.notifications.error("Cannot delete this item.");
+        if (this.isFreeStuff) {
+            ui.notifications.error(`Cannot delete <b>${this.detailedName()}</b> because it is not part of a HDC file.`);
             return;
         }
 
@@ -7137,72 +7230,107 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
         return null;
     }
-    isValidTypeConversion(targetType, targetActor = this.actor) {
+    isValidTypeConversion(targetType, targetActor) {
         return this.validationTypeConversionFailures(targetType, targetActor).length === 0;
     }
 
-    validationTypeConversionFailures(targetType, targetActor = this.actor) {
+    validationTypeConversionFailures(targetType, targetActor) {
+        if (!targetActor) {
+            console.error(`No target actor provided for type conversion validation`);
+        }
+
         let validationFailureMessages = [];
+
+        // Verify the item is valid for this Actor
+        switch (targetActor?.type) {
+            case "ai":
+                if (this.isSkillEnhancer) {
+                    validationFailureMessages.push(
+                        `Item ${this.detailedName()} is not valid because ${targetActor?.name} is an AI and cannot use skill enhancers.`,
+                    );
+                }
+                break;
+        }
+
+        if (this.isFreeStuff) {
+            validationFailureMessages.push(
+                `Item ${this.detailedName()} for ${targetActor?.name} is a core piece of automation, not included in the HDC file, and cannot be converted.`,
+            );
+        }
+
+        switch (targetType) {
+            case "martialart":
+                if (!this.isMartialManeuver && !this.isList && !this.isSeparator) {
+                    validationFailureMessages.push(
+                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a martial art.`,
+                    );
+                }
+                break;
+
+            case "skill":
+                if (!this.isSkill && !this.isSkillEnhancer && !this.isList && !this.isSeparator) {
+                    validationFailureMessages.push(
+                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a skill.`,
+                    );
+                }
+                break;
+
+            case "power":
+            case "equipment":
+                if (
+                    !this.isSkill &&
+                    !this.isPerk &&
+                    !this.isTalent &&
+                    !this.isPower &&
+                    !this.isDisadvantage &&
+                    !this.isList &&
+                    !this.isSeparator &&
+                    !this.isIsCompoundPower &&
+                    !this.isPowerFramework
+                ) {
+                    validationFailureMessages.push(
+                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}.`,
+                    );
+                }
+                break;
+
+            case "perk":
+                if (!this.isPerk && !this.isPerkEnhancer && !this.isList && !this.isSeparator) {
+                    validationFailureMessages.push(
+                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a perk.`,
+                    );
+                }
+                break;
+
+            case "talent":
+                if (!this.isTalent && !this.isList && !this.isSeparator) {
+                    validationFailureMessages.push(
+                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a talent.`,
+                    );
+                }
+                break;
+
+            case "disadvantage":
+                if (!this.isDisadvantage && !this.isList && !this.isSeparator) {
+                    validationFailureMessages.push(
+                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a disadvantage.`,
+                    );
+                }
+                break;
+
+            default:
+                validationFailureMessages.push(
+                    `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}.`,
+                );
+                break;
+        }
 
         // Make sure children are valid
         for (const child of this.childItems) {
             validationFailureMessages = validationFailureMessages.concat(
-                child.validationTypeConversionFailures(targetType),
+                child.validationTypeConversionFailures(targetType, targetActor),
             );
         }
-
-        // Maneuvers and martial arts cannot be converted to other types
-        if (this.isCombatManeuver || this.isMartialArt || this.baseInfo.behaviors?.includes("non-hd")) {
-            // In some unexpected cases, we might convert back to original type
-            if (!this.baseInfo?.type.includes(targetType)) {
-                validationFailureMessages.push(
-                    `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}`,
-                );
-            }
-            return validationFailureMessages;
-        }
-
-        // targetType is likely a targetTab, which isn't always a valid item.type
-        if (
-            [
-                "attack",
-                "defense",
-                "movement",
-                "characteristics",
-                "background",
-                "effect",
-                "condition",
-                "other",
-                "analysis",
-            ].includes(targetType)
-        ) {
-            validationFailureMessages.push(
-                `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, try POWER or EQUIPMENT instead.`,
-            );
-            return validationFailureMessages;
-        }
-
-        // Most items can be a power or equipment
-        if (["power", "equipment"].includes(targetType)) {
-            return validationFailureMessages;
-        }
-
-        // Base type is valid
-        if (this.baseInfo?.type.includes(targetType)) {
-            return validationFailureMessages;
-        }
-
-        // LIST can be most types
-        if (
-            this.baseInfo?.key === "LIST" &&
-            ["martialart", "skill", "perk", "talent", "power", "equipment"].includes(targetType)
-        ) {
-            return validationFailureMessages;
-        }
-
-        validationFailureMessages.push(
-            `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}`,
-        );
 
         return validationFailureMessages;
     }
@@ -7211,13 +7339,6 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         // If the item is already of the correct type, return it
         if (this.type === targetType) {
             console.warn(`${this.detailedName()} for ${this.actor?.name} is already of type ${targetType}`);
-            return;
-        }
-
-        if (!this.isValidTypeConversion(targetType)) {
-            ui.notifications.error(
-                `${this.detailedName()} for ${this.actor?.name} cannot be converted to type ${targetType}.`,
-            );
             return;
         }
 

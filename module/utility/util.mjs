@@ -20,7 +20,9 @@ export function getPowerInfo(options) {
         options.xmlTag = options.item.system.xmlTag;
     }
 
-    if (!options.xmlTag && !options.item?.isCombatManeuver) {
+    // "non-hd" items don't have xmlTag (which is the XmlTag used in the HDC file)
+    // Decided not to create xmlTags for these as we aren't going to write them to an HDC file (when we get that working)
+    if (!options.xmlTag && !options.item?.type === "maneuver") {
         if (!squelch(options.item || xmlid)) {
             console.warn(`${options.item?.actor?.name}/${options.item?.name}/${xmlid} is missing xmlTag`, options.item);
         }
