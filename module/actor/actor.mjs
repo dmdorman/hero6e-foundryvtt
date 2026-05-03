@@ -528,7 +528,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             speaker["alias"] = game.user.name;
             const content = `<b>${tokenName}</b> ${changed.system.heroicIdentity ? "entered" : "left"} their heroic identity.`;
             const chatData = {
-                style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+                style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
                 author: game.user._id,
                 content: content,
                 speaker: speaker,
@@ -858,7 +858,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             if (asAction) {
                 const chatData = {
                     author: game.user._id,
-                    style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+                    style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
                     content: content,
                     speaker: speaker,
                 };
@@ -947,7 +947,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
         const chatData = {
             author: game.user._id,
-            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             content: content,
             speaker: speaker,
             whisper: [...ChatMessage.getWhisperRecipients(this.name), ...ChatMessage.getWhisperRecipients("GM")],
@@ -1036,7 +1036,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             const chatData = {
                 author: game.user._id,
-                style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+                style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
                 content: `${this.name} is ${badStatus.join(", ")} and cannot move. Override key was used.`,
                 whisper: whisperUserTargetsForActor(this),
                 speaker,
@@ -1131,7 +1131,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             const chatData = {
                 author: game.user._id,
-                style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+                style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
                 content: `${this.name} is ${badStatus.join(", ")} and cannot act. Override key was used.`,
                 whisper: whisperUserTargetsForActor(this),
                 speaker,
@@ -1783,7 +1783,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         await this.token.delta.restore();
 
         await ChatMessage.create({
-            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             author: game.user._id,
             speaker: ChatMessage.getSpeaker({ actor: this }),
             whisper: whisperUserTargetsForActor(this),
@@ -2104,7 +2104,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const speaker = ChatMessage.getSpeaker({ actor: this, token });
 
         const chatData = {
-            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             rolls: heroRoller.rawRolls(),
             author: game.user._id,
             content: cardHtml,
@@ -2211,7 +2211,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const speaker = ChatMessage.getSpeaker({ actor: this.actor, token });
 
         const chatData = {
-            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             rolls: characteristicRoller.rawRolls(),
             author: game.user._id,
             content: cardHtml,
@@ -2236,7 +2236,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const speaker = ChatMessage.getSpeaker({ actor: this.actor, token });
 
         const chatData = {
-            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             rolls: characteristicRoller.rawRolls(),
             author: game.user._id,
             content: cardHtml,
@@ -2353,7 +2353,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             if (!options.quenchUpload && this.id) {
                 // Fire and forget
                 ChatMessage.create({
-                    style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+                    style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
                     author: game.user._id,
                     speaker: ChatMessage.getSpeaker({ actor: this }),
                     whisper: whisperUserTargetsForActor(this),
@@ -3183,7 +3183,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             if (!options.quenchUpload && this.id) {
                 // Fire and forget
                 ChatMessage.create({
-                    style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+                    style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
                     author: game.user._id,
                     speaker: ChatMessage.getSpeaker({ actor: this }),
                     whisper: whisperUserTargetsForActor(this),
@@ -3233,7 +3233,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                     } else {
                         // Fire and forget (no await on this ChatMessage)
                         ChatMessage.create({
-                            style: CONFIG?.HERO?.CHAT_MESSAGE_DEFAULT_STYLE ?? CONST.CHAT_MESSAGE_STYLES.OOC,
+                            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
                             author: game.user._id,
                             speaker: ChatMessage.getSpeaker({ actor: this }),
                             content: `<b>${this.name}</b> kept a few items that were not in the HDC upload: ${unorderedList}`,

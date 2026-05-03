@@ -387,6 +387,8 @@ export async function doManeuverEffects(item, action) {
             // NOTE: A targetedToken can be a PrototypeToken or a TokenDocument.
             const actor = targetedToken.actor;
             newActiveEffects.push(actor.addActiveEffect(HeroSystem6eActorActiveEffects.statusEffectsObj.proneEffect));
+
+            // Offer actor an ACROBATICS skill roll to negate the prone effect
         });
     }
 

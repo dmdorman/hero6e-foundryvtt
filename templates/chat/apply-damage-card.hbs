@@ -97,6 +97,19 @@
             Roll Breakfall
           </button>
         {{/if}}
+
+        {{!-- BreakFall--}}
+        {{#if canAcrobatics}}
+          <button class="roll-breakfall" 
+            data-actor-uuid="{{actor.uuid}}" 
+            data-target-token-id="{{targetTokenDocument.id}}"
+            data-trip-succeeded-by="{{tripSucceededBy}}"
+            title="You can use ACROBATICS to avoid being prone due to a trip.">
+            Roll Acrobatics
+          </button>
+        {{/if}}
+
+
       {{else}}
         <div class="description-tiny">{{ knockbackMessage }}</div>
       {{/if}}
