@@ -2353,6 +2353,16 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         return children;
     }
 
+    async childItemsFromPack() {
+        if (!this.pack) return [];
+        const pack = game.packs.get(this.pack);
+        if (!pack) return [];
+        const documents = await pack.getDocuments(); // query not working and undocumented { "system.PARENTID": this.system.ID });
+        return documents.filter(
+            (item) => item.system.PARENTID === this.system.ID && item.folder.uuid === this.folder.uuid,
+        );
+    }
+
     get childIdx() {
         if (!this.parentItem) return null;
         let result = this.parentItem.childItems.findIndex((o) => o.id === this.id) + 1;

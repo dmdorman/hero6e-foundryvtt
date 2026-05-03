@@ -1214,7 +1214,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         ChatMessage.create(chatData);
 
         // Is this a parent item with children?
-        for (const child of item.childItems) {
+        for (const child of item.pack ? await item.childItemsFromPack() : item.childItems) {
             await this.DropItemFramework(child, { PARENTID: itemData.system.ID });
         }
     }
