@@ -31,6 +31,21 @@ export class HeroSocketHandler {
                     if (game.user !== game.users.activeGM) return;
                     await game.combat.previousTurn();
                     break;
+                case "updateChatMessage": {
+                    if (game.user !== game.users.activeGM) return;
+
+                    const message = ChatMessage.get(data.messageId);
+                    if (!message) {
+                        console.error(`Message not found: ${data.messageId}`);
+                        return;
+                    }
+                    if (!data.content) {
+                        console.error(`Message content not found.`);
+                        return;
+                    }
+                    await message.update({ content: data.content });
+                    break;
+                }
 
                 default: {
                     throw new Error(`unhandled operation ${data?.operation}`);

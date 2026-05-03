@@ -2220,7 +2220,19 @@ export async function _onRollBreakfall(event) {
             const button = parsedMessageContent.querySelector(`button.roll-breakfall`);
             if (button) {
                 button.style.color = "darkgray";
-                await message.update({ content: parsedMessageContent.innerHTML });
+                console.log(`emit updateChatMessage`);
+                if (game.user.isGM) {
+                    await message.update({ content: parsedMessageContent.innerHTML });
+                } else {
+                    game.socket.emit(`system.${game.system.id}`, {
+                        operation: "updateChatMessage",
+                        userId: game.user.id,
+                        messageId: messageId,
+                        content: parsedMessageContent.innerHTML,
+                        //actor: targetActor,
+                        //token: targetToken,
+                    });
+                }
             }
         }
     } catch (e) {
