@@ -2,7 +2,7 @@
     "id": "hero6efoundryvttv2",
     "title": "Hero System 6e (Unofficial) v2",
     "description": "The Hero System 6e for FoundryVTT!",
-    "version": "4.3.4",
+    "version": "4.3.5",
     "compatibility": {
         "minimum": "13",
         "verified": "13.351",

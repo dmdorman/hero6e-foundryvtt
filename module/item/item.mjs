@@ -903,7 +903,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
                 break;
 
-            case "base":
+            case "base2":
                 if (this.isMovement) {
                     validationFailureMessages.push({
                         itemId: this.id,
@@ -2451,7 +2451,10 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         if (!pack) return [];
         const documents = await pack.getDocuments(); // query not working and undocumented { "system.PARENTID": this.system.ID });
         return documents.filter(
-            (item) => item.system.PARENTID === this.system.ID && item.folder?.uuid === this.folder?.uuid,
+            (item) =>
+                item.system.PARENTID &&
+                item.system.PARENTID === this.system.ID &&
+                item.folder?.uuid === this.folder?.uuid,
         );
     }
 
