@@ -1138,10 +1138,10 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             return;
         }
 
-        await this.DropItemFramework(item);
+        await this.DropItemFramework(item, {});
     }
 
-    async DropItemFramework(item, options = {}) {
+    async DropItemFramework(item, options) {
         const itemData = item.toObject();
 
         // Create new system.ID
