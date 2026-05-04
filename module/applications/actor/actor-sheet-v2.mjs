@@ -1154,16 +1154,9 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         } else {
             const conversionFailures = item.validationTypeConversionFailures(targetType, this.actor);
 
-            if (options.type) {
-                // Show only one validation failure to UI
-                console.error(conversionFailures);
-                return ui.notifications.error(conversionFailures[0].message);
-            } else {
-                // Show only one validation failure to UI
-                console.error("this needs review");
-                console.warn(conversionFailures);
-                return ui.notifications.warn(`${conversionFailures[0].message} Creating item as ${itemData.type}.`);
-            }
+            // Show only one validation failure to UI
+            console.error(conversionFailures);
+            return ui.notifications.error(conversionFailures[0].message);
         }
 
         const baseInfoCheck = getPowerInfo({
