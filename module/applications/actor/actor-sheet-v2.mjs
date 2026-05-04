@@ -335,8 +335,8 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                 template: `systems/${systemId}/templates/actor/actor-sheet-v2-parts/actor-sheet-talents-v2.hbs`,
                 scrollable: [""],
             },
-            complications: {
-                template: `systems/${systemId}/templates/actor/actor-sheet-v2-parts/actor-sheet-complications-v2.hbs`,
+            disadvantages: {
+                template: `systems/${systemId}/templates/actor/actor-sheet-v2-parts/actor-sheet-disadvantages-v2.hbs`,
                 scrollable: [""],
             },
             background: {
@@ -391,7 +391,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                 { id: "characteristics" },
                 { id: "perks" },
                 { id: "talents" },
-                { id: "complications" },
+                { id: "disadvantages" },
                 { id: "background" },
                 { id: "effects" },
                 { id: "conditions" },
@@ -440,8 +440,8 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                         }
 
                         // 5e disadvantages
-                        if (tabName === "complications" && this.actor.is5e) {
-                            context.tabs[tabName].label = "Disadvantages";
+                        if (tabName === "disadvantages" && !this.actor.is5e) {
+                            context.tabs[tabName].label = "Complications";
                         }
 
                         const hv = this.#heroValidationCssForTab(this._items[tabName]);
@@ -472,7 +472,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                 case "characteristics":
                 case "perks":
                 case "talents":
-                case "complications":
+                case "disadvantages":
                 case "invalid":
                     context.items = this._items[partId];
                     context.searchValue = this.searchValues[partId];
@@ -572,7 +572,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                     .map((o) => this.actor.system.characteristics[o.key.toLowerCase()]),
                 perks: this.actor.items.filter((item) => item.type === "perk" && !item.parentItem),
                 talents: this.actor.items.filter((item) => item.type === "talent" && !item.parentItem),
-                complications: this.actor.items.filter((item) => item.type === "disadvantage" && !item.parentItem),
+                disadvantages: this.actor.items.filter((item) => item.type === "disadvantage" && !item.parentItem),
                 background: Object.keys(this.actor.system.CHARACTER.CHARACTER_INFO)
                     .filter((key) => key.match(/[A-Z_]+/))
                     .filter((key) => this.actor.system.CHARACTER.CHARACTER_INFO[key]),

@@ -30,24 +30,28 @@
             </div>
             
         </div>
+
         <div class="item-column item-end">
             {{#if (ne this.system.XMLID "LIST")}}
                 {{this.system.endEstimate}}
             {{/if}}
         </div>
+
         <div class="item-column item-price">
             {{this.priceText}}
         </div>
+
         <div class="item-column item-weight">
             {{this.weightKg}}
         </div>
+        
         <div class="item-column item-carried">
             <input class="item-update" type="checkbox"  {{checked
                     this.system.CARRIED}} data-action="carried" data-dtype="Boolean" />
         </div>
-        <div class="item-column item-controls">
-            {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-actions-partial-v2.hbs') this }}
-        </div>
+
+        {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-actions-partial-v2.hbs') this }}
+
     </div>
 </li>
 

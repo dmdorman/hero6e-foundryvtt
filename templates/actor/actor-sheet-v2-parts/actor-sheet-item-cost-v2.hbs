@@ -1,0 +1,17 @@
+{{log "actor-sheet-item-cost-v2" this}}
+
+<div class="item-column item-cost">
+    {{#if (eq this.system.XMLID "COMPOUNDPOWER")}}
+        {{this.compoundCostForDisplay}}
+    {{else if this.isSeparator}}
+        {{!-- Show no cost--}}
+    {{else if (eq this.system.XMLID "LIST")}}
+        <span style="opacity: 0.5">{{this.listCost}}</span>
+    {{else}}
+        {{#if (eq this.parentItem.system.XMLID "COMPOUNDPOWER")}}
+            <span style="opacity: 0.5">{{this.characterPointCostForDisplayPlusSuffix}}</span>
+        {{else}}
+            {{this.characterPointCostForDisplayPlusSuffix}}
+        {{/if}}
+    {{/if}}
+</div>

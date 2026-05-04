@@ -1,6 +1,8 @@
 # Releases
 
-### Version 4.3.5 20260503 [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+### Version 4.3.6 So Far... [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+
+### Version 4.3.5 20260503
 
 - ActorSheet V2 is now the default sheet. You can change your FoundryVTT "User Interface Configuration" settings to be Applications = Light to get a similar look as before. The ActorSheet V1 sheet will eventually be deprecated.
 - Fix offhand defense not working against strike and other strength based attacks. [#4071](https://github.com/dmdorman/hero6e-foundryvtt/issues/4071)

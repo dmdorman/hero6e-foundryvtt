@@ -1,6 +1,6 @@
 <li class="item powers draggable expandable-document" data-item-id="{{this.id}}" data-document-uuid="{{this.uuid}}">
-    <div class="item-row draggable {{this.validationCss}}">
-        
+    <div class="item-row {{css}} {{this.validationCss}}">
+                
         {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-cost-v2.hbs') this }}
 
         {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-description-v2.hbs') this }}
@@ -12,6 +12,6 @@
 
 {{#if (not this.system.collapse)}}
     {{#each this.childItems }}
-        {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-perks-partial-item-v2.hbs') this }}
+        {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-disadvantages-partial-item-v2.hbs') this }}
     {{/each}}
 {{/if}}

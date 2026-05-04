@@ -74,10 +74,9 @@
                                 -
                             {{/if}}
                         </div>
-                        <div class="item-column item-controls">
-                            {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-actions-partial-v2.hbs') this }}                       
-                            {{!-- <a class="fa-solid fa-angle-{{ifThen abilityContext.expanded "down" "right"}}" data-action="toggleDocumentDescription"></a> --}}
-                        </div>
+                        
+                        {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-actions-partial-v2.hbs') this }}
+                                               
                     </div>
                     {{!-- 
                     <div class="item-description-expandable">
