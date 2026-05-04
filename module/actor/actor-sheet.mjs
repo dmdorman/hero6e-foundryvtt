@@ -532,7 +532,7 @@ export class HeroSystemActorSheet extends FoundryVttActorSheet {
             return;
         }
 
-        await this.DropItemFramework(item);
+        await this.DropItemFramework(item, null);
     }
 
     async DropItemFramework(item, parentId) {
