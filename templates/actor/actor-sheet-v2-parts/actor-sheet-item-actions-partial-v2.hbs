@@ -1,55 +1,59 @@
 {{!-- {{log 'item-action-icons-partial' this}} --}}
 
-{{#if this.disabledOIHID}}
-    <i class="fal fa-minus-square fa-xl item-oihid" title="{{localize "ActorSheet.OnlyInHeroicID"}}" width="24" height="24"></i>
-{{else}}
-    {{#if (itemHasBehaviours this "roll" "success")}}
-        {{#if this.system.roll}}
-            <button type="button" class="item-rollable" data-action="roll" data-roll="{{this.system.roll}}" data-label="{{this._id}}">
-                {{numberFormat this.system.roll decimals=0 sign=false}}-
-            </button>
-        {{else}}
-            {{!-- {{log 'missing roll for ' this}} --}}
-        {{/if}}       
-    {{/if}}
+<div class="item-column item-controls">
+    
+    {{#if this.disabledOIHID}}
+        <i class="fal fa-minus-square fa-xl item-oihid" title="{{localize "ActorSheet.OnlyInHeroicID"}}" width="24" height="24"></i>
+    {{else}}
+        {{#if (itemHasBehaviours this "roll" "success")}}
+            {{#if this.system.roll}}
+                <button type="button" class="item-rollable" data-action="roll" data-roll="{{this.system.roll}}" data-label="{{this._id}}">
+                    {{numberFormat this.system.roll decimals=0 sign=false}}-
+                </button>
+            {{else}}
+                {{!-- {{log 'missing roll for ' this}} --}}
+            {{/if}}       
+        {{/if}}
 
 
 
-    {{#if (itemHasActionBehavior this "activatable")}}
-        <input class="Xitem-toggle" type="checkbox"
-            Xname="this.isActive" {{checked this.isActive}} data-action="toggle" data-dtype="Boolean"
-            title="Activation toggle" {{#if this.vppUnSlotted}}disabled{{/if}} 
-        />
-    {{/if}}
+        {{#if (itemHasActionBehavior this "activatable")}}
+            <input class="Xitem-toggle" type="checkbox"
+                Xname="this.isActive" {{checked this.isActive}} data-action="toggle" data-dtype="Boolean"
+                title="Activation toggle" {{#if this.vppUnSlotted}}disabled{{/if}} 
+            />
+        {{/if}}
 
-    {{#if (itemHasActionBehavior this "showClipsReload")}}
-        <a class="item-image item-change-clip"><i
-                class="fas fa-refresh"
-                title="Reload clips"
-                width="24"
-                height="24"
-                data-action="clips"
+        {{#if (itemHasActionBehavior this "showClipsReload")}}
+            <a class="item-image item-change-clip"><i
+                    class="fas fa-refresh"
+                    title="Reload clips"
+                    width="24"
+                    height="24"
+                    data-action="clips"
+                ></i></a>
+        {{/if}}
+
+        {{#if (eq this.system.XMLID "VPP")}}
+            <a class="item-image item-change-vpp"><i
+                    class="fas fa-cog"
+                    title="Change VPP"
+                    width="24"
+                    height="24"
+                    data-action="vpp"
+                ></i></a>
+        {{/if}}
+
+        {{!-- The dice icon does double duty - for to-hit or for damage/effects that don't require a to-hit roll (e.g. luck, unluck, susceptibility) --}}
+        {{#if (or (itemHasActionBehavior this "to-hit") (itemHasBehaviours this "dice"))}}
+            <a class="item-image item-rollable"><i class="fas fa-dice" 
+            title="Roll" 
+            width="24" 
+            height="24"
+            data-action="roll"
             ></i></a>
+        {{/if}}
     {{/if}}
+    <a class="fa-fw fa-solid fa-ellipsis-vertical" data-action="documentListContext"></a>
 
-    {{#if (eq this.system.XMLID "VPP")}}
-        <a class="item-image item-change-vpp"><i
-                class="fas fa-cog"
-                title="Change VPP"
-                width="24"
-                height="24"
-                data-action="vpp"
-            ></i></a>
-    {{/if}}
-
-    {{!-- The dice icon does double duty - for to-hit or for damage/effects that don't require a to-hit roll (e.g. luck, unluck, susceptibility) --}}
-    {{#if (or (itemHasActionBehavior this "to-hit") (itemHasBehaviours this "dice"))}}
-        <a class="item-image item-rollable"><i class="fas fa-dice" 
-        title="Roll" 
-        width="24" 
-        height="24"
-        data-action="roll"
-        ></i></a>
-    {{/if}}
-{{/if}}
-<a class="fa-fw fa-solid fa-ellipsis-vertical" data-action="documentListContext"></a>
+</div>

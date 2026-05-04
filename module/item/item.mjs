@@ -6986,6 +6986,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         this.migrateData_missingXMLID(source);
         this.migrateData_4_0_26(source);
         this.migrateData_4_2_5(source);
+        this.migrateData_4_3_6_Disadvantages(source);
 
         return super.migrateData(source);
     }
@@ -7162,6 +7163,15 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         // Remove the isHeroic property as it is now calculated on the fly
         if (source.system?.isHeroic !== undefined) {
             delete source.system.isHeroic;
+            tagObjectForPersistence(source);
+        }
+    }
+
+    static migrateData_4_3_6_Disadvantages(source) {
+        // Migration for 4.3.6 - Disadvantages
+        // This is a placeholder for any specific migration logic needed for disadvantages
+        if (source.type === "complication") {
+            source.type = "disadvantage";
             tagObjectForPersistence(source);
         }
     }
@@ -7455,7 +7465,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             default:
                 validationFailureMessages.push({
                     itemId: this.id,
-                    message: `${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}.`,
+                    message: `${this.detailedName()} for ${targetActor?.name} cannot be converted to unhandled type ${targetType}.`,
                     severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
                 });
                 break;

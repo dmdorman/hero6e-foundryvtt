@@ -1,58 +1,18 @@
 <li class="item powers draggable expandable-document" data-item-id="{{this.id}}" data-document-uuid="{{this.uuid}}">
     <div class="item-row {{css}} {{this.validationCss}}">
-        <div class="item-column item-cost">
-            {{#if (eq this.system.XMLID "COMPOUNDPOWER")}}
-                {{this.compoundCostForDisplay}}
-            {{else if this.isSeparator}}
-                {{!-- Show no cost--}}
-            {{else if (eq this.system.XMLID "LIST")}}
-                <span style="opacity: 0.5">{{this.listCost}}</span>
-            {{else}}
-                {{#if (eq this.parentItem.system.XMLID "COMPOUNDPOWER")}}
-                    <span style="opacity: 0.5">{{this.characterPointCostForDisplayPlusSuffix}}</span>
-                {{else}}
-                    {{this.characterPointCostForDisplayPlusSuffix}}
-                {{/if}}
-            {{/if}}
-        </div>
+        
+        {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-cost-v2.hbs') this }}
 
-        <div class="item-column item-description item-depth-{{this.childDepth}}"
-            data-tooltip="{{this.validationTooltip}}"
-        >
-            
-            {{#if this.validationTooltip}}
-                <i class="fa-regular fa-circle-exclamation fa-2xl"></i>
-            {{else}}
-                {{#if this.isContainer}}
-                    <a class="item-image item-chevron" data-action="toggleChevron">
-                        <i class="fas fa-square-caret-down fa-2x"></i>
-                    </a>
-                {{else}}
-                    {{#if (ne this.system.XMLID "LIST")}}
-                        <img class="item-image" src="{{this.img}}" alt="{{this.name}}">
-                    {{/if}}
-                {{/if}}
-            {{/if}}
+        {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-description-v2.hbs') this }}
 
-            <div class="item-description-full {{this.css.description}}">
-                {{#if (and this.childIdx this.parentItem)}}
-                    {{this.childIdx}})
-                {{/if}}
-                {{{itemFullDescription this}}}
-                {{#if this.system.NOTES}}
-                    <div class="item-notes-editable-content"><b>Notes:</b> {{{this.system.NOTES}}}</div>
-                {{/if}}
-            </div>
-            
-        </div>
         <div class="item-column item-char">
             {{#if (ne this.system.XMLID "LIST")}}
                 {{this.system.CHARACTERISTIC}}
             {{/if}}
         </div>
-        <div class="item-column item-controls">
-            {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-actions-partial-v2.hbs') this }}
-        </div>
+
+        {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-actions-partial-v2.hbs') this }}
+
     </div>
 </li>
 
