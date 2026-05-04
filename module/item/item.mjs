@@ -751,7 +751,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         } else {
             _heroValidations.push({
                 property: "XMLID",
-                message: `${this.detailedName()} does not appear to be a proper ${this.is5e ? `5e` : `6e`} ${this.type}`,
+                message: `${this.detailedName()} does not appear to be a proper (known) ${this.is5e ? `5e` : `6e`} ${this.type}`,
                 severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
             });
         }
@@ -809,19 +809,9 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             }
         }
 
-        // Automaton
-        if (this.actor?.type === "automaton") {
-            if (this.type === "perk") {
-                _heroValidations.push({
-                    message: `Automatons generally should not buy Perks`,
-                    severity: CONFIG.HERO.VALIDATION_SEVERITY.INFO,
-                });
-            } else if (this.type === "skill" && this.system.EVERYMAN) {
-                _heroValidations.push({
-                    message: `Automatons do not get Everyman Skills. They must buy those skills`,
-                    severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
-                });
-            }
+        // Actor specific checks
+        if (this.actor) {
+            _heroValidations.push(...this.validationForActor(this.actor));
         }
 
         const e = this.system.debugModelProps();
@@ -835,6 +825,109 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         }
 
         return _heroValidations;
+    }
+
+    /**
+     * Validate this item when taking the actor type into consideration
+     *
+     * @returns {Array<Object>}
+     */
+    validationForActor(actor) {
+        const validationFailureMessages = [];
+
+        if (!actor) {
+            return validationFailureMessages;
+        }
+
+        switch (actor.type) {
+            case "npc":
+            case "pc":
+                // PCs and NPCs are characters and are not limited in the sort of items they have.
+                break;
+
+            case "automaton":
+                if (this.isPerk) {
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} is not valid because ${actor.name} is an Automaton and should not have perks.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.INFO,
+                    });
+                } else if (this.isSkill && this.system.EVERYMAN) {
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} is not valid because ${actor.name} is an Automaton and does not get Everyman Skills. They must buy all skills.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
+                } else if (this.isCharacteristic && !actor.hasCharacteristic(this.system.XMLID)) {
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} is not valid because ${actor.name} is an Automaton and cannot have the ${this.system.XMLID} characteristic.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
+                }
+
+                break;
+
+            case "ai":
+            case "computer":
+                if (this.isSkillEnhancer) {
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} is not valid because ${actor.name} is an AI and cannot use skill enhancers.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
+                } else if (this.isMovement) {
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} is not valid because ${actor.name} is an AI and cannot have movement powers.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
+                } else if (this.isCharacteristic && !actor.hasCharacteristic(this.system.XMLID)) {
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} is not valid because ${actor.name} is an AI and cannot have the ${this.system.XMLID} characteristic.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
+                }
+
+                break;
+
+            case "vehicle":
+                if (this.isCharacteristic && !actor.hasCharacteristic(this.system.XMLID)) {
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} is not valid because ${actor.name} is a vehicle and cannot have the ${this.system.XMLID} characteristic.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
+                }
+
+                break;
+
+            case "base":
+                if (this.isMovement) {
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} is not valid because ${actor.name} is a base and cannot have movement powers.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
+                } else if (this.isCharacteristic && !actor.hasCharacteristic(this.system.XMLID)) {
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} is not valid because ${actor.name} is a base and cannot have the ${this.system.XMLID} characteristic.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
+                }
+
+                // PH: FIXME: Confirm that the base's item uses 0 END or is hooked to an END reserve
+
+                break;
+
+            default:
+                console.error(`Unknown actor ${actor.name}/${actor.type} with item ${this.detailedName()}`);
+                break;
+        }
+
+        return validationFailureMessages;
     }
 
     get validationCss() {
@@ -7244,8 +7337,24 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
         return null;
     }
+
+    /**
+     * Are there any CONFIG.HERO.VALIDATION_SEVERITY.ERROR in the validation?
+     *
+     * @param {*} targetType
+     * @param {HeroSystem6eActor} targetActor
+     *
+     * @returns {Boolean}
+     */
     isValidTypeConversion(targetType, targetActor) {
-        return this.validationTypeConversionFailures(targetType, targetActor).length === 0;
+        const validationFailures = this.validationTypeConversionFailures(targetType, targetActor);
+        const numErrorInValidationFailures = validationFailures.reduce((accum, failure) => {
+            if (failure.severity === CONFIG.HERO.VALIDATION_SEVERITY.ERROR) {
+                return accum + 1;
+            }
+        }, 0);
+
+        return numErrorInValidationFailures === 0;
     }
 
     validationTypeConversionFailures(targetType, targetActor) {
@@ -7253,51 +7362,39 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             console.error(`No target actor provided for type conversion validation`);
         }
 
-        let validationFailureMessages = [];
+        const validationFailureMessages = [];
 
-        // Verify the item is valid for this Actor
-        switch (targetActor?.type) {
-            case "ai":
-                if (this.isSkillEnhancer) {
-                    validationFailureMessages.push(
-                        `Item ${this.detailedName()} is not valid because ${targetActor?.name} is an AI and cannot use skill enhancers.`,
-                    );
-                }
-                if (this.isMovement) {
-                    validationFailureMessages.push(
-                        `Item ${this.detailedName()} is not valid because ${targetActor?.name} is an AI and cannot have movement powers.`,
-                    );
-                }
-                if (this.isCharacteristic && !targetActor.hasCharacteristic(this.system.XMLID)) {
-                    validationFailureMessages.push(
-                        `Item ${this.detailedName()} is not valid because ${targetActor?.name} is an AI and cannot have the ${this.system.XMLID} characteristic.`,
-                    );
-                }
-                break;
+        // Verify the item is valid for the targetActor's type
+        validationFailureMessages.push(...this.validationForActor(targetActor));
 
-            default: // TODO: we have more research to do here for other actor types
-        }
-
+        // Free stuff cannot be dragged around.
         if (this.isFreeStuff) {
-            validationFailureMessages.push(
-                `Item ${this.detailedName()} for ${targetActor?.name} is a core piece of automation, not included in the HDC file, and cannot be converted.`,
-            );
+            validationFailureMessages.push({
+                itemId: this.id,
+                message: `${this.detailedName()} for ${targetActor?.name} is a core piece of automation, not included in the HDC file, and cannot be converted.`,
+                severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+            });
         }
 
+        // Is the target tab (targetType) a valid recipient for this item?
         switch (targetType) {
             case "martialart":
                 if (!this.isMartialManeuver && !this.isList && !this.isSeparator) {
-                    validationFailureMessages.push(
-                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a martial art.`,
-                    );
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a martial art.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
                 }
                 break;
 
             case "skill":
                 if (!this.isSkill && !this.isSkillEnhancer && !this.isList && !this.isSeparator) {
-                    validationFailureMessages.push(
-                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a skill.`,
-                    );
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a skill.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
                 }
                 break;
 
@@ -7314,47 +7411,57 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     !this.isIsCompoundPower &&
                     !this.isPowerFramework
                 ) {
-                    validationFailureMessages.push(
-                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}.`,
-                    );
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
                 }
                 break;
 
             case "perk":
                 if (!this.isPerk && !this.isPerkEnhancer && !this.isList && !this.isSeparator) {
-                    validationFailureMessages.push(
-                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a perk.`,
-                    );
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a perk.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
                 }
                 break;
 
             case "talent":
                 if (!this.isTalent && !this.isList && !this.isSeparator) {
-                    validationFailureMessages.push(
-                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a talent.`,
-                    );
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a talent.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
                 }
                 break;
 
             case "disadvantage":
                 if (!this.isDisadvantage && !this.isList && !this.isSeparator) {
-                    validationFailureMessages.push(
-                        `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a disadvantage.`,
-                    );
+                    validationFailureMessages.push({
+                        itemId: this.id,
+                        message: `${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}, as it is not a disadvantage.`,
+                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                    });
                 }
                 break;
 
             default:
-                validationFailureMessages.push(
-                    `Item ${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}.`,
-                );
+                validationFailureMessages.push({
+                    itemId: this.id,
+                    message: `${this.detailedName()} for ${targetActor?.name} cannot be converted to type ${targetType}.`,
+                    severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                });
                 break;
         }
 
-        // Make sure children are valid
+        // Make sure children, if any, are valid
         for (const child of this.childItems) {
-            validationFailureMessages = validationFailureMessages.concat(
-                child.validationTypeConversionFailures(targetType, targetActor),
+            validationFailureMessages = validationFailureMessages.push(
+                ...child.validationTypeConversionFailures(targetType, targetActor),
             );
         }
 

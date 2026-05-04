@@ -1013,9 +1013,11 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
 
         // Is this a valid target tab
         if (!item.isValidTypeConversion(targetType, this.actor)) {
-            console.error(item.validationTypeConversionFailures(targetType, this.actor));
+            const conversionFailures = item.validationTypeConversionFailures(targetType, this.actor);
+
             // Show only one validation failure to UI
-            return ui.notifications.error(item.validationTypeConversionFailures(targetType, this.actor).at(0));
+            console.error(conversionFailures);
+            return ui.notifications.error(conversionFailures[0].message);
         }
 
         const sameActor = item.actor?.id === this.actor.id;
@@ -1150,17 +1152,17 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         if (item.isValidTypeConversion(targetType, this.actor)) {
             itemData.type = targetType;
         } else {
-            console.error(item.validationTypeConversionFailures(targetType, this.actor));
+            const conversionFailures = item.validationTypeConversionFailures(targetType, this.actor);
 
             if (options.type) {
                 // Show only one validation failure to UI
-                return ui.notifications.error(item.validationTypeConversionFailures(targetType, this.actor).at(0));
+                console.error(conversionFailures);
+                return ui.notifications.error(conversionFailures[0].message);
             } else {
                 // Show only one validation failure to UI
                 console.error("this needs review");
-                return ui.notifications.warn(
-                    `${item.validationTypeConversionFailures(targetType, this.actor).at(0)} Creating item as ${itemData.type}.`,
-                );
+                console.warn(conversionFailures);
+                return ui.notifications.warn(`${conversionFailures[0].message} Creating item as ${itemData.type}.`);
             }
         }
 
