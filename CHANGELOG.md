@@ -1,15 +1,14 @@
 # Releases
 
-### Version 4.3.5 So Far... [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+### Version 4.3.5 20260503 [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
 
+- ActorSheet V2 is now the default sheet. You can change your FoundryVTT "User Interface Configuration" settings to be Applications = Light to get a similar look as before. The ActorSheet V1 sheet will eventually be deprecated.
 - Fix offhand defense not working against strike and other strength based attacks. [#4071](https://github.com/dmdorman/hero6e-foundryvtt/issues/4071)
 - The /heroroll command now supports being inline in chat messages, journal entries, and V1 actor sheets. Added luck "[l]" and unluck "[u]" flavours to the command. [#4077](https://github.com/dmdorman/hero6e-foundryvtt/issues/4077)
 - Power Frameworks are now included in the Hero Item Compendium. Items dropped onto an actor sheet now favor active item tab. [#4093](https://github.com/dmdorman/hero6e-foundryvtt/issues/4093)
 - Compendium packs created via HDP files should now work properly. [#4072](https://github.com/dmdorman/hero6e-foundryvtt/issues/4072)
-- Untrained skills can now be rolled. [#4096](https://github.com/dmdorman/hero6e-foundryvtt/issues/4096) [#4083
-  ](https://github.com/dmdorman/hero6e-foundryvtt/issues/4083)
-- ActorSheet V2 is now the default sheet. You can change your FoundryVTT "User Interface Configuration" settings to be Applications = Light to get a similar look as before. The ActorSheet V1 sheet will eventually be deprecated.
-- A BREAKFALL skill roll button is shown at the start of an actors phase if they are prone. [#4052](https://github.com/dmdorman/hero6e-foundryvtt/issues/4052)
+- Untrained skills can now be rolled. [#4096](https://github.com/dmdorman/hero6e-foundryvtt/issues/4096) [#4083](https://github.com/dmdorman/hero6e-foundryvtt/issues/4083)
+- A BREAKFALL skill roll button is shown at the start of an actor's phase if they are prone. [#4052](https://github.com/dmdorman/hero6e-foundryvtt/issues/4052)
 
 ### Version 4.3.4 20260426
 
