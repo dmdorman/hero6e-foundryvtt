@@ -7460,9 +7460,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
         // Make sure children, if any, are valid
         for (const child of this.childItems) {
-            validationFailureMessages = validationFailureMessages.push(
-                ...child.validationTypeConversionFailures(targetType, targetActor),
-            );
+            validationFailureMessages.push(...child.validationTypeConversionFailures(targetType, targetActor));
         }
 
         return validationFailureMessages;
