@@ -903,7 +903,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
                 break;
 
-            case "base":
+            case "base2":
                 if (this.isMovement) {
                     validationFailureMessages.push({
                         itemId: this.id,
