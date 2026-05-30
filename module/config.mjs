@@ -72,6 +72,13 @@ HERO.activeEffectExpiryEvents = {
     turnEnd: "HERO.ActiveEffect.ExpiryTurnEnd",
 };
 
+HERO.combatManeuverOffsets = {
+    none: 0,
+    haymaker: -3.0, // Shifts priority below standard actions
+    delayedPhase: -5.0, // Delayed actions occur later
+    heldAction: 100.0, // Held actions can override/intercept standard initiative ranks
+};
+
 HERO.DEFENSE_ABBREVIATIONS = {
     FLASHDEFENSE: "FlashD",
     POWERDEFENSE: "PowD",

@@ -58,4 +58,33 @@ export class HeroCombatTracker extends CombatTracker {
             });
         }
     }
+
+    /**
+     * Centralized ApplicationV2 action handler intercepting button clicks.
+     * @override
+     */
+    async _onAction(event, target) {
+        const combatantId = target.closest("[data-combatant-id]")?.dataset.combatantId;
+        const combatant = this.viewed?.combatants.get(combatantId);
+        if (!combatant) return super._onAction(event, target);
+
+        // Capture custom maneuver adjustments
+        switch (target.dataset.action) {
+            case "holdAction":
+                await combatant.setFlag(game.system.id, "activeManeuver", "heldAction");
+                return this.viewed.updateCodeInitiatives(); // Force tracker recalculation
+
+            case "abortPhase":
+                await combatant.setFlag(game.system.id, "hasAborted", true);
+                return this.viewed.updateCodeInitiatives();
+
+            case "clearManeuvers":
+                await combatant.setFlag(game.system.id, "activeManeuver", "none");
+                await combatant.setFlag(game.system.id, "hasAborted", false);
+                return this.viewed.updateCodeInitiatives();
+        }
+
+        // Fall back to default native behaviors (like toggling hidden/defeated states)
+        return super._onAction(event, target);
+    }
 }

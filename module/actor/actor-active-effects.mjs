@@ -265,6 +265,9 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 id: "aborted",
                 name: game.i18n.localize("EFFECT.Aborted"),
                 img: `systems/${module}/icons/aborted.svg`,
+                duration: {
+                    expiry: "phaseEnd",
+                },
             },
             blockEffect: {
                 id: "block",
