@@ -8712,7 +8712,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             rangeForItem: fixedValueFunction(HERO.RANGE_TYPES.SELF),
             costPerLevel: fixedValueFunction(1),
             activeEffect: function (item) {
-                return item?.createVisionActiveEffect("darkvision", true);
+                return item.createVisionActiveEffect("darkvision", true);
             },
             xml: `<POWER XMLID="ACTIVESONAR" ID="1763830302787" BASECOST="15.0" LEVELS="0" ALIAS="Active Sonar" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" GROUP="HEARINGGROUP"></POWER>`,
         },
@@ -9094,7 +9094,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 //color: "#ff9999",  // washes out sewer tiles.  May need to create a custom visionMode.
             },
             activeEffect: function (item) {
-                return item?.createVisionActiveEffect("darkvision", true);
+                return item.createVisionActiveEffect("darkvision", true);
             },
             xml: `<POWER XMLID="INFRAREDPERCEPTION" ID="1762719249446" BASECOST="5.0" LEVELS="0" ALIAS="Infrared Perception" POSITION="63" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" GROUP="SIGHTGROUP"></POWER>`,
         },
@@ -9218,7 +9218,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 //color: "aaaaff",
             },
             activeEffect: function (item) {
-                return item?.createVisionActiveEffect("darkvision", true);
+                return item.createVisionActiveEffect("darkvision", true);
             },
             xml: `<POWER XMLID="NIGHTVISION" ID="1763940758264" BASECOST="5.0" LEVELS="0" ALIAS="Nightvision" POSITION="65" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" GROUP="SIGHTGROUP"></POWER>`,
         },
@@ -9242,7 +9242,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         target: "self only",
         rangeForItem: fixedValueFunction(HERO.RANGE_TYPES.SELF),
         activeEffect: function (item) {
-            return item?.createVisionActiveEffect("darkvision", true);
+            return item.createVisionActiveEffect("darkvision", true);
         },
         xml: `<POWER XMLID="NRAYPERCEPTION" ID="1763941699736" BASECOST="10.0" LEVELS="0" ALIAS="N-Ray Perception" POSITION="72" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" GROUP="SIGHTGROUP"></POWER>`,
     });
@@ -9338,7 +9338,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             target: "self only",
             rangeForItem: fixedValueFunction(HERO.RANGE_TYPES.SELF),
             activeEffect: function (item) {
-                return item?.createVisionActiveEffect("darkvision", true);
+                return item.createVisionActiveEffect("darkvision", true);
             },
             xml: `<POWER XMLID="RADAR" ID="1763940928672" BASECOST="15.0" LEVELS="0" ALIAS="Radar" POSITION="72" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" GROUP="RADIOGROUP"></POWER>`,
         },
@@ -9479,7 +9479,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             target: "self only",
             rangeForItem: fixedValueFunction(HERO.RANGE_TYPES.SELF),
             activeEffect: function (item) {
-                return item?.createVisionActiveEffect("darkvision", true);
+                return item.createVisionActiveEffect("darkvision", true);
             },
             xml: `<POWER XMLID="SPATIALAWARENESS" ID="1763940939009" BASECOST="32.0" LEVELS="0" ALIAS="Spatial Awareness" POSITION="75" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" GROUP="UNUSUALGROUP"></POWER>`,
         },
@@ -9512,7 +9512,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             target: "self only",
             rangeForItem: fixedValueFunction(HERO.RANGE_TYPES.SELF),
             activeEffect: function (item) {
-                return item?.createVisionActiveEffect("darkvision", true);
+                return item.createVisionActiveEffect("darkvision", true);
             },
             xml: `<POWER XMLID="TARGETINGSENSE" ID="1765683750863" BASECOST="10.0" LEVELS="0" ALIAS="Targeting" POSITION="21" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="NORMALHEARING" OPTIONID="NORMALHEARING" OPTION_ALIAS="Normal Hearing" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1765665248447" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes"></POWER>`,
         },
@@ -9673,7 +9673,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 //color: "7F00FF",
             },
             activeEffect: function (item) {
-                return item?.createVisionActiveEffect("darkvision", true);
+                return item.createVisionActiveEffect("darkvision", true);
             },
             xml: `<POWER XMLID="ULTRAVIOLETPERCEPTION" ID="1763940945104" BASECOST="5.0" LEVELS="0" ALIAS="Ultraviolet Perception" POSITION="77" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" GROUP="SIGHTGROUP"></POWER>`,
         },

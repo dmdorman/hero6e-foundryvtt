@@ -63,6 +63,11 @@ import "./utility/adjustment.mjs";
 import { expireEffects } from "./utility/util.mjs";
 import { isGameV14OrLater } from "./utility/compatibility.mjs";
 
+// New 12 segment CombatTracker stuff
+import { HeroCombat } from "./combat/hero-combat.mjs";
+import { HeroCombatant } from "./combat/hero-combatant.mjs";
+import { HeroCombatTracker } from "./combat/hero-tracker.mjs";
+
 // v13 has namespaced these. Remove when support is no longer provided. Also remove from eslint template.
 const FoundryVttActors = foundry.documents?.collections?.Actors || Actors;
 const FoundryVttItems = foundry.documents?.collections?.Items || Items;
@@ -154,8 +159,12 @@ Hooks.once("init", async function () {
 
     CONFIG.HERO = { ...CONFIG.HERO, ...HERO };
 
-    CONFIG.Combat.documentClass = HeroSystem6eCombat;
-    CONFIG.Combatant.documentClass = HeroSystem6eCombatant;
+    // CONFIG.Combat.documentClass = HeroSystem6eCombat;
+    // CONFIG.Combatant.documentClass = HeroSystem6eCombatant;
+    CONFIG.Combat.documentClass = HeroCombat;
+    CONFIG.Combatant.documentClass = HeroCombatant;
+    CONFIG.ui.combat = HeroCombatTracker;
+
     CONFIG.Combat.defeatedStatusId = "dead";
     CONFIG.ChatMessage.documentClass = HeroSystem6eChatMessage;
 
@@ -355,8 +364,8 @@ Hooks.once("init", async function () {
     // Assign the Sidebar subclasses
     CONFIG.ui.items = HeroSystem6eItemDirectory;
     CONFIG.ui.compendium = HeroSystem6eCompendiumDirectory;
-    HeroSystem6eCombatTracker.initializeTemplate();
-    CONFIG.ui.combat = HeroSystem6eCombatTracker;
+    //HeroSystem6eCombatTracker.initializeTemplate();
+    //CONFIG.ui.combat = HeroSystem6eCombatTracker;
 
     GenericRoller.Initialize();
     HeroSocketHandler.Initialize();
