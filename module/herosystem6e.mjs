@@ -1,8 +1,8 @@
 import { HeroSystem6eTemplateLayer } from "./canvas-layer.mjs";
 import * as chat from "./chat.mjs";
-import { HeroSystem6eCombat } from "./combat.mjs";
-import { HeroSystem6eCombatTracker } from "./combatTracker.mjs";
-import { HeroSystem6eCombatant } from "./combatant.mjs";
+// import { HeroSystem6eCombat } from "./combat.mjs";
+// import { HeroSystem6eCombatTracker } from "./combatTracker.mjs";
+// import { HeroSystem6eCombatant } from "./combatant.mjs";
 import { HeroSystem6eCompendium } from "./compendium.mjs";
 import { HeroSystem6eCompendiumDirectory } from "./compendiumDirectory.mjs";
 import { HERO } from "./config.mjs";
@@ -130,15 +130,12 @@ Hooks.once("init", async function () {
     // Custom HeroSystem VisionMode
     setPerceptionModes();
 
-    // if (isGameV14OrLater()) {
-    //     // Custom Expiry Events. Map custom string to a translation path or static text block
-    //     CONFIG.ActiveEffect.expiryEvents = CONFIG.ActiveEffect.expiryEvents || {};
-
-    //     // Registering the label makes it selectable and visible in configuration menus
-    //     for (const [key, value] of Object.entries(HERO.ACTIVE_EFFECT_EXPIRY_EVENTS)) {
-    //         CONFIG.ActiveEffect.expiryEvents[key] = value.label;
-    //     }
-    // }
+    if (isGameV14OrLater()) {
+        // Loop through custom dictionary map to update Foundry's core schema
+        for (const [key, localizationPath] of Object.entries(HERO.activeEffectExpiryEvents)) {
+            CONFIG.ActiveEffect.expiryEvents[key] = game.i18n.localize(localizationPath);
+        }
+    }
 
     // Compendiums
     game.CreateHeroCompendiums = CreateHeroCompendiums;

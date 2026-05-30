@@ -80,3 +80,10 @@ $combat-tracker-hero-disposition-opacity-active: 0.6;
 .combat-sidebar .combatant {
     border: 1px solid black;
 }
+
+.combat-tracker .combatant.inactive-segment {
+    opacity: 0.35;
+    background: rgb(0 0 0 / 15%);
+    filter: grayscale(50%);
+    transition: all 0.2s ease;
+}

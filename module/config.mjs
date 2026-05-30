@@ -64,6 +64,14 @@ HERO.folderColors = {
     "Powers.Talents": "#ff6666",
 };
 
+HERO.activeEffectExpiryEvents = {
+    phaseStart: "HERO.ActiveEffect.ExpiryPhaseStart",
+    phaseEnd: "HERO.ActiveEffect.ExpiryPhaseEnd",
+    segmentStart: "HERO.ActiveEffect.ExpirySegmentStart",
+    segmentEnd: "HERO.ActiveEffect.ExpirySegmentEnd",
+    turnEnd: "HERO.ActiveEffect.ExpiryTurnEnd",
+};
+
 HERO.DEFENSE_ABBREVIATIONS = {
     FLASHDEFENSE: "FlashD",
     POWERDEFENSE: "PowD",
