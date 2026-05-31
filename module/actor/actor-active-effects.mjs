@@ -603,6 +603,7 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
             if (itemName) components.push(itemName);
             const label = d?.label?.replace("None", ""); // In v14 label is the duration in user readable format
             if (label) components.push(label);
+            if (this.isSuppressed) components.push("SUPPRESSED");
             return `${this.name}${components.length > 0 ? ` [${components.filter((c) => !!c).join(", ")}]` : ""}`;
         } catch (e) {
             console.error("Error in nameExtended", e);
@@ -629,10 +630,17 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
 
             if (d.remaining < 0) {
                 {
-                    heroValidations.push({
-                        message: `${this._prepareDuration().remaining}s is negative.`,
-                        severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
-                    });
+                    if (this.disabled || this.isSuppressed) {
+                        heroValidations.push({
+                            message: `Temporary effects should be deleted, not disabled or suppressed.`,
+                            severity: CONFIG.HERO.VALIDATION_SEVERITY.WARNING,
+                        });
+                    } else {
+                        heroValidations.push({
+                            message: `${this._prepareDuration().remaining}s is negative.`,
+                            severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
+                        });
+                    }
                 }
             }
 

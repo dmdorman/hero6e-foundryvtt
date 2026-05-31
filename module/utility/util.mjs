@@ -220,7 +220,8 @@ export async function getTemporaryEffectsOwnedByActorInCombat(actor) {
 
 /// Check the actor for any effects that should expire, and expire them.
 export async function expireEffects(actor, expiresOn) {
-    const temporaryEffects = actor.temporaryEffects;
+    // V14: temporaryEffects does not include suppressed AEs, which we want so we can delete them.
+    const temporaryEffects = actor.getTemporaryEffects(); //temporaryEffects;
 
     if (!expiresOn) {
         console.error(`missing expiresOn, v14 goal to use duration.expiry`);
@@ -375,6 +376,15 @@ export async function expireEffects(actor, expiresOn) {
                 console.log(`${ae.name} expired`);
                 break;
             }
+        }
+
+        // Sanity (or cleanup) delete
+        if (ae.persisted && !ae.XMLID && ae.statuses.size === 0 && ae.changes.length === 0) {
+            // What can this AE possibly be good for, likely a leftover from an old system rev.
+            console.error(
+                `Deleted ${ae.parent?.parent?.name}/${ae.parent?.name}/${ae.name} as it has no XMLID, statuses, or changes.`,
+            );
+            await ae.delete();
         }
 
         // If temporary effect is still active, check heroValidation

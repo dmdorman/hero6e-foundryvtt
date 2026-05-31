@@ -1,7 +1,8 @@
 # Releases
 
-### Version 4.3.9 So Far... [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+### Version 4.3.9 20260531 [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
 
+- We continue to improve FoundryVTT V14 support. We don't recommend running a game with FoundryVTT V14 yet. There are some [known issues](https://github.com/dmdorman/hero6e-foundryvtt/issues?q=is%3Aissue%20state%3Aopen%20label%3Av14compatibility) (5e actors, flash, AoE damage targets, herovision) and we need to do more testing. Feel free to play around with it and bring any issues to our attention.
 - Fixed issue preventing drag and drop of COMPOUND POWERS between ActorSheetV2 tabs. [#4213](https://github.com/dmdorman/hero6e-foundryvtt/issues/4213)
 - New tokens have vision enable by default.
 - Fixed issues with multiple FLASH effects. [#4227](https://github.com/dmdorman/hero6e-foundryvtt/issues/4227)

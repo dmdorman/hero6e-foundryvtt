@@ -23,8 +23,10 @@
                         </div>
 
                         <div class="item-column item-controls">
-                            <input class="effect-toggle" data-action="toggleEffect" type="checkbox" {{checked (not
-                            this.disabled)}} data-dtype="Boolean" data-action="toggle" />
+                            <input class="effect-toggle" data-action="toggleEffect" type="checkbox" 
+                            {{checked (and (not this.disabled) (not this.isSuppressed))}} data-dtype="Boolean" data-action="toggle" 
+                                {{#if this.isSuppressed}}disabled{{/if}} 
+                            />
                             {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-item-actions-partial-v2.hbs') this }}
                         </div>
                     </div>

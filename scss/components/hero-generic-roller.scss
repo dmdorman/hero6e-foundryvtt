@@ -2,10 +2,11 @@
     align-items: center;
     flex: 0;
     border: 1px;
-    padding: 0 5px;
     pointer-events: all;
     display: flex;
     flex-direction: row;
+    width: calc(100% - 12px);
+    padding: var(--chat-message-spacing);
 
     button {
         background: rgb(70 130 180);
@@ -16,9 +17,4 @@
         color: rgb(255 255 255);
         margin: 1px;
     }
-}
-
-.hero-generic-roller.game-version-major-13 {
-    width: calc(100% - 12px);
-    padding: var(--chat-message-spacing);
 }
