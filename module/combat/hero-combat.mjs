@@ -166,7 +166,7 @@ export class HeroCombat extends Combat {
             }
         }
 
-        // 2. If an actor is found inside the active segment, step directly to them
+        // 2. Step straight to them if found inside the active segment window
         if (targetIndex !== -1) {
             return this.update({ turn: targetIndex });
         }
@@ -176,11 +176,10 @@ export class HeroCombat extends Combat {
         let nextRoundCycle = this.round;
         let segmentDeltaCount = 0;
 
-        // Initialize our master update object up-front so internal loops can inject flags safely
         const updateData = {};
+        let foundActors = [];
 
         // Scan segments sequentially forward (up to a max rotation loop of 12 steps)
-        let foundActors = [];
         for (let check = 1; check <= 12; check++) {
             nextSegment++;
             segmentDeltaCount++; // Accumulate every calendar second crossed
@@ -216,9 +215,7 @@ export class HeroCombat extends Combat {
         // 5. DETERMINING FIRST ACTIVE ACTOR SAFELY VIA IN-MEMORY SIMULATION
         let targetCombatantId = null;
         if (foundActors.length > 0) {
-            // Sort our local reference block using the fresh roll definitions we just computed
             foundActors.sort((a, b) => {
-                // Evaluate the looking-ahead priority score manually to dodge database cache lag
                 const getProjPriority = (combatant) => {
                     if (!combatant?.actor) return 0;
                     if (combatant.actor.statuses.has("aborted")) return 0;
@@ -244,7 +241,6 @@ export class HeroCombat extends Combat {
                 return (b.initiative || 0) - (a.initiative || 0);
             });
 
-            // Capture the ID of the winner of the priority stack
             targetCombatantId = foundActors[0]?.id;
         }
 
@@ -260,7 +256,6 @@ export class HeroCombat extends Combat {
         // 6. COMPILE EMBEDDED CHILD DATA WITH RECALCULATED INITIATIVES
         const combatantUpdates = [];
         this.combatants.forEach((combatant) => {
-            // Determine initiative based on the upcoming rolls map
             const rolls = updatedRollsCache[nextSegment] || {};
             const rollValue = rolls[combatant.id] || 11;
             const chKey = combatant.actor?.system?.initiativeCharacteristic ?? "dex";
@@ -283,24 +278,21 @@ export class HeroCombat extends Combat {
         });
 
         // 7. ARRANGE TURNS MATRIX MANUALLY TO DERIVE TRUE DATABASE POINTER INDEX
-        // Clone turns list and update local values to map out exactly how Foundry will sort them on the server side
         const mockTurns = [...turns];
         mockTurns.forEach((t) => {
             const match = combatantUpdates.find((u) => u._id === t.id);
             if (match) t.initiative = match.initiative;
         });
 
-        // Re-run standard collection sorting using our updated values
         mockTurns.sort((a, b) => {
             const aActs = a.hasPhaseInSegment(nextSegment) || (a.actor?.statuses.has("holding") ?? false);
             const bActs = b.hasPhaseInSegment(nextSegment) || (b.actor?.statuses.has("holding") ?? false);
             if (aActs !== bActs) return aActs ? -1 : 1;
 
             if (a.initiative !== b.initiative) return (b.initiative || 0) - (a.initiative || 0);
-            return a.id.localeCompare(b.id); // Core core engine final alpha id fallback sort
+            return a.id.localeCompare(b.id);
         });
 
-        // Find our prioritized combatant inside the freshly sorted blueprint array
         const absoluteTargetTurnIndex = mockTurns.findIndex((t) => t.id === targetCombatantId);
 
         // 8. Populate master data object
@@ -308,6 +300,13 @@ export class HeroCombat extends Combat {
         updateData.turn = absoluteTargetTurnIndex !== -1 ? absoluteTargetTurnIndex : 0;
         updateData[`flags.${game.system.id}.currentSegment`] = nextSegment;
         updateData.combatants = combatantUpdates;
+
+        // ─── CRITICAL CORRECTION FIX ───
+        // Edge Case Guard: If the index calculation computes that we are pointing to the identical turn pointer
+        // position on a segment skip transaction, we force a turn index increment so the database update registers as a data mutation.
+        if (this.round === nextRoundCycle && this.segment === nextSegment && this.turn === updateData.turn) {
+            updateData.turn = (this.turn ?? 0) + 1;
+        }
 
         // 9. Package options context parameters
         const updateOptions = {
@@ -327,7 +326,7 @@ export class HeroCombat extends Combat {
      * @override
      */
     async previousTurn() {
-        // ─── CHECK START OF COMBAT BOUNDARY RESET ───
+        // 1. CHECK START OF COMBAT BOUNDARY RESET
         if (this.round === 1 && this.segment === 12 && (this.turn ?? 0) === 0) {
             return this._handleCombatStartReset();
         }
@@ -336,71 +335,167 @@ export class HeroCombat extends Combat {
         const startIndex = (this.turn ?? 0) - 1;
         let targetIndex = -1;
 
-        // 1. Scan backwards within the current segment window
+        // 2. Scan backwards within the current segment window to find the previous actor
         for (let i = startIndex; i >= 0; i--) {
-            if (turns[i]?.hasPhaseInSegment(this.segment)) {
+            if (turns[i]?.hasPhaseInSegment(this.segment) || (turns[i]?.actor?.statuses.has("holding") ?? false)) {
                 targetIndex = i;
                 break;
             }
         }
 
-        // 2. If an actor was found earlier in the array, step directly back to their index pointer
+        // 3. If an actor was found earlier in the array, step directly back to them
         if (targetIndex !== -1) {
             return this.update({ turn: targetIndex });
         }
 
-        // 3. Segment boundary crossed. Calculate backwards leap distance.
+        // 4. Segment boundary crossed. Initialize step variables to scan backwards.
         let prevSegment = this.segment;
         let prevRoundCycle = this.round;
-        let foundPrevActorIndex = -1;
         let segmentDeltaCount = 0;
 
-        // Segment boundary crossed. Calculate backwards leap distance.
+        const updateData = {};
+        let foundActors = [];
+
+        // Scan backwards sequentially (up to a max rotation loop of 12 steps)
         for (let check = 1; check <= 12; check++) {
             prevSegment--;
-            segmentDeltaCount++;
+            segmentDeltaCount++; // Accumulate every calendar second wound backwards
 
             if (prevSegment < 1) {
                 prevSegment = 12;
                 prevRoundCycle = Math.max(1, prevRoundCycle - 1);
             }
 
-            // --- HERO 6E CORRECTION: Include Holding Characters in the Prev Segment Look-Behind ---
-            const actorsInPrevSegment = turns.filter((t) => {
-                const hasNaturalPhase = t.hasPhaseInSegment(prevSegment);
-                const isHoldingAction = t.actor?.statuses.has("holding") ?? false;
-                return hasNaturalPhase || isHoldingAction;
-            });
+            // Safeguard: If we drop below Turn 1, force a complete combat reset instead of an illegal state
+            if (prevRoundCycle < 1) {
+                return this._handleCombatStartReset();
+            }
 
-            if (actorsInPrevSegment.length > 0) {
-                actorsInPrevSegment.sort((a, b) => {
-                    const priorityA = this.getInitiativePriority(a, prevSegment);
-                    const priorityB = this.getInitiativePriority(b, prevSegment);
-                    if (priorityA !== priorityB) return priorityB - priorityA;
-                    return (b.initiative || 0) - (a.initiative || 0);
-                });
-
-                const lastActorOfSegment = actorsInPrevSegment[actorsInPrevSegment.length - 1];
-                foundPrevActorIndex = turns.indexOf(lastActorOfSegment);
+            // Filter all actors who act naturally or are holding an action in this preceding segment
+            foundActors = turns.filter(
+                (t) => t.hasPhaseInSegment(prevSegment) || (t.actor?.statuses.has("holding") ?? false),
+            );
+            if (foundActors.length > 0) {
                 break;
             }
         }
 
-        // 4. Build single transaction update payload including custom flags
-        const updateData = {
-            round: prevRoundCycle,
-            turn: foundPrevActorIndex !== -1 ? foundPrevActorIndex : 0,
-            [`flags.${game.system.id}.currentSegment`]: prevSegment,
-        };
+        // 5. Final fallback: If we scanned 12 segments backwards and found absolutely NO ONE active, reset to combat start.
+        if (foundActors.length === 0 && prevRoundCycle === 1) {
+            return this._handleCombatStartReset();
+        }
 
-        // 5. Structure options payload to cleanly step the clock backward
+        // 6. TRANSACTION BOUNDARY GENERATION: Fetch or build rolls cache for the preceding segment
+        const updatedRollsCache = await this._generateSegmentRollCache(prevSegment);
+        updateData[`flags.${game.system.id}.segmentRolls`] = updatedRollsCache;
+
+        // 7. DETERMINING FIRST ACTIVE ACTOR SAFELY VIA IN-MEMORY SIMULATION
+        let targetCombatantId = null;
+        if (foundActors.length > 0) {
+            foundActors.sort((a, b) => {
+                // Evaluate the looking-backward priority score manually to dodge database cache lag
+                const getProjPriority = (combatant) => {
+                    if (!combatant?.actor) return 0;
+                    if (combatant.actor.statuses.has("aborted")) return 0;
+
+                    const chKey = combatant.actor.system.initiativeCharacteristic ?? "dex";
+                    const base = combatant.actor.system?.characteristics?.[chKey]?.value || 0;
+                    const rolls = updatedRollsCache[prevSegment] || {};
+                    const rollValue = rolls[combatant.id] || 11;
+                    const fraction = (19 - rollValue) * 0.01;
+
+                    let offset = 0;
+                    const s = combatant.actor.statuses;
+                    if (s.has("holding")) offset = CONFIG.HERO.combatManeuverOffsets.heldAction ?? 100.0;
+                    else if (s.has("haymaker")) offset = CONFIG.HERO.combatManeuverOffsets.haymaker ?? -3.0;
+                    else if (s.has("delayedPhase")) offset = CONFIG.HERO.combatManeuverOffsets.delayedPhase ?? -5.0;
+
+                    return base + fraction + offset;
+                };
+
+                const pA = getProjPriority(a);
+                const pB = getProjPriority(b);
+                if (pA !== pB) return pB - pA;
+                return (b.initiative || 0) - (a.initiative || 0);
+            });
+
+            // When rewinding segments, we want to land on the LAST person who acts in that segment (lowest priority)
+            targetCombatantId = foundActors[foundActors.length - 1]?.id;
+        }
+
+        // --- GENERIC PHASE END EXPIRY PROCESSING FOR REWIND LEAPS ---
+        const incomingCombatant = this.combatants.get(targetCombatantId);
+        if (incomingCombatant?.actor?.statuses.has("aborted")) {
+            const phaseEndEffects = incomingCombatant.actor.effects.filter((e) => e.duration?.expiry === "phaseEnd");
+            for (const effect of phaseEndEffects) {
+                await effect.delete();
+            }
+        }
+
+        // 8. COMPILE EMBEDDED CHILD DATA WITH RECALCULATED INITIATIVES
+        const combatantUpdates = [];
+        this.combatants.forEach((combatant) => {
+            const rolls = updatedRollsCache[prevSegment] || {};
+            const rollValue = rolls[combatant.id] || 11;
+            const chKey = combatant.actor?.system?.initiativeCharacteristic ?? "dex";
+            const base = combatant.actor?.system?.characteristics?.[chKey]?.value || 0;
+            let finalInitiative = base + (19 - rollValue) * 0.01;
+
+            if (combatant.actor) {
+                const s = combatant.actor.statuses;
+                if (s.has("holding")) finalInitiative += CONFIG.HERO.combatManeuverOffsets.heldAction ?? 100.0;
+                else if (s.has("haymaker")) finalInitiative += CONFIG.HERO.combatManeuverOffsets.haymaker ?? -3.0;
+                else if (s.has("delayedPhase"))
+                    finalInitiative += CONFIG.HERO.combatManeuverOffsets.delayedPhase ?? -5.0;
+                if (s.has("aborted")) finalInitiative = 0;
+            }
+
+            combatantUpdates.push({
+                _id: combatant.id,
+                initiative: finalInitiative,
+            });
+        });
+
+        // 9. ARRANGE TURNS MATRIX MANUALLY TO DERIVE TRUE DATABASE POINTER INDEX
+        const mockTurns = [...turns];
+        mockTurns.forEach((t) => {
+            const match = combatantUpdates.find((u) => u._id === t.id);
+            if (match) t.initiative = match.initiative;
+        });
+
+        mockTurns.sort((a, b) => {
+            const aActs = a.hasPhaseInSegment(prevSegment) || (a.actor?.statuses.has("holding") ?? false);
+            const bActs = b.hasPhaseInSegment(prevSegment) || (b.actor?.statuses.has("holding") ?? false);
+            if (aActs !== bActs) return aActs ? -1 : 1;
+
+            if (a.initiative !== b.initiative) return (b.initiative || 0) - (a.initiative || 0);
+            return a.id.localeCompare(b.id);
+        });
+
+        const absoluteTargetTurnIndex = mockTurns.findIndex((t) => t.id === targetCombatantId);
+
+        // 10. Populate master data object
+        updateData.round = prevRoundCycle;
+        updateData.turn = absoluteTargetTurnIndex !== -1 ? absoluteTargetTurnIndex : 0;
+        updateData[`flags.${game.system.id}.currentSegment`] = prevSegment;
+        updateData.combatants = combatantUpdates;
+
+        // ─── CRITICAL CORRECTION FIX ───
+        // Edge Case Guard: If the index calculation computes that we are pointing to the identical turn pointer
+        // position on a segment rewind transaction, we force a turn index decrement to register a real data mutation.
+        if (this.round === prevRoundCycle && this.segment === prevSegment && this.turn === updateData.turn) {
+            updateData.turn = Math.max(0, (this.turn ?? 0) - 1);
+        }
+
+        // 11. Package options context parameters
         const updateOptions = {
             direction: -1,
-            previousCombatantId: this.combatant?.id, // MANUALLY INJECT FOR V14 UPSTREAM LOGIC
-            worldTime: {
-                delta: -segmentDeltaCount,
-            },
+            previousCombatantId: this.combatant?.id,
         };
+
+        if (segmentDeltaCount > 0) {
+            updateOptions.worldTime = { delta: -segmentDeltaCount };
+        }
 
         return this.update(updateData, updateOptions);
     }

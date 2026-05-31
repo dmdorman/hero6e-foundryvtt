@@ -99,3 +99,100 @@ $combat-tracker-hero-disposition-opacity-active: 0.6;
     color: var(--color-text-hyperlink);
     font-weight: bold;
 }
+
+/* --- HERO SYSTEM 6E SIDEBAR TIMELINE DESIGN MATRIX --- */
+
+/* 1. Transform the fake header row into a distinct separator bar */
+.combat-tracker .combatant.hero-timeline-header-row {
+    background: linear-gradient(90deg, rgb(30 41 59 / 95%) 0%, rgb(15 23 42 / 60%) 100%) !important;
+    border: 1px solid var(--color-border-dark) !important;
+    border-left: 5px solid var(--color-text-hyperlink) !important;
+    min-height: 26px !important;
+    height: 26px !important;
+    padding: 0 6px !important; /* Strips vertical padding to fix flex centering */
+    margin-top: 10px !important;
+    margin-bottom: 2px !important;
+    overflow: hidden !important; /* Your brilliant fix to prevent element spillover */
+    pointer-events: none;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 30%);
+    align-items: center !important; /* Forces flex child blocks to align horizontally */
+}
+
+/* Fix the text block container alignment */
+.combat-tracker .combatant.hero-timeline-header-row .token-name {
+    height: 100% !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 0 0 6px !important;
+}
+
+/* Adjust the separator text sizing and line heights */
+.combat-tracker .combatant.hero-timeline-header-row h4 {
+    font-size: var(--font-size-11) !important;
+    color: #e2e8f0 !important;
+    font-weight: bold !important;
+    text-transform: uppercase;
+    letter-spacing: 0.75px;
+    line-height: 26px !important; /* Matches exactly to row constraints */
+    margin: 0 !important;
+}
+
+/* Shrink and contain the icon image frame inside the narrow row */
+.combat-tracker .combatant.hero-timeline-header-row .token-image {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    max-height: 16px !important;
+    flex: 0 0 16px !important; /* FIXED: Overrides native core flex scaling blocks completely */
+    object-fit: contain !important; /* FIXED: Scales portrait smoothly to fit container dimensions */
+    border: none !important;
+    border-radius: 0 !important;
+    opacity: 0.6;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Balance the initiative block flex container wrapper */
+.combat-tracker .combatant.hero-timeline-header-row .token-initiative {
+    height: 100% !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+/* Transform the initiative numeric indicator block into an actor count badge */
+.combat-tracker .combatant.hero-timeline-header-row .initiative {
+    font-size: 9px !important;
+    background: rgb(30 41 59 / 80%) !important;
+    padding: 1px 5px !important;
+    border-radius: 10px !important;
+    color: #cbd5e1 !important;
+    font-weight: bold;
+    border: 1px solid rgb(255 255 255 / 15%) !important;
+    line-height: 10px !important;
+}
+
+/* Completely strip out native side action toggle panels for header rows */
+.combat-tracker .combatant.hero-timeline-header-row .combatant-controls {
+    display: none !important;
+}
+
+/* 2. Style upcoming actors so they look like distinct future previews */
+.combat-tracker .combatant.future-segment-preview {
+    opacity: 0.45;
+    background: rgb(0 0 0 / 15%) !important;
+    border-bottom: 1px dashed rgb(255 255 255 / 4%) !important;
+    transform: scale(0.98);
+    transform-origin: left;
+    transition: all 0.2s ease;
+}
+
+.combat-tracker .combatant.future-segment-preview:hover {
+    opacity: 0.7; /* Allows a soft hover insight check for the GM */
+}
+
+/* Dim action toggle utility buttons on future previews to clean up clutter */
+.combat-tracker .combatant.future-segment-preview .combatant-controls,
+.combat-tracker .combatant.future-segment-preview .roll {
+    opacity: 0.1;
+    pointer-events: none;
+}

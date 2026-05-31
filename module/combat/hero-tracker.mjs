@@ -105,33 +105,83 @@ export class HeroCombatTracker extends CombatTracker {
 
     /** @override */
     async _prepareTrackerContext(context, options) {
+        // 1. Let Foundry assemble the core combatant turns layout dataset natively
         await super._prepareTrackerContext(context, options);
         if (!this.viewed) return;
 
-        if (context.turns) {
-            context.turns.forEach((t) => {
+        const currentSegment = this.viewed.segment;
+        const masterTurns = context.turns || [];
+
+        // 2. Build a fresh timeline array map
+        const timelineTurns = [];
+
+        // ─── PART A: PROCESS CURRENT SEGMENT ───
+        const currentActors = masterTurns.filter((t) => {
+            const combatant = this.viewed.combatants.get(t.id);
+            const isHolding = combatant?.actor?.statuses.has("holding") ?? false;
+            const hasPhase = combatant ? combatant.hasPhaseInSegment(currentSegment) : false;
+            return hasPhase || isHolding;
+        });
+
+        currentActors.forEach((t) => {
+            const combatant = this.viewed.combatants.get(t.id);
+            if (combatant?.actor?.statuses.has("holding")) {
+                t.css = t.css ? `${t.css} is-holding-action` : "is-holding-action";
+                t.name = `⏳ [HELD] ${t.name}`;
+            }
+        });
+
+        timelineTurns.push(...currentActors);
+
+        // ─── PART B: CALCULATE FUTURE SEGMENTS ROADMAP ───
+        let lookupSegment = currentSegment;
+        let lookaheadStepsCount = 0;
+
+        for (let check = 1; check <= 12; check++) {
+            lookupSegment++;
+            if (lookupSegment > 12) lookupSegment = 1;
+
+            const futureActors = masterTurns.filter((t) => {
                 const combatant = this.viewed.combatants.get(t.id);
-
-                // Check BOTH conditions: Do they act naturally OR are they actively holding an action?
-                const isHolding = combatant?.actor?.statuses.has("holding") ?? false;
-                const hasPhase = combatant ? combatant.hasPhaseInSegment(this.viewed.segment) : false;
-
-                const isActingThisSegment = hasPhase || isHolding;
-
-                // Apply the gray-out styling ONLY if they truly have nothing to do this segment
-                if (!isActingThisSegment) {
-                    t.css = t.css ? `${t.css} inactive-segment` : "inactive-segment";
-                }
-
-                // Add a specialized class if they are holding an action
-                if (isHolding) {
-                    t.css = t.css ? `${t.css} is-holding-action` : "is-holding-action";
-
-                    // INJECT A VISUAL ANCHOR INDICATOR ICON
-                    // Append a small clock icon directly to their name string inside the sidebar data template
-                    t.name = `⏳ [HELD] ${t.name}`;
-                }
+                return combatant ? combatant.hasPhaseInSegment(lookupSegment) : false;
             });
+
+            if (futureActors.length > 0) {
+                lookaheadStepsCount++;
+
+                const fakeId = `seg-header-${lookupSegment}`;
+
+                timelineTurns.push({
+                    id: fakeId,
+                    name: `Segment ${lookupSegment}`,
+                    img: "icons/svg/clockwork.svg",
+                    css: "hero-timeline-header-row",
+                    hasRolled: true,
+                    initiative: futureActors.length,
+                    isFakeHeader: true,
+                });
+
+                futureActors.forEach((t) => {
+                    // Clone the turn object reference so modifying its layout tags does not mutate the master cache
+                    const clone = { ...t };
+
+                    // ─── FIX: REMOVE OR SUPPRESS THE NATIVE "active" CLASS FROM FUTURE PREVIEWS ───
+                    if (clone.css) {
+                        // Replace word boundary occurrences of "active" with an empty string, cleaning up excess whitespace
+                        clone.css = clone.css.replace(/\bactive\b/g, "").trim();
+                        clone.css = clone.css ? `${clone.css} future-segment-preview` : "future-segment-preview";
+                    } else {
+                        clone.css = "future-segment-preview";
+                    }
+
+                    timelineTurns.push(clone);
+                });
+            }
+
+            if (lookaheadStepsCount >= 2) break;
         }
+
+        // 4. SWAP TRACKER STREAM CONTEXT DIRECTLY OVER TO THE NEW TIMELINE BUNDLE
+        context.turns = timelineTurns;
     }
 }
