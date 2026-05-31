@@ -223,91 +223,13 @@ export async function expireEffects(actor, expiresOn) {
     const temporaryEffects = actor.temporaryEffects;
 
     if (!expiresOn) {
-        console.error(`missing expiresOn`);
+        console.error(`missing expiresOn, v14 goal to use duration.expiry`);
     }
 
     const adjustmentChatMessages = [];
 
     // TODO: Move remaining sanity checks to HeroValidation
     for (const ae of temporaryEffects) {
-        try {
-            const heroValidation = ae.heroValidation;
-            for (const validationEntry of heroValidation) {
-                const message = `${actor.name}/${ae.flags[game.system.id]?.XMLID}/${ae.nameExtended}: ${validationEntry.message}`;
-                // If current combatant, show in the UI otherwise to log
-                if (actor.inCombat && game.combat?.combatant?.actorId === actor.id) {
-                    switch (validationEntry.severity) {
-                        case CONFIG.HERO.VALIDATION_SEVERITY.INFO:
-                            ui.notifications.info(message);
-                            break;
-
-                        case CONFIG.HERO.VALIDATION_SEVERITY.WARNING:
-                            ui.notifications.warn(message);
-                            break;
-
-                        case CONFIG.HERO.VALIDATION_SEVERITY.ERROR:
-                            ui.notifications.error(message);
-                            break;
-
-                        default:
-                            console.error("Invalid validation severity", validationEntry.severity);
-                            break;
-                    }
-                } else {
-                    switch (validationEntry.severity) {
-                        case CONFIG.HERO.VALIDATION_SEVERITY.INFO:
-                            console.log(message, ae);
-                            break;
-
-                        case CONFIG.HERO.VALIDATION_SEVERITY.WARNING:
-                            console.warn(message, ae);
-                            break;
-
-                        case CONFIG.HERO.VALIDATION_SEVERITY.ERROR:
-                            console.error(message, ae);
-                            break;
-
-                        default:
-                            console.error("Invalid validation severity", validationEntry.severity);
-                            break;
-                    }
-                }
-            }
-        } catch (e) {
-            console.error(`Error processing hero validation for ${actor.name}/${ae.nameExtended}`, e);
-        }
-
-        //const d = ae._prepareDuration();
-
-        //Sanity Check
-        // if (d.remaining > 0 && !ae.duration.startTime) {
-        //     console.warn(
-        //         `${actor.name}/${ae.name} has ${ae._prepareDuration().remaining}s remaining.  It has no duration.startTime and will likely never expire.`,
-        //         ae,
-        //     );
-        //     if (ae.parent instanceof HeroSystem6eItem) {
-        //         console.error(
-        //             `${actor.name}/${ae.parent.detailedName()}/${ae.name} is a temporary effect associated with an item. This is super unusual. Try uploading the HDC file again.  If that doesn't resolve the issue then this could be a coding error and should be reported.`,
-        //             ae,
-        //         );
-        //     }
-        // }
-
-        // if (d.remaining > d.seconds) {
-        //     console.error(
-        //         `${actor.name}/${ae.nameExtended} has ${ae._prepareDuration().remaining}s remaining but only ${d.seconds}s duration. ` +
-        //             `This is causing issues with expiration.`,
-        //         ae,
-        //     );
-        //     // If in current combat, show in the UI that the AE expiration is likely wrong
-        //     if (actor.inCombat && game.combat.combatants.find((c) => c.actorId === actor.id)) {
-        //         ui.notifications.error(
-        //             `${actor.name}/${ae.nameExtended} has ${ae._prepareDuration().remaining}s remaining but only ${d.seconds}s duration. ` +
-        //                 `This is causing issues with expiration.  You may want to manually track expiration of this effect.`,
-        //         );
-        //     }
-        // }
-
         // We are expecting expiresOn flag
         const aeExpiresOn =
             ae.flags[game.system.id]?.expiresOn ||
@@ -374,6 +296,7 @@ export async function expireEffects(actor, expiresOn) {
                     ui.notifications.warn(
                         `The originating item ${ae.origin} of adjustment ${ae.name} appears to have been deleted. Deleting adjustment's active effect.`,
                     );
+                    // TODO: bulk delete all AE's at once, then take a second pass for HeroValidation
                     await ae.delete();
                     break;
                 }
@@ -398,6 +321,8 @@ export async function expireEffects(actor, expiresOn) {
                 });
 
                 if (bodyValue === bodyMax) {
+                    // TODO: one ChatMessage per actor
+                    // TODO: bulk delete all AE's at once, then take a second pass for HeroValidation
                     await ae.delete();
                     break;
                 }
@@ -423,7 +348,9 @@ export async function expireEffects(actor, expiresOn) {
                             token: tokenEducatedGuess({ actor }),
                         }),
                     };
+                    // TODO: one ChatMessage per actor
                     await ChatMessage.create(chatData);
+                    // TODO: bulk delete all AE's at once, then take a second pass for HeroValidation
                     await ae.delete();
                 }
                 break;
@@ -434,6 +361,7 @@ export async function expireEffects(actor, expiresOn) {
                 // Sanity delete
                 if (ae.flags[game.system.id]?.adjustmentActivePoints === 0) {
                     console.error(`Sanity deleting ${ae.name}. Shouldn't need to do this.`);
+                    // TODO: bulk delete all AE's at once, then take a second pass for HeroValidation
                     await ae.delete();
                     break;
                 }
@@ -446,6 +374,56 @@ export async function expireEffects(actor, expiresOn) {
             } else {
                 console.log(`${ae.name} expired`);
                 break;
+            }
+        }
+
+        // If temporary effect is still active, check heroValidation
+        if (ae.persisted) {
+            try {
+                const heroValidation = ae.heroValidation;
+                for (const validationEntry of heroValidation) {
+                    const message = `${actor.name}/${ae.flags[game.system.id]?.XMLID}/${ae.nameExtended}: ${validationEntry.message}`;
+                    // If current combatant, show in the UI otherwise to log
+                    if (actor.inCombat && game.combat?.combatant?.actorId === actor.id) {
+                        switch (validationEntry.severity) {
+                            case CONFIG.HERO.VALIDATION_SEVERITY.INFO:
+                                ui.notifications.info(message);
+                                break;
+
+                            case CONFIG.HERO.VALIDATION_SEVERITY.WARNING:
+                                ui.notifications.warn(message);
+                                break;
+
+                            case CONFIG.HERO.VALIDATION_SEVERITY.ERROR:
+                                ui.notifications.error(message);
+                                break;
+
+                            default:
+                                console.error("Invalid validation severity", validationEntry.severity);
+                                break;
+                        }
+                    } else {
+                        switch (validationEntry.severity) {
+                            case CONFIG.HERO.VALIDATION_SEVERITY.INFO:
+                                console.log(message, ae);
+                                break;
+
+                            case CONFIG.HERO.VALIDATION_SEVERITY.WARNING:
+                                console.warn(message, ae);
+                                break;
+
+                            case CONFIG.HERO.VALIDATION_SEVERITY.ERROR:
+                                console.error(message, ae);
+                                break;
+
+                            default:
+                                console.error("Invalid validation severity", validationEntry.severity);
+                                break;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error(`Error processing hero validation for ${actor.name}/${ae.nameExtended}`, e);
             }
         }
     }

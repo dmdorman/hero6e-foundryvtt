@@ -4,6 +4,7 @@
 
 - Fixed issue preventing drag and drop of COMPOUND POWERS between ActorSheetV2 tabs. [#4213](https://github.com/dmdorman/hero6e-foundryvtt/issues/4213)
 - New tokens have vision enable by default.
+- Fixed issues with multiple FLASH effects. [#4227](https://github.com/dmdorman/hero6e-foundryvtt/issues/4227)
 
 ### Version 4.3.8 20260523
 

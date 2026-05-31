@@ -9,10 +9,21 @@
         They are presented here for reference.
         There may be occasions where the automation is incorrect or insufficient, 
         requiring minor edits.
+    </p>
+
+    <div class="flexrow">
         <button data-action="createActiveEffect">
             Create ActiveEffect
         </button>
-    </p>
+        <button data-action="deleteAllTemporaryEffects">
+            Delete All Temporary Effects
+        </button>
+        <button data-action="deleteAllActiveEffects">
+            Delete All ActiveEffects
+        </button>
+    </div>
+
+    {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-search-partial-v2.hbs') this }}
 
     <div>
         {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-effects-partial-item-v2.hbs') 

@@ -584,6 +584,11 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
         return duration;
     }
 
+    get XMLID() {
+        // natively created ActiveEffects likely have no system/flag data
+        return this.system.XMLID ?? this.flags?.[game.system.id]?.XMLID;
+    }
+
     get nameExtended() {
         try {
             const sourceItem = this.origin?.includes("Item") ? fromUuidSync(this.origin) : null;

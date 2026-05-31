@@ -44,6 +44,8 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             configureActorType: HeroSystemActorSheetV2.#onConfigureActorType,
             configureToken: HeroSystemActorSheetV2.#onConfigureToken,
             createActiveEffect: HeroSystemActorSheetV2.#onCreateActiveEffect,
+            deleteAllActiveEffects: HeroSystemActorSheetV2.#onDeleteAllActiveEffects,
+            deleteAllTemporaryEffects: HeroSystemActorSheetV2.#onDeleteAllTemporaryEffects,
             fullHealth: HeroSystemActorSheetV2.#onFullHealth,
             presenceAttack: HeroSystemActorSheetV2.#onPresenceAttack,
             recovery: HeroSystemActorSheetV2.#onRecovery,
@@ -251,6 +253,38 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             img: "icons/svg/aura.svg",
         };
         this.actor.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+    }
+
+    static async #onDeleteAllTemporaryEffects() {
+        const confirm = await Dialog.confirm({
+            title: "Delete all Temporary Effects",
+            content:
+                `<h4>Are you sure?</h4><p>This will permanently delete all ${this.actor.temporaryEffects.length} ` +
+                `temporary effects.</p>`,
+        });
+
+        if (confirm) {
+            await this.actor.deleteEmbeddedDocuments(
+                "ActiveEffect",
+                this.actor.temporaryEffects.map((ae) => ae.id),
+            );
+        }
+    }
+
+    static async #onDeleteAllActiveEffects() {
+        const confirm = await Dialog.confirm({
+            title: "Delete all activeEffects",
+            content:
+                `<h4>Are you sure?</h4><p>This will permanently delete all ${Array.from(this.actor.allApplicableEffects()).length} ` +
+                `active effects.  This may break some powers, requiring a re-upload of HDC or FullHealth+Rebuild to fix.</p>`,
+        });
+
+        if (confirm) {
+            await this.actor.deleteEmbeddedDocuments(
+                "ActiveEffect",
+                Array.from(this.actor.allApplicableEffects()).map((ae) => ae.id),
+            );
+        }
     }
 
     /*
@@ -1310,37 +1344,53 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
     #onSearch(ev) {
         const filter = ev.target.value;
         const regex = new RegExp(RegExp.escape(filter), "i");
-        const itemList = ev.target.closest(".tab")?.querySelector(".item-list");
-        if (!itemList) {
+
+        // Effects tab, which has multiple item-list elements
+        const itemLists = ev.target.closest(".tab")?.querySelectorAll(".item-list");
+        if (itemLists.length === 0) {
             console.error(`unable to find itemList`);
             return;
         }
-        const applicationPart = itemList.closest("[data-application-part]")?.dataset.applicationPart;
-        if (applicationPart) {
-            this.searchValues[applicationPart] = filter;
-        } else {
-            console.error(`unable to find applicationPart`);
-        }
-
-        for (const li of itemList.children) {
-            const item = this._getEmbeddedDocument(li);
-            if (!item) {
-                console.error(`onSearch: Unable to locate item}`, li);
-                continue;
+        for (const itemList of itemLists) {
+            const applicationPart = itemList.closest("[data-application-part]")?.dataset.applicationPart;
+            if (applicationPart) {
+                this.searchValues[applicationPart] = filter;
+            } else {
+                console.error(`unable to find applicationPart`);
             }
-            try {
-                if (
-                    item.name.match(regex) ||
-                    item.system.XMLID.match(regex) ||
-                    item.system.description.match(regex) ||
-                    item.parentItem?.system.description.match(regex)
-                ) {
-                    li.classList.remove("hidden");
-                } else {
-                    li.classList.add("hidden");
+
+            for (const li of itemList.children) {
+                const item = this._getEmbeddedDocument(li);
+                if (!item) {
+                    console.error(`onSearch: Unable to locate item}`, li);
+                    continue;
                 }
-            } catch (e) {
-                console.error(e);
+
+                try {
+                    if (item.documentName === "Item") {
+                        if (
+                            item.name.match(regex) ||
+                            item.system.XMLID.match(regex) ||
+                            item.system.description.match(regex) ||
+                            item.parentItem?.system.description.match(regex)
+                        ) {
+                            li.classList.remove("hidden");
+                        } else {
+                            li.classList.add("hidden");
+                        }
+                    } else if (item.documentName === "ActiveEffect") {
+                        const activeEffect = item; // makes code a bit easier to read.
+                        if (activeEffect.nameExtended.match(regex) || activeEffect.XMLID?.match(regex)) {
+                            li.classList.remove("hidden");
+                        } else {
+                            li.classList.add("hidden");
+                        }
+                    } else {
+                        console.error(`Unknown documentName=${item.documentName}`);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
             }
         }
     }

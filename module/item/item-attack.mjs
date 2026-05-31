@@ -2955,7 +2955,7 @@ export async function _onApplyDamageToSpecificToken(item, _damageData, action, t
     } else if (isAdjustment) {
         return _onApplyAdjustmentToSpecificToken(item, targetToken, damageDetail, defense, defenseTags, action);
     } else if (isSenseAffecting) {
-        return _onApplySenseAffectingToSpecificToken(item, targetToken, damageDetail);
+        return _onApplySenseAffectingToSpecificToken(item, targetToken, damageDetail, action);
     }
 
     // Ablate defenses in the defenseTags, if appropriate.
@@ -3800,7 +3800,7 @@ async function _onApplyAdjustmentToSpecificToken(adjustmentItem, token, damageDe
     }
 }
 
-async function _onApplySenseAffectingToSpecificToken(senseAffectingItem, targetToken, damageData) {
+async function _onApplySenseAffectingToSpecificToken(senseAffectingItem, targetToken, damageData, action) {
     const defenseTags = [];
 
     // We currently only support sense groups, not individual senses
@@ -3880,10 +3880,11 @@ async function _onApplySenseAffectingToSpecificToken(senseAffectingItem, targetT
         }
     }
 
-    // Create new ActiveEffects
+    // Create new ActiveEffects in one DB call
+    const newActiveEffects = [];
     for (const senseGroup of senseGroups) {
         if (senseGroup.bodyDamage > 0) {
-            targetToken.actor.addActiveEffect({
+            const newActiveEffect = {
                 ...senseGroup.statusEffect,
                 name: `${senseAffectingItem.effectiveAttackItem.system.XMLID.replace("MANEUVER", senseAffectingItem.system.ALIAS)} ${senseGroup.XMLID}`,
                 duration: {
@@ -3893,13 +3894,18 @@ async function _onApplySenseAffectingToSpecificToken(senseAffectingItem, targetT
                     [game.system.id]: {
                         bodyDamage: senseGroup.bodyDamage,
                         XMLID: senseAffectingItem.system.XMLID,
-                        source: tokenEducatedGuess({ actor: senseAffectingItem.actor })?.name,
+                        source: tokenEducatedGuess({
+                            actor: senseAffectingItem.actor,
+                            action,
+                        })?.name,
                         expiresOn: "segmentEnd",
                     },
                 },
-            });
+            };
+            newActiveEffects.push(newActiveEffect);
         }
     }
+    await targetToken.actor.createEmbeddedDocuments("ActiveEffect", newActiveEffects);
 
     const cardData = {
         item: senseAffectingItem,
