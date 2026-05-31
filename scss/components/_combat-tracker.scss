@@ -82,8 +82,20 @@ $combat-tracker-hero-disposition-opacity-active: 0.6;
 }
 
 .combat-tracker .combatant.inactive-segment {
-    opacity: 0.35;
-    background: rgb(0 0 0 / 15%);
-    filter: grayscale(50%);
-    transition: all 0.2s ease;
+    display: none;
+}
+
+/* Custom Hero System 6e Held Action Highlight Panel */
+.combat-tracker .combatant.is-holding-action {
+    border-left: 4px solid var(--color-border-highlight, orange) !important;
+    background: rgb(255 140 0 / 8%) !important;
+    opacity: 1 !important; /* Force full color opacity, overriding any .inactive-segment spillover */
+    filter: none !important;
+    transition: border 0.2s ease;
+}
+
+/* Give the held text marker a distinct color shift */
+.combat-tracker .combatant.is-holding-action h4 {
+    color: var(--color-text-hyperlink);
+    font-weight: bold;
 }
