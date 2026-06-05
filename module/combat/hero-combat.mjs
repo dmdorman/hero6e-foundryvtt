@@ -244,13 +244,14 @@ export class HeroCombat extends Combat {
             targetCombatantId = foundActors[0]?.id;
         }
 
-        // --- NATIVE V14 CUSTOM EVENT EXPIRATION REFRESH ---
-        // Pass an object containing the event key string and optionally an array of specific target actors
+        // --- GENERIC PHASE END EXPIRY PROCESSING FOR SEGMENT LEAPS ---
         const incomingCombatant = this.combatants.get(targetCombatantId);
-        ActiveEffect.expiry.refresh({
-            event: "phaseEnd", // Injects your custom camelCase status key string constant
-            actors: [incomingCombatant.actor], // Targets ONLY the character whose action window just arrived
-        });
+        if (incomingCombatant?.actor?.statuses.has("aborted")) {
+            const phaseEndEffects = incomingCombatant.actor.effects.filter((e) => e.duration?.expiry === "phaseEnd");
+            for (const effect of phaseEndEffects) {
+                await effect.delete();
+            }
+        }
 
         // 6. COMPILE EMBEDDED CHILD DATA WITH RECALCULATED INITIATIVES
         const combatantUpdates = [];
