@@ -73,6 +73,7 @@ export default [
                 OutlineOverlayFilter: "readonly",
                 PIXI: "readonly",
                 quench: "readonly",
+                RegionDocument: "readonly",
                 renderTemplate: "readonly",
                 Roll: "readonly",
                 RollTerm: "readonly",

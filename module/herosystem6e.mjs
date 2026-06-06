@@ -32,6 +32,7 @@ import { GenericRoller } from "./heroRoller/genericRoller.mjs";
 
 import { ItemVppConfig } from "./applications/apps/item-vpp-config.mjs";
 import { HeroSystemItemSheetV2 } from "./applications/item/item-sheet-v2.mjs";
+import { HeroSystem6eRegionDocument } from "./heroRegion.mjs";
 
 import {
     HeroActorModel,
@@ -167,6 +168,8 @@ Hooks.once("init", async function () {
 
     // templatePreview
     CONFIG.Canvas.layers.templates.layerClass = HeroSystem6eTemplateLayer;
+
+    CONFIG.Region.documentClass = HeroSystem6eRegionDocument;
 
     // V11 now support ActiveEffects on items without
     // the need to transfer the effect to the actor.

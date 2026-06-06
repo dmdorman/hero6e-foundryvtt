@@ -2344,9 +2344,13 @@ export async function _onRollMindScan(event) {
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kludge to fix.
     const toHitData = { ...button.dataset };
-    const item = HeroSystem6eItem.fromSource(JSON.parse(toHitData.itemJsonStr), {
-        parent: fromUuidSync(toHitData.actorUuid),
-    });
+
+    // PH: FIXME: This is now included in the action data and this can be cleaned up
+    const { actor, item } = rehydrateActorAndAttackItem(toHitData);
+
+    if (!item || !actor) {
+        return ui.notifications.error(`Mind scan details are no longer available.`);
+    }
 
     // We may need to use selected token
     if (toHitData.target === "Selected") {
@@ -2401,13 +2405,12 @@ export async function _onRollMindScanEffectRoll(event) {
     const button = event.currentTarget;
     button.blur(); // The button remains highlighted for some reason; kludge to fix.
     const toHitData = { ...button.dataset };
-    const item = HeroSystem6eItem.fromSource(JSON.parse(toHitData.itemJsonStr), {
-        parent: fromUuidSync(toHitData.actorUuid),
-    });
-    const actor = item?.actor;
 
-    if (!actor) {
-        return ui.notifications.error(`Attack details are no longer available.`);
+    // PH: FIXME: This is now included in the action data and this can be cleaned up
+    const { actor, item } = rehydrateActorAndAttackItem(toHitData);
+
+    if (!item || !actor) {
+        return ui.notifications.error(`Mind scan details are no longer available.`);
     }
 
     // Look through all the scenes to find this token

@@ -275,15 +275,21 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         const confirm = await Dialog.confirm({
             title: "Delete all activeEffects",
             content:
-                `<h4>Are you sure?</h4><p>This will permanently delete all ${Array.from(this.actor.allApplicableEffects()).length} ` +
-                `active effects.  This may break some powers, requiring a re-upload of HDC or FullHealth+Rebuild to fix.</p>`,
+                `<h4>Are you sure?</h4><p>This will attempt to permanently delete all ${Array.from(this.actor.allApplicableEffects()).length} ` +
+                `active effects.  Some effects will get re-applied.  This may break some powers and/or automation, requiring a re-upload of HDC or FullHealth+Rebuild to fix.</p>`,
         });
 
         if (confirm) {
-            await this.actor.deleteEmbeddedDocuments(
-                "ActiveEffect",
-                Array.from(this.actor.allApplicableEffects()).map((ae) => ae.id),
-            );
+            // Intentionally not bulk deleting as we may have errors and we want to delete
+            // as many as possible even if some fail instead of failing the entire operation
+            // if any single delete fails
+            for (const ae of this.actor.allApplicableEffects()) {
+                try {
+                    await ae.delete();
+                } catch (error) {
+                    console.error("Error deleting active effect:", error);
+                }
+            }
         }
     }
 

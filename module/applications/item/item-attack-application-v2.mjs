@@ -11,7 +11,7 @@ import {
     isRangedCombatManeuver,
 } from "../../utility/damage.mjs";
 import { convertSystemUnitsToMetres, getSystemDisplayUnits, gridUnitsToMeters } from "../../utility/units.mjs";
-import { HeroSystem6eRegion } from "../../heroRegion.mjs";
+import { HeroSystem6eRegionDocument } from "../../heroRegion.mjs";
 
 /**
  * 5e HEX type and NORMAL are converted to RADIUS
@@ -642,33 +642,31 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
                     type: templateType,
                     x: token.center.x,
                     y: token.center.y,
-                    rotation: -token.document?.rotation || 0 + 90, // Top down tokens typically face south
+                    rotation: -token.document?.rotation || 0 + 90,
                 },
             ],
             displayMeasurements: true,
             highlightMode: "coverage",
             visibility: CONST.REGION_VISIBILITY.ALWAYS,
+            label: `${item.name}\n(Stun Gas Area)`,
             flags: {
                 [game.system.id]: {
                     purpose: "AoE",
                     itemId: effectiveAttackItemOriginalItemId,
                     actorUuid: actor.uuid,
-                    effectiveItemJson: dehydrateAttackItem(item), // item.effectiveAttackItem.toJSON(),
+                    effectiveItemJson: dehydrateAttackItem(item),
                     userId: game.user.id,
-                    //item,
-                    //actor,
-                    //aoeType,
-                    //aoeValue,
-                    //sizeConversionToMeters,
-                    //usesHexTemplate: hexTemplates && hexGrid,
-                    //is5e: item.effectiveAttackItem.is5e,
                 },
             },
 
-            // AARON WAS HERE 4/4/2026: Foundry bug?  Can't create with restriction
-            // restriction: {
-            //     enabled: true,
-            // },
+            levels:
+                canvas.scene.levels.find((level) => {
+                    const elevation = token.document.elevation ?? 0;
+                    return elevation >= level.bottom && elevation <= level.top;
+                })?.id ?? "defaultLevel0000",
+            "restriction.enabled": true,
+            "restriction.type": "sight",
+            "restriction.priority": 0,
         };
 
         switch (templateType) {
@@ -727,33 +725,51 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
         }
 
         // Remove all targets
-        canvas.tokens.ownedTokens?.[0].setTarget(false, { releaseOthers: true });
+        for (const target of game.user.targets) {
+            target.setTarget(false, { releaseOthers: false });
+        }
 
         // Apply the TokenAutomaticTargeting behavior to the region
         // so that it will target tokens that enter it and remove targets that leave it.
         // GM permissions are required to add behaviors, so if the user isn't a GM
         // we need to send a socket message to the GM to have them add the behavior for us.
         if (game.user.isGM) {
-            await HeroSystem6eRegion.applyBehaviorTokenAutomaticTargeting(newRegion.uuid);
+            await HeroSystem6eRegionDocument.applyBehaviorTokenAutomaticTargeting(newRegion.uuid);
         } else {
-            game.socket.emit(`system.${game.system.id}`, {
-                operation: "applyBehaviorTokenAutomaticTargeting",
-                userId: game.user.id,
-                regionUuid: newRegion.uuid,
-            });
-        }
-
-        // DELAY PAUSE: Wait for Foundry's quadtree/spatial map to update the region.tokens cache
-        await new Promise((resolve) => setTimeout(resolve, 50));
-
-        // FORCED TRIGGER: Handle tokens that are already standing inside right now
-        // region.tokens holds a collection of all TokenDocuments currently within the region boundaries
-        for (const tokenDoc of newRegion.tokens) {
-            if (tokenDoc.object) {
-                // Set target to true, don't clear target strings of other players
-                tokenDoc.object.setTarget(true, { releaseOthers: false });
+            // Check if GM is online
+            const isGmOnline = game.users.some((u) => u.isGM && u.active);
+            if (isGmOnline) {
+                game.socket.emit(`system.${game.system.id}`, {
+                    operation: "applyBehaviorTokenAutomaticTargeting",
+                    userId: game.user.id,
+                    regionUuid: newRegion.uuid,
+                });
+            } else {
+                ui.notifications.warn(
+                    "A GM must be online to create the AoE automatic targeting behavior to the region.",
+                );
             }
         }
+
+        // DELAYED TRIGGER: Target tokens that are inside the region.
+        // We listen to every update until we find OUR region's update, then unregister.
+        const hookId = Hooks.on("updateRegion", (document) => {
+            // Check if the region being updated matches our newly created region
+            if (document.id === newRegion.id) {
+                // Immediately turn off this listener so it doesn't loop
+                Hooks.off("updateRegion", hookId);
+
+                // Safely grab the tokens from the updated document cache
+                const tokensInRegion = document.tokens ?? [];
+
+                // Target all the tokens that are inside the region
+                for (const tokenDoc of tokensInRegion) {
+                    if (tokenDoc.object) {
+                        tokenDoc.object.setTarget(true, { releaseOthers: false });
+                    }
+                }
+            }
+        });
     }
 
     async placeRegionWithHiddenUI(regionData) {

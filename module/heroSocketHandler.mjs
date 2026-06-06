@@ -1,4 +1,4 @@
-import { HeroSystem6eRegion } from "./heroRegion.mjs";
+import { HeroSystem6eRegionDocument } from "./heroRegion.mjs";
 
 export class HeroSocketHandler {
     static Initialize() {
@@ -59,7 +59,7 @@ export class HeroSocketHandler {
                         console.error(`Region UUID not found.`);
                         return;
                     }
-                    await HeroSystem6eRegion.applyBehaviorTokenAutomaticTargeting(data.regionUuid);
+                    await HeroSystem6eRegionDocument.applyBehaviorTokenAutomaticTargeting(data.regionUuid);
                     break;
                 }
 
