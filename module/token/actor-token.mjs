@@ -405,6 +405,14 @@ export class HeroSystem6eToken extends FoundryVttToken {
         this.renderFlags.set({ refreshEffects: true });
     }
 
+    // TODO Remove when V13 support ends
+    // V13 iterates over every dependent token regardless of whether it's rendered. V14 added a filter internally
+    // This replicates V14's behavior and is a no-op there.
+    _configureFilterEffect(statusId, active) {
+        if (!this.mesh) return;
+        return super._configureFilterEffect(statusId, active);
+    }
+
     /**
      * Add or remove the currently controlled Tokens from the active combat encounter
      * @param {Combat} [combat]    A specific combat encounter to which this Token should be added

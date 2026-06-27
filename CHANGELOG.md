@@ -5,6 +5,7 @@
 - Improved compendium prefab support. Improved and drag/drop support of items.
 - Fix crashes with NND maneuvers. [#4326](https://github.com/dmdorman/hero6e-foundryvtt/issues/4326)
 - Added support for overriding AOE templates with manual targeting [#4358](https://github.com/dmdorman/hero6e-foundryvtt/issues/4358)
+- Fixed invisibility failing to toggle off in V13 due to token visibility issues [#4372](https://github.com/dmdorman/hero6e-foundryvtt/issues/4372)
 
 ### Version 4.3.11 20260621
 
