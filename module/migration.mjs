@@ -343,6 +343,16 @@ export async function migrateWorld() {
         async (actor) => await removePlaceholderWeaponItem(actor),
     );
 
+    // Strip the recursive self-embedded maneuver dehydration from existing chat messages (see cbbbb44).
+    // Only chat messages created before that fix carry the bloat; the fix stops new ones from getting it.
+    await migrateToVersion(
+        "4.3.15",
+        lastMigration,
+        Array.from(game.messages),
+        "reclaiming space from bloated chat messages",
+        async (message) => await removeDehydratedManeuverItemFromMessage_4_3_15(message),
+    );
+
     // Placeholder for notifying GM of items missing XMLID
     // await migrateToVersion(
     //     game.system.version,
@@ -425,6 +435,61 @@ async function commitItemsCollectionMigrateDataChanges(item) {
         const { system, flags, type } = item.toObject();
         delete flags[game.system.id][needToPersistToDb];
         await item.update({ "==system": system, "==flags": flags, type: type });
+    }
+}
+
+/**
+ * Recursively remove every `dehydratedManeuverItem` flag from a value, descending into arrays,
+ * plain objects, and JSON-string-encoded blobs (dehydrated items are stored as JSON strings, and
+ * one dehydrated item can nest another inside its effect flags).
+ */
+function stripDehydratedManeuverItem_4_3_15(value) {
+    if (typeof value === "string") {
+        // Cheap guard - only pay for JSON.parse when the marker is actually present.
+        if (!value.includes("dehydratedManeuverItem")) {
+            return value;
+        }
+
+        try {
+            return JSON.stringify(stripDehydratedManeuverItem_4_3_15(JSON.parse(value)));
+        } catch {
+            // Not a JSON string (e.g. rendered HTML content), leave it untouched.
+            return value;
+        }
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((entry) => stripDehydratedManeuverItem_4_3_15(entry));
+    }
+
+    if (value && typeof value === "object") {
+        const cleaned = {};
+        for (const [key, entry] of Object.entries(value)) {
+            if (key === "dehydratedManeuverItem") {
+                continue;
+            }
+            cleaned[key] = stripDehydratedManeuverItem_4_3_15(entry);
+        }
+        return cleaned;
+    }
+
+    return value;
+}
+
+async function removeDehydratedManeuverItemFromMessage_4_3_15(message) {
+    try {
+        const originalFlags = message.toObject().flags;
+
+        // Nothing to do unless this message actually carries the bloat.
+        if (!JSON.stringify(originalFlags ?? {}).includes("dehydratedManeuverItem")) {
+            return;
+        }
+
+        const cleanedFlags = stripDehydratedManeuverItem_4_3_15(originalFlags);
+
+        await message.update({ flags: cleanedFlags });
+    } catch (e) {
+        console.error(`Failed to clean dehydratedManeuverItem from chat message ${message?.id}`, e);
     }
 }
 
