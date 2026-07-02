@@ -7,7 +7,7 @@
   </header>
 
   <div>
-    Attacker: <span class="item-name">{{#if isKnockBack}}Knockback{{else}}{{item.actor.name}}{{/if}}</span>
+    Attacker: <span class="item-name">{{#if isKnockBack}}Knockback{{else}}{{#if attackerToken}}{{attackerToken.name}}{{else}}{{item.actor.name}}{{/if}}{{/if}}</span>
   </div>
   <div>
     Attack: <span class="item-name">{{{itemNameHtml item}}}</span>

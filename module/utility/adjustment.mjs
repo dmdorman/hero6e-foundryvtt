@@ -1199,7 +1199,7 @@ function _generateAdjustmentChatCard(
         isFade,
         //isEffectFinished,
         targetActor,
-        targetToken,
+        targetToken: targetToken || targetActor?.getActiveTokens()?.[0],
         attackerToken,
         startRound: game.combat?.round,
         startSegment: game.combat?.current?.segment,

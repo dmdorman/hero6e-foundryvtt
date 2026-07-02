@@ -8,7 +8,7 @@
         {{/if}}
         <div class="flexrow">
             <img src="{{item.img}}" title="{{item.name}}" width="36" height="36" />
-            <h3>vs {{targetActor.name}}</h3>
+            <h3>vs {{#if targetToken}}{{targetToken.name}}{{else}}{{targetActor.name}}{{/if}}</h3>
         </div>
     </header>
 
