@@ -1,4 +1,5 @@
 import { HeroCompatibility } from "./utility/compatibility.mjs";
+import { HeroSystem6eCombatantSingle } from "./combatant-single.mjs";
 
 export class HeroSystem6eCombatSingle extends Combat {
     /**
@@ -393,7 +394,11 @@ export class HeroSystem6eCombatSingle extends Combat {
         updateData.turn = absoluteTargetTurnIndex !== -1 ? absoluteTargetTurnIndex : 0;
         updateData[`flags.${game.system.id}.currentSegment`] = nextSegment;
 
-        const updateOptions = { direction: 1, previousCombatantId: this.combatant?.id };
+        const updateOptions = {
+            direction: 1,
+            previousCombatantId: this.combatant?.id,
+            previousSegment: activeSegment,
+        };
         if (segmentDeltaCount > 0) {
             updateOptions.worldTime = { delta: segmentDeltaCount };
         }
@@ -606,7 +611,18 @@ export class HeroSystem6eCombatSingle extends Combat {
         };
         updateData[`flags.${game.system.id}.currentSegment`] = this.segment;
 
-        const updateOptions = { direction: 1 };
+        // Skipping a full Turn crosses Post-Segment 12 exactly once
+        if (this.started && this.round > 0) {
+            const roundToRecover = this.round;
+            const recoveryApplied = await this._executePostSegment12Recovery(roundToRecover);
+            if (recoveryApplied) {
+                const recoveredRounds = this.getFlag(game.system.id, "recoveredRounds") ?? [];
+                recoveredRounds.push(roundToRecover);
+                updateData[`flags.${game.system.id}.recoveredRounds`] = recoveredRounds;
+            }
+        }
+
+        const updateOptions = { direction: 1, turnAdvance: true };
         updateOptions.worldTime = { delta: 12 };
 
         // Clear internal turn caches before updating the database to prevent stale reads
@@ -818,12 +834,19 @@ export class HeroSystem6eCombatSingle extends Combat {
         const direction = foundry.utils.getProperty(options, "direction") ?? 1;
         if (direction < 0) return;
 
-        // A Held Action is lost as soon as a Segment containing the holder's natural Phase
-        // begins (6E2 20 "null zone"; 5ER 360) — check every holder on each segment boundary.
-        // roundChanged covers the segment-12-to-segment-12 wrap, where the flag value is unchanged.
+        // Segment-boundary maintenance. turnAdvance marks a full-Turn skip (nextRound), where
+        // every SPD 1-12 has had a Phase; roundChanged covers the segment-12-to-segment-12
+        // wrap, where the currentSegment flag value is unchanged.
+        const turnAdvance = foundry.utils.getProperty(options, "turnAdvance") === true;
         const newSegment = foundry.utils.getProperty(changed, `${systemFlagKey}.currentSegment`);
-        if (newSegment !== undefined || roundChanged) {
-            this._consumeExpiredHeldActions(this.segment);
+        if (newSegment !== undefined || roundChanged || turnAdvance) {
+            const previousSegment = turnAdvance ? null : foundry.utils.getProperty(options, "previousSegment");
+            (async () => {
+                // SPD-change lockouts first so the hold/abort checks see updated phase eligibility
+                await this._maintainSpdChanges();
+                await this._consumeExpiredHeldActions(turnAdvance ? null : this.segment);
+                await this._clearExpiredAborts(previousSegment);
+            })().catch((e) => console.error(e));
         }
 
         const prevId = foundry.utils.getProperty(options, "previousCombatantId");
@@ -834,16 +857,73 @@ export class HeroSystem6eCombatSingle extends Combat {
     }
 
     /**
+     * Detects SPD changes (Aid/Drain, form switches) since the previous segment boundary and
+     * applies the SPD-change lockout: the character cannot act until both the old and the new
+     * SPD would have had a Phase (6E2 17; 5ER 357). Also clears lockouts once they have passed.
+     * Detection polls at segment boundaries so ActiveEffect-driven changes are caught without
+     * actor-update hooks; a change made and reverted within one segment is intentionally ignored.
+     * @private
+     */
+    async _maintainSpdChanges() {
+        if (!this.started) return;
+
+        const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
+        const combatantUpdates = [];
+
+        for (const combatant of this.combatants) {
+            if (!combatant.actor) continue;
+
+            const spd = combatant.combatSpd;
+            const knownSpd = combatant.getFlag(game.system.id, "knownSpd");
+            const lockout = combatant.getFlag(game.system.id, "spdLockout");
+
+            if (knownSpd === undefined) {
+                combatantUpdates.push({ _id: combatant.id, [`flags.${game.system.id}.knownSpd`]: spd });
+                continue;
+            }
+
+            if (spd !== knownSpd) {
+                const update = { _id: combatant.id, [`flags.${game.system.id}.knownSpd`]: spd };
+
+                // A change from or to SPD 0 has no pending old/new Phase to wait for
+                if (knownSpd > 0 && spd > 0) {
+                    const oldNext = HeroSystem6eCombatantSingle.nextPhaseAbs(knownSpd, currentAbs);
+                    const newNext = HeroSystem6eCombatantSingle.nextPhaseAbs(spd, currentAbs);
+                    const lockoutEndAbs = Math.max(oldNext, newNext);
+                    if (lockoutEndAbs > currentAbs) {
+                        update[`flags.${game.system.id}.spdLockout`] = { previousSpd: knownSpd, lockoutEndAbs };
+                        await ChatMessage.create({
+                            speaker: ChatMessage.getSpeaker({ actor: combatant.actor }),
+                            content: `${combatant.actor.name}'s SPD changed from ${knownSpd} to ${spd}. They cannot act until both SPDs would have had a Phase (Segment ${((lockoutEndAbs - 1) % 12) + 1}).`,
+                        });
+                    }
+                }
+                combatantUpdates.push(update);
+                continue;
+            }
+
+            if (lockout?.lockoutEndAbs && currentAbs >= lockout.lockoutEndAbs) {
+                await combatant.unsetFlag(game.system.id, "spdLockout");
+            }
+        }
+
+        if (combatantUpdates.length > 0) {
+            await this.updateEmbeddedDocuments("Combatant", combatantUpdates);
+        }
+    }
+
+    /**
      * Removes the held-action status from every combatant whose natural speed-chart
      * Phase falls in the segment that just began; their Phase replaces the hold.
-     * @param {number} segment
+     * @param {number|null} segment - Segment that just began, or null when a full Turn elapsed
      * @private
      */
     async _consumeExpiredHeldActions(segment) {
         for (const combatant of this.combatants) {
             const actor = combatant.actor;
             if (!actor?.statuses.has("holding")) continue;
-            if (!combatant.hasPhaseInSegment(segment)) continue;
+            // segment === null: a full Turn elapsed, so every SPD 1-12 had a Phase
+            if (segment !== null && !combatant.hasPhaseInSegment(segment)) continue;
 
             const holdingEffect = actor.effects.find((e) => e.statuses.has("holding"));
             if (!holdingEffect) continue;
@@ -853,7 +933,35 @@ export class HeroSystem6eCombatSingle extends Combat {
 
             await ChatMessage.create({
                 speaker: ChatMessage.getSpeaker({ actor }),
-                content: `${actor.name}'s Held Action was consumed by their natural Phase in Segment ${segment}.`,
+                content: `${actor.name}'s Held Action was consumed by their natural Phase${segment !== null ? ` in Segment ${segment}` : ""}.`,
+            });
+        }
+    }
+
+    /**
+     * Clears the aborted status from combatants whose spent Phase has now passed.
+     * Aborting uses the character's next full Phase; once the Segment containing that
+     * Phase ends they may act again on their following Phase (6E2 22; 5ER 361).
+     * @param {number|null|undefined} elapsedSegment - Segment that just ended, null when a
+     *   full Turn elapsed, undefined when unknown (skip)
+     * @private
+     */
+    async _clearExpiredAborts(elapsedSegment) {
+        if (elapsedSegment === undefined) return;
+
+        for (const combatant of this.combatants) {
+            const actor = combatant.actor;
+            if (!actor?.statuses.has("aborted")) continue;
+            if (elapsedSegment !== null && !combatant.hasPhaseInSegment(elapsedSegment)) continue;
+
+            const abortedEffect = actor.effects.find((e) => e.statuses.has("aborted"));
+            if (!abortedEffect) continue;
+
+            await abortedEffect.delete();
+
+            await ChatMessage.create({
+                speaker: ChatMessage.getSpeaker({ actor }),
+                content: `${actor.name}'s aborted Phase has passed; they may act again on their next Phase.`,
             });
         }
     }
