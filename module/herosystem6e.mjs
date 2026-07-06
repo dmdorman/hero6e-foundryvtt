@@ -930,6 +930,10 @@ async function _outOfCombatRecovery(actor, multiplier) {
     let recoveryDate;
     let enduranceReserveDate;
     if (actor.inCombat) return;
+    // Actor#inCombat only consults the *viewed* combat (game.combat = ui.combat.viewed).
+    // Actors in any other started combat get their recoveries from Post-Segment 12, so a
+    // worldTime advance must not also recover them.
+    if (game.combats.some((c) => c.started && c.getCombatantsByActor(actor).length > 0)) return;
     if (multiplier <= 0) return;
 
     const automation = game.settings.get(HEROSYS.module, "automation");
