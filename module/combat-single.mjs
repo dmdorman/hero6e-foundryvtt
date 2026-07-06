@@ -141,6 +141,13 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         const baseScore = characteristicObj?.value ?? 10;
 
+        // LIGHTNING_REFLEXES_ALL raises effective DEX for initiative order only (6E1 116; 5ER 96).
+        // The single-action variant requires GM adjudication per action, so it is not auto-applied.
+        const lightningReflexesLevels =
+            parseInt(
+                actorDoc.items?.find?.((i) => i.system?.XMLID === "LIGHTNING_REFLEXES_ALL")?.system?.LEVELS ?? 0,
+            ) || 0;
+
         const spdObj = actorDoc.system?.characteristics?.spd;
         const resolvedSpd = spdObj?.value ?? 2;
 
@@ -166,7 +173,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             maneuverOffset = CONFIG.HERO?.combatManeuverOffsets?.delayedPhase ?? -5.0;
         }
 
-        return baseScore + tieBreakerFraction + maneuverOffset;
+        return baseScore + lightningReflexesLevels + tieBreakerFraction + maneuverOffset;
     }
 
     /**
@@ -269,7 +276,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         }
 
         if (targetIndex !== -1) {
-            return this.update({ turn: targetIndex });
+            return this.update({ turn: targetIndex }, { direction: 1, previousCombatantId: this.combatant?.id });
         }
 
         let nextSegment = activeSegment;
@@ -329,7 +336,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             upcomingActors.sort((a, b) => {
                 return this._comparePriority(a, b, this, nextSegment);
             });
-            targetCombatantId = upcomingActors?.id || null;
+            targetCombatantId = upcomingActors[0]?.id || null;
         }
 
         const incomingCombatant = this.combatants.get(targetCombatantId);
@@ -698,58 +705,90 @@ export class HeroSystem6eCombatSingle extends Combat {
      * @private
      */
     async _executePostSegment12Recovery(roundToRecover) {
-        // 1. ENVIRONMENT BRIDGE: Use isGM to safely pass cross-version referee checks
-        if (!game.user.isGM) return false;
+        // Only the active GM applies recovery so multiple connected GMs don't double-apply it
+        if (!game.users.activeGM?.isSelf) return false;
 
         const recoveredRounds = this.getFlag(game.system.id, "recoveredRounds") ?? [];
         if (recoveredRounds.includes(roundToRecover)) {
             await ChatMessage.create({
-                flavor: `<strong>[${game.system.id.toUpperCase()}] Post-Segment 12 Recovery (Turn ${roundToRecover})</strong>`,
-                content: `<em>Recovery cycle skipped (Already applied).</em>`,
+                style: CONST.CHAT_MESSAGE_STYLES.OTHER,
+                author: game.user._id,
+                content: `Post-Segment 12 (Turn ${roundToRecover})
+                <p>Skipping because this has already been performed on this turn during this combat.
+                This typically occurs when rewinding combat.</p>`,
             });
             return false;
         }
 
-        const updates = [];
+        const automation = game.settings.get(game.system.id, "automation");
 
-        // 2. SCHEMA EXTRACTION: Loop through participants to determine value changes
-        for (const combatant of this.combatants) {
+        let content = `Post-Segment 12 (Turn ${roundToRecover})<ul>`;
+        let contentHidden = `Post-Segment 12 (Turn ${roundToRecover})<ul>`;
+        let hasHidden = false;
+
+        for (const combatant of this.combatants.filter((c) => !c.isDefeated || c.hasPlayerOwner)) {
             const actor = combatant.actor;
             if (!actor) continue;
 
-            const characteristics = actor.system?.characteristics;
-            const rec = characteristics?.rec?.value || 0;
-            const stun = characteristics?.stun || { value: 0, max: 0 };
-            const end = characteristics?.end || { value: 0, max: 0 };
+            if (
+                automation === "all" ||
+                (automation === "npcOnly" && actor.type === "npc") ||
+                (automation === "pcEndOnly" && actor.type === "pc")
+            ) {
+                // TakeRecovery works on synthetic token actors (unlinked tokens) and applies the
+                // recovery exclusions: KO'd below -10 STUN, holding breath, dead NPCs, bases,
+                // negative REC (6E2 129; 5ER 368).
+                let recoveryText =
+                    (await actor.TakeRecovery({
+                        asAction: false,
+                        token: combatant.token,
+                        preventRecoverFromStun: true,
+                    })) || "";
 
-            // If the actor is already fully healed, skip them safely
-            if (stun.value >= stun.max && end.value >= end.max) continue;
+                // END RESERVE recovers at its own REC rate
+                for (const endReserveItem of actor.items.filter((o) => o.system.XMLID === "ENDURANCERESERVE")) {
+                    const ENDURANCERESERVEREC = endReserveItem.findModsByXmlid("ENDURANCERESERVEREC");
+                    if (ENDURANCERESERVEREC) {
+                        const newValue = Math.min(
+                            endReserveItem.system.LEVELS,
+                            endReserveItem.system.value + parseInt(ENDURANCERESERVEREC.LEVELS),
+                        );
+                        if (newValue > endReserveItem.system.value) {
+                            const delta = newValue - endReserveItem.system.value;
+                            await endReserveItem.update({ "system.value": newValue });
+                            recoveryText += `${recoveryText ? " " : ""}${endReserveItem.name} +${delta} END.`;
+                        }
+                    }
+                }
 
-            const newStun = Math.min(stun.max, stun.value + rec);
-            const newEnd = Math.min(end.max, end.value + rec);
+                if (recoveryText) {
+                    const showToAll = !combatant.hidden && (combatant.hasPlayerOwner || actor.type === "pc");
+                    if (showToAll) {
+                        content += `<li>${recoveryText}</li>`;
+                    } else {
+                        hasHidden = true;
+                        contentHidden += `<li>${recoveryText}</li>`;
+                    }
+                }
+            }
+        }
+        content += "</ul>";
+        contentHidden += "</ul>";
 
-            // FIX: Build structural schema objects to ensure maximum database compatibility
-            updates.push({
-                _id: actor.id,
-                system: {
-                    characteristics: {
-                        stun: { value: newStun },
-                        end: { value: newEnd },
-                    },
-                },
+        const chatData = {
+            style: CONST.CHAT_MESSAGE_STYLES.OTHER,
+            author: game.user._id,
+            content,
+        };
+        await ChatMessage.create(chatData);
+
+        if (hasHidden) {
+            await ChatMessage.create({
+                ...chatData,
+                content: contentHidden,
+                whisper: ChatMessage.getWhisperRecipients("GM"),
             });
         }
-
-        // 3. DATABASE COMMIT BOUNDARY: Bulk update the documents safely
-        if (updates.length > 0) {
-            // Actor.updateDocuments accepts clean structured objects across both V13 and V14
-            await Actor.updateDocuments(updates);
-        }
-
-        await ChatMessage.create({
-            flavor: `<strong>[${game.system.id.toUpperCase()}] Post-Segment 12 Recovery (Turn ${roundToRecover})</strong>`,
-            content: `<em>Recovery processing complete. Resources adjusted for active participants.</em>`,
-        });
 
         return true;
     }
@@ -761,63 +800,62 @@ export class HeroSystem6eCombatSingle extends Combat {
     _onUpdate(changed, options, userId) {
         super._onUpdate(changed, options, userId);
 
-        // 1. ENVIRONMENT BRIDGE: Use isGM to safely pass cross-version referee checks
-        if (!game.user.isGM) return;
+        // Only the active GM runs side effects so multiple connected GMs don't double-fire them
+        if (!game.users.activeGM?.isSelf) return;
+
+        // Combat start/reset updates are not turn flow
+        if (changed.started !== undefined) return;
 
         const turnChanged = changed.turn !== undefined;
         const roundChanged = changed.round !== undefined;
-
-        // 2. STABLE FLAG EVALUATION: Check for flag changes using version-agnostic lookup utilities
-        // This safely catches both V14 nested objects and V13 flattened dotted path strings
         const systemFlagKey = `flags.${game.system.id}`;
         const flagsChanged = foundry.utils.hasProperty(changed, systemFlagKey);
 
         // If neither the phase pointers nor the custom segment properties updated, exit early
         if (!turnChanged && !roundChanged && !flagsChanged) return;
 
-        // 3. SECURE OPTION ACQUISITION: Safely resolve the previous actor target parameter
-        // Fall back gracefully to standard core navigation trackers if options are stripped over network sockets
+        // Rewinding must not consume holds or expire effects
+        const direction = foundry.utils.getProperty(options, "direction") ?? 1;
+        if (direction < 0) return;
+
+        // A Held Action is lost as soon as a Segment containing the holder's natural Phase
+        // begins (6E2 20 "null zone"; 5ER 360) — check every holder on each segment boundary.
+        // roundChanged covers the segment-12-to-segment-12 wrap, where the flag value is unchanged.
+        const newSegment = foundry.utils.getProperty(changed, `${systemFlagKey}.currentSegment`);
+        if (newSegment !== undefined || roundChanged) {
+            this._consumeExpiredHeldActions(this.segment);
+        }
+
         const prevId = foundry.utils.getProperty(options, "previousCombatantId");
         const previousCombatant = prevId ? this.combatants.get(prevId) : null;
-
-        if (!previousCombatant?.actor) return;
-
-        // Execute status tracking cleanup safely inside a clean variable scope
-        this._maintainTacticalStatuses(previousCombatant);
+        if (previousCombatant?.actor) {
+            this._expireCustomSystemEffects(previousCombatant.actor);
+        }
     }
 
     /**
-     * Evaluates action economies and removes spent tactical statuses post-turn.
-     * @param {Combatant} combatant
+     * Removes the held-action status from every combatant whose natural speed-chart
+     * Phase falls in the segment that just began; their Phase replaces the hold.
+     * @param {number} segment
      * @private
      */
-    async _maintainTacticalStatuses(combatant) {
-        if (!combatant?.actor) return;
+    async _consumeExpiredHeldActions(segment) {
+        for (const combatant of this.combatants) {
+            const actor = combatant.actor;
+            if (!actor?.statuses.has("holding")) continue;
+            if (!combatant.hasPhaseInSegment(segment)) continue;
 
-        const statuses = combatant.actor.statuses;
-        const currentSegment = this.segment;
+            const holdingEffect = actor.effects.find((e) => e.statuses.has("holding"));
+            if (!holdingEffect) continue;
 
-        // ─── HERO 6E RULE: EXPIRE HELD ACTION POST-TURN ───
-        // If they concluded their turn, and this segment matches their natural speed-chart phase,
-        // their held action is officially consumed/expired.
-        if (statuses.has("holding") && combatant.hasPhaseInSegment(currentSegment)) {
-            const holdingEffect = combatant.actor.effects.find((e) => e.statuses.has("holding"));
+            // The hold is consumed by the rule, not by a duration, so delete it explicitly
+            await holdingEffect.delete();
 
-            if (holdingEffect) {
-                // FIX: Completely dropped explicit .delete() in favor of your core expiry abstraction manager
-                HeroCompatibility.refreshActiveEffect(holdingEffect);
-
-                await ChatMessage.create({
-                    speaker: ChatMessage.getSpeaker({ actor: combatant.actor }),
-                    flavor: `<strong>[${game.system.id.toUpperCase()}] Action Economy Notice</strong>`,
-                    content: `<em>${combatant.actor.name}'s Held Action was consumed by their natural Phase in Segment ${currentSegment}.</em>`,
-                });
-            }
+            await ChatMessage.create({
+                speaker: ChatMessage.getSpeaker({ actor }),
+                content: `${actor.name}'s Held Action was consumed by their natural Phase in Segment ${segment}.`,
+            });
         }
-
-        // FIX: Prepended await to ensure custom system phaseEnd loops execute sequentially
-        // This blocks time desynchronization across server clients during fast turn updates
-        await this._expireCustomSystemEffects(combatant.actor);
     }
 
     /**
