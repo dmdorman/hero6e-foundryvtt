@@ -465,6 +465,367 @@ export function registerCombatTests(quench) {
                     expect(testCombatDocument.turn).to.equal(0);
                     expect(testCombatDocument.segment).to.equal(12);
                 });
+
+                // Some combat side effects (held-action consumption) run async after the update commits
+                async function waitUntil(condition, timeoutMs = 3000, intervalMs = 50) {
+                    const start = Date.now();
+                    while (Date.now() - start < timeoutMs) {
+                        if (condition()) return true;
+                        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+                    }
+                    return condition();
+                }
+
+                it("Should give SPD 1-12 characters their book speed chart phases", async function () {
+                    // 6E1 17; 5ER 20
+                    const bookSpeedChart = {
+                        1: [7],
+                        2: [6, 12],
+                        3: [4, 8, 12],
+                        4: [3, 6, 9, 12],
+                        5: [3, 5, 8, 10, 12],
+                        6: [2, 4, 6, 8, 10, 12],
+                        7: [2, 4, 6, 7, 9, 11, 12],
+                        8: [2, 3, 5, 6, 8, 9, 11, 12],
+                        9: [2, 3, 4, 6, 7, 8, 10, 11, 12],
+                        10: [2, 3, 4, 5, 6, 8, 9, 10, 11, 12],
+                        11: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                        12: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                    };
+
+                    const chartActors = [];
+                    for (let spd = 1; spd <= 12; spd++) {
+                        const actor = await Actor.create({
+                            name: `_Quench Chart SPD ${spd}`,
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 10, max: 10 },
+                                    spd: { value: spd, max: spd },
+                                },
+                            },
+                        });
+                        actorDocuments.push(actor);
+                        chartActors.push(actor);
+                    }
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments(
+                        "Combatant",
+                        chartActors.map((a) => ({ actorId: a.id })),
+                    );
+
+                    for (let spd = 1; spd <= 12; spd++) {
+                        const combatant = combat.combatants.find((c) => c.actorId === chartActors[spd - 1].id);
+                        const phases = [];
+                        for (let segment = 1; segment <= 12; segment++) {
+                            if (combatant.hasPhaseInSegment(segment)) phases.push(segment);
+                        }
+                        expect(phases, `SPD ${spd}`).to.deep.equal(bookSpeedChart[spd]);
+                    }
+                });
+
+                it("Should apply Post-Segment 12 Recovery through TakeRecovery exactly once per turn boundary", async function () {
+                    const automationSetting = game.settings.get(game.system.id, "automation");
+                    await game.settings.set(game.system.id, "automation", "all");
+
+                    try {
+                        const actor = await Actor.create({
+                            name: "_Quench Recovery PC",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 10, max: 10 },
+                                    spd: { value: 2, max: 2 },
+                                },
+                            },
+                        });
+                        actorDocuments.push(actor);
+
+                        const rec = actor.system.characteristics.rec.value;
+                        const stunMax = actor.system.characteristics.stun.max;
+                        const endMax = actor.system.characteristics.end.max;
+                        expect(rec, "test actor has positive REC").to.be.greaterThan(0);
+
+                        // Damage well below max so the recovery isn't capped
+                        await actor.update({
+                            "system.characteristics.stun.value": stunMax - rec - 3,
+                            "system.characteristics.end.value": endMax - rec - 3,
+                        });
+
+                        const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [{ actorId: actor.id }]);
+                        await combat.startCombat();
+                        expect(combat.segment).to.equal(12);
+
+                        // Crossing out of Segment 12 applies the Post-Segment 12 Recovery
+                        await combat.nextTurn();
+                        expect(combat.round).to.equal(2);
+                        expect(combat.segment).to.equal(6);
+                        expect(actor.system.characteristics.stun.value).to.equal(stunMax - 3);
+                        expect(actor.system.characteristics.end.value).to.equal(endMax - 3);
+
+                        // Rewind across the boundary and advance again: the recoveredRounds ledger
+                        // must prevent a second application
+                        await combat.previousTurn();
+                        expect(combat.round).to.equal(1);
+                        expect(combat.segment).to.equal(12);
+
+                        await combat.nextTurn();
+                        expect(combat.round).to.equal(2);
+                        expect(actor.system.characteristics.stun.value).to.equal(stunMax - 3);
+                        expect(actor.system.characteristics.end.value).to.equal(endMax - 3);
+                    } finally {
+                        await game.settings.set(game.system.id, "automation", automationSetting);
+                    }
+                });
+
+                it("Should apply Post-Segment 12 Recovery to unlinked token actors", async function () {
+                    const automationSetting = game.settings.get(game.system.id, "automation");
+                    await game.settings.set(game.system.id, "automation", "all");
+
+                    let tokenDoc = null;
+                    try {
+                        let scene = game.scenes.active ?? game.scenes.contents?.[0];
+                        if (!scene) {
+                            scene = await Scene.create({ name: "_Quench Recovery Arena" });
+                        }
+
+                        const npcActor = await Actor.create({
+                            name: "_Quench Recovery NPC",
+                            type: "npc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 10, max: 10 },
+                                    spd: { value: 2, max: 2 },
+                                },
+                            },
+                            prototypeToken: { actorLink: false },
+                        });
+                        actorDocuments.push(npcActor);
+
+                        [tokenDoc] = await scene.createEmbeddedDocuments("Token", [
+                            await npcActor.getTokenDocument({ x: 0, y: 0, actorLink: false }),
+                        ]);
+                        expect(tokenDoc.actor.isToken, "token actor is synthetic (unlinked)").to.be.true;
+
+                        const rec = tokenDoc.actor.system.characteristics.rec.value;
+                        const stunMax = tokenDoc.actor.system.characteristics.stun.max;
+                        expect(rec, "test npc has positive REC").to.be.greaterThan(0);
+
+                        await tokenDoc.actor.update({
+                            "system.characteristics.stun.value": stunMax - rec - 3,
+                        });
+                        const worldStun = npcActor.system.characteristics.stun.value;
+
+                        const combat = await Combat.create({ scene: scene.id, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [
+                            { actorId: npcActor.id, tokenId: tokenDoc.id, sceneId: scene.id },
+                        ]);
+                        await combat.startCombat();
+                        await combat.nextTurn();
+
+                        expect(combat.round).to.equal(2);
+                        expect(
+                            tokenDoc.actor.system.characteristics.stun.value,
+                            "unlinked token actor received the recovery",
+                        ).to.equal(stunMax - 3);
+                        expect(npcActor.system.characteristics.stun.value, "world actor was not modified").to.equal(
+                            worldStun,
+                        );
+                    } finally {
+                        if (tokenDoc) await tokenDoc.delete();
+                        await game.settings.set(game.system.id, "automation", automationSetting);
+                    }
+                });
+
+                it("Should keep a Held Action through interim segments and consume it when the holder's natural Phase begins", async function () {
+                    const automationSetting = game.settings.get(game.system.id, "automation");
+                    await game.settings.set(game.system.id, "automation", "none");
+
+                    try {
+                        const holder = await Actor.create({
+                            name: "_Quench Holder",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 20, max: 20 },
+                                    spd: { value: 2, max: 2 },
+                                },
+                            },
+                        });
+                        const rusher = await Actor.create({
+                            name: "_Quench Rusher",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 25, max: 25 },
+                                    spd: { value: 3, max: 3 },
+                                },
+                            },
+                        });
+                        actorDocuments.push(holder, rusher);
+
+                        const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [
+                            { actorId: holder.id },
+                            { actorId: rusher.id },
+                        ]);
+                        await combat.startCombat();
+
+                        // Segment 12: Rusher (DEX 25) acts before Holder (DEX 20)
+                        expect(combat.segment).to.equal(12);
+                        expect(combat.combatant.actorId).to.equal(rusher.id);
+
+                        await combat.nextTurn();
+                        expect(combat.combatant.actorId).to.equal(holder.id);
+
+                        // Holder declares a Held Action on their Phase
+                        await holder.createEmbeddedDocuments("ActiveEffect", [
+                            { name: "Holding An Action", img: "icons/svg/clockwork.svg", statuses: ["holding"] },
+                        ]);
+
+                        // Holding makes the combatant eligible in every segment, ahead of natural phases
+                        const holderCombatant = combat.combatants.find((c) => c.actorId === holder.id);
+                        const rusherCombatant = combat.combatants.find((c) => c.actorId === rusher.id);
+                        expect(combat.getInitiativePriority(holderCombatant, 1)).to.be.greaterThan(
+                            combat.getInitiativePriority(rusherCombatant, 12),
+                        );
+
+                        // Crossing into Segment 1: only the holder is eligible, and the segment-advance
+                        // target selection must land on them
+                        await combat.nextTurn();
+                        expect(combat.round).to.equal(2);
+                        expect(combat.segment).to.equal(1);
+                        expect(combat.combatant.actorId).to.equal(holder.id);
+                        expect(holder.statuses.has("holding"), "hold persists in a non-Phase segment").to.be.true;
+
+                        // March forward until the holder's natural SPD 2 Phase segment (6) begins
+                        let guard = 0;
+                        while (combat.segment !== 6 && guard++ < 20) {
+                            await combat.nextTurn();
+                        }
+                        expect(combat.segment).to.equal(6);
+
+                        // A Held Action is lost as soon as a Segment containing the holder's natural
+                        // Phase begins (6E2 20; 5ER 360). Consumption runs async after the update.
+                        const consumed = await waitUntil(() => !holder.statuses.has("holding"));
+                        expect(consumed, "Held Action consumed at the start of Segment 6").to.be.true;
+                    } finally {
+                        await game.settings.set(game.system.id, "automation", automationSetting);
+                    }
+                });
+
+                it("Should apply LIGHTNING_REFLEXES_ALL to initiative order", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+
+                    const lrActor = await Actor.create({
+                        name: "_Quench Lightning Reflexes",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 15, max: 15 },
+                                spd: { value: 2, max: 2 },
+                            },
+                        },
+                    });
+                    const opponent = await Actor.create({
+                        name: "_Quench LR Opponent",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 20, max: 20 },
+                                spd: { value: 2, max: 2 },
+                            },
+                        },
+                    });
+                    actorDocuments.push(lrActor, opponent);
+
+                    await lrActor.items.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000001" BASECOST="0.0" LEVELS="10" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SEX="Neutral" MINCOSTS="No" MAXCOSTS="No" NAME="" OPTION="ALL" OPTIONID="ALL" OPTION_ALIAS="All Actions"></TALENT>`,
+                            lrActor,
+                        ),
+                    );
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [
+                        { actorId: lrActor.id },
+                        { actorId: opponent.id },
+                    ]);
+
+                    // Effective DEX 15 + 10 beats DEX 20 for action order only
+                    const lrCombatant = combat.combatants.find((c) => c.actorId === lrActor.id);
+                    const oppCombatant = combat.combatants.find((c) => c.actorId === opponent.id);
+                    expect(Math.floor(combat.getInitiativePriority(lrCombatant, 12))).to.equal(25);
+                    expect(combat.getInitiativePriority(lrCombatant, 12)).to.be.greaterThan(
+                        combat.getInitiativePriority(oppCombatant, 12),
+                    );
+
+                    await combat.startCombat();
+                    expect(combat.combatant.actorId).to.equal(lrActor.id);
+                });
+
+                it("Should re-evaluate initiative order when DEX changes mid-combat and zero out aborted combatants", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench Dex Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 20, max: 20 },
+                                spd: { value: 2, max: 2 },
+                            },
+                        },
+                    });
+                    const bravo = await Actor.create({
+                        name: "_Quench Dex Bravo",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 15, max: 15 },
+                                spd: { value: 2, max: 2 },
+                            },
+                        },
+                    });
+                    actorDocuments.push(alpha, bravo);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: bravo.id }]);
+                    await combat.startCombat();
+
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(bravo.id);
+
+                    // Simulate an Aid to DEX on Bravo; order is re-evaluated each segment
+                    await bravo.update({ "system.characteristics.dex.value": 25 });
+
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId, "raised DEX acts first in the next segment").to.equal(bravo.id);
+
+                    // An aborted combatant used their Phase early and sorts to zero priority
+                    await alpha.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Aborted", img: "icons/svg/downgrade.svg", statuses: ["aborted"] },
+                    ]);
+                    const alphaCombatant = combat.combatants.find((c) => c.actorId === alpha.id);
+                    expect(combat.getInitiativePriority(alphaCombatant, 6)).to.equal(0);
+                });
             });
         },
         { displayName: "HERO SYSTEM 6E: Speed Chart Combat Validation" },
