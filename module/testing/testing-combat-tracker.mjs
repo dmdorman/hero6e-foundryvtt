@@ -752,11 +752,12 @@ export function registerCombatTests(quench) {
                     });
                     actorDocuments.push(lrActor, opponent);
 
-                    await lrActor.items.create(
+                    await HeroSystem6eItem.create(
                         HeroSystem6eItem.itemDataFromXml(
                             `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000001" BASECOST="0.0" LEVELS="10" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SEX="Neutral" MINCOSTS="No" MAXCOSTS="No" NAME="" OPTION="ALL" OPTIONID="ALL" OPTION_ALIAS="All Actions"></TALENT>`,
                             lrActor,
                         ),
+                        { parent: lrActor },
                     );
 
                     const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
@@ -825,6 +826,136 @@ export function registerCombatTests(quench) {
                     ]);
                     const alphaCombatant = combat.combatants.find((c) => c.actorId === alpha.id);
                     expect(combat.getInitiativePriority(alphaCombatant, 6)).to.equal(0);
+
+                    // Once the Segment containing the aborted Phase passes, the status clears
+                    // and the character may act on their next Phase (6E2 22)
+                    await combat.nextTurn(); // Alpha's spent Phase (priority 0) in Segment 6
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+                    await combat.nextTurn(); // Crosses into Segment 12
+                    expect(combat.segment).to.equal(12);
+
+                    const abortCleared = await waitUntil(() => !alpha.statuses.has("aborted"));
+                    expect(abortCleared, "aborted status cleared after the spent Phase segment passed").to.be.true;
+                });
+
+                it("Should apply Post-Segment 12 Recovery when nextRound skips a full Turn", async function () {
+                    const automationSetting = game.settings.get(game.system.id, "automation");
+                    await game.settings.set(game.system.id, "automation", "all");
+
+                    try {
+                        const actor = await Actor.create({
+                            name: "_Quench Round Recovery PC",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 10, max: 10 },
+                                    spd: { value: 2, max: 2 },
+                                },
+                            },
+                        });
+                        actorDocuments.push(actor);
+
+                        const rec = actor.system.characteristics.rec.value;
+                        const stunMax = actor.system.characteristics.stun.max;
+                        expect(rec, "test actor has positive REC").to.be.greaterThan(0);
+
+                        await actor.update({
+                            "system.characteristics.stun.value": stunMax - rec - 3,
+                        });
+
+                        const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [{ actorId: actor.id }]);
+                        await combat.startCombat();
+
+                        // Skipping a full Turn crosses Post-Segment 12 exactly once
+                        await combat.nextRound();
+                        expect(combat.round).to.equal(2);
+                        expect(combat.segment).to.equal(12);
+                        expect(actor.system.characteristics.stun.value).to.equal(stunMax - 3);
+
+                        // Rewinding and skipping forward again must not double-apply
+                        await combat.previousRound();
+                        expect(combat.round).to.equal(1);
+
+                        await combat.nextRound();
+                        expect(combat.round).to.equal(2);
+                        expect(actor.system.characteristics.stun.value).to.equal(stunMax - 3);
+                    } finally {
+                        await game.settings.set(game.system.id, "automation", automationSetting);
+                    }
+                });
+
+                it("Should lock out a combatant whose SPD changes until both SPDs would have had a Phase", async function () {
+                    const slow = await Actor.create({
+                        name: "_Quench SPD Change",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 20, max: 20 },
+                                spd: { value: 2, max: 2 },
+                            },
+                        },
+                    });
+                    const pacer = await Actor.create({
+                        name: "_Quench SPD Pacer",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 10, max: 10 },
+                                spd: { value: 12, max: 12 },
+                            },
+                        },
+                    });
+                    actorDocuments.push(slow, pacer);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: slow.id }, { actorId: pacer.id }]);
+                    await combat.startCombat();
+
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId).to.equal(slow.id);
+                    await combat.nextTurn(); // Pacer in Segment 12
+                    await combat.nextTurn(); // Crosses into Round 2, Segment 1 (Pacer only)
+                    expect(combat.segment).to.equal(1);
+
+                    // SPD bookkeeping is seeded at the first segment boundary; wait for it so the
+                    // change below is detected against the old SPD
+                    const slowCombatant = combat.combatants.find((c) => c.actorId === slow.id);
+                    const seeded = await waitUntil(
+                        () => slowCombatant.getFlag(game.system.id, "knownSpd") !== undefined,
+                    );
+                    expect(seeded, "knownSpd seeded at the first segment boundary").to.be.true;
+
+                    // Aid the SPD mid-Turn: SPD 2 (Phases 6, 12) becomes SPD 4 (Phases 3, 6, 9, 12)
+                    await slow.update({ "system.characteristics.spd.value": 4 });
+
+                    await combat.nextTurn(); // Crosses into Segment 2; boundary detects the change
+                    expect(combat.segment).to.equal(2);
+                    const detected = await waitUntil(() => !!slowCombatant.getFlag(game.system.id, "spdLockout"));
+                    expect(detected, "SPD change detected at the segment boundary").to.be.true;
+
+                    // Old SPD 2 would next act in Segment 6, new SPD 4 in Segment 3, so no actions
+                    // until Segment 6 (6E2 17)
+                    expect(slowCombatant.hasPhaseInSegment(3), "locked out of the new SPD Segment 3 Phase").to.be.false;
+                    expect(slowCombatant.hasPhaseInSegment(6), "acts once both SPDs would have had a Phase").to.be.true;
+
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(3);
+                    expect(combat.combatant.actorId, "locked-out combatant does not act in Segment 3").to.equal(
+                        pacer.id,
+                    );
+
+                    let guard = 0;
+                    while (combat.segment !== 6 && guard++ < 12) {
+                        await combat.nextTurn();
+                    }
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId, "DEX 20 acts first on the new SPD chart").to.equal(slow.id);
                 });
             });
         },
