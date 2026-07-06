@@ -92,7 +92,6 @@ $combat-tracker-hero-disposition-opacity-active: 0.6;
     margin-bottom: 2px !important;
     align-items: center !important;
     overflow: hidden !important;
-    pointer-events: none;
     box-shadow: 0 2px 4px rgb(0 0 0 / 30%);
 }
 
@@ -104,6 +103,32 @@ $combat-tracker-hero-disposition-opacity-active: 0.6;
     border-left: 5px solid var(--color-border-highlight) !important;
     font-size: 1.1em;
     text-shadow: 0 0 4px #000;
+
+    /* The current segment cannot be collapsed */
+    pointer-events: none;
+}
+
+/* 2b. COLLAPSIBLE SEGMENT HEADERS */
+.combat-tracker .collapsible-segment-header-slot {
+    cursor: pointer;
+}
+
+.combat-tracker .collapsible-segment-header-slot:hover {
+    border-color: var(--color-border-highlight) !important;
+}
+
+.combat-tracker .past-segment-header-slot h4 {
+    color: #8a929e !important;
+}
+
+/* 2c. NON-CURRENT SEGMENT MEMBER ROWS */
+.combat-tracker .combatant.future-segment-preview {
+    opacity: 0.65;
+}
+
+.combat-tracker .combatant.past-segment-preview {
+    opacity: 0.5;
+    filter: grayscale(60%);
 }
 
 /* 3. INTERNAL DOM COMPONENT ALIGNMENTS & VISIBILITY FOR HEADERS */
