@@ -151,12 +151,13 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             if (abs >= startAbs && membersAt(abs).length > 0) positions.add(abs);
         }
 
-        // Auto-expanded window: previous 2 and next 2 non-empty segments, across Turn boundaries
+        // Include the previous 2 and next 2 non-empty segments, across Turn boundaries,
+        // but only auto-expand the nearest one in each direction.
         const windowAbs = new Set();
         let found = 0;
         for (let abs = currentAbs - 1; abs >= startAbs && found < 2; abs--) {
             if (membersAt(abs).length > 0) {
-                windowAbs.add(abs);
+                if (found === 0) windowAbs.add(abs);
                 positions.add(abs);
                 found++;
             }
@@ -164,7 +165,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         found = 0;
         for (let abs = currentAbs + 1; abs <= currentAbs + 24 && found < 2; abs++) {
             if (membersAt(abs).length > 0) {
-                windowAbs.add(abs);
+                if (found === 0) windowAbs.add(abs);
                 positions.add(abs);
                 found++;
             }
