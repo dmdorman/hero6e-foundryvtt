@@ -30,10 +30,11 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
             // Safely check the true active combatant ID string straight from the source database.
             // The active combatant row only carries the highlight inside the current segment group.
+            // Exclude the exploded-group summary row, which reuses the active member's id
             const activeId = app.viewed.combatant?.id;
             if (activeId) {
                 const activeRow = element.querySelector(
-                    `.current-segment-member[data-combatant-id="${activeId}"], .current-segment-member[data-id="${activeId}"]`,
+                    `.current-segment-member:not(.hero-group-parent)[data-combatant-id="${activeId}"], .current-segment-member:not(.hero-group-parent)[data-id="${activeId}"]`,
                 );
                 if (activeRow) {
                     activeRow.classList.add("active");
@@ -247,16 +248,14 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
             for (const group of groups) {
                 // The group holding the active combatant explodes into its individual
-                // members, indented so the grouping hierarchy stays visible
+                // members beneath the ×N header row, indented so the hierarchy is clear
                 const exploded =
                     group.combatants.length > 1 &&
                     isCurrent &&
                     group.combatants.some((c) => c.id === activeCombatantId);
-                const rowCombatants = exploded
-                    ? group.combatants
-                    : [group.combatants.find((c) => c.id === activeCombatantId) ?? group.combatants[0]];
+                const representative = group.combatants.find((c) => c.id === activeCombatantId) ?? group.combatants[0];
 
-                for (const combatant of rowCombatants) {
+                const buildRow = (combatant) => {
                     const base = masterById.get(combatant.id);
                     const row = base
                         ? { ...base }
@@ -274,11 +273,25 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                     // Handlebars draws the number instead of the d20 roll button
                     row.initiative = group.priority.toFixed(2);
                     row.hasRolled = true;
-                    if (exploded) row.css = `${row.css || ""} hero-group-exploded`.trim();
-                    else if (group.combatants.length > 1) row.name = `${row.name} ×${group.combatants.length}`;
                     if (dispositionTint) row.css = `${row.css || ""} ${this._dispositionClass(combatant)}`.trim();
                     row.active = false;
                     row.css = (row.css || "").replace(/\bactive\b/g, "").trim();
+                    return row;
+                };
+
+                if (exploded) {
+                    // Summary header above the members; it carries the representative's id
+                    // (never the active highlight) so click/hover still target a real token
+                    const parentRow = buildRow(representative);
+                    parentRow.name = `${parentRow.name} ×${group.combatants.length}`;
+                    parentRow.css = `${parentRow.css} current-segment-member hero-group-parent`.trim();
+                    timelineTurns.push(parentRow);
+                }
+
+                for (const combatant of exploded ? group.combatants : [representative]) {
+                    const row = buildRow(combatant);
+                    if (exploded) row.css = `${row.css} hero-group-exploded`.trim();
+                    else if (group.combatants.length > 1) row.name = `${row.name} ×${group.combatants.length}`;
 
                     if (!isPast && combatant.actor?.statuses.has("holding")) {
                         row.css = `${row.css} is-holding-action`.trim();

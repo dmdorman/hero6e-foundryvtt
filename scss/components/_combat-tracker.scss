@@ -109,7 +109,15 @@ $combat-tracker-hero-dispositions: (
     background: rgb(255 159 67 / 6%);
 }
 
-/* 2e. EXPLODED ACTIVE GROUP MEMBERS INDENT TO SHOW HIERARCHY */
+/* 2e. EXPLODED ACTIVE GROUP: ×N SUMMARY HEADER WITH INDENTED MEMBERS BELOW */
+.combat-tracker li.combatant.hero-group-parent .name {
+    font-weight: bold;
+}
+
+.combat-tracker li.combatant.hero-group-parent .token-initiative {
+    font-weight: bold;
+}
+
 .combat-tracker li.combatant.hero-group-exploded {
     margin-left: 14px;
     border-left: 2px solid var(--color-border-highlight, #ff6400);
