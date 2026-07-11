@@ -184,6 +184,22 @@ export class HeroSystem6eCombatSingle extends Combat {
     }
 
     /**
+     * Whether a combatant actually receives a turn in the given segment: they must have
+     * a Phase there (or be holding one) and must not be skipped as defeated when the
+     * core tracker's Skip Defeated setting is on.
+     * @param {Combatant} combatant
+     * @param {number} segment
+     * @returns {boolean}
+     * @protected
+     */
+    _takesTurnInSegment(combatant, segment) {
+        const actor = combatant?.actor;
+        if (!actor) return false;
+        if ((this.settings?.skipDefeated ?? false) && combatant.isDefeated) return false;
+        return (combatant.hasPhaseInSegment?.(segment) ?? false) || actor.statuses.has("holding");
+    }
+
+    /**
      * Re-compiles the internal 'this.turns' array to strictly include ONLY the actors
      * who possess a valid phase or are holding actions in the active calendar segment.
      * Implements cache invalidation logic safely for multi-client V13 architectures.
@@ -237,11 +253,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             return this._comparePriority(a, b, this, 12);
         });
 
-        const targetActorDoc = startTurns.find((t) => {
-            const acts = t.hasPhaseInSegment ? t.hasPhaseInSegment(12) : false;
-            const holds = t.actor?.statuses.has("holding") ?? false;
-            return acts || holds;
-        });
+        const targetActorDoc = startTurns.find((t) => this._takesTurnInSegment(t, 12));
         const targetCombatantId = targetActorDoc?.id || null;
 
         const finalTargetTurnsArray = HeroCompatibility.isV14
@@ -272,11 +284,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         let targetIndex = -1;
 
         for (let i = startIndex; i < turns.length; i++) {
-            const candidate = turns[i];
-            const hasPhase = candidate ? candidate.hasPhaseInSegment(activeSegment) : false;
-            const isHolding = candidate?.actor?.statuses.has("holding") ?? false;
-
-            if (hasPhase || isHolding) {
+            if (this._takesTurnInSegment(turns[i], activeSegment)) {
                 targetIndex = i;
                 break;
             }
@@ -308,9 +316,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                 }
             }
 
-            const foundActors = allCombatants.filter(
-                (c) => c.hasPhaseInSegment(nextSegment) || (c.actor?.statuses.has("holding") ?? false),
-            );
+            const foundActors = allCombatants.filter((c) => this._takesTurnInSegment(c, nextSegment));
             if (foundActors.length > 0) {
                 segmentActorsFound = true;
                 break;
@@ -329,9 +335,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         updateData[`flags.${game.system.id}.segmentRolls`] = masterRollsCache;
 
         let targetCombatantId = null;
-        const upcomingActors = allCombatants.filter(
-            (c) => c.hasPhaseInSegment(nextSegment) || (c.actor?.statuses.has("holding") ?? false),
-        );
+        const upcomingActors = allCombatants.filter((c) => this._takesTurnInSegment(c, nextSegment));
 
         if (upcomingActors.length > 0) {
             upcomingActors.sort((a, b) => {
@@ -453,7 +457,7 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         const currentActiveTurns = HeroCompatibility.isV14
             ? turns
-            : turns.filter((t) => t.hasPhaseInSegment?.(activeSegment) || (t.actor?.statuses.has("holding") ?? false));
+            : turns.filter((t) => this._takesTurnInSegment(t, activeSegment));
 
         const currentFilteredIndex = currentActiveTurns.findIndex((t) => t.id === this.combatant?.id);
 
@@ -505,9 +509,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                 }
             }
 
-            const foundActors = allCombatants.filter(
-                (c) => c.hasPhaseInSegment(prevSegment) || (c.actor?.statuses.has("holding") ?? false),
-            );
+            const foundActors = allCombatants.filter((c) => this._takesTurnInSegment(c, prevSegment));
             if (foundActors.length > 0) {
                 segmentActorsFound = true;
                 break;
@@ -557,9 +559,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             : recompiledTurns;
 
         let targetCombatantId = null;
-        const targetActors = allCombatants.filter(
-            (c) => c.hasPhaseInSegment(prevSegment) || (c.actor?.statuses.has("holding") ?? false),
-        );
+        const targetActors = allCombatants.filter((c) => this._takesTurnInSegment(c, prevSegment));
 
         if (targetActors.length > 0) {
             targetActors.sort((a, b) => {
@@ -742,7 +742,11 @@ export class HeroSystem6eCombatSingle extends Combat {
         let contentHidden = `Post-Segment 12 (Turn ${roundToRecover})<ul>`;
         let hasHidden = false;
 
-        for (const combatant of this.combatants.filter((c) => !c.isDefeated || c.hasPlayerOwner)) {
+        // Knocked out characters still take Post-Segment 12 Recoveries (that is how they wake
+        // up), even though isDefeated skips their Phases in the turn order
+        const recovers = (c) =>
+            !c.isDefeated || c.hasPlayerOwner || (c.actor?.statuses.has("knockedOut") && !c.actor.statuses.has("dead"));
+        for (const combatant of this.combatants.filter(recovers)) {
             const actor = combatant.actor;
             if (!actor) continue;
 

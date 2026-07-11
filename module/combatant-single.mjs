@@ -45,6 +45,15 @@ export class HeroSystem6eCombatantSingle extends Combatant {
     }
 
     /**
+     * Defeated also covers the dead and knocked out status conditions, not just the
+     * tracker's manual defeated toggle, so "Skip Defeated" passes over them.
+     * @override
+     */
+    get isDefeated() {
+        return super.isDefeated || !!this.actor?.statuses.has("dead") || !!this.actor?.statuses.has("knockedOut");
+    }
+
+    /**
      * Effective Speed for phase purposes: 0 when drained below 1, otherwise clamped
      * to the 1-12 speed chart range since characters cannot act more than once per segment.
      * Traverses cross-generation document data layers to find the true Speed score.
