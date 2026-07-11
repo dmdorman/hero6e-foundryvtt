@@ -458,8 +458,24 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         switch (action) {
             case "toggleHidden":
                 return Promise.all(members.map((c) => this._onToggleHidden(c)));
-            case "toggleDefeated":
-                return Promise.all(members.map((c) => this._onToggleDefeatedStatus(c)));
+            case "toggleDefeated": {
+                // Mirrors core _onToggleDefeatedStatus for the whole group: every member
+                // converges on the representative's next state. Linked tokens share one
+                // actor document, so the status is set once per unique actor — concurrent
+                // per-combatant toggles race and stack duplicate defeated/dead effects.
+                const isDefeated = !this.viewed.combatants.get(row.dataset.combatantId)?.isDefeated;
+                const flagUpdates = members.map((c) => ({ _id: c.id, defeated: isDefeated }));
+                const uniqueActors = [
+                    ...new Map(members.filter((c) => c.actor).map((c) => [c.actor.uuid, c.actor])).values(),
+                ];
+                return (async () => {
+                    await this.viewed.updateEmbeddedDocuments("Combatant", flagUpdates);
+                    const defeatedId = CONFIG.specialStatusEffects.DEFEATED;
+                    for (const actor of uniqueActors) {
+                        await actor.toggleStatusEffect(defeatedId, { overlay: true, active: isDefeated });
+                    }
+                })();
+            }
             case "pingCombatant": {
                 // Ping only visible members to avoid one core warning per hidden token;
                 // fall back to the representative so an empty result still warns once
