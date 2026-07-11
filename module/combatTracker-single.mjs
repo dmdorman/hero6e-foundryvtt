@@ -186,6 +186,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             const round = roundOf(abs);
             const isCurrent = abs === currentAbs;
             const isPast = abs < currentAbs;
+            const isNextTurn = round > combat.round;
             const expanded = isCurrent || (expansionOverrides[segment] ?? windowAbs.has(abs));
 
             // _comparePriority breaks priority ties by combatant id, keeping the order stable
@@ -206,6 +207,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                     "hero-timeline-header-row",
                     isCurrent ? "active-segment-header-slot" : "collapsible-segment-header-slot",
                     isPast ? "past-segment-header-slot" : "",
+                    isNextTurn ? "next-turn-header-slot" : "",
                     expanded ? "segment-expanded" : "segment-collapsed",
                 ]
                     .filter(Boolean)
@@ -264,7 +266,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 if (isPast) {
                     row.css = `${row.css} past-segment-preview`.trim();
                 } else if (!isCurrent) {
-                    row.css = `${row.css} future-segment-preview`.trim();
+                    row.css = `${row.css} future-segment-preview${isNextTurn ? " next-turn-preview" : ""}`.trim();
                 } else {
                     row.css = `${row.css} current-segment-member`.trim();
                     if (combatant.id === activeCombatantId) {
