@@ -129,6 +129,34 @@ $combat-tracker-hero-dispositions: (
     display: none;
 }
 
+/* 2g. HELD ACTIONS: PANEL FOR EVENT/GENERIC HOLDS, MARKER FOR POSITIONAL SLOTS */
+.combat-tracker .combatant.hero-held-panel-header {
+    border-left: 5px solid #d9a520 !important;
+}
+
+.combat-tracker .combatant.hero-held-panel-header h4 {
+    color: #ecc94b !important;
+}
+
+.combat-tracker li.combatant.hero-held-row {
+    box-shadow: inset 3px 0 0 rgb(217 165 32 / 80%);
+    background: rgb(217 165 32 / 6%);
+}
+
+.combat-tracker li.combatant.hero-held-row .name {
+    font-style: italic;
+}
+
+/* Panel members have no initiative position; also hides the core roll button */
+.combat-tracker li.combatant.hero-held-panel-member .token-initiative {
+    display: none;
+}
+
+/* Injected "Use Held Action" control */
+.combat-tracker li.combatant .hero-use-held {
+    color: #ecc94b;
+}
+
 /* 3. INTERNAL DOM COMPONENT ALIGNMENTS & VISIBILITY FOR HEADERS */
 .combat-tracker .combatant.hero-timeline-header-row .token-name {
     height: 100% !important;

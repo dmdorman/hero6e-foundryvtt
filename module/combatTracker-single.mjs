@@ -158,8 +158,9 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 // Core filters hidden combatants out of player-facing turns; match it here
                 if (c.hidden && !game.user.isGM) return false;
                 if (c.hasPhaseInSegment(segment)) return true;
-                // Holders may act in the current segment or any future one
-                return !isPast && c.actor.statuses.has("holding");
+                // A positional Held Action occupies exactly its declared slot;
+                // event/generic holds render in the Held Actions panel instead
+                return !isPast && c.holdsPositionAtAbs(abs);
             });
         };
 
@@ -201,6 +202,70 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
         const expansionOverrides = this._getSegmentExpansion(combat.id);
         const timelineTurns = [];
+
+        // Event/generic holders occupy no initiative slot; they wait in a panel above the
+        // timeline until activated (⚡), released, or expired by their natural Phase
+        const panelHolders = combat.combatants
+            .filter((c) => {
+                if (!c.actor) return false;
+                if (c.hidden && !game.user.isGM) return false;
+                const hold = c.heldAction;
+                return !!hold && hold.mode !== "position";
+            })
+            .sort(
+                (a, b) =>
+                    (b.actor.system?.characteristics?.dex?.value ?? 0) -
+                        (a.actor.system?.characteristics?.dex?.value ?? 0) || a.id.localeCompare(b.id),
+            );
+
+        if (panelHolders.length > 0) {
+            const panelExpanded = expansionOverrides["held"] ?? true;
+            const panelHeader = {
+                id: "held-panel-header",
+                _id: "held-panel-header",
+                name: `${panelExpanded ? "▼" : "▶"} ⏳ Held Actions (${panelHolders.length})`,
+                img: "icons/svg/clockwork.svg",
+                css: [
+                    "hero-timeline-header-row",
+                    "collapsible-segment-header-slot",
+                    "hero-held-panel-header",
+                    panelExpanded ? "segment-expanded" : "segment-collapsed",
+                ].join(" "),
+                hasRolled: true,
+                initiative: panelHolders.length,
+                isFakeHeader: true,
+                active: false,
+            };
+            Object.defineProperty(panelHeader, "token", { get: () => null, configurable: true, enumerable: true });
+            Object.defineProperty(panelHeader, "actor", { get: () => null, configurable: true, enumerable: true });
+            timelineTurns.push(panelHeader);
+
+            if (panelExpanded) {
+                for (const combatant of panelHolders) {
+                    const hold = combatant.heldAction;
+                    const base = masterById.get(combatant.id);
+                    const row = base
+                        ? { ...base }
+                        : {
+                              id: combatant.id,
+                              _id: combatant.id,
+                              name: combatant.name,
+                              img: combatant.img ?? combatant.actor?.img ?? "icons/svg/mystery-man.svg",
+                              hidden: combatant.hidden,
+                              defeated: combatant.isDefeated,
+                              css: "",
+                          };
+                    const condition = hold.mode === "event" && hold.trigger ? `until: ${hold.trigger}` : "generic";
+                    row.name = `⏳ ${row.name} — ${condition}`;
+                    row.initiative = null;
+                    row.hasRolled = true;
+                    row.active = false;
+                    row.css = `${(row.css || "").replace(/\bactive\b/g, "").trim()} hero-held-row hero-held-panel-member`;
+                    if (dispositionTint) row.css = `${row.css} ${this._dispositionClass(combatant)}`.trim();
+                    timelineTurns.push(row);
+                }
+            }
+        }
 
         for (const abs of [...positions].sort((a, b) => a - b)) {
             const segment = segmentOf(abs);
@@ -324,9 +389,12 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                         row.css = `${row.css} hero-group-row hero-group-collapsed`.trim();
                     }
 
-                    if (!isPast && combatant.actor?.statuses.has("holding")) {
-                        row.css = `${row.css} is-holding-action`.trim();
-                        row.name = `⏳ [HELD] ${row.name}`;
+                    // Positional holds render at their declared slot with the held marker;
+                    // the holder's natural-Phase rows stay unmarked (that is where the
+                    // hold expires and a normal Phase takes over)
+                    if (!isPast && combatant.holdsPositionAtAbs(abs)) {
+                        row.css = `${row.css} is-holding-action hero-held-row`.trim();
+                        row.name = `⏳ ${row.name} (held)`;
                     }
 
                     row.css = `${row.css} ${stateCss}`.trim();
@@ -402,6 +470,14 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const row = this._combatantRowFromEvent(event, target);
         const combatantId = row?.dataset?.combatantId;
         if (!combatantId) return;
+
+        // The Held Actions panel header toggles its expansion
+        if (combatantId === "held-panel-header") {
+            if (!this.viewed) return;
+            this._setSegmentExpansion(this.viewed.id, "held", row.classList.contains("segment-collapsed"));
+            this.render();
+            return;
+        }
 
         // Segment headers toggle their expansion; the current segment is always expanded
         if (combatantId.startsWith("seg-header-")) {
