@@ -1,5 +1,8 @@
 const { CombatTracker } = foundry.applications.sidebar.tabs;
 
+// Last combatant auto-scrolled to, so re-renders don't yank the list back while the user browses
+let lastScrolledCombatantId = null;
+
 export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
     static {
         /**
@@ -34,6 +37,10 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 );
                 if (activeRow) {
                     activeRow.classList.add("active");
+                    if (lastScrolledCombatantId !== activeId) {
+                        lastScrolledCombatantId = activeId;
+                        activeRow.scrollIntoView({ block: "center", behavior: "smooth" });
+                    }
                 }
             }
         };
