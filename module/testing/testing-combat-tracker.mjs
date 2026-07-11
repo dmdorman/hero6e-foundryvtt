@@ -645,7 +645,7 @@ export function registerCombatTests(quench) {
                     }
                 });
 
-                it("Should keep a Held Action through interim segments and consume it when the holder's natural Phase begins", async function () {
+                it("Should slot positional Held Actions, bench generic holds, and consume both on the natural Phase", async function () {
                     const automationSetting = game.settings.get(game.system.id, "automation");
                     await game.settings.set(game.system.id, "automation", "none");
 
@@ -689,25 +689,49 @@ export function registerCombatTests(quench) {
                         await combat.nextTurn();
                         expect(combat.combatant.actorId).to.equal(holder.id);
 
-                        // Holder declares a Held Action on their Phase
+                        // Holder declares a positional Held Action on their Phase: Segment 2 of the
+                        // next Turn at DEX 12 (legal window for SPD 2 at T1S12 spans through Segment 5)
                         await holder.createEmbeddedDocuments("ActiveEffect", [
+                            {
+                                name: "Holding An Action",
+                                img: "icons/svg/clockwork.svg",
+                                statuses: ["holding"],
+                                flags: { [game.system.id]: { hold: { mode: "position", segmentAbs: 26, dex: 12 } } },
+                            },
+                        ]);
+                        // Rusher banks a generic hold (bare status): no initiative slot at all
+                        await rusher.createEmbeddedDocuments("ActiveEffect", [
                             { name: "Holding An Action", img: "icons/svg/clockwork.svg", statuses: ["holding"] },
                         ]);
 
-                        // Holding makes the combatant eligible in every segment, ahead of natural phases
                         const holderCombatant = combat.combatants.find((c) => c.actorId === holder.id);
                         const rusherCombatant = combat.combatants.find((c) => c.actorId === rusher.id);
-                        expect(combat.getInitiativePriority(holderCombatant, 1)).to.be.greaterThan(
-                            combat.getInitiativePriority(rusherCombatant, 12),
-                        );
 
-                        // Crossing into Segment 1: only the holder is eligible, and the segment-advance
-                        // target selection must land on them
+                        // The positional hold slots at the declared DEX in the declared segment only
+                        expect(Math.floor(combat.getInitiativePriority(holderCombatant, 2))).to.equal(12);
+                        expect(combat.getInitiativePriority(holderCombatant, 1)).to.equal(0);
+                        // Generic holds occupy no position and receive no turn
+                        expect(combat.getInitiativePriority(rusherCombatant, 2)).to.equal(0);
+
+                        // Segment 1 is empty; the advance lands on the holder's declared slot in Segment 2
                         await combat.nextTurn();
                         expect(combat.round).to.equal(2);
-                        expect(combat.segment).to.equal(1);
+                        expect(combat.segment).to.equal(2);
                         expect(combat.combatant.actorId).to.equal(holder.id);
-                        expect(holder.statuses.has("holding"), "hold persists in a non-Phase segment").to.be.true;
+                        expect(holder.statuses.has("holding"), "hold persists at its declared slot").to.be.true;
+
+                        // Segment 3 is empty; Segment 4 is the rusher's natural SPD 3 Phase, which
+                        // replaces their generic hold (6E2 20; 5ER 360)
+                        await combat.nextTurn();
+                        expect(combat.segment).to.equal(4);
+                        expect(combat.combatant.actorId).to.equal(rusher.id);
+                        const rusherConsumed = await waitUntil(() => !rusher.statuses.has("holding"));
+                        expect(rusherConsumed, "generic hold consumed by the natural Phase").to.be.true;
+
+                        // The holder declined to act at their slot: the hold slides forward with the
+                        // combat instead of being lost
+                        const slid = await waitUntil(() => holderCombatant.heldAction?.segmentAbs === 28);
+                        expect(slid, "positional hold slid to the current segment").to.be.true;
 
                         // March forward until the holder's natural SPD 2 Phase segment (6) begins
                         let guard = 0;
