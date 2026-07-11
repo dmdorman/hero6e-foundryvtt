@@ -214,7 +214,20 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
             if (!expanded) continue;
 
+            // Tokens of the same root actor tied on the same priority act back to back;
+            // collapse them into a single row with a count. The row represents the active
+            // member when the group contains it so click/hover target the acting token.
+            const groups = [];
             for (const combatant of members) {
+                const key = combatant.actorId || combatant.id;
+                const priority = combat.getInitiativePriority(combatant, segment);
+                const prev = groups.at(-1);
+                if (prev && prev.key === key && prev.priority === priority) prev.combatants.push(combatant);
+                else groups.push({ key, priority, combatants: [combatant] });
+            }
+
+            for (const group of groups) {
+                const combatant = group.combatants.find((c) => c.id === activeCombatantId) ?? group.combatants[0];
                 const base = masterById.get(combatant.id);
                 const row = base
                     ? { ...base }
@@ -230,8 +243,9 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
                 // Pull the calculated priority score from the source-of-truth document method so
                 // Handlebars draws the number instead of the d20 roll button
-                row.initiative = combat.getInitiativePriority(combatant, segment).toFixed(2);
+                row.initiative = group.priority.toFixed(2);
                 row.hasRolled = true;
+                if (group.combatants.length > 1) row.name = `${row.name} ×${group.combatants.length}`;
                 row.active = false;
                 row.css = (row.css || "").replace(/\bactive\b/g, "").trim();
 
