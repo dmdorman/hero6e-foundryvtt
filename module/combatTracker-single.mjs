@@ -246,47 +246,59 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             }
 
             for (const group of groups) {
-                const combatant = group.combatants.find((c) => c.id === activeCombatantId) ?? group.combatants[0];
-                const base = masterById.get(combatant.id);
-                const row = base
-                    ? { ...base }
-                    : {
-                          id: combatant.id,
-                          _id: combatant.id,
-                          name: combatant.name,
-                          img: combatant.img ?? combatant.actor?.img ?? "icons/svg/mystery-man.svg",
-                          hidden: combatant.hidden,
-                          defeated: combatant.isDefeated,
-                          css: "",
-                      };
+                // The group holding the active combatant explodes into its individual
+                // members, indented so the grouping hierarchy stays visible
+                const exploded =
+                    group.combatants.length > 1 &&
+                    isCurrent &&
+                    group.combatants.some((c) => c.id === activeCombatantId);
+                const rowCombatants = exploded
+                    ? group.combatants
+                    : [group.combatants.find((c) => c.id === activeCombatantId) ?? group.combatants[0]];
 
-                // Pull the calculated priority score from the source-of-truth document method so
-                // Handlebars draws the number instead of the d20 roll button
-                row.initiative = group.priority.toFixed(2);
-                row.hasRolled = true;
-                if (group.combatants.length > 1) row.name = `${row.name} ×${group.combatants.length}`;
-                if (dispositionTint) row.css = `${row.css || ""} ${this._dispositionClass(combatant)}`.trim();
-                row.active = false;
-                row.css = (row.css || "").replace(/\bactive\b/g, "").trim();
+                for (const combatant of rowCombatants) {
+                    const base = masterById.get(combatant.id);
+                    const row = base
+                        ? { ...base }
+                        : {
+                              id: combatant.id,
+                              _id: combatant.id,
+                              name: combatant.name,
+                              img: combatant.img ?? combatant.actor?.img ?? "icons/svg/mystery-man.svg",
+                              hidden: combatant.hidden,
+                              defeated: combatant.isDefeated,
+                              css: "",
+                          };
 
-                if (!isPast && combatant.actor?.statuses.has("holding")) {
-                    row.css = `${row.css} is-holding-action`.trim();
-                    row.name = `⏳ [HELD] ${row.name}`;
-                }
+                    // Pull the calculated priority score from the source-of-truth document method so
+                    // Handlebars draws the number instead of the d20 roll button
+                    row.initiative = group.priority.toFixed(2);
+                    row.hasRolled = true;
+                    if (exploded) row.css = `${row.css || ""} hero-group-exploded`.trim();
+                    else if (group.combatants.length > 1) row.name = `${row.name} ×${group.combatants.length}`;
+                    if (dispositionTint) row.css = `${row.css || ""} ${this._dispositionClass(combatant)}`.trim();
+                    row.active = false;
+                    row.css = (row.css || "").replace(/\bactive\b/g, "").trim();
 
-                if (isPast) {
-                    row.css = `${row.css} past-segment-preview`.trim();
-                } else if (!isCurrent) {
-                    row.css = `${row.css} future-segment-preview${isNextTurn ? " next-turn-preview" : ""}`.trim();
-                } else {
-                    row.css = `${row.css} current-segment-member`.trim();
-                    if (combatant.id === activeCombatantId) {
-                        row.active = true;
-                        row.css = `${row.css} active`.trim();
+                    if (!isPast && combatant.actor?.statuses.has("holding")) {
+                        row.css = `${row.css} is-holding-action`.trim();
+                        row.name = `⏳ [HELD] ${row.name}`;
                     }
-                }
 
-                timelineTurns.push(row);
+                    if (isPast) {
+                        row.css = `${row.css} past-segment-preview`.trim();
+                    } else if (!isCurrent) {
+                        row.css = `${row.css} future-segment-preview${isNextTurn ? " next-turn-preview" : ""}`.trim();
+                    } else {
+                        row.css = `${row.css} current-segment-member`.trim();
+                        if (combatant.id === activeCombatantId) {
+                            row.active = true;
+                            row.css = `${row.css} active`.trim();
+                        }
+                    }
+
+                    timelineTurns.push(row);
+                }
             }
         }
 

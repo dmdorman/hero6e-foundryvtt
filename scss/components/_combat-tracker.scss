@@ -109,6 +109,12 @@ $combat-tracker-hero-dispositions: (
     background: rgb(255 159 67 / 6%);
 }
 
+/* 2e. EXPLODED ACTIVE GROUP MEMBERS INDENT TO SHOW HIERARCHY */
+.combat-tracker li.combatant.hero-group-exploded {
+    margin-left: 14px;
+    border-left: 2px solid var(--color-border-highlight, #ff6400);
+}
+
 /* 3. INTERNAL DOM COMPONENT ALIGNMENTS & VISIBILITY FOR HEADERS */
 .combat-tracker .combatant.hero-timeline-header-row .token-name {
     height: 100% !important;
