@@ -1,3 +1,5 @@
+import { HeroSystem6eCombatantSingle } from "./combatant-single.mjs";
+
 const { CombatTracker } = foundry.applications.sidebar.tabs;
 
 // Last combatant auto-scrolled to, so re-renders don't yank the list back while the user browses
@@ -44,6 +46,25 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                     }
                 }
             }
+
+            // Inject the ⚡ Use Held Action control on held rows for their owners
+            element.querySelectorAll("li.combatant.hero-held-row").forEach((li) => {
+                const combatant = app.viewed.combatants.get(li.dataset.combatantId);
+                if (!combatant?.isOwner || !combatant.actor?.statuses.has("holding")) return;
+                const controls = li.querySelector(".combatant-controls");
+                if (!controls || controls.querySelector(".hero-use-held")) return;
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "inline-control combatant-control icon fa-solid fa-bolt hero-use-held";
+                button.setAttribute("aria-label", "Use Held Action");
+                button.dataset.tooltip = "Use Held Action";
+                button.addEventListener("click", (clickEvent) => {
+                    clickEvent.preventDefault();
+                    clickEvent.stopPropagation();
+                    app._onUseHeldAction(li.dataset.combatantId);
+                });
+                controls.prepend(button);
+            });
         };
 
         Hooks.on("renderCombatTracker", onRenderTracker);
@@ -563,5 +584,246 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             default:
                 return super._onCombatantControl(event, target);
         }
+    }
+
+    /**
+     * Adds Hold/Abort entries to the row context menu and guards every entry against
+     * the tracker's synthetic rows (segment headers, group summaries, the held panel).
+     * @override
+     */
+    _getEntryContextOptions() {
+        const options = super._getEntryContextOptions();
+        const getCombatant = (li) => this.viewed?.combatants.get(li.dataset?.combatantId) ?? null;
+
+        for (const option of options) {
+            const visible = option.visible;
+            option.visible = (li) =>
+                !!getCombatant(li) && (typeof visible === "function" ? visible.call(this, li) : true);
+        }
+
+        options.push(
+            {
+                label: "Hold Action…",
+                icon: "fa-solid fa-hourglass-half",
+                visible: (li) => {
+                    const combatant = getCombatant(li);
+                    return !!combatant?.isOwner && !!this.viewed?.started && !combatant.actor?.statuses.has("holding");
+                },
+                onClick: (event, li) => this._onDeclareHoldAction(li.dataset.combatantId),
+            },
+            {
+                label: "Use Held Action",
+                icon: "fa-solid fa-bolt",
+                visible: (li) => {
+                    const combatant = getCombatant(li);
+                    return !!combatant?.isOwner && !!combatant.actor?.statuses.has("holding");
+                },
+                onClick: (event, li) => this._onUseHeldAction(li.dataset.combatantId),
+            },
+            {
+                label: "Release Hold",
+                icon: "fa-solid fa-hand",
+                visible: (li) => {
+                    const combatant = getCombatant(li);
+                    return !!combatant?.isOwner && !!combatant.actor?.statuses.has("holding");
+                },
+                onClick: (event, li) => this._onReleaseHeldAction(li.dataset.combatantId),
+            },
+            {
+                label: "Toggle Abort",
+                icon: "fa-solid fa-shield-halved",
+                visible: (li) => !!getCombatant(li)?.isOwner && !!this.viewed?.started,
+                onClick: (event, li) => this._onToggleAbort(li.dataset.combatantId),
+            },
+        );
+        return options;
+    }
+
+    /**
+     * Posts a hold-related chat card, whispered to the GM for hidden combatants.
+     * @param {Combatant} combatant
+     * @param {string} content
+     * @private
+     */
+    _holdCard(combatant, content) {
+        const data = { speaker: ChatMessage.getSpeaker({ actor: combatant.actor }), content };
+        if (combatant.hidden) data.whisper = ChatMessage.getWhisperRecipients("GM");
+        return ChatMessage.create(data);
+    }
+
+    /**
+     * Opens the Hold Action declaration dialog (6E2 20-21; 5ER 360-361) and applies the
+     * chosen hold: a position (segment + DEX, validated against the null zone by only
+     * offering legal segments), an event trigger, or a generic hold.
+     * @param {string} combatantId
+     * @protected
+     */
+    async _onDeclareHoldAction(combatantId) {
+        const combat = this.viewed;
+        const combatant = combat?.combatants.get(combatantId);
+        const actor = combatant?.actor;
+        if (!combat?.started || !combatant?.isOwner || !actor) return;
+        if (actor.statuses.has("holding")) return;
+
+        const currentAbs = combat.round * 12 + combat.segment;
+        const characteristicKey = actor.system?.initiativeCharacteristic ?? "dex";
+        const ownDex = actor.system?.characteristics?.[characteristicKey]?.value ?? 10;
+        const lightningReflexes =
+            parseInt(actor.items?.find?.((i) => i.system?.XMLID === "LIGHTNING_REFLEXES_ALL")?.system?.LEVELS ?? 0) ||
+            0;
+        const actingDex = ownDex + lightningReflexes;
+
+        // Legal window: from now up to (not including) the segment of the next natural
+        // Phase — a Held Action is lost the moment that segment begins (null zone)
+        const spd = combatant.combatSpd;
+        const nextNaturalAbs = spd > 0 ? HeroSystem6eCombatantSingle.nextPhaseAbs(spd, currentAbs + 1) : currentAbs;
+        const segmentChoices = [];
+        for (let abs = currentAbs; abs < nextNaturalAbs; abs++) {
+            const segment = ((abs - 1) % 12) + 1;
+            const round = Math.floor((abs - 1) / 12);
+            segmentChoices.push({
+                abs,
+                label: `Segment ${segment}${round === combat.round ? "" : ` (Turn ${round})`}`,
+            });
+        }
+
+        const positionOption = segmentChoices.length
+            ? `<label><input type="radio" name="hold-mode" value="position" checked> Until a position</label>
+               <div class="form-group">
+                   <label>Segment</label>
+                   <select name="hold-segment">${segmentChoices
+                       .map((choice) => `<option value="${choice.abs}">${choice.label}</option>`)
+                       .join("")}</select>
+                   <label>DEX</label>
+                   <input type="number" name="hold-dex" value="${ownDex}" min="0" max="99" step="1">
+               </div>`
+            : "";
+
+        const content = `<fieldset>
+            <legend>Hold until</legend>
+            ${positionOption}
+            <label><input type="radio" name="hold-mode" value="event" ${positionOption ? "" : "checked"}> An event</label>
+            <div class="form-group">
+                <input type="text" name="hold-trigger" placeholder="e.g. if the guard turns around">
+            </div>
+            <label><input type="radio" name="hold-mode" value="generic"> Generic (no precondition — GM discretion)</label>
+        </fieldset>`;
+
+        const result = await foundry.applications.api.DialogV2.wait({
+            window: { title: `Hold Action — ${actor.name}` },
+            content,
+            buttons: [
+                {
+                    action: "hold",
+                    label: "Hold",
+                    default: true,
+                    callback: (event, button) => {
+                        const form = button.form.elements;
+                        return {
+                            mode: form["hold-mode"].value,
+                            segmentAbs: parseInt(form["hold-segment"]?.value),
+                            dex: parseInt(form["hold-dex"]?.value),
+                            trigger: form["hold-trigger"]?.value.trim() ?? "",
+                        };
+                    },
+                },
+                { action: "cancel", label: "Cancel" },
+            ],
+            rejectClose: false,
+        });
+        if (!result || result === "cancel") return;
+
+        let hold;
+        let description;
+        if (result.mode === "position") {
+            const segmentAbs = Number.isFinite(result.segmentAbs) ? result.segmentAbs : currentAbs;
+            const dex = Number.isFinite(result.dex) ? result.dex : ownDex;
+            if (segmentAbs === currentAbs && dex >= actingDex) {
+                ui.notifications.warn(`A same-segment hold must target a DEX below ${actingDex}.`);
+                return;
+            }
+            hold = { mode: "position", segmentAbs, dex };
+            const segment = ((segmentAbs - 1) % 12) + 1;
+            const round = Math.floor((segmentAbs - 1) / 12);
+            description = `until DEX ${dex} in Segment ${segment}${round === combat.round ? "" : ` (Turn ${round})`}`;
+        } else if (result.mode === "event") {
+            hold = { mode: "event", trigger: result.trigger };
+            description = result.trigger ? `— until: ${result.trigger}` : "until a declared event";
+        } else {
+            hold = { mode: "generic" };
+            description = "with no declared condition";
+        }
+
+        await actor.toggleStatusEffect("holding", { active: true });
+        const effect = actor.effects.find((e) => e.statuses.has("holding"));
+        if (effect) await effect.setFlag(game.system.id, "hold", hold);
+        await this._holdCard(combatant, `${actor.name} holds their action ${description}.`);
+    }
+
+    /**
+     * Consumes a Held Action: the holder acts right now, at whatever point in the
+     * order the table has reached. The turn pointer is deliberately not moved.
+     * @param {string} combatantId
+     * @protected
+     */
+    async _onUseHeldAction(combatantId) {
+        const combatant = this.viewed?.combatants.get(combatantId);
+        const actor = combatant?.actor;
+        const effect = actor?.effects.find((e) => e.statuses.has("holding"));
+        if (!combatant?.isOwner || !effect) return;
+        await effect.delete();
+        await this._holdCard(combatant, `${actor.name} uses their Held Action.`);
+    }
+
+    /**
+     * Drops a Held Action without acting.
+     * @param {string} combatantId
+     * @protected
+     */
+    async _onReleaseHeldAction(combatantId) {
+        const combatant = this.viewed?.combatants.get(combatantId);
+        const actor = combatant?.actor;
+        const effect = actor?.effects.find((e) => e.statuses.has("holding"));
+        if (!combatant?.isOwner || !effect) return;
+        await effect.delete();
+        await this._holdCard(combatant, `${actor.name} releases their Held Action without acting.`);
+    }
+
+    /**
+     * Toggles the aborted status. Aborting while holding may spend the held Phase
+     * instead of the next one, losing no further Phases (6E2 22; 5ER 361).
+     * @param {string} combatantId
+     * @protected
+     */
+    async _onToggleAbort(combatantId) {
+        const combatant = this.viewed?.combatants.get(combatantId);
+        const actor = combatant?.actor;
+        if (!combatant?.isOwner || !actor) return;
+
+        if (actor.statuses.has("aborted")) {
+            return actor.toggleStatusEffect("aborted", { active: false });
+        }
+
+        const holdingEffect = actor.effects.find((e) => e.statuses.has("holding"));
+        if (holdingEffect) {
+            const useHeld = await foundry.applications.api.DialogV2.confirm({
+                window: { title: `Abort — ${actor.name}` },
+                content: `<p>Use the held Phase to abort? No further Phase is lost.</p>`,
+                yes: { label: "Use held Phase" },
+                no: { label: "Use next Phase" },
+                rejectClose: false,
+            });
+            if (useHeld === null) return;
+            if (useHeld) {
+                await holdingEffect.delete();
+                await this._holdCard(
+                    combatant,
+                    `${actor.name} aborts using their Held Action — no further Phase is lost.`,
+                );
+                return;
+            }
+        }
+
+        await actor.toggleStatusEffect("aborted", { active: true });
     }
 }
