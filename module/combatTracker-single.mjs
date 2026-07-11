@@ -178,6 +178,16 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             }
         }
 
+        // TODO(post-alpha): drop the system setting and rely solely on core combatTrackerConfig.turnMarker.disposition
+        let dispositionTint = false;
+        try {
+            dispositionTint =
+                game.settings.get(game.system.id, "combatTrackerDispositionHighlighting") ||
+                !!game.settings.get("core", Combat.CONFIG_SETTING)?.turnMarker?.disposition;
+        } catch (e) {
+            console.warn(`Unable to read combat tracker disposition settings`, e);
+        }
+
         const expansionOverrides = this._getSegmentExpansion(combat.id);
         const timelineTurns = [];
 
@@ -255,6 +265,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 row.initiative = group.priority.toFixed(2);
                 row.hasRolled = true;
                 if (group.combatants.length > 1) row.name = `${row.name} ×${group.combatants.length}`;
+                if (dispositionTint) row.css = `${row.css || ""} ${this._dispositionClass(combatant)}`.trim();
                 row.active = false;
                 row.css = (row.css || "").replace(/\bactive\b/g, "").trim();
 
@@ -281,6 +292,30 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
         context.turns = timelineTurns;
         return context;
+    }
+
+    /**
+     * Row tint class for the combatant's token disposition.
+     * @param {Combatant} combatant
+     * @returns {string}
+     * @protected
+     */
+    _dispositionClass(combatant) {
+        const token = combatant.token;
+        switch (token?.disposition) {
+            case CONST.TOKEN_DISPOSITIONS.FRIENDLY:
+                return token.hasPlayerOwner
+                    ? "combat-tracker-hero-disposition-player"
+                    : "combat-tracker-hero-disposition-friendly";
+            case CONST.TOKEN_DISPOSITIONS.NEUTRAL:
+                return "combat-tracker-hero-disposition-neutral";
+            case CONST.TOKEN_DISPOSITIONS.HOSTILE:
+                return "combat-tracker-hero-disposition-hostile";
+            case CONST.TOKEN_DISPOSITIONS.SECRET:
+                return "combat-tracker-hero-disposition-secret";
+            default:
+                return "";
+        }
     }
 
     /**
