@@ -45,6 +45,40 @@ export class HeroSystem6eCombatantSingle extends Combatant {
     }
 
     /**
+     * Details of this combatant's Held Action (6E2 20-21; 5ER 360-361), or null when
+     * not holding. Declared via the tracker's Hold Action dialog, which stores the
+     * declaration on the holding effect; a bare holding status (e.g. token HUD toggle)
+     * counts as a generic hold.
+     * @type {{mode: "position"|"event"|"generic", segmentAbs?: number, dex?: number, trigger?: string}|null}
+     */
+    get heldAction() {
+        const effect = this.actor?.effects.find((e) => e.statuses.has("holding"));
+        if (!effect) return null;
+        return effect.getFlag(game.system.id, "hold") ?? { mode: "generic" };
+    }
+
+    /**
+     * True when a positional Held Action places this combatant in the given absolute segment.
+     * @param {number} abs
+     * @returns {boolean}
+     */
+    holdsPositionAtAbs(abs) {
+        const hold = this.heldAction;
+        return hold?.mode === "position" && hold.segmentAbs === abs;
+    }
+
+    /**
+     * Segment-number variant for turn-flow checks. Unambiguous despite the modulo because
+     * the hold window is always shorter than a full Turn (null zone, 6E2 21).
+     * @param {number} segmentNumber - 1-12
+     * @returns {boolean}
+     */
+    holdsPositionInSegment(segmentNumber) {
+        const hold = this.heldAction;
+        return hold?.mode === "position" && ((hold.segmentAbs - 1) % 12) + 1 === segmentNumber;
+    }
+
+    /**
      * Defeated also covers the dead and knocked out status conditions, not just the
      * tracker's manual defeated toggle, so "Skip Defeated" passes over them.
      * @override

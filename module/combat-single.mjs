@@ -89,8 +89,8 @@ export class HeroSystem6eCombatSingle extends Combat {
         // This perfectly matches the true array layout order across all connected player clients.
         const aActs = a.hasPhaseInSegment ? a.hasPhaseInSegment(currentSegment) : false;
         const bActs = b.hasPhaseInSegment ? b.hasPhaseInSegment(currentSegment) : false;
-        const aHolds = a.actor?.statuses.has("holding") ?? false;
-        const bHolds = b.actor?.statuses.has("holding") ?? false;
+        const aHolds = a.holdsPositionInSegment?.(currentSegment) ?? false;
+        const bHolds = b.holdsPositionInSegment?.(currentSegment) ?? false;
 
         const aEligible = aActs || aHolds;
         const bEligible = bActs || bHolds;
@@ -158,9 +158,11 @@ export class HeroSystem6eCombatSingle extends Combat {
         const resolvedSpd = spdObj?.value ?? 2;
 
         const hasPhase = combatant.hasPhaseInSegment ? combatant.hasPhaseInSegment(activeSegment) : false;
-        const isHolding = statuses.has("holding") ?? false;
+        // A positional Held Action slots the combatant at their declared DEX in the declared
+        // segment; event/generic holds occupy no initiative position (tracker panel instead)
+        const positionalHold = combatant.holdsPositionInSegment?.(activeSegment) ? combatant.heldAction : null;
 
-        if (resolvedSpd <= 0 || (!hasPhase && !isHolding)) {
+        if (resolvedSpd <= 0 || (!hasPhase && !positionalHold)) {
             return 0;
         }
 
@@ -171,10 +173,13 @@ export class HeroSystem6eCombatSingle extends Combat {
         const tieBreakerRoll = segmentRolls[combatant.actorId || combatant.id] ?? segmentRolls[combatant.id] ?? 50;
         const tieBreakerFraction = tieBreakerRoll * 0.01;
 
+        if (positionalHold) {
+            // The declared DEX is the exact acting position: LR and maneuver offsets don't move it
+            return (positionalHold.dex ?? baseScore) + tieBreakerFraction;
+        }
+
         let maneuverOffset = 0;
-        if (statuses.has("holding")) {
-            maneuverOffset = CONFIG.HERO?.combatManeuverOffsets?.heldAction ?? 100.0;
-        } else if (statuses.has("haymaker")) {
+        if (statuses.has("haymaker")) {
             maneuverOffset = CONFIG.HERO?.combatManeuverOffsets?.haymaker ?? -3.0;
         } else if (statuses.has("delayedPhase")) {
             maneuverOffset = CONFIG.HERO?.combatManeuverOffsets?.delayedPhase ?? -5.0;
@@ -185,8 +190,10 @@ export class HeroSystem6eCombatSingle extends Combat {
 
     /**
      * Whether a combatant actually receives a turn in the given segment: they must have
-     * a Phase there (or be holding one), must not be skipped as defeated when the core
-     * tracker's Skip Defeated setting is on, and must not have aborted their Phase.
+     * a Phase there (or a positional Held Action declared for it), must not be skipped
+     * as defeated when the core tracker's Skip Defeated setting is on, and must not have
+     * aborted their Phase. Event/generic holds receive no turn; they act on demand via
+     * the tracker's Held Actions panel.
      * @param {Combatant} combatant
      * @param {number} segment
      * @param {object} [options]
@@ -200,7 +207,9 @@ export class HeroSystem6eCombatSingle extends Combat {
         if (!actor) return false;
         if ((this.settings?.skipDefeated ?? false) && combatant.isDefeated) return false;
         if (!ignoreAbort && actor.statuses.has("aborted")) return false;
-        return (combatant.hasPhaseInSegment?.(segment) ?? false) || actor.statuses.has("holding");
+        return (
+            (combatant.hasPhaseInSegment?.(segment) ?? false) || (combatant.holdsPositionInSegment?.(segment) ?? false)
+        );
     }
 
     /**
@@ -263,7 +272,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         const finalTargetTurnsArray = HeroCompatibility.isV14
             ? startTurns.filter((t) => {
                   const actsInNext = t.hasPhaseInSegment ? t.hasPhaseInSegment(12) : false;
-                  const holdsInNext = t.actor?.statuses.has("holding") ?? false;
+                  const holdsInNext = t.holdsPositionInSegment?.(12) ?? false;
                   return actsInNext || holdsInNext;
               })
             : startTurns;
@@ -390,8 +399,8 @@ export class HeroSystem6eCombatSingle extends Combat {
         recompiledTurns.sort((a, b) => {
             const aActs = a.hasPhaseInSegment ? a.hasPhaseInSegment(nextSegment) : false;
             const bActs = b.hasPhaseInSegment ? b.hasPhaseInSegment(nextSegment) : false;
-            const aHolds = a.actor?.statuses.has("holding") ?? false;
-            const bHolds = b.actor?.statuses.has("holding") ?? false;
+            const aHolds = a.holdsPositionInSegment?.(nextSegment) ?? false;
+            const bHolds = b.holdsPositionInSegment?.(nextSegment) ?? false;
             const aE = aActs || aHolds;
             const bE = bActs || bHolds;
             if (aE !== bE) return aE ? -1 : 1;
@@ -401,7 +410,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         const finalTargetTurnsArray = HeroCompatibility.isV14
             ? recompiledTurns.filter((t) => {
                   const actsInNext = t.hasPhaseInSegment ? t.hasPhaseInSegment(nextSegment) : false;
-                  const holdsInNext = t.actor?.statuses.has("holding") ?? false;
+                  const holdsInNext = t.holdsPositionInSegment?.(nextSegment) ?? false;
                   return actsInNext || holdsInNext;
               })
             : recompiledTurns;
@@ -557,8 +566,8 @@ export class HeroSystem6eCombatSingle extends Combat {
         recompiledTurns.sort((a, b) => {
             const aActs = a.hasPhaseInSegment ? a.hasPhaseInSegment(prevSegment) : false;
             const bActs = b.hasPhaseInSegment ? b.hasPhaseInSegment(prevSegment) : false;
-            const aHolds = a.actor?.statuses.has("holding") ?? false;
-            const bHolds = b.actor?.statuses.has("holding") ?? false;
+            const aHolds = a.holdsPositionInSegment?.(prevSegment) ?? false;
+            const bHolds = b.holdsPositionInSegment?.(prevSegment) ?? false;
             const aE = aActs || aHolds;
             const bE = bActs || bHolds;
             if (aE !== bE) return aE ? -1 : 1;
@@ -568,7 +577,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         const finalTargetTurnsArray = HeroCompatibility.isV14
             ? recompiledTurns.filter((t) => {
                   const actsInPrev = t.hasPhaseInSegment ? t.hasPhaseInSegment(prevSegment) : false;
-                  const holdsInPrev = t.actor?.statuses.has("holding") ?? false;
+                  const holdsInPrev = t.holdsPositionInSegment?.(prevSegment) ?? false;
                   return actsInPrev || holdsInPrev;
               })
             : recompiledTurns;
@@ -875,6 +884,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                 // SPD-change lockouts first so the hold/abort checks see updated phase eligibility
                 await this._maintainSpdChanges();
                 await this._consumeExpiredHeldActions(turnAdvance ? null : this.segment);
+                await this._slidePositionalHolds();
                 await this._clearExpiredAborts(elapsedSegments);
             })().catch((e) => console.error(e));
         }
@@ -939,6 +949,25 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         if (combatantUpdates.length > 0) {
             await this.updateEmbeddedDocuments("Combatant", combatantUpdates);
+        }
+    }
+
+    /**
+     * Slides un-used positional Held Actions forward: a holder who declined to act at
+     * their declared slot keeps holding at the same DEX in the current segment (the
+     * book allows continuing to hold; null-zone expiry is handled separately by
+     * _consumeExpiredHeldActions).
+     * @private
+     */
+    async _slidePositionalHolds() {
+        if (!this.started) return;
+        const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
+        for (const combatant of this.combatants) {
+            const hold = combatant.heldAction;
+            if (hold?.mode !== "position" || hold.segmentAbs >= currentAbs) continue;
+            const effect = combatant.actor?.effects.find((e) => e.statuses.has("holding"));
+            if (!effect) continue;
+            await effect.setFlag(game.system.id, "hold", { ...hold, segmentAbs: currentAbs });
         }
     }
 
