@@ -445,20 +445,32 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
     }
 
     /**
-     * Group header hide/defeated buttons apply to every member of the group.
+     * Group header hide/defeated/ping buttons apply to every member of the group.
+     * Pan stays single-target: there is only one camera.
      * @override
      */
     _onCombatantControl(event, target) {
         const row = target.closest("[data-combatant-id]");
         const action = target.dataset.action;
-        if (row?.classList.contains("hero-group-row") && ["toggleHidden", "toggleDefeated"].includes(action)) {
-            const members = this._groupMembers(row.dataset.combatantId);
-            return Promise.all(
-                members.map((c) =>
-                    action === "toggleHidden" ? this._onToggleHidden(c) : this._onToggleDefeatedStatus(c),
-                ),
-            );
+        if (!row?.classList.contains("hero-group-row")) return super._onCombatantControl(event, target);
+
+        const members = this._groupMembers(row.dataset.combatantId);
+        switch (action) {
+            case "toggleHidden":
+                return Promise.all(members.map((c) => this._onToggleHidden(c)));
+            case "toggleDefeated":
+                return Promise.all(members.map((c) => this._onToggleDefeatedStatus(c)));
+            case "pingCombatant": {
+                // Ping only visible members to avoid one core warning per hidden token;
+                // fall back to the representative so an empty result still warns once
+                const pingable = members.filter(
+                    (c) => c.sceneId === canvas.scene?.id && c.token?.object && this._isTokenVisible(c.token.object),
+                );
+                if (pingable.length === 0) return super._onCombatantControl(event, target);
+                return Promise.all(pingable.map((c) => this._onPingCombatant(c)));
+            }
+            default:
+                return super._onCombatantControl(event, target);
         }
-        return super._onCombatantControl(event, target);
     }
 }
