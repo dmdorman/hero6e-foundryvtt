@@ -190,14 +190,13 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             }
         }
 
-        // TODO(post-alpha): drop the system setting and rely solely on core combatTrackerConfig.turnMarker.disposition
+        // The single tracker follows only Foundry's own disposition setting; the legacy
+        // combatTrackerDispositionHighlighting system setting applies to the old tracker
         let dispositionTint = false;
         try {
-            dispositionTint =
-                game.settings.get(game.system.id, "combatTrackerDispositionHighlighting") ||
-                !!game.settings.get("core", Combat.CONFIG_SETTING)?.turnMarker?.disposition;
+            dispositionTint = !!game.settings.get("core", Combat.CONFIG_SETTING)?.turnMarker?.disposition;
         } catch (e) {
-            console.warn(`Unable to read combat tracker disposition settings`, e);
+            console.warn(`Unable to read combat tracker disposition setting`, e);
         }
 
         const expansionOverrides = this._getSegmentExpansion(combat.id);
