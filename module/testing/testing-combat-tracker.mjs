@@ -645,7 +645,7 @@ export function registerCombatTests(quench) {
                     }
                 });
 
-                it("Should slot positional Held Actions, bench generic holds, and consume both on the natural Phase", async function () {
+                it("Should slot positional Held Actions, bench generic holds, and spend both when passed", async function () {
                     const automationSetting = game.settings.get(game.system.id, "automation");
                     await game.settings.set(game.system.id, "automation", "none");
 
@@ -728,22 +728,10 @@ export function registerCombatTests(quench) {
                         const rusherConsumed = await waitUntil(() => !rusher.statuses.has("holding"));
                         expect(rusherConsumed, "generic hold consumed by the natural Phase").to.be.true;
 
-                        // The holder declined to act at their slot: the hold slides forward with the
-                        // combat instead of being lost
-                        const slid = await waitUntil(() => holderCombatant.heldAction?.segmentAbs === 28);
-                        expect(slid, "positional hold slid to the current segment").to.be.true;
-
-                        // March forward until the holder's natural SPD 2 Phase segment (6) begins
-                        let guard = 0;
-                        while (combat.segment !== 6 && guard++ < 20) {
-                            await combat.nextTurn();
-                        }
-                        expect(combat.segment).to.equal(6);
-
-                        // A Held Action is lost as soon as a Segment containing the holder's natural
-                        // Phase begins (6E2 20; 5ER 360). Consumption runs async after the update.
-                        const consumed = await waitUntil(() => !holder.statuses.has("holding"));
-                        expect(consumed, "Held Action consumed at the start of Segment 6").to.be.true;
+                        // The holder's held turn came and went in Segment 2 without being used,
+                        // so the positional hold is spent, not carried forward
+                        const spent = await waitUntil(() => !holder.statuses.has("holding"));
+                        expect(spent, "positional hold spent once its held turn passed").to.be.true;
                     } finally {
                         await game.settings.set(game.system.id, "automation", automationSetting);
                     }

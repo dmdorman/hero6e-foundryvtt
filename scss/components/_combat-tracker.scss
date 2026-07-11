@@ -152,6 +152,11 @@ $combat-tracker-hero-dispositions: (
     display: none;
 }
 
+/* Panel rows stay slim: the ⚡ control is the only button */
+.combat-tracker li.combatant.hero-held-panel-member .combatant-control:not(.hero-use-held) {
+    display: none;
+}
+
 /* Injected "Use Held Action" control */
 .combat-tracker li.combatant .hero-use-held {
     color: #ecc94b;

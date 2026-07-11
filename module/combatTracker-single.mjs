@@ -239,52 +239,51 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                         (a.actor.system?.characteristics?.dex?.value ?? 0) || a.id.localeCompare(b.id),
             );
 
-        if (panelHolders.length > 0) {
-            const panelExpanded = expansionOverrides["held"] ?? true;
-            const panelHeader = {
-                id: "held-panel-header",
-                _id: "held-panel-header",
-                name: `${panelExpanded ? "▼" : "▶"} ⏳ Held Actions (${panelHolders.length})`,
-                img: "icons/svg/clockwork.svg",
-                css: [
-                    "hero-timeline-header-row",
-                    "collapsible-segment-header-slot",
-                    "hero-held-panel-header",
-                    panelExpanded ? "segment-expanded" : "segment-collapsed",
-                ].join(" "),
-                hasRolled: true,
-                initiative: panelHolders.length,
-                isFakeHeader: true,
-                active: false,
-            };
-            Object.defineProperty(panelHeader, "token", { get: () => null, configurable: true, enumerable: true });
-            Object.defineProperty(panelHeader, "actor", { get: () => null, configurable: true, enumerable: true });
-            timelineTurns.push(panelHeader);
+        const panelExpanded = expansionOverrides["held"] ?? true;
+        const panelHeader = {
+            id: "held-panel-header",
+            _id: "held-panel-header",
+            name: `${panelExpanded ? "▼" : "▶"} ⏳ Held Actions (${panelHolders.length})`,
+            img: "icons/svg/clockwork.svg",
+            css: [
+                "hero-timeline-header-row",
+                "collapsible-segment-header-slot",
+                "hero-held-panel-header",
+                panelExpanded ? "segment-expanded" : "segment-collapsed",
+            ].join(" "),
+            hasRolled: true,
+            initiative: panelHolders.length,
+            isFakeHeader: true,
+            active: false,
+        };
+        Object.defineProperty(panelHeader, "token", { get: () => null, configurable: true, enumerable: true });
+        Object.defineProperty(panelHeader, "actor", { get: () => null, configurable: true, enumerable: true });
+        timelineTurns.push(panelHeader);
 
-            if (panelExpanded) {
-                for (const combatant of panelHolders) {
-                    const hold = combatant.heldAction;
-                    const base = masterById.get(combatant.id);
-                    const row = base
-                        ? { ...base }
-                        : {
-                              id: combatant.id,
-                              _id: combatant.id,
-                              name: combatant.name,
-                              img: combatant.img ?? combatant.actor?.img ?? "icons/svg/mystery-man.svg",
-                              hidden: combatant.hidden,
-                              defeated: combatant.isDefeated,
-                              css: "",
-                          };
-                    const condition = hold.mode === "event" && hold.trigger ? `until: ${hold.trigger}` : "generic";
-                    row.name = `⏳ ${row.name} — ${condition}`;
-                    row.initiative = null;
-                    row.hasRolled = true;
-                    row.active = false;
-                    row.css = `${(row.css || "").replace(/\bactive\b/g, "").trim()} hero-held-row hero-held-panel-member`;
-                    if (dispositionTint) row.css = `${row.css} ${this._dispositionClass(combatant)}`.trim();
-                    timelineTurns.push(row);
-                }
+        if (panelExpanded) {
+            for (const combatant of panelHolders) {
+                const hold = combatant.heldAction;
+                const base = masterById.get(combatant.id);
+                const row = base
+                    ? { ...base }
+                    : {
+                          id: combatant.id,
+                          _id: combatant.id,
+                          name: combatant.name,
+                          img: combatant.img ?? combatant.actor?.img ?? "icons/svg/mystery-man.svg",
+                          hidden: combatant.hidden,
+                          defeated: combatant.isDefeated,
+                          css: "",
+                      };
+                const condition = hold.mode === "event" && hold.trigger ? `until: ${hold.trigger}` : "generic";
+                row.name = `⏳ ${row.name} — ${condition}`;
+                row.initiative = null;
+                row.hasRolled = true;
+                row.active = false;
+                row.effects = { icons: [], tooltip: "" };
+                row.css = `${(row.css || "").replace(/\bactive\b/g, "").trim()} hero-held-row hero-held-panel-member`;
+                if (dispositionTint) row.css = `${row.css} ${this._dispositionClass(combatant)}`.trim();
+                timelineTurns.push(row);
             }
         }
 
@@ -742,7 +741,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 ui.notifications.warn(`A same-segment hold must target a DEX below ${actingDex}.`);
                 return;
             }
-            hold = { mode: "position", segmentAbs, dex };
+            hold = { mode: "position", segmentAbs, dex, declaredAbs: currentAbs };
             const segment = ((segmentAbs - 1) % 12) + 1;
             const round = Math.floor((segmentAbs - 1) / 12);
             description = `until DEX ${dex} in Segment ${segment}${round === combat.round ? "" : ` (Turn ${round})`}`;
@@ -758,6 +757,15 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const effect = actor.effects.find((e) => e.statuses.has("holding"));
         if (effect) await effect.setFlag(game.system.id, "hold", hold);
         await this._holdCard(combatant, `${actor.name} holds their action ${description}.`);
+
+        // Declaring a hold IS the combatant's Phase: end their turn
+        if (combat.combatant?.id === combatant.id) {
+            try {
+                await combat.nextTurn();
+            } catch (e) {
+                console.warn(`Unable to advance the turn after declaring a hold`, e);
+            }
+        }
     }
 
     /**

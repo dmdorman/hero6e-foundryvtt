@@ -884,7 +884,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                 // SPD-change lockouts first so the hold/abort checks see updated phase eligibility
                 await this._maintainSpdChanges();
                 await this._consumeExpiredHeldActions(turnAdvance ? null : this.segment);
-                await this._slidePositionalHolds();
+                await this._clearPassedPositionalHolds();
                 await this._clearExpiredAborts(elapsedSegments);
             })().catch((e) => console.error(e));
         }
@@ -893,6 +893,18 @@ export class HeroSystem6eCombatSingle extends Combat {
         const previousCombatant = prevId ? this.combatants.get(prevId) : null;
         if (previousCombatant?.actor) {
             this._expireCustomSystemEffects(previousCombatant.actor);
+
+            // A positional hold is spent the moment its held turn passes within the same
+            // segment; cross-segment passes are handled by _clearPassedPositionalHolds.
+            // A hold declared THIS segment hasn't had its slot yet (the ending turn was
+            // the declarer's natural Phase), so declaredAbs === currentAbs is exempt.
+            const hold = previousCombatant.heldAction;
+            if (hold?.mode === "position") {
+                const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
+                if (hold.segmentAbs === currentAbs && hold.declaredAbs !== currentAbs) {
+                    this._spendPassedHold(previousCombatant).catch((e) => console.error(e));
+                }
+            }
         }
     }
 
@@ -953,22 +965,36 @@ export class HeroSystem6eCombatSingle extends Combat {
     }
 
     /**
-     * Slides un-used positional Held Actions forward: a holder who declined to act at
-     * their declared slot keeps holding at the same DEX in the current segment (the
-     * book allows continuing to hold; null-zone expiry is handled separately by
-     * _consumeExpiredHeldActions).
+     * Clears positional Held Actions whose declared segment has been left behind:
+     * the held turn came and went without the holder acting, so the hold is spent.
+     * Within-segment passes are caught by the previous-combatant check in _onUpdate;
+     * event/generic holds are unaffected (they expire at the null zone instead).
      * @private
      */
-    async _slidePositionalHolds() {
+    async _clearPassedPositionalHolds() {
         if (!this.started) return;
         const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
         for (const combatant of this.combatants) {
             const hold = combatant.heldAction;
             if (hold?.mode !== "position" || hold.segmentAbs >= currentAbs) continue;
-            const effect = combatant.actor?.effects.find((e) => e.statuses.has("holding"));
-            if (!effect) continue;
-            await effect.setFlag(game.system.id, "hold", { ...hold, segmentAbs: currentAbs });
+            await this._spendPassedHold(combatant);
         }
+    }
+
+    /**
+     * Deletes a passed positional hold with its chat card.
+     * @param {Combatant} combatant
+     * @private
+     */
+    async _spendPassedHold(combatant) {
+        const actor = combatant.actor;
+        const effect = actor?.effects.find((e) => e.statuses.has("holding"));
+        if (!effect) return;
+        await effect.delete();
+        await ChatMessage.create({
+            speaker: ChatMessage.getSpeaker({ actor }),
+            content: `${actor.name}'s held turn passed without being used; the Held Action is spent.`,
+        });
     }
 
     /**
