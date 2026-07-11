@@ -57,6 +57,17 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
      */
     #segmentExpansion = {};
 
+    /**
+     * Root actor ids of groups the user manually exploded, per combat id.
+     * The group containing the active combatant is always exploded.
+     * @type {Record<string, Set<string>>}
+     */
+    #explodedGroups = {};
+
+    _getExplodedGroups(combatId) {
+        return (this.#explodedGroups[combatId] ??= new Set());
+    }
+
     _segmentExpansionStorageKey(combatId) {
         return `${game.system.id}.segmentExpansion.${combatId}`;
     }
@@ -247,13 +258,18 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             }
 
             for (const group of groups) {
-                // The group holding the active combatant explodes into its individual
-                // members beneath the ×N header row, indented so the hierarchy is clear
-                const exploded =
-                    group.combatants.length > 1 &&
-                    isCurrent &&
-                    group.combatants.some((c) => c.id === activeCombatantId);
+                // Multi-member groups explode into their individual members beneath the ×N
+                // header row, indented so the hierarchy is clear. The group holding the
+                // active combatant is always exploded; others explode on demand.
+                const isGroup = group.combatants.length > 1;
+                const isActiveGroup = isGroup && isCurrent && group.combatants.some((c) => c.id === activeCombatantId);
+                const exploded = isActiveGroup || (isGroup && this._getExplodedGroups(combat.id).has(group.key));
                 const representative = group.combatants.find((c) => c.id === activeCombatantId) ?? group.combatants[0];
+                const stateCss = isPast
+                    ? "past-segment-preview"
+                    : !isCurrent
+                      ? `future-segment-preview${isNextTurn ? " next-turn-preview" : ""}`
+                      : "current-segment-member";
 
                 const buildRow = (combatant) => {
                     const base = masterById.get(combatant.id);
@@ -281,33 +297,43 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
                 if (exploded) {
                     // Summary header above the members; it carries the representative's id
-                    // (never the active highlight) so click/hover still target a real token
+                    // (never the active highlight) so hover still targets a real token.
+                    // Clicking it collapses the group unless the group is the active one.
                     const parentRow = buildRow(representative);
-                    parentRow.name = `${parentRow.name} ×${group.combatants.length}`;
-                    parentRow.css = `${parentRow.css} current-segment-member hero-group-parent`.trim();
+                    parentRow.name = `▼ ${parentRow.name} ×${group.combatants.length}`;
+                    parentRow.effects = { icons: [], tooltip: "" };
+                    parentRow.css = [
+                        parentRow.css,
+                        stateCss,
+                        "hero-group-row hero-group-parent",
+                        isActiveGroup ? "hero-group-locked" : "",
+                    ]
+                        .filter(Boolean)
+                        .join(" ")
+                        .trim();
                     timelineTurns.push(parentRow);
                 }
 
                 for (const combatant of exploded ? group.combatants : [representative]) {
                     const row = buildRow(combatant);
-                    if (exploded) row.css = `${row.css} hero-group-exploded`.trim();
-                    else if (group.combatants.length > 1) row.name = `${row.name} ×${group.combatants.length}`;
+                    if (exploded) {
+                        row.css = `${row.css} hero-group-exploded`.trim();
+                    } else if (isGroup) {
+                        // Collapsed group header: clicking explodes it into its members
+                        row.name = `▶ ${row.name} ×${group.combatants.length}`;
+                        row.effects = { icons: [], tooltip: "" };
+                        row.css = `${row.css} hero-group-row hero-group-collapsed`.trim();
+                    }
 
                     if (!isPast && combatant.actor?.statuses.has("holding")) {
                         row.css = `${row.css} is-holding-action`.trim();
                         row.name = `⏳ [HELD] ${row.name}`;
                     }
 
-                    if (isPast) {
-                        row.css = `${row.css} past-segment-preview`.trim();
-                    } else if (!isCurrent) {
-                        row.css = `${row.css} future-segment-preview${isNextTurn ? " next-turn-preview" : ""}`.trim();
-                    } else {
-                        row.css = `${row.css} current-segment-member`.trim();
-                        if (combatant.id === activeCombatantId) {
-                            row.active = true;
-                            row.css = `${row.css} active`.trim();
-                        }
+                    row.css = `${row.css} ${stateCss}`.trim();
+                    if (isCurrent && combatant.id === activeCombatantId) {
+                        row.active = true;
+                        row.css = `${row.css} active`.trim();
                     }
 
                     timelineTurns.push(row);
@@ -390,6 +416,49 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
         // GUARD: Prevent clicking, panning, or pinging rows without a real combatant
         if (!this.viewed?.combatants?.has(combatantId)) return;
+
+        // Group headers toggle their explosion; the active group cannot be collapsed
+        if (row.classList.contains("hero-group-row")) {
+            if (row.classList.contains("hero-group-locked")) return;
+            const key = this.viewed.combatants.get(combatantId)?.actorId || combatantId;
+            const explodedGroups = this._getExplodedGroups(this.viewed.id);
+            if (row.classList.contains("hero-group-collapsed")) explodedGroups.add(key);
+            else explodedGroups.delete(key);
+            this.render();
+            return;
+        }
+
         return super._onCombatantMouseDown(event, row);
+    }
+
+    /**
+     * All combatants sharing the clicked group row's root actor.
+     * @param {string} combatantId
+     * @returns {Combatant[]}
+     * @private
+     */
+    _groupMembers(combatantId) {
+        const representative = this.viewed?.combatants.get(combatantId);
+        if (!representative) return [];
+        const key = representative.actorId || representative.id;
+        return this.viewed.combatants.filter((c) => (c.actorId || c.id) === key);
+    }
+
+    /**
+     * Group header hide/defeated buttons apply to every member of the group.
+     * @override
+     */
+    _onCombatantControl(event, target) {
+        const row = target.closest("[data-combatant-id]");
+        const action = target.dataset.action;
+        if (row?.classList.contains("hero-group-row") && ["toggleHidden", "toggleDefeated"].includes(action)) {
+            const members = this._groupMembers(row.dataset.combatantId);
+            return Promise.all(
+                members.map((c) =>
+                    action === "toggleHidden" ? this._onToggleHidden(c) : this._onToggleDefeatedStatus(c),
+                ),
+            );
+        }
+        return super._onCombatantControl(event, target);
     }
 }

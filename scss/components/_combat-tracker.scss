@@ -109,18 +109,24 @@ $combat-tracker-hero-dispositions: (
     background: rgb(255 159 67 / 6%);
 }
 
-/* 2e. EXPLODED ACTIVE GROUP: ×N SUMMARY HEADER WITH INDENTED MEMBERS BELOW */
-.combat-tracker li.combatant.hero-group-parent .name {
+/* 2e. SAME-ACTOR GROUPS: ×N SUMMARY HEADER WITH INDENTED MEMBERS WHEN EXPLODED */
+.combat-tracker li.combatant.hero-group-row .name,
+.combat-tracker li.combatant.hero-group-row .token-initiative {
     font-weight: bold;
 }
 
-.combat-tracker li.combatant.hero-group-parent .token-initiative {
-    font-weight: bold;
+.combat-tracker li.combatant.hero-group-row:not(.hero-group-locked) {
+    cursor: pointer;
 }
 
 .combat-tracker li.combatant.hero-group-exploded {
     margin-left: 14px;
     border-left: 2px solid var(--color-border-highlight, #ff6400);
+}
+
+/* Member rows share the group's priority, shown once on the header */
+.combat-tracker li.combatant.hero-group-exploded .token-initiative {
+    display: none;
 }
 
 /* 3. INTERNAL DOM COMPONENT ALIGNMENTS & VISIBILITY FOR HEADERS */
