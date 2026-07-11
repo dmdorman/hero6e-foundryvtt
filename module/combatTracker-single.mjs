@@ -181,9 +181,8 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             const isPast = abs < currentAbs;
             const expanded = isCurrent || (expansionOverrides[segment] ?? windowAbs.has(abs));
 
-            const members = membersAt(abs).sort(
-                (a, b) => combat.getInitiativePriority(b, segment) - combat.getInitiativePriority(a, segment),
-            );
+            // _comparePriority breaks priority ties by combatant id, keeping the order stable
+            const members = membersAt(abs).sort((a, b) => combat._comparePriority(a, b, combat, segment));
 
             const roundLabel = round === combat.round ? "" : ` (Turn ${round})`;
             const stateLabel = isCurrent ? " — Current" : isPast ? " — Passed" : "";
