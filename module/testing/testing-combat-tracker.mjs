@@ -827,15 +827,18 @@ export function registerCombatTests(quench) {
                     const alphaCombatant = combat.combatants.find((c) => c.actorId === alpha.id);
                     expect(combat.getInitiativePriority(alphaCombatant, 6)).to.equal(0);
 
-                    // Once the Segment containing the aborted Phase passes, the status clears
-                    // and the character may act on their next Phase (6E2 22)
-                    await combat.nextTurn(); // Alpha's spent Phase (priority 0) in Segment 6
-                    expect(combat.combatant.actorId).to.equal(alpha.id);
-                    await combat.nextTurn(); // Crosses into Segment 12
+                    // Aborting spends Alpha's Phase: advancing skips their turn entirely and
+                    // crosses into Segment 12; once the Segment containing the spent Phase
+                    // passes they may act again on their next Phase (6E2 22)
+                    await combat.nextTurn();
                     expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "aborted combatant's turn is skipped").to.equal(bravo.id);
 
                     const abortCleared = await waitUntil(() => !alpha.statuses.has("aborted"));
                     expect(abortCleared, "aborted status cleared after the spent Phase segment passed").to.be.true;
+
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId, "recovered combatant acts on their next Phase").to.equal(alpha.id);
                 });
 
                 it("Should apply Post-Segment 12 Recovery when nextRound skips a full Turn", async function () {

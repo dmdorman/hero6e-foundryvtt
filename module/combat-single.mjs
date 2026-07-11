@@ -185,17 +185,21 @@ export class HeroSystem6eCombatSingle extends Combat {
 
     /**
      * Whether a combatant actually receives a turn in the given segment: they must have
-     * a Phase there (or be holding one) and must not be skipped as defeated when the
-     * core tracker's Skip Defeated setting is on.
+     * a Phase there (or be holding one), must not be skipped as defeated when the core
+     * tracker's Skip Defeated setting is on, and must not have aborted their Phase.
      * @param {Combatant} combatant
      * @param {number} segment
+     * @param {object} [options]
+     * @param {boolean} [options.ignoreAbort] - Treat a lingering aborted status as spent
+     *   because the aborted Phase already passed earlier in the same advance
      * @returns {boolean}
      * @protected
      */
-    _takesTurnInSegment(combatant, segment) {
+    _takesTurnInSegment(combatant, segment, { ignoreAbort = false } = {}) {
         const actor = combatant?.actor;
         if (!actor) return false;
         if ((this.settings?.skipDefeated ?? false) && combatant.isDefeated) return false;
+        if (!ignoreAbort && actor.statuses.has("aborted")) return false;
         return (combatant.hasPhaseInSegment?.(segment) ?? false) || actor.statuses.has("holding");
     }
 
@@ -300,6 +304,16 @@ export class HeroSystem6eCombatSingle extends Combat {
         const updateData = {};
         let segmentActorsFound = false;
 
+        // An abort spends the combatant's next Phase: the scan passes over that Phase's
+        // segment, after which they count as able to act again (the status itself is
+        // cleared by _clearExpiredAborts once those segments have elapsed). Aborted
+        // combatants with a Phase in the segment now ending have already spent it.
+        const abortSpentIds = new Set(
+            allCombatants
+                .filter((c) => (c.actor?.statuses.has("aborted") ?? false) && c.hasPhaseInSegment(activeSegment))
+                .map((c) => c.id),
+        );
+
         for (let check = 1; check <= 12; check++) {
             nextSegment++;
             segmentDeltaCount++;
@@ -316,7 +330,13 @@ export class HeroSystem6eCombatSingle extends Combat {
                 }
             }
 
-            const foundActors = allCombatants.filter((c) => this._takesTurnInSegment(c, nextSegment));
+            const foundActors = allCombatants.filter((c) => {
+                if ((c.actor?.statuses.has("aborted") ?? false) && !abortSpentIds.has(c.id)) {
+                    if (c.hasPhaseInSegment(nextSegment)) abortSpentIds.add(c.id);
+                    return false;
+                }
+                return this._takesTurnInSegment(c, nextSegment, { ignoreAbort: true });
+            });
             if (foundActors.length > 0) {
                 segmentActorsFound = true;
                 break;
@@ -335,21 +355,15 @@ export class HeroSystem6eCombatSingle extends Combat {
         updateData[`flags.${game.system.id}.segmentRolls`] = masterRollsCache;
 
         let targetCombatantId = null;
-        const upcomingActors = allCombatants.filter((c) => this._takesTurnInSegment(c, nextSegment));
+        const upcomingActors = allCombatants.filter((c) =>
+            this._takesTurnInSegment(c, nextSegment, { ignoreAbort: abortSpentIds.has(c.id) }),
+        );
 
         if (upcomingActors.length > 0) {
             upcomingActors.sort((a, b) => {
                 return this._comparePriority(a, b, this, nextSegment);
             });
             targetCombatantId = upcomingActors[0]?.id || null;
-        }
-
-        const incomingCombatant = this.combatants.get(targetCombatantId);
-        if (incomingCombatant?.actor?.statuses.has("aborted")) {
-            const phaseEndEffects = incomingCombatant.actor.effects.filter((e) => e.duration?.expiry === "phaseEnd");
-            for (const effect of phaseEndEffects) {
-                HeroCompatibility.refreshActiveEffect(effect);
-            }
         }
 
         const combatantUpdates = [];
@@ -402,6 +416,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             direction: 1,
             previousCombatantId: this.combatant?.id,
             previousSegment: activeSegment,
+            segmentsElapsed: segmentDeltaCount,
         };
         if (segmentDeltaCount > 0) {
             updateOptions.worldTime = { delta: segmentDeltaCount };
@@ -844,12 +859,23 @@ export class HeroSystem6eCombatSingle extends Combat {
         const turnAdvance = foundry.utils.getProperty(options, "turnAdvance") === true;
         const newSegment = foundry.utils.getProperty(changed, `${systemFlagKey}.currentSegment`);
         if (newSegment !== undefined || roundChanged || turnAdvance) {
+            // Segments that just ended, oldest first; empty segments count because an
+            // aborted combatant's spent Phase may fall in a segment nobody acted in
             const previousSegment = turnAdvance ? null : foundry.utils.getProperty(options, "previousSegment");
+            let elapsedSegments;
+            if (turnAdvance) {
+                elapsedSegments = null; // A full Turn elapsed: every SPD 1-12 had a Phase
+            } else if (previousSegment !== undefined && previousSegment !== null) {
+                const segmentsElapsed = foundry.utils.getProperty(options, "segmentsElapsed") ?? 1;
+                if (segmentsElapsed >= 12) elapsedSegments = null;
+                else
+                    elapsedSegments = Array.fromRange(segmentsElapsed).map((i) => ((previousSegment - 1 + i) % 12) + 1);
+            }
             (async () => {
                 // SPD-change lockouts first so the hold/abort checks see updated phase eligibility
                 await this._maintainSpdChanges();
                 await this._consumeExpiredHeldActions(turnAdvance ? null : this.segment);
-                await this._clearExpiredAborts(previousSegment);
+                await this._clearExpiredAborts(elapsedSegments);
             })().catch((e) => console.error(e));
         }
 
@@ -946,17 +972,17 @@ export class HeroSystem6eCombatSingle extends Combat {
      * Clears the aborted status from combatants whose spent Phase has now passed.
      * Aborting uses the character's next full Phase; once the Segment containing that
      * Phase ends they may act again on their following Phase (6E2 22; 5ER 361).
-     * @param {number|null|undefined} elapsedSegment - Segment that just ended, null when a
-     *   full Turn elapsed, undefined when unknown (skip)
+     * @param {number[]|null|undefined} elapsedSegments - Segments that just ended, oldest
+     *   first; null when a full Turn elapsed, undefined when unknown (skip)
      * @private
      */
-    async _clearExpiredAborts(elapsedSegment) {
-        if (elapsedSegment === undefined) return;
+    async _clearExpiredAborts(elapsedSegments) {
+        if (elapsedSegments === undefined) return;
 
         for (const combatant of this.combatants) {
             const actor = combatant.actor;
             if (!actor?.statuses.has("aborted")) continue;
-            if (elapsedSegment !== null && !combatant.hasPhaseInSegment(elapsedSegment)) continue;
+            if (elapsedSegments !== null && !elapsedSegments.some((s) => combatant.hasPhaseInSegment(s))) continue;
 
             const abortedEffect = actor.effects.find((e) => e.statuses.has("aborted"));
             if (!abortedEffect) continue;
