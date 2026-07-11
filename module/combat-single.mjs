@@ -14,10 +14,26 @@ export class HeroSystem6eCombatSingle extends Combat {
     }
 
     /**
-     * Generates or fetches a flat dictionary cache of 3d6 initiative tie-breaker rolls
+     * Rolls a fresh 0-99 initiative tie-breaker for every combatant. Rolls are keyed by
+     * root actor id so every token of the same base actor shares one roll and therefore
+     * ties on the same DEX, letting the tracker group them.
+     * @returns {Record<string, number>} A flat mapping of { [rollKey]: 0-99 }
+     * @protected
+     */
+    _buildSegmentRollMap() {
+        const newSegmentMap = {};
+        for (const combatant of this.combatants) {
+            const rollKey = combatant.actorId || combatant.id;
+            newSegmentMap[rollKey] ??= Math.floor(Math.random() * 100);
+        }
+        return newSegmentMap;
+    }
+
+    /**
+     * Generates or fetches a flat dictionary cache of 0-99 initiative tie-breaker rolls
      * specifically for the requested segment index window.
      * @param {number|string} targetSegment - The calendar segment to process (1-12)
-     * @returns {Promise<Record<string, number>>} A flat mapping of { [combatantId]: 3d6RollTotal }
+     * @returns {Promise<Record<string, number>>} A flat mapping of { [rollKey]: 0-99 }
      * @protected
      */
     async _generateSegmentRollCache(targetSegment) {
@@ -30,25 +46,14 @@ export class HeroSystem6eCombatSingle extends Combat {
             return masterRollsCache[targetSegment];
         }
 
-        const newSegmentMap = {};
+        const newSegmentMap = this._buildSegmentRollMap();
 
-        // 3. Clean block-scoped loop simulating standard 3d6 dice outcomes efficiently
-        for (const combatant of this.combatants) {
-            // Simulate 3d6 by generating 3 random integers between 1 and 6
-            const d1 = Math.floor(Math.random() * 6) + 1;
-            const d2 = Math.floor(Math.random() * 6) + 1;
-            const d3 = Math.floor(Math.random() * 6) + 1;
-
-            newSegmentMap[combatant.id] = d1 + d2 + d3;
-        }
-
-        // 4. Update the local master reference before writing back to the database flag tree
+        // 3. Update the local master reference before writing back to the database flag tree
         masterRollsCache[targetSegment] = newSegmentMap;
 
-        // 5. Update the flag array on the document to persist the history
+        // 4. Update the flag array on the document to persist the history
         await this.setFlag(game.system.id, "segmentRolls", masterRollsCache);
 
-        // FIX: Return the flat dictionary window to ensure updatedRollsCache[combatant.id] parses flawlessly
         return newSegmentMap;
     }
 
@@ -162,8 +167,9 @@ export class HeroSystem6eCombatSingle extends Combat {
         const segmentRolls = parentCombat
             ? parentCombat.getFlag(game.system.id, "segmentRolls")?.[activeSegment] || {}
             : {};
-        const tieBreakerRoll = segmentRolls[combatant.id] || 11;
-        const tieBreakerFraction = (19 - tieBreakerRoll) * 0.01;
+        // Rolls are keyed by root actor id; fall back to combatant id for pre-existing combats
+        const tieBreakerRoll = segmentRolls[combatant.actorId || combatant.id] ?? segmentRolls[combatant.id] ?? 50;
+        const tieBreakerFraction = tieBreakerRoll * 0.01;
 
         let maneuverOffset = 0;
         if (statuses.has("holding")) {
@@ -317,13 +323,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         let updatedRollsCache = masterRollsCache[nextSegment];
 
         if (!updatedRollsCache) {
-            updatedRollsCache = {};
-            for (const combatant of this.combatants) {
-                const d1 = Math.floor(Math.random() * 6) + 1;
-                const d2 = Math.floor(Math.random() * 6) + 1;
-                const d3 = Math.floor(Math.random() * 6) + 1;
-                updatedRollsCache[combatant.id] = d1 + d2 + d3;
-            }
+            updatedRollsCache = this._buildSegmentRollMap();
             masterRollsCache[nextSegment] = updatedRollsCache;
         }
         updateData[`flags.${game.system.id}.segmentRolls`] = masterRollsCache;
