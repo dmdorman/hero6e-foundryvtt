@@ -958,10 +958,13 @@ export class HeroSystem6eCombatSingle extends Combat {
             (async () => {
                 // SPD-change lockouts first so the hold/abort checks see updated phase
                 // eligibility; passed-hold cleanup before the natural-phase consume so
-                // already-spent holds are removed silently instead of re-carded
+                // already-spent holds are removed silently instead of re-carded.
+                // Holds are consumed when the holder's natural TURN begins (lenient null
+                // zone, 6E2 21 GM option) — not at segment start — except on a full-Turn
+                // skip, where every SPD has had a Phase.
                 await this._maintainSpdChanges();
                 await this._clearPassedPositionalHolds();
-                await this._consumeExpiredHeldActions(turnAdvance ? null : this.segment);
+                if (turnAdvance) await this._consumeExpiredHeldActions(null);
                 await this._clearExpiredAborts(elapsedSegments);
                 await this._consumeActiveCombatantHold();
             })().catch((e) => console.error(e));
@@ -1132,6 +1135,9 @@ export class HeroSystem6eCombatSingle extends Combat {
     /**
      * Removes the held-action status from every combatant whose natural speed-chart
      * Phase falls in the segment that just began; their Phase replaces the hold.
+     * Only invoked for full-Turn skips (segment === null) since per-turn consumption
+     * moved to _consumeActiveCombatantHold; the segment parameter is kept for the
+     * strict-RAW null zone should it return as a setting.
      * @param {number|null} segment - Segment that just began, or null when a full Turn elapsed
      * @private
      */
