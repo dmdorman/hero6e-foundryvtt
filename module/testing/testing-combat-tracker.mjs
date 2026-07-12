@@ -1194,6 +1194,129 @@ export function registerCombatTests(quench) {
                     expect(combat.combatant.actorId).to.equal(lrActor.id);
                 });
 
+                it("Should not auto-apply scoped Lightning Reflexes purchases", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+
+                    const sniper = await Actor.create({
+                        name: "_Quench LR Sniper",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    // LIGHTNING_REFLEXES_SINGLE is a 5e-only power, so its holder is 5e
+                    const fiver = await Actor.create({
+                        name: "_Quench LR Fiver",
+                        type: "pc",
+                        system: {
+                            is5e: true,
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(sniper, fiver);
+
+                    // 6e scoped LR shares XMLID LIGHTNING_REFLEXES_ALL, distinguished by OPTIONID
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000002" BASECOST="0.0" LEVELS="5" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                            sniper,
+                        ),
+                        { parent: sniper },
+                    );
+                    // 5e single-action LR has its own XMLID
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_SINGLE" ID="1735000000003" BASECOST="0.0" LEVELS="2" ALIAS="Lightning Reflexes: +2 DEX to act first with Single Action" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="" INPUT="Single Action"></TALENT>`,
+                            fiver,
+                        ),
+                        { parent: fiver },
+                    );
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: sniper.id }, { actorId: fiver.id }]);
+                    await combat.startCombat();
+
+                    // Scoped purchases restrict the character to the scoped action when
+                    // acting early, so they only apply on demand (6E1 116; 5ER 96)
+                    const sniperCombatant = combat.combatants.find((c) => c.actorId === sniper.id);
+                    const fiverCombatant = combat.combatants.find((c) => c.actorId === fiver.id);
+                    expect(Math.floor(combat.getInitiativePriority(sniperCombatant, 12))).to.equal(20);
+                    expect(Math.floor(combat.getInitiativePriority(fiverCombatant, 12))).to.equal(20);
+                    expect(sniperCombatant.lightningReflexes.always).to.equal(0);
+                    expect(sniperCombatant.lightningReflexes.scoped, "scope resolved").to.deep.equal({
+                        levels: 5,
+                        label: "Shuriken",
+                    });
+                    expect(fiverCombatant.lightningReflexes.scoped?.levels, "5e scoped levels").to.equal(2);
+                });
+
+                it("Should elevate a scoped Lightning Reflexes combatant for one segment on demand", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+
+                    const alpha = await Actor.create({
+                        name: "_Quench LR Elev Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const mika = await Actor.create({
+                        name: "_Quench LR Elev Mika",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, mika);
+
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000004" BASECOST="0.0" LEVELS="5" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                            mika,
+                        ),
+                        { parent: mika },
+                    );
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: mika.id }]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+
+                    // The elevated position (25) is still below the acting DEX 30, so
+                    // acting early is on offer; taking it re-sorts without moving the
+                    // pointer off the active combatant
+                    const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                    expect(ui.combat._lrElevationState(mikaCombatant)).to.equal("available");
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    expect(mikaCombatant.lrElevatedAbs).to.equal(24);
+                    expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(25);
+                    expect(combat.combatant.actorId, "pointer stays on the active combatant").to.equal(alpha.id);
+
+                    // Mika acts at the elevated position; once reached it cannot be cancelled
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "elevated turn arrives").to.equal(mika.id);
+                    expect(ui.combat._lrElevationState(mikaCombatant)).to.equal(null);
+
+                    // The elevation is a single-segment record: swept at the boundary,
+                    // back to natural DEX in the next segment
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+                    const swept = await waitUntil(() => mikaCombatant.lrElevatedAbs === null);
+                    expect(swept, "elevation swept at the segment boundary").to.be.true;
+                    expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 6)), "natural DEX again").to.equal(
+                        20,
+                    );
+                });
+
                 it("Should re-evaluate initiative order when DEX changes mid-combat and skip aborted combatants", async function () {
                     const alpha = await Actor.create({
                         name: "_Quench Dex Alpha",
