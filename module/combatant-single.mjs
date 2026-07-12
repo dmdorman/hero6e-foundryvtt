@@ -30,6 +30,24 @@ export class HeroSystem6eCombatantSingle extends Combatant {
     }
 
     /**
+     * Segment number (1-12) of an absolute segment.
+     * @param {number} abs
+     * @returns {number}
+     */
+    static segmentOf(abs) {
+        return ((abs - 1) % 12) + 1;
+    }
+
+    /**
+     * Turn (round) number of an absolute segment.
+     * @param {number} abs
+     * @returns {number}
+     */
+    static roundOf(abs) {
+        return Math.floor((abs - 1) / 12);
+    }
+
+    /**
      * The first absolute segment at or after fromAbs in which the given SPD has a Phase.
      * @param {number} spd
      * @param {number} fromAbs
@@ -75,7 +93,7 @@ export class HeroSystem6eCombatantSingle extends Combatant {
      */
     holdsPositionInSegment(segmentNumber) {
         const hold = this.heldAction;
-        return hold?.mode === "position" && ((hold.segmentAbs - 1) % 12) + 1 === segmentNumber;
+        return hold?.mode === "position" && HeroSystem6eCombatantSingle.segmentOf(hold.segmentAbs) === segmentNumber;
     }
 
     /**
@@ -103,7 +121,7 @@ export class HeroSystem6eCombatantSingle extends Combatant {
      */
     spentHoldInSegment(segmentNumber) {
         const spent = this.spentHoldPosition;
-        return !!spent && ((spent.segmentAbs - 1) % 12) + 1 === segmentNumber;
+        return !!spent && HeroSystem6eCombatantSingle.segmentOf(spent.segmentAbs) === segmentNumber;
     }
 
     /**

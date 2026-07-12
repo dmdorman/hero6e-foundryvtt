@@ -1,3 +1,6 @@
+$hero-held-accent: #d9a520;
+$hero-held-text: #ecc94b;
+$hero-next-turn: #ff9f43;
 $combat-tracker-hero-disposition-opacity-default: 0.05;
 $combat-tracker-hero-disposition-opacity-hover: 0.2;
 $combat-tracker-hero-disposition-opacity-active: 0.6;
@@ -97,16 +100,16 @@ $combat-tracker-hero-dispositions: (
 
 /* 2d. NEXT TURN (FUTURE ROUND) SEGMENTS RENDER ORANGE */
 .combat-tracker .combatant.next-turn-header-slot {
-    border-left: 5px solid #ff9f43 !important;
+    border-left: 5px solid $hero-next-turn !important;
 }
 
 .combat-tracker .combatant.next-turn-header-slot h4 {
-    color: #ff9f43 !important;
+    color: $hero-next-turn !important;
 }
 
 .combat-tracker .combatant.next-turn-preview {
-    box-shadow: inset 3px 0 0 rgb(255 159 67 / 80%);
-    background: rgb(255 159 67 / 6%);
+    box-shadow: inset 3px 0 0 rgba($hero-next-turn, 0.8);
+    background: rgba($hero-next-turn, 0.06);
 }
 
 /* 2e. SAME-ACTOR GROUPS: ×N SUMMARY HEADER WITH INDENTED MEMBERS WHEN EXPLODED */
@@ -138,12 +141,12 @@ $combat-tracker-hero-dispositions: (
     top: 0;
     z-index: 6;
     margin-top: 0 !important;
-    border-left: 5px solid #d9a520 !important;
+    border-left: 5px solid $hero-held-accent !important;
     background: var(--color-cool-5, rgb(28 27 34)) !important;
 }
 
 .combat-tracker .combatant.hero-held-panel-header h4 {
-    color: #ecc94b !important;
+    color: $hero-held-text !important;
 }
 
 /* Member rows live in a pinned container built by the render hook; it caps out
@@ -167,8 +170,8 @@ $combat-tracker-hero-dispositions: (
 }
 
 .combat-tracker li.combatant.hero-held-row {
-    box-shadow: inset 3px 0 0 rgb(217 165 32 / 80%);
-    background: rgb(217 165 32 / 6%);
+    box-shadow: inset 3px 0 0 rgba($hero-held-accent, 0.8);
+    background: rgba($hero-held-accent, 0.06);
 }
 
 .combat-tracker li.combatant.hero-held-row .name {
@@ -225,7 +228,7 @@ $combat-tracker-hero-dispositions: (
 
 /* Injected "Use Held Action" controls */
 .combat-tracker li.combatant .hero-use-held {
-    color: #ecc94b;
+    color: $hero-held-text;
 }
 
 .combat-tracker li.combatant .hero-use-held-compact,
@@ -239,7 +242,7 @@ $combat-tracker-hero-dispositions: (
     font-size: var(--font-size-10);
     font-weight: bold;
     line-height: 1.1;
-    color: #ecc94b;
+    color: $hero-held-text;
 }
 
 .combat-tracker li.combatant .hero-use-held-compact {
@@ -247,7 +250,7 @@ $combat-tracker-hero-dispositions: (
 }
 
 .combat-tracker li.combatant .hero-use-held-compact:hover {
-    text-shadow: 0 0 6px #ecc94b;
+    text-shadow: 0 0 6px $hero-held-text;
 }
 
 .combat-tracker li.combatant .hero-held-condition {
