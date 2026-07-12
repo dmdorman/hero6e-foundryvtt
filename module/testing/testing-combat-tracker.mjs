@@ -1398,6 +1398,84 @@ export function registerCombatTests(quench) {
                     expect(combat.combatant.actorId).to.equal(alpha.id);
                 });
 
+                it("Should preempt the segment's first actor when elevating above them", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+
+                    const fast = await Actor.create({
+                        name: "_Quench LR Pre Fast",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 25, max: 25 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const delta = await Actor.create({
+                        name: "_Quench LR Pre Delta",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 22, max: 22 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const mika = await Actor.create({
+                        name: "_Quench LR Pre Mika",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(fast, delta, mika);
+
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000006" BASECOST="0.0" LEVELS="8" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                            mika,
+                        ),
+                        { parent: mika },
+                    );
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [
+                        { actorId: fast.id },
+                        { actorId: delta.id },
+                        { actorId: mika.id },
+                    ]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+                    expect(combat.combatant.actorId).to.equal(fast.id);
+
+                    // Nothing has completed a turn yet, so an elevated position ABOVE
+                    // the (unacted) first actor is reachable and preempts the pointer
+                    const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                    expect(ui.combat._lrElevationState(mikaCombatant)).to.equal("available");
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    expect(combat.combatant.actorId, "LR stop preempts the first actor").to.equal(mika.id);
+                    expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(28);
+
+                    // Ending the LR stop: the displaced actor acts, and the completed
+                    // stop raises the high-water mark so re-elevating is off the table
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId, "displaced actor re-enters").to.equal(fast.id);
+                    expect(ui.combat._lrElevationState(mikaCombatant), "no second elevation this segment").to.equal(
+                        null,
+                    );
+
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(delta.id);
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId, "Phase remainder at natural DEX").to.equal(mika.id);
+
+                    // A fresh segment resets the high-water mark: elevation is on offer again
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId).to.equal(fast.id);
+                    expect(ui.combat._lrElevationState(mikaCombatant), "fresh segment, fresh Phase").to.equal(
+                        "available",
+                    );
+                });
+
                 it("Should re-evaluate initiative order when DEX changes mid-combat and skip aborted combatants", async function () {
                     const alpha = await Actor.create({
                         name: "_Quench Dex Alpha",

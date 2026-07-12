@@ -986,16 +986,17 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         }
 
         // Elevation moves this segment's natural Phase earlier: it needs a Phase here,
-        // an action still unspent, and an elevated position the count has not passed
+        // an action still unspent, and an elevated position the count has not passed.
+        // A position only counts as passed once someone has COMPLETED a turn above it
+        // (the segment high-water mark) — the current actor merely being up has not
+        // passed it; elevating above them preempts the pointer instead.
         if (!combatant.hasPhaseInSegment(combat.segment)) return null;
         if (combatant.actor.statuses.has("holding")) return null;
         if (combatant.spentHoldInSegment?.(combat.segment)) return null;
         if (reached) return null;
         const elevatedPriority = combat.getInitiativePriority(combatant, combat.segment) + scoped.levels;
-        const actingPriority =
-            combat.getFlag(game.system.id, "actingPriority") ??
-            (combat.combatant ? combat.getInitiativePriority(combat.combatant, combat.segment) : Infinity);
-        if (elevatedPriority >= actingPriority) return null;
+        const highWater = combat.getFlag(game.system.id, "segmentHighWater") ?? null;
+        if (highWater !== null && elevatedPriority >= highWater) return null;
         return "available";
     }
 
@@ -1026,11 +1027,36 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             if (blocked) return void ui.notifications.warn(blocked);
             const currentAbs = combat.round * 12 + combat.segment;
             await combatant.setFlag(game.system.id, "lrElevatedAbs", currentAbs);
-            const effectiveDex = Math.floor(combat.getInitiativePriority(combatant, combat.segment));
+            const elevatedPriority = combat.getInitiativePriority(combatant, combat.segment);
             await this._holdCard(
                 combatant,
-                `${actor.name} acts early at effective DEX ${effectiveDex} (Lightning Reflexes — only: ${combatant.lightningReflexes.scoped.label}); the rest of their Phase follows at their natural DEX.`,
+                `${actor.name} acts early at effective DEX ${Math.floor(elevatedPriority)} (Lightning Reflexes — only: ${combatant.lightningReflexes.scoped.label}); the rest of their Phase follows at their natural DEX.`,
             );
+
+            // Elevating above the unacted current actor preempts the pointer: the
+            // count has not reached that position, so the LR stop goes first and the
+            // displaced actor re-enters via the acting-priority threshold afterwards
+            const actingPriority =
+                combat.getFlag(game.system.id, "actingPriority") ??
+                (activeId ? combat.getInitiativePriority(combat.combatants.get(activeId), combat.segment) : -Infinity);
+            if (activeId && activeId !== combatant.id && elevatedPriority > actingPriority) {
+                if (!HeroCompatibility.isV14) {
+                    combat._turns = null;
+                    combat.setupTurns();
+                }
+                const index = combat.turns.findIndex((t) => t.id === combatant.id);
+                if (index !== -1) {
+                    try {
+                        await combat.update(
+                            { turn: index, [`flags.${game.system.id}.actingPriority`]: elevatedPriority },
+                            { direction: 1, previousCombatantId: combatant.id },
+                        );
+                    } catch (e) {
+                        console.warn(`Unable to preempt the turn pointer for Lightning Reflexes`, e);
+                    }
+                    return;
+                }
+            }
         }
 
         await this._resyncTurnPointer(combat, activeId);

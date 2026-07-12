@@ -403,6 +403,13 @@ export class HeroSystem6eCombatSingle extends Combat {
 
             if (targetIndex !== -1) {
                 if (!HeroCompatibility.isV14) this._turns = null;
+                // Completed turns raise the segment's high-water mark: a Lightning
+                // Reflexes elevation may only slot below it — positions above it have
+                // genuinely been passed, while the current actor merely being up has not
+                const priorHighWater = this.getFlag(game.system.id, "segmentHighWater");
+                const segmentHighWater = ending
+                    ? Math.max(priorHighWater ?? -Infinity, endingPriority)
+                    : priorHighWater;
                 const result = await HeroCompatibility.updateEmbedded(
                     this,
                     "combatants",
@@ -410,6 +417,9 @@ export class HeroSystem6eCombatSingle extends Combat {
                     {
                         turn: targetIndex,
                         [`flags.${game.system.id}.actingPriority`]: this.getInitiativePriority(target, activeSegment),
+                        [`flags.${game.system.id}.segmentHighWater`]: Number.isFinite(segmentHighWater)
+                            ? segmentHighWater
+                            : null,
                     },
                     { direction: 1, previousCombatantId: ending?.id },
                 );
@@ -557,6 +567,8 @@ export class HeroSystem6eCombatSingle extends Combat {
         updateData[`flags.${game.system.id}.actingPriority`] = incomingCombatant
             ? this.getInitiativePriority(incomingCombatant, nextSegment)
             : null;
+        // A fresh segment has no completed turns yet
+        updateData[`flags.${game.system.id}.segmentHighWater`] = null;
 
         const updateOptions = {
             direction: 1,
@@ -632,6 +644,8 @@ export class HeroSystem6eCombatSingle extends Combat {
             const inlineUpdateData = {
                 turn: masterTargetIndex !== -1 ? masterTargetIndex : 0,
                 [`flags.${game.system.id}.actingPriority`]: this.getInitiativePriority(targetCombatant, activeSegment),
+                // Rewinds forget completed turns; lenient for re-declared elevations
+                [`flags.${game.system.id}.segmentHighWater`]: null,
             };
             const rewindResets = this._rewindHoldFlagResets(this.round * 12 + activeSegment);
 
@@ -738,6 +752,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         updateData[`flags.${game.system.id}.actingPriority`] = rewindTarget
             ? this.getInitiativePriority(rewindTarget, prevSegment)
             : null;
+        updateData[`flags.${game.system.id}.segmentHighWater`] = null;
 
         const updateOptions = { direction: -1, previousCombatantId: this.combatant?.id };
         if (segmentDeltaCount < 0) {
@@ -776,6 +791,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         };
         updateData[`flags.${game.system.id}.currentSegment`] = this.segment;
         updateData[`flags.${game.system.id}.actingPriority`] = null;
+        updateData[`flags.${game.system.id}.segmentHighWater`] = null;
 
         // Skipping a full Turn crosses Post-Segment 12 exactly once
         if (this.started && this.round > 0) {
@@ -820,6 +836,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             turn: 0,
         };
         updateData[`flags.${game.system.id}.actingPriority`] = null;
+        updateData[`flags.${game.system.id}.segmentHighWater`] = null;
 
         // Test 3 requires checking if resetting to turn 0 under an unstarted/rewound
         // boundary should forcefully clamp the timeline back to the initial segment threshold (12).
@@ -918,6 +935,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             "segmentRolls",
             "recoveredRounds",
             "actingPriority",
+            "segmentHighWater",
         ]);
 
         // 4. Update parent properties and children simultaneously through your compatibility bridge
