@@ -577,13 +577,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                 nextSegment = 1;
                 nextRoundCycle += 1;
 
-                const roundToRecover = nextRoundCycle - 1;
-                const recoveryApplied = await this._executePostSegment12Recovery(roundToRecover);
-                if (recoveryApplied) {
-                    const recoveredRounds = this.getFlag(game.system.id, "recoveredRounds") ?? [];
-                    recoveredRounds.push(roundToRecover);
-                    updateData[`flags.${game.system.id}.recoveredRounds`] = recoveredRounds;
-                }
+                await this._executePostSegment12Recovery(nextRoundCycle - 1);
             }
 
             const foundActors = allCombatants.filter((c) => {
@@ -602,7 +596,10 @@ export class HeroSystem6eCombatSingle extends Combat {
             }
         }
 
-        if (!segmentActorsFound) return this;
+        if (!segmentActorsFound) {
+            ui.notifications.warn(`No combatant can take a turn; the tracker did not advance.`);
+            return this;
+        }
 
         const masterRollsCache = this.getFlag(game.system.id, "segmentRolls") ?? {};
         let updatedRollsCache = masterRollsCache[nextSegment];
@@ -914,13 +911,7 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         // Skipping a full Turn crosses Post-Segment 12 exactly once
         if (this.started && this.round > 0) {
-            const roundToRecover = this.round;
-            const recoveryApplied = await this._executePostSegment12Recovery(roundToRecover);
-            if (recoveryApplied) {
-                const recoveredRounds = this.getFlag(game.system.id, "recoveredRounds") ?? [];
-                recoveredRounds.push(roundToRecover);
-                updateData[`flags.${game.system.id}.recoveredRounds`] = recoveredRounds;
-            }
+            await this._executePostSegment12Recovery(this.round);
         }
 
         const updateOptions = { direction: 1, turnAdvance: true };
@@ -1068,8 +1059,10 @@ export class HeroSystem6eCombatSingle extends Combat {
      * @private
      */
     async _executePostSegment12Recovery(roundToRecover) {
-        // Only the active GM applies recovery so multiple connected GMs don't double-apply it
-        if (!game.users.activeGM?.isSelf) return false;
+        // Runs inline on the single client that advances the tracker; non-GM
+        // advances are relayed to a GM before reaching this point. Gating on the
+        // active GM here would silently skip recovery for any other GM's advance.
+        if (!game.user.isGM) return false;
 
         const recoveredRounds = this.getFlag(game.system.id, "recoveredRounds") ?? [];
         if (recoveredRounds.includes(roundToRecover)) {
@@ -1082,6 +1075,10 @@ export class HeroSystem6eCombatSingle extends Combat {
             });
             return false;
         }
+
+        // Persist the guard before any actor is touched: if the caller's advance never
+        // commits (no eligible combatant found), recovery must not re-apply on retry
+        await this.setFlag(game.system.id, "recoveredRounds", [...recoveredRounds, roundToRecover]);
 
         const automation = game.settings.get(game.system.id, "automation");
 
@@ -1215,8 +1212,10 @@ export class HeroSystem6eCombatSingle extends Combat {
                 await this._consumeActiveCombatantHold(prevId);
                 await this._segmentStartLightningReflexes();
             })().catch((e) => console.error(e));
-        } else {
-            // Turn-only advance within a segment: the natural-turn clear still applies
+        } else if (turnChanged) {
+            // Turn advance within a segment: the natural-turn clear still applies.
+            // Flag-only updates (e.g. the recovery bookkeeping written mid-advance)
+            // move no pointer and must not consume holds.
             this._consumeActiveCombatantHold(prevId).catch((e) => console.error(e));
         }
 
