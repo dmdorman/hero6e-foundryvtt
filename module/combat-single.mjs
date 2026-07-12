@@ -316,8 +316,9 @@ export class HeroSystem6eCombatSingle extends Combat {
             if (!this._takesTurnInSegment(c, activeSegment)) return false;
             const cHold = c.heldAction;
             const cHeldHere = cHold?.mode === "position" && cHold.segmentAbs === currentAbsNow;
-            // A held slot only comes up once
-            if (cHeldHere && c.getFlag(game.system.id, "heldSlotTakenAbs") === currentAbsNow) return false;
+            // A held slot only comes up once, and a spent hold is display-only
+            if (cHeldHere && (cHold.spentAbs || c.getFlag(game.system.id, "heldSlotTakenAbs") === currentAbsNow))
+                return false;
             // The ending combatant re-enters the segment only via an unused held slot
             if (c.id === ending?.id && !cHeldHere) return false;
             const priority = this.getInitiativePriority(c, activeSegment);
@@ -955,10 +956,12 @@ export class HeroSystem6eCombatSingle extends Combat {
                     elapsedSegments = Array.fromRange(segmentsElapsed).map((i) => ((previousSegment - 1 + i) % 12) + 1);
             }
             (async () => {
-                // SPD-change lockouts first so the hold/abort checks see updated phase eligibility
+                // SPD-change lockouts first so the hold/abort checks see updated phase
+                // eligibility; passed-hold cleanup before the natural-phase consume so
+                // already-spent holds are removed silently instead of re-carded
                 await this._maintainSpdChanges();
-                await this._consumeExpiredHeldActions(turnAdvance ? null : this.segment);
                 await this._clearPassedPositionalHolds();
+                await this._consumeExpiredHeldActions(turnAdvance ? null : this.segment);
                 await this._clearExpiredAborts(elapsedSegments);
                 await this._consumeActiveCombatantHold();
             })().catch((e) => console.error(e));
@@ -985,9 +988,9 @@ export class HeroSystem6eCombatSingle extends Combat {
                 if (hold.segmentAbs === currentAbs) {
                     const slotTaken = previousCombatant.getFlag(game.system.id, "heldSlotTakenAbs") === currentAbs;
                     if (slotTaken) {
-                        this._spendPassedHold(previousCombatant, { used: true }).catch((e) => console.error(e));
+                        this._markHoldSpent(previousCombatant, { used: true }).catch((e) => console.error(e));
                     } else if (hold.declaredAbs !== currentAbs) {
-                        this._spendPassedHold(previousCombatant).catch((e) => console.error(e));
+                        this._markHoldSpent(previousCombatant).catch((e) => console.error(e));
                     }
                 }
             }
@@ -1087,23 +1090,37 @@ export class HeroSystem6eCombatSingle extends Combat {
         for (const combatant of this.combatants) {
             const hold = combatant.heldAction;
             if (hold?.mode !== "position" || hold.segmentAbs >= currentAbs) continue;
-            const used = combatant.getFlag(game.system.id, "heldSlotTakenAbs") === hold.segmentAbs;
-            await this._spendPassedHold(combatant, { used });
+            const effect = combatant.actor?.effects.find((e) => e.statuses.has("holding"));
+            if (!effect) continue;
+            await effect.delete();
+            // Already-spent holds were carded when their turn ended; delete silently
+            if (!hold.spentAbs) {
+                const used = combatant.getFlag(game.system.id, "heldSlotTakenAbs") === hold.segmentAbs;
+                await ChatMessage.create({
+                    speaker: ChatMessage.getSpeaker({ actor: combatant.actor }),
+                    content: used
+                        ? `${combatant.actor.name} used their Held Action.`
+                        : `${combatant.actor.name}'s held turn passed without being used; the Held Action is spent.`,
+                });
+            }
         }
     }
 
     /**
-     * Deletes a spent positional hold with its chat card.
+     * Marks a positional hold spent at the end of its held turn WITHOUT deleting it,
+     * so the combatant keeps displaying at the held DEX for the rest of the segment.
+     * The effect itself is removed silently once the segment ends.
      * @param {Combatant} combatant
      * @param {object} [options]
      * @param {boolean} [options.used] - The holder actually acted at their held slot
      * @private
      */
-    async _spendPassedHold(combatant, { used = false } = {}) {
+    async _markHoldSpent(combatant, { used = false } = {}) {
         const actor = combatant.actor;
         const effect = actor?.effects.find((e) => e.statuses.has("holding"));
-        if (!effect) return;
-        await effect.delete();
+        const hold = combatant.heldAction;
+        if (!effect || !hold || hold.spentAbs) return;
+        await effect.setFlag(game.system.id, "hold", { ...hold, spentAbs: hold.segmentAbs });
         await ChatMessage.create({
             speaker: ChatMessage.getSpeaker({ actor }),
             content: used
