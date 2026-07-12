@@ -942,6 +942,8 @@ export class HeroSystem6eCombatSingle extends Combat {
         const direction = foundry.utils.getProperty(options, "direction") ?? 1;
         if (direction < 0) return;
 
+        const prevId = foundry.utils.getProperty(options, "previousCombatantId");
+
         // Segment-boundary maintenance. turnAdvance marks a full-Turn skip (nextRound), where
         // every SPD 1-12 has had a Phase; roundChanged covers the segment-12-to-segment-12
         // wrap, where the currentSegment flag value is unchanged.
@@ -962,25 +964,20 @@ export class HeroSystem6eCombatSingle extends Combat {
             }
             (async () => {
                 // SPD-change lockouts first so the hold/abort checks see updated phase
-                // eligibility; passed-hold cleanup before the natural-phase consume so
-                // already-spent holds are removed silently instead of re-carded.
-                // Holds are consumed when the holder's natural TURN begins (lenient null
-                // zone, 6E2 21 GM option) — not at segment start — except on a full-Turn
-                // skip, where every SPD has had a Phase.
+                // eligibility; passed-hold cleanup before the natural-turn clear so
+                // spent positional holds are never re-carded
                 await this._maintainSpdChanges();
                 await this._clearSpentHoldPositions();
                 await this._clearPassedPositionalHolds();
                 if (turnAdvance) await this._consumeExpiredHeldActions(null);
                 await this._clearExpiredAborts(elapsedSegments);
-                await this._consumeActiveCombatantHold();
+                await this._consumeActiveCombatantHold(prevId);
             })().catch((e) => console.error(e));
         } else {
-            // Turn-only advance within a segment: still enforce the null zone if the
-            // pointer landed on a holder's natural Phase
-            this._consumeActiveCombatantHold().catch((e) => console.error(e));
+            // Turn-only advance within a segment: the natural-turn clear still applies
+            this._consumeActiveCombatantHold(prevId).catch((e) => console.error(e));
         }
 
-        const prevId = foundry.utils.getProperty(options, "previousCombatantId");
         const previousCombatant = prevId ? this.combatants.get(prevId) : null;
         if (previousCombatant?.actor) {
             this._expireCustomSystemEffects(previousCombatant.actor);
@@ -1007,16 +1004,21 @@ export class HeroSystem6eCombatSingle extends Combat {
     }
 
     /**
-     * Null-zone safety net: when the active combatant's natural Phase has come up
-     * while they still carry a hold, the Phase replaces the hold — regardless of
-     * which update path brought the turn here. Their own held slot is exempt.
+     * Clears an event/generic hold when the holder's natural turn comes around: the
+     * arriving Phase replaces the banked one. Guarded against self-advance — when the
+     * turn arrived directly from the holder's own ending turn (declaring a hold ends
+     * the turn, and in sparse combats the next stop can be the holder's own next
+     * Phase), the hold survives to the next full cycle. Positional holds are exempt;
+     * they expire with their slot.
+     * @param {string|undefined} previousCombatantId
      * @private
      */
-    async _consumeActiveCombatantHold() {
+    async _consumeActiveCombatantHold(previousCombatantId) {
         if (!this.started) return;
         const combatant = this.combatant;
         const actor = combatant?.actor;
         if (!actor?.statuses.has("holding")) return;
+        if (combatant.id === previousCombatantId) return;
         if (!combatant.hasPhaseInSegment(this.segment)) return;
         if (combatant.holdsPositionInSegment(this.segment)) return;
 
@@ -1026,7 +1028,7 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         await ChatMessage.create({
             speaker: ChatMessage.getSpeaker({ actor }),
-            content: `${actor.name}'s Held Action was consumed by their natural Phase in Segment ${this.segment}.`,
+            content: `${actor.name}'s Held Action was replaced by their natural Phase in Segment ${this.segment}.`,
         });
     }
 
@@ -1153,9 +1155,9 @@ export class HeroSystem6eCombatSingle extends Combat {
     /**
      * Removes the held-action status from every combatant whose natural speed-chart
      * Phase falls in the segment that just began; their Phase replaces the hold.
-     * Only invoked for full-Turn skips (segment === null) since per-turn consumption
-     * moved to _consumeActiveCombatantHold; the segment parameter is kept for the
-     * strict-RAW null zone should it return as a setting.
+     * Only invoked for full-Turn skips (segment === null); per-turn clearing lives in
+     * _consumeActiveCombatantHold. The segment parameter is kept for the strict-RAW
+     * null zone should it return as a setting.
      * @param {number|null} segment - Segment that just began, or null when a full Turn elapsed
      * @private
      */
