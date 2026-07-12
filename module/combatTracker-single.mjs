@@ -748,7 +748,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                </div>`
             : "";
 
-        const content = `<fieldset>
+        const content = `<fieldset class="hero-hold-dialog">
             <legend>Hold until</legend>
             ${positionOption}
             <label><input type="radio" name="hold-mode" value="event" ${positionOption ? "" : "checked"}> An event</label>

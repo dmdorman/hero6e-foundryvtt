@@ -217,6 +217,12 @@ $combat-tracker-hero-dispositions: (
     display: none;
 }
 
+/* Hold declaration dialog: keep the select's dropdown arrow clear of the text */
+.hero-hold-dialog select[name="hold-segment"] {
+    min-width: 11em;
+    padding-right: 1.75em;
+}
+
 /* Injected "Use Held Action" controls */
 .combat-tracker li.combatant .hero-use-held {
     color: #ecc94b;
