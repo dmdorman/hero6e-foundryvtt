@@ -1006,6 +1006,14 @@ export class HeroSystem6eCombatSingle extends Combat {
             if ((combatant.lrElevatedAbs ?? -1) >= targetAbs) {
                 update[`flags.${game.system.id}.lrElevatedAbs`] = null;
             }
+            // A SPD change detected at or after the rewind target is un-detected: the
+            // baseline reverts so the replay re-fires the lockout from its own position.
+            // Lockouts recorded before the target stand — the change already happened.
+            const lockout = combatant.getFlag(game.system.id, "spdLockout");
+            if (lockout && (lockout.lockoutStartAbs ?? Infinity) >= targetAbs) {
+                update[`flags.${game.system.id}.spdLockout`] = null;
+                update[`flags.${game.system.id}.knownSpd`] = lockout.previousSpd;
+            }
             if (Object.keys(update).length > 0) resets.push({ _id: combatant.id, ...update });
         }
         return resets;
@@ -1029,6 +1037,11 @@ export class HeroSystem6eCombatSingle extends Combat {
                 [`flags.${game.system.id}.heldSlotTakenAbs`]: null,
                 [`flags.${game.system.id}.spentHoldPosition`]: null,
                 [`flags.${game.system.id}.lrElevatedAbs`]: null,
+                // A fresh combat re-seeds the SPD baseline; out-of-combat changes are
+                // free (6E2 17 only restricts mid-Turn changes) and stale lockouts
+                // reference the previous run's absolute positions
+                [`flags.${game.system.id}.spdLockout`]: null,
+                [`flags.${game.system.id}.knownSpd`]: null,
             });
         });
 
@@ -1332,7 +1345,12 @@ export class HeroSystem6eCombatSingle extends Combat {
                     const newNext = HeroSystem6eCombatantSingle.nextPhaseAbs(spd, currentAbs);
                     const lockoutEndAbs = Math.max(oldNext, newNext);
                     if (lockoutEndAbs > currentAbs) {
-                        update[`flags.${game.system.id}.spdLockout`] = { previousSpd: knownSpd, lockoutEndAbs };
+                        update[`flags.${game.system.id}.spdLockout`] = {
+                            previousSpd: knownSpd,
+                            lockoutEndAbs,
+                            // Rewinds behind this position un-detect the change entirely
+                            lockoutStartAbs: currentAbs,
+                        };
                         await this._combatCard(
                             combatant,
                             `${combatant.actor.name}'s SPD changed from ${knownSpd} to ${spd}. They cannot act until both SPDs would have had a Phase (Segment ${((lockoutEndAbs - 1) % 12) + 1}).`,
