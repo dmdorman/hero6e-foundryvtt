@@ -819,12 +819,35 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
      * @protected
      */
     async _onUseHeldAction(combatantId) {
-        const combatant = this.viewed?.combatants.get(combatantId);
+        const combat = this.viewed;
+        const combatant = combat?.combatants.get(combatantId);
         const actor = combatant?.actor;
         const effect = actor?.effects.find((e) => e.statuses.has("holding"));
         if (!combatant?.isOwner || !effect) return;
+        const hold = combatant.heldAction;
         await effect.delete();
+        await this._recordSpentAction(combatant, hold);
         await this._holdCard(combatant, `${actor.name} uses their Held Action.`);
+    }
+
+    /**
+     * Using (or aborting with) a Held Action consumes this segment's action: it takes
+     * the place of the Phase — a character cannot have two Phases in one Segment
+     * (6E2 20; 5ER 360). Records the acted position so turn flow skips the natural
+     * Phase and the tracker keeps the row where they acted.
+     * @param {Combatant} combatant
+     * @param {{mode: string, segmentAbs?: number, dex?: number}|null} hold - The hold as it was before deletion
+     * @private
+     */
+    async _recordSpentAction(combatant, hold) {
+        const combat = this.viewed;
+        if (!combat?.started || !hold) return;
+        const currentAbs = combat.round * 12 + combat.segment;
+        const atOwnSlot = hold.mode === "position" && hold.segmentAbs === currentAbs;
+        const replacesNaturalPhase = hold.mode !== "position" && combatant.hasPhaseInSegment(combat.segment);
+        if (!atOwnSlot && !replacesNaturalPhase) return;
+        const dex = atOwnSlot ? hold.dex : Math.floor(combat.getInitiativePriority(combatant, combat.segment));
+        await combatant.setFlag(game.system.id, "spentHoldPosition", { segmentAbs: currentAbs, dex });
     }
 
     /**
@@ -867,7 +890,9 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             });
             if (useHeld === null) return;
             if (useHeld) {
+                const hold = combatant.heldAction;
                 await holdingEffect.delete();
+                await this._recordSpentAction(combatant, hold);
                 await this._holdCard(
                     combatant,
                     `${actor.name} aborts using their Held Action — no further Phase is lost.`,

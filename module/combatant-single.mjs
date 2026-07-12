@@ -107,6 +107,21 @@ export class HeroSystem6eCombatantSingle extends Combatant {
     }
 
     /**
+     * Whether this combatant occupies an initiative position in the segment: a spent
+     * hold's acted position, a positional hold's declared slot, or a natural Phase.
+     * A positional hold commits the banked Phase to its slot, so natural Phases don't
+     * count while one is pending.
+     * @param {number} segmentNumber - 1-12
+     * @returns {boolean}
+     */
+    occupiesSegment(segmentNumber) {
+        if (this.spentHoldInSegment(segmentNumber)) return true;
+        const hold = this.heldAction;
+        if (hold?.mode === "position") return this.holdsPositionInSegment(segmentNumber);
+        return this.hasPhaseInSegment(segmentNumber);
+    }
+
+    /**
      * Out of the fight for turn-skipping purposes: the tracker's defeated toggle, dead,
      * or knocked out. Deliberately NOT an isDefeated override — core computes the skull
      * toggle's next state from isDefeated, so broadening that getter inverts the toggle
