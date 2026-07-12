@@ -737,6 +737,138 @@ export function registerCombatTests(quench) {
                     }
                 });
 
+                it("Should replace the natural Phase when a Held Action is used in its segment", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench Replace Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const holder = await Actor.create({
+                        name: "_Quench Replace Holder",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, holder);
+
+                    // Generic hold banked before combat; the holder also has a natural
+                    // Phase in Segment 12
+                    await holder.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Holding An Action", img: "icons/svg/clockwork.svg", statuses: ["holding"] },
+                    ]);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: holder.id }]);
+                    await combat.startCombat();
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+
+                    // Using the hold out of turn consumes this segment's action: it takes
+                    // the place of the Phase (6E2 20; 5ER 360)
+                    const holderCombatant = combat.combatants.find((c) => c.actorId === holder.id);
+                    await ui.combat._onUseHeldAction(holderCombatant.id);
+
+                    expect(holder.statuses.has("holding"), "hold consumed by use").to.be.false;
+                    expect(holderCombatant.spentHoldPosition?.segmentAbs, "acted position recorded").to.equal(24);
+                    expect(Math.floor(combat.getInitiativePriority(holderCombatant, 12))).to.equal(20);
+                    expect(combat._takesTurnInSegment(holderCombatant, 12), "no second action this segment").to.be
+                        .false;
+
+                    // Advancing skips the holder's replaced natural Phase entirely
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                });
+
+                it("Should consume the abort's declared next Phase, not one already used", async function () {
+                    const bruiser = await Actor.create({
+                        name: "_Quench Abort Bruiser",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const dodger = await Actor.create({
+                        name: "_Quench Abort Dodger",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(bruiser, dodger);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [
+                        { actorId: bruiser.id },
+                        { actorId: dodger.id },
+                    ]);
+                    await combat.startCombat();
+
+                    // March to Segment 6 and let the dodger act on their Phase
+                    await combat.nextTurn(); // dodger, Segment 12
+                    await combat.nextTurn(); // bruiser, Segment 6
+                    await combat.nextTurn(); // dodger, Segment 6
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId).to.equal(dodger.id);
+
+                    // Aborting after acting must spend the NEXT Phase (Segment 12), not
+                    // the Segment 6 Phase already used (6E2 22)
+                    const dodgerCombatant = combat.combatants.find((c) => c.actorId === dodger.id);
+                    await ui.combat._onToggleAbort(dodgerCombatant.id);
+                    expect(dodger.statuses.has("aborted")).to.be.true;
+                    expect(dodgerCombatant.abortSpentAbs, "abort consumes the Segment 12 Phase").to.equal(36);
+
+                    // Segment 12: the spent Phase is skipped and the abort persists there
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "aborted Phase skipped").to.equal(bruiser.id);
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+
+                    // Once the spent Phase's segment has passed, the status clears
+                    const cleared = await waitUntil(() => !dodger.statuses.has("aborted"));
+                    expect(cleared, "aborted status cleared after the spent Phase passed").to.be.true;
+                });
+
+                it("Should mark knocked out combatants defeated via the tracker toggle", async function () {
+                    const sleeper = await Actor.create({
+                        name: "_Quench KO Sleeper",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 10, max: 10 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(sleeper);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: sleeper.id }]);
+
+                    await sleeper.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Knocked Out", img: "icons/svg/unconscious.svg", statuses: ["knockedOut"] },
+                    ]);
+
+                    const combatant = combat.combatants.find((c) => c.actorId === sleeper.id);
+                    expect(combatant.isDefeated, "KO alone is not core-defeated").to.be.false;
+                    expect(combatant.isOutOfCombat, "KO skips turns").to.be.true;
+
+                    // The skull toggle must still be able to MARK a KO'd combatant defeated
+                    await ui.combat._onToggleDefeatedStatus(combatant);
+                    expect(combatant.defeated, "defeated flag set").to.be.true;
+                    expect(combatant.isDefeated).to.be.true;
+
+                    await ui.combat._onToggleDefeatedStatus(combatant);
+                    expect(combatant.defeated, "defeated flag cleared").to.be.false;
+                });
+
                 it("Should apply LIGHTNING_REFLEXES_ALL to initiative order", async function () {
                     const { HeroSystem6eItem } = await import("../item/item.mjs");
 
