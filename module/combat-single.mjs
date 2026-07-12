@@ -253,8 +253,9 @@ export class HeroSystem6eCombatSingle extends Combat {
             });
         });
 
+        const startInitiativeById = new Map(combatantUpdates.map((u) => [u._id, u]));
         const startTurns = this.combatants.map((c) => {
-            const match = combatantUpdates.find((u) => u._id === c.id);
+            const match = startInitiativeById.get(c.id);
             const clone = Object.create(c);
             if (match) {
                 Object.defineProperty(clone, "initiative", {
@@ -331,13 +332,14 @@ export class HeroSystem6eCombatSingle extends Combat {
 
             // A mid-segment hold changes live priorities, and any embedded combatant write
             // re-sorts the turns array — so the turn index must address the RE-SORTED
-            // order, and every client must actually re-sort. Refreshing all initiatives
-            // forces the re-sort deterministically; the index comes from a prediction
-            // using the same comparator setupTurns uses.
-            const inlineCombatantUpdates = this.combatants.map((c) => ({
-                _id: c.id,
-                initiative: this.getInitiativePriority(c, activeSegment),
-            }));
+            // order. Only changed initiatives persist: unchanged writes are wasted
+            // round-trips, and any single combatant write re-sorts every client.
+            let inlineCombatantUpdates = this.combatants
+                .map((c) => ({
+                    _id: c.id,
+                    initiative: this.getInitiativePriority(c, activeSegment),
+                }))
+                .filter((u) => this.combatants.get(u._id)?.initiative !== u.initiative);
 
             // Landing on a positional holder's declared slot marks it taken in the
             // same update, so ending that turn consumes the hold race-free
@@ -345,6 +347,17 @@ export class HeroSystem6eCombatSingle extends Combat {
             if (targetHold?.mode === "position" && targetHold.segmentAbs === currentAbsNow) {
                 const targetUpdate = inlineCombatantUpdates.find((u) => u._id === target.id);
                 if (targetUpdate) targetUpdate[`flags.${game.system.id}.heldSlotTakenAbs`] = currentAbsNow;
+                else
+                    inlineCombatantUpdates.push({
+                        _id: target.id,
+                        [`flags.${game.system.id}.heldSlotTakenAbs`]: currentAbsNow,
+                    });
+            }
+
+            // Players may only write combatants they own; the GM-side _onUpdate
+            // backfills any slot-taken marker dropped here
+            if (!game.user.isGM) {
+                inlineCombatantUpdates = inlineCombatantUpdates.filter((u) => this.combatants.get(u._id)?.isOwner);
             }
 
             let predictedTurns = [...allCombatants].sort((a, b) => this._sortCombatants(a, b, this));
@@ -463,8 +476,18 @@ export class HeroSystem6eCombatSingle extends Combat {
             if (targetUpdate) targetUpdate[`flags.${game.system.id}.heldSlotTakenAbs`] = incomingHold.segmentAbs;
         }
 
+        // Persist only changed initiatives, and for players only owned combatants;
+        // the GM-side _onUpdate backfills any dropped slot-taken marker
+        let persistedCombatantUpdates = combatantUpdates.filter(
+            (u) => this.combatants.get(u._id)?.initiative !== u.initiative || Object.keys(u).length > 2,
+        );
+        if (!game.user.isGM) {
+            persistedCombatantUpdates = persistedCombatantUpdates.filter((u) => this.combatants.get(u._id)?.isOwner);
+        }
+
+        const initiativeById = new Map(combatantUpdates.map((u) => [u._id, u]));
         const recompiledTurns = this.combatants.map((c) => {
-            const match = combatantUpdates.find((u) => u._id === c.id);
+            const match = initiativeById.get(c.id);
             const clone = Object.create(c);
             if (match) {
                 Object.defineProperty(clone, "initiative", {
@@ -507,11 +530,10 @@ export class HeroSystem6eCombatSingle extends Combat {
             this._turns = null;
         }
 
-        // ✅ FIXED SIGNATURE: Injected "combatants" collection name parameter
         const result = await HeroCompatibility.updateEmbedded(
             this,
             "combatants",
-            combatantUpdates,
+            persistedCombatantUpdates,
             updateData,
             updateOptions,
         );
@@ -627,8 +649,9 @@ export class HeroSystem6eCombatSingle extends Combat {
             else combatantUpdates.push(reset);
         }
 
+        const initiativeById = new Map(combatantUpdates.map((u) => [u._id, u]));
         const recompiledTurns = this.combatants.map((c) => {
-            const match = combatantUpdates.find((u) => u._id === c.id);
+            const match = initiativeById.get(c.id);
             const clone = Object.create(c);
             if (match) {
                 Object.defineProperty(clone, "initiative", {
@@ -1011,6 +1034,20 @@ export class HeroSystem6eCombatSingle extends Combat {
                         this._spendHold(previousCombatant).catch((e) => console.error(e));
                     }
                 }
+            }
+        }
+
+        // Backfill the slot-taken marker when the update that landed here couldn't
+        // write it (player-initiated advances only persist combatants the player owns)
+        const activeCombatant = this.combatant;
+        const activeHold = activeCombatant?.heldAction;
+        if (activeHold?.mode === "position") {
+            const nowAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
+            if (
+                activeHold.segmentAbs === nowAbs &&
+                activeCombatant.getFlag(game.system.id, "heldSlotTakenAbs") !== nowAbs
+            ) {
+                activeCombatant.setFlag(game.system.id, "heldSlotTakenAbs", nowAbs).catch((e) => console.error(e));
             }
         }
     }
