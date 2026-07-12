@@ -459,6 +459,11 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                     } else if (!isPast && combatant.spentHoldAtAbs(abs)) {
                         row.css = `${row.css} is-holding-action`.trim();
                         row.name = `${row.name} (acted)`;
+                    } else if (!isPast && combatant.abortSpentAbs === abs) {
+                        // The Phase an abort consumed stays visible but greyed, so the
+                        // table can see where the cost lands (6E2 22)
+                        row.css = `${row.css} hero-aborted-row`.trim();
+                        row.name = `${row.name} (aborted)`;
                     }
 
                     row.css = `${row.css} ${stateCss}`.trim();
@@ -653,7 +658,15 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 icon: "fa-solid fa-hourglass-half",
                 visible: (li) => {
                     const combatant = getCombatant(li);
-                    return !!combatant?.isOwner && !!this.viewed?.started && !combatant.actor?.statuses.has("holding");
+                    // Holds are declared on the character's own Phase (6E2 20); declaring
+                    // out of turn would let the banked Phase land earlier than it should.
+                    // The GM is exempt for NPC bookkeeping.
+                    return (
+                        !!combatant?.isOwner &&
+                        !!this.viewed?.started &&
+                        !combatant.actor?.statuses.has("holding") &&
+                        (game.user.isGM || this.viewed?.combatant?.id === combatant.id)
+                    );
                 },
                 onClick: (event, li) => this._onDeclareHoldAction(li.dataset.combatantId),
             },
@@ -676,10 +689,22 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 onClick: (event, li) => this._onReleaseHeldAction(li.dataset.combatantId),
             },
             {
-                label: "Toggle Abort",
+                label: "Abort…",
                 icon: "fa-solid fa-shield-halved",
-                visible: (li) => !!getCombatant(li)?.isOwner && !!this.viewed?.started,
-                onClick: (event, li) => this._onToggleAbort(li.dataset.combatantId),
+                visible: (li) => {
+                    const combatant = getCombatant(li);
+                    return !!combatant?.isOwner && !!this.viewed?.started && !combatant.actor?.statuses.has("aborted");
+                },
+                onClick: (event, li) => this._onAbortAction(li.dataset.combatantId),
+            },
+            {
+                label: "Cancel Abort",
+                icon: "fa-solid fa-rotate-left",
+                visible: (li) => {
+                    const combatant = getCombatant(li);
+                    return !!combatant?.isOwner && !!combatant.actor?.statuses.has("aborted");
+                },
+                onClick: (event, li) => this._onCancelAbort(li.dataset.combatantId),
             },
         );
 
@@ -717,6 +742,12 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const actor = combatant?.actor;
         if (!combat?.started || !combatant?.isOwner || !actor) return;
         if (actor.statuses.has("holding")) return;
+        const blocked = this._blockedActionReason(combatant);
+        if (blocked) return void ui.notifications.warn(blocked);
+        // Holds are declared on the character's own Phase (6E2 20); the GM may backfill
+        if (!game.user.isGM && combat.combatant?.id !== combatant.id) {
+            return void ui.notifications.warn(`Held Actions are declared on the character's own Phase.`);
+        }
 
         const currentAbs = combat.round * 12 + combat.segment;
         const characteristicKey = actor.system?.initiativeCharacteristic ?? "dex";
@@ -834,6 +865,8 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const actor = combatant?.actor;
         const effect = actor?.effects.find((e) => e.statuses.has("holding"));
         if (!combatant?.isOwner || !effect) return;
+        const blocked = this._blockedActionReason(combatant);
+        if (blocked) return void ui.notifications.warn(blocked);
         const hold = combatant.heldAction;
         await effect.delete();
         await this._recordSpentAction(combatant, hold);
@@ -879,59 +912,263 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
     }
 
     /**
-     * Toggles the aborted status. Aborting while holding may spend the held Phase
-     * instead of the next one, losing no further Phases (6E2 22; 5ER 361).
-     * @param {string} combatantId
+     * Why the combatant cannot take a voluntary action right now, or null when
+     * unblocked. A Stunned character can take no Action at all — not even Aborting
+     * (6E2 105); an aborted character cannot act again until the Phase they aborted
+     * has passed (6E2 22; 5ER 361).
+     * @param {Combatant} combatant
+     * @returns {string|null}
+     * @private
+     */
+    _blockedActionReason(combatant) {
+        const combat = this.viewed;
+        const actor = combatant?.actor;
+        if (!actor) return null;
+        if (actor.statuses.has("stunned")) {
+            return `${actor.name} is Stunned and can take no Actions — not even Aborting.`;
+        }
+        if (combat?.started && actor.statuses.has("aborted")) {
+            const currentAbs = combat.round * 12 + combat.segment;
+            if (combatant.abortAppliesAtAbs?.(currentAbs)) {
+                const spentAbs = combatant.abortSpentAbs;
+                const until =
+                    spentAbs === null
+                        ? "their aborted Phase has passed"
+                        : `Segment ${HeroSystem6eCombatantSingle.segmentOf(spentAbs)} has passed`;
+                return `${actor.name} has Aborted and cannot act again until ${until}.`;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Why a fresh abort is illegal right now, or null. Beyond the shared action
+     * guards, a character who already used their Phase this Segment cannot Abort
+     * until the next Segment (6E2 22; 5ER 361).
+     * @param {Combatant} combatant
+     * @returns {string|null}
+     * @private
+     */
+    _blockedAbortReason(combatant) {
+        const shared = this._blockedActionReason(combatant);
+        if (shared) return shared;
+        const combat = this.viewed;
+        if (!combat?.started) return null;
+        const turnIndex = combat.turns?.findIndex((t) => t.id === combatant.id) ?? -1;
+        const actedThisSegment =
+            combatant.spentHoldInSegment(combat.segment) ||
+            (combatant.occupiesSegment?.(combat.segment) && turnIndex !== -1 && turnIndex < (combat.turn ?? 0));
+        if (actedThisSegment) {
+            return `${combatant.actor.name} has already acted this Segment and cannot Abort until the next Segment.`;
+        }
+        return null;
+    }
+
+    /**
+     * The Phases a fresh abort would consume from the current combat position: the
+     * current Phase when the pointer is on the combatant (their DEX came up without
+     * acting — e.g. a Held Action interrupt), otherwise the next full Phase; an
+     * Extra Phase power consumes the one after as well (6E2 22).
+     * @param {Combatant} combatant
+     * @param {{extraPhase?: boolean}} [options]
+     * @returns {{isActive: boolean, firstAbs: number, spentAbs: number, nextActAbs: number}}
+     * @private
+     */
+    _abortCost(combatant, { extraPhase = false } = {}) {
+        const combat = this.viewed;
+        const currentAbs = combat.round * 12 + combat.segment;
+        const isActive = combat.combatant?.id === combatant.id;
+        const spd = combatant.combatSpd;
+        const firstAbs = isActive ? currentAbs : HeroSystem6eCombatantSingle.nextPhaseAbs(spd, currentAbs);
+        const spentAbs = extraPhase ? HeroSystem6eCombatantSingle.nextPhaseAbs(spd, firstAbs + 1) : firstAbs;
+        const nextActAbs = HeroSystem6eCombatantSingle.nextPhaseAbs(spd, spentAbs + 1);
+        return { isActive, firstAbs, spentAbs, nextActAbs };
+    }
+
+    /**
+     * Applies an abort to a defensive Action (6E2 21-22; 5ER 361). A held Phase is
+     * spent instead when the combatant is holding — no further Phase is lost;
+     * otherwise the consumed Phase is recorded and the aborted status enforces the
+     * lockout until it passes. When the abort replaces the current Phase, the turn
+     * advances.
+     * @param {Combatant} combatant
+     * @param {object} [options]
+     * @param {string} [options.toAction] - Defensive action label for the chat card
+     * @param {string} [options.statusId] - Maneuver status to apply alongside (e.g. dodge, block)
+     * @param {boolean} [options.extraPhase] - The power takes an Extra Phase: two Phases are consumed
+     * @param {boolean} [options.force] - Skip the legality guards (GM override)
+     * @returns {Promise<boolean>} Whether the abort was applied
      * @protected
      */
-    async _onToggleAbort(combatantId) {
-        const combatant = this.viewed?.combatants.get(combatantId);
+    async _declareAbort(
+        combatant,
+        { toAction = "a defensive Action", statusId = null, extraPhase = false, force = false } = {},
+    ) {
+        const combat = this.viewed;
         const actor = combatant?.actor;
-        if (!combatant?.isOwner || !actor) return;
+        if (!combat?.started || !combatant?.isOwner || !actor) return false;
+        if (actor.statuses.has("aborted")) return false;
 
-        if (actor.statuses.has("aborted")) {
-            return actor.toggleStatusEffect("aborted", { active: false });
+        if (!force) {
+            const reason = this._blockedAbortReason(combatant);
+            if (reason) {
+                ui.notifications.warn(reason);
+                return false;
+            }
         }
 
+        if (statusId) await actor.toggleStatusEffect(statusId, { active: true });
+
+        // A held Phase absorbs the abort — no further Phases are lost (6E2 22; 5ER 361)
         const holdingEffect = actor.effects.find((e) => e.statuses.has("holding"));
         if (holdingEffect) {
-            const useHeld = await foundry.applications.api.DialogV2.confirm({
-                window: { title: `Abort — ${actor.name}` },
-                content: `<p>Use the held Phase to abort? No further Phase is lost.</p>`,
-                yes: { label: "Use held Phase" },
-                no: { label: "Use next Phase" },
-                rejectClose: false,
-            });
-            if (useHeld === null) return;
-            if (useHeld) {
-                const hold = combatant.heldAction;
-                await holdingEffect.delete();
-                await this._recordSpentAction(combatant, hold);
-                await this._holdCard(
-                    combatant,
-                    `${actor.name} aborts using their Held Action — no further Phase is lost.`,
-                );
-                return;
-            }
+            const hold = combatant.heldAction;
+            await holdingEffect.delete();
+            await this._recordSpentAction(combatant, hold);
+            await this._holdCard(
+                combatant,
+                `${actor.name} Aborts to ${toAction} using their Held Action — no further Phase is lost.`,
+            );
+            return true;
         }
 
         await actor.toggleStatusEffect("aborted", { active: true });
 
-        // Record which Phase the abort consumes (6E2 22: the NEXT full Phase — a phase
-        // already used this segment cannot be the one spent). Approximates "already
-        // acted" by the combatant's position relative to the turn pointer.
-        const combat = this.viewed;
-        if (combat?.started && combatant.combatSpd > 0) {
-            const currentAbs = combat.round * 12 + combat.segment;
-            const turnIndex = combat.turns?.findIndex((t) => t.id === combatant.id) ?? -1;
-            const alreadyActed =
-                combatant.hasPhaseInSegment(combat.segment) && turnIndex !== -1 && turnIndex <= (combat.turn ?? -1);
-            const spentAbs = HeroSystem6eCombatantSingle.nextPhaseAbs(
-                combatant.combatSpd,
-                alreadyActed ? currentAbs + 1 : currentAbs,
-            );
-            const abortEffect = actor.effects.find((e) => e.statuses.has("aborted"));
-            if (abortEffect) await abortEffect.setFlag(game.system.id, "abort", { spentAbs });
+        // SPD 0 has no Phase to consume; leave the bare status for the GM to adjudicate
+        if (combatant.combatSpd <= 0) {
+            await this._holdCard(combatant, `${actor.name} Aborts to ${toAction}.`);
+            return true;
         }
+
+        const { isActive, firstAbs, spentAbs, nextActAbs } = this._abortCost(combatant, { extraPhase });
+        const abortEffect = actor.effects.find((e) => e.statuses.has("aborted"));
+        if (abortEffect) await abortEffect.setFlag(game.system.id, "abort", { spentAbs });
+
+        const { segmentOf } = HeroSystem6eCombatantSingle;
+        const costText = extraPhase
+            ? `their Phases in Segments ${segmentOf(firstAbs)} and ${segmentOf(spentAbs)} (Extra Phase)`
+            : isActive
+              ? "their current Phase"
+              : `their Phase in Segment ${segmentOf(spentAbs)}`;
+        await this._holdCard(
+            combatant,
+            `${actor.name} Aborts to ${toAction} — this consumes ${costText}; they cannot act again until Segment ${segmentOf(nextActAbs)}.`,
+        );
+
+        if (isActive) {
+            try {
+                await combat.nextTurn();
+            } catch (e) {
+                console.warn(`Unable to advance the turn after an abort`, e);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Opens the abort declaration dialog: what the character aborts to (flavor for
+     * the chat card; Dodge and Block also apply their maneuver status) and, for the
+     * GM, whether the power takes an Extra Phase. Blocked aborts warn players; the
+     * GM may override.
+     * @param {string} combatantId
+     * @protected
+     */
+    async _onAbortAction(combatantId) {
+        const combat = this.viewed;
+        const combatant = combat?.combatants.get(combatantId);
+        const actor = combatant?.actor;
+        if (!combat?.started || !combatant?.isOwner || !actor) return;
+        if (actor.statuses.has("aborted")) return;
+
+        const reason = this._blockedAbortReason(combatant);
+        if (reason && !game.user.isGM) return void ui.notifications.warn(reason);
+        if (reason) {
+            const proceed = await foundry.applications.api.DialogV2.confirm({
+                window: { title: `Abort — ${actor.name}` },
+                content: `<p>${reason}</p><p>Abort anyway?</p>`,
+                rejectClose: false,
+            });
+            if (!proceed) return;
+        }
+
+        const { segmentOf, roundOf } = HeroSystem6eCombatantSingle;
+        const holding = actor.statuses.has("holding");
+        let costLine;
+        if (holding) {
+            costLine = "The Held Action will be spent — no further Phase is lost.";
+        } else if (combatant.combatSpd <= 0) {
+            costLine = "No Phases on the Speed Chart — the GM adjudicates the cost.";
+        } else {
+            const { isActive, spentAbs, nextActAbs } = this._abortCost(combatant);
+            const roundLabel = roundOf(spentAbs) === combat.round ? "" : ` (Turn ${roundOf(spentAbs)})`;
+            costLine = isActive
+                ? `This consumes the current Phase and ends the turn; ${actor.name} cannot act again until Segment ${segmentOf(nextActAbs)}.`
+                : `This consumes the Phase in Segment ${segmentOf(spentAbs)}${roundLabel}; ${actor.name} cannot act again until Segment ${segmentOf(nextActAbs)}.`;
+        }
+
+        const extraPhaseOption =
+            game.user.isGM && !holding && combatant.combatSpd > 0
+                ? `<label><input type="checkbox" name="abort-extra-phase"> Power takes an Extra Phase (consumes two Phases)</label>`
+                : "";
+
+        const content = `<fieldset class="hero-hold-dialog">
+            <legend>Abort to</legend>
+            <div class="form-group">
+                <select name="abort-action">
+                    <option value="dodge">Dodge</option>
+                    <option value="block">Block</option>
+                    <option value="dive">Dive For Cover</option>
+                    <option value="other">Other defensive Action</option>
+                </select>
+                <input type="text" name="abort-detail" placeholder="details, e.g. activate Force Field">
+            </div>
+            ${extraPhaseOption}
+            <p class="hint">${costLine}</p>
+        </fieldset>`;
+
+        const result = await foundry.applications.api.DialogV2.wait({
+            window: { title: `Abort — ${actor.name}` },
+            content,
+            buttons: [
+                {
+                    action: "abort",
+                    label: "Abort",
+                    default: true,
+                    callback: (event, button) => {
+                        const form = button.form.elements;
+                        return {
+                            action: form["abort-action"].value,
+                            detail: form["abort-detail"]?.value.trim() ?? "",
+                            extraPhase: !!form["abort-extra-phase"]?.checked,
+                        };
+                    },
+                },
+                { action: "cancel", label: "Cancel" },
+            ],
+            rejectClose: false,
+        });
+        if (!result || result === "cancel") return;
+
+        const labels = { dodge: "Dodge", block: "Block", dive: "Dive For Cover", other: "a defensive Action" };
+        const statusIds = { dodge: "dodge", block: "block" };
+        // Guards already ran above (with the GM override prompt)
+        await this._declareAbort(combatant, {
+            toAction: result.detail || labels[result.action] || "a defensive Action",
+            statusId: statusIds[result.action] ?? null,
+            extraPhase: result.extraPhase,
+            force: true,
+        });
+    }
+
+    /**
+     * Removes the aborted status — the correction tool for a mis-declared abort.
+     * @param {string} combatantId
+     * @protected
+     */
+    async _onCancelAbort(combatantId) {
+        const combatant = this.viewed?.combatants.get(combatantId);
+        const actor = combatant?.actor;
+        if (!combatant?.isOwner || !actor?.statuses.has("aborted")) return;
+        await actor.toggleStatusEffect("aborted", { active: false });
     }
 }

@@ -220,8 +220,20 @@ $combat-tracker-hero-dispositions: (
     display: none;
 }
 
-/* Hold declaration dialog: keep the select's dropdown arrow clear of the text */
-.hero-hold-dialog select[name="hold-segment"] {
+/* 2i. ABORTED: THE CONSUMED PHASE ROW STAYS VISIBLE, GREYED OUT */
+.combat-tracker li.combatant.hero-aborted-row {
+    opacity: 0.55;
+    filter: grayscale(70%);
+}
+
+.combat-tracker li.combatant.hero-aborted-row .name {
+    font-style: italic;
+    text-decoration: line-through;
+}
+
+/* Hold/abort declaration dialogs: keep the select's dropdown arrow clear of the text */
+.hero-hold-dialog select[name="hold-segment"],
+.hero-hold-dialog select[name="abort-action"] {
     min-width: 11em;
     padding-right: 1.75em;
 }
