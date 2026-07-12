@@ -47,15 +47,46 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 }
             }
 
-            // Inject the ⚡ Use Held Action control on held rows for their owners
+            // Gather panel member rows into a pinned container beneath the header; the
+            // container caps at 20vh and scrolls when more holders than that pile up
+            const panelHeaderRow = element.querySelector(".combatant.hero-held-panel-header");
+            const panelMemberRows = element.querySelectorAll("li.combatant.hero-held-panel-member");
+            if (panelHeaderRow && panelMemberRows.length > 0 && !element.querySelector(".hero-held-scroll-wrapper")) {
+                const wrapper = document.createElement("li");
+                wrapper.className = "hero-held-scroll-wrapper";
+                const list = document.createElement("ol");
+                list.className = "hero-held-scroll plain";
+                wrapper.appendChild(list);
+                panelHeaderRow.after(wrapper);
+                panelMemberRows.forEach((li) => list.appendChild(li));
+            }
+
+            // Compact hold controls: panel rows show "⚡ <condition>" (the use control for
+            // owners, a passive label otherwise); positional timeline rows get a plain ⚡
             element.querySelectorAll("li.combatant.hero-held-row").forEach((li) => {
                 const combatant = app.viewed.combatants.get(li.dataset.combatantId);
-                if (!combatant?.isOwner || !combatant.actor?.statuses.has("holding")) return;
+                if (!combatant?.actor?.statuses.has("holding")) return;
                 const controls = li.querySelector(".combatant-controls");
-                if (!controls || controls.querySelector(".hero-use-held")) return;
+                if (!controls || controls.querySelector(".hero-use-held, .hero-held-condition")) return;
+
+                const isPanelRow = li.classList.contains("hero-held-panel-member");
+                const hold = combatant.heldAction;
+                const conditionLabel = hold?.mode === "event" ? hold.trigger || "Event" : "Generic";
+
+                if (!combatant.isOwner) {
+                    if (isPanelRow) {
+                        const label = document.createElement("span");
+                        label.className = "hero-held-condition";
+                        const icon = document.createElement("i");
+                        icon.className = "fa-solid fa-hourglass-half";
+                        label.append(icon, ` ${conditionLabel}`);
+                        controls.prepend(label);
+                    }
+                    return;
+                }
+
                 const button = document.createElement("button");
                 button.type = "button";
-                button.className = "inline-control combatant-control icon fa-solid fa-bolt hero-use-held";
                 button.setAttribute("aria-label", "Use Held Action");
                 button.dataset.tooltip = "Use Held Action";
                 button.addEventListener("click", (clickEvent) => {
@@ -63,18 +94,18 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                     clickEvent.stopPropagation();
                     app._onUseHeldAction(li.dataset.combatantId);
                 });
+                if (isPanelRow) {
+                    button.className = "inline-control combatant-control hero-use-held hero-use-held-compact";
+                    const icon = document.createElement("i");
+                    icon.className = "fa-solid fa-bolt";
+                    const label = document.createElement("span");
+                    label.textContent = conditionLabel;
+                    button.append(icon, label);
+                } else {
+                    button.className = "inline-control combatant-control icon fa-solid fa-bolt hero-use-held";
+                }
                 controls.prepend(button);
             });
-
-            // Pin the Held Actions panel to the top of the scrolling list; member rows
-            // stack beneath the header with cumulative offsets
-            let stickyTop = 0;
-            element
-                .querySelectorAll(".combatant.hero-held-panel-header, li.combatant.hero-held-panel-member")
-                .forEach((li) => {
-                    li.style.top = `${stickyTop}px`;
-                    stickyTop += li.offsetHeight;
-                });
         };
 
         Hooks.on("renderCombatTracker", onRenderTracker);
@@ -273,7 +304,6 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
             if (panelExpanded) {
                 for (const combatant of panelHolders) {
-                    const hold = combatant.heldAction;
                     const base = masterById.get(combatant.id);
                     const row = base
                         ? { ...base }
@@ -286,8 +316,6 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                               defeated: combatant.isDefeated,
                               css: "",
                           };
-                    const condition = hold.mode === "event" && hold.trigger ? `until: ${hold.trigger}` : "generic";
-                    row.name = `⏳ ${row.name} — ${condition}`;
                     row.initiative = null;
                     row.hasRolled = true;
                     row.active = false;
