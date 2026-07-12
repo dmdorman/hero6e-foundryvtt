@@ -639,9 +639,12 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const getCombatant = (li) => this.viewed?.combatants.get(li.dataset?.combatantId) ?? null;
 
         for (const option of options) {
-            const visible = option.visible;
-            option.visible = (li) =>
-                !!getCombatant(li) && (typeof visible === "function" ? visible.call(this, li) : true);
+            const visible = option.visible ?? option.condition;
+            const guarded = (li) =>
+                !!getCombatant(li) && (typeof visible === "function" ? visible.call(this, li) : (visible ?? true));
+            // V14 reads visible/onClick/label; real V13 reads condition/callback/name
+            option.visible = guarded;
+            option.condition = guarded;
         }
 
         options.push(
@@ -679,6 +682,13 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 onClick: (event, li) => this._onToggleAbort(li.dataset.combatantId),
             },
         );
+
+        // Mirror the V14 entry fields onto the V13 names so both cores render them
+        for (const option of options) {
+            option.name ??= option.label;
+            option.condition ??= option.visible;
+            option.callback ??= (li) => option.onClick?.(null, li);
+        }
         return options;
     }
 
