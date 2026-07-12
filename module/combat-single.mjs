@@ -886,7 +886,12 @@ export class HeroSystem6eCombatSingle extends Combat {
                 await this._consumeExpiredHeldActions(turnAdvance ? null : this.segment);
                 await this._clearPassedPositionalHolds();
                 await this._clearExpiredAborts(elapsedSegments);
+                await this._consumeActiveCombatantHold();
             })().catch((e) => console.error(e));
+        } else {
+            // Turn-only advance within a segment: still enforce the null zone if the
+            // pointer landed on a holder's natural Phase
+            this._consumeActiveCombatantHold().catch((e) => console.error(e));
         }
 
         const prevId = foundry.utils.getProperty(options, "previousCombatantId");
@@ -906,6 +911,30 @@ export class HeroSystem6eCombatSingle extends Combat {
                 }
             }
         }
+    }
+
+    /**
+     * Null-zone safety net: when the active combatant's natural Phase has come up
+     * while they still carry a hold, the Phase replaces the hold — regardless of
+     * which update path brought the turn here. Their own held slot is exempt.
+     * @private
+     */
+    async _consumeActiveCombatantHold() {
+        if (!this.started) return;
+        const combatant = this.combatant;
+        const actor = combatant?.actor;
+        if (!actor?.statuses.has("holding")) return;
+        if (!combatant.hasPhaseInSegment(this.segment)) return;
+        if (combatant.holdsPositionInSegment(this.segment)) return;
+
+        const holdingEffect = actor.effects.find((e) => e.statuses.has("holding"));
+        if (!holdingEffect) return;
+        await holdingEffect.delete();
+
+        await ChatMessage.create({
+            speaker: ChatMessage.getSpeaker({ actor }),
+            content: `${actor.name}'s Held Action was consumed by their natural Phase in Segment ${this.segment}.`,
+        });
     }
 
     /**
