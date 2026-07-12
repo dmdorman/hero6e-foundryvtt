@@ -215,7 +215,7 @@ export class HeroSystem6eCombatSingle extends Combat {
     _takesTurnInSegment(combatant, segment, { ignoreAbort = false } = {}) {
         const actor = combatant?.actor;
         if (!actor) return false;
-        if ((this.settings?.skipDefeated ?? false) && combatant.isDefeated) return false;
+        if ((this.settings?.skipDefeated ?? false) && combatant.isOutOfCombat) return false;
         if (!ignoreAbort && actor.statuses.has("aborted")) return false;
         return (
             (combatant.hasPhaseInSegment?.(segment) ?? false) || (combatant.holdsPositionInSegment?.(segment) ?? false)
@@ -846,11 +846,9 @@ export class HeroSystem6eCombatSingle extends Combat {
         let contentHidden = `Post-Segment 12 (Turn ${roundToRecover})<ul>`;
         let hasHidden = false;
 
-        // Knocked out characters still take Post-Segment 12 Recoveries (that is how they wake
-        // up), even though isDefeated skips their Phases in the turn order
-        const recovers = (c) =>
-            !c.isDefeated || c.hasPlayerOwner || (c.actor?.statuses.has("knockedOut") && !c.actor.statuses.has("dead"));
-        for (const combatant of this.combatants.filter(recovers)) {
+        // Knocked out characters still take Post-Segment 12 Recoveries (that is how they
+        // wake up); isDefeated here is core's (defeated toggle or dead), not isOutOfCombat
+        for (const combatant of this.combatants.filter((c) => !c.isDefeated || c.hasPlayerOwner)) {
             const actor = combatant.actor;
             if (!actor) continue;
 

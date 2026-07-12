@@ -107,12 +107,14 @@ export class HeroSystem6eCombatantSingle extends Combatant {
     }
 
     /**
-     * Defeated also covers the dead and knocked out status conditions, not just the
-     * tracker's manual defeated toggle, so "Skip Defeated" passes over them.
-     * @override
+     * Out of the fight for turn-skipping purposes: the tracker's defeated toggle, dead,
+     * or knocked out. Deliberately NOT an isDefeated override — core computes the skull
+     * toggle's next state from isDefeated, so broadening that getter inverts the toggle
+     * for KO'd combatants (skull becomes inert / strips dead from group members).
+     * @type {boolean}
      */
-    get isDefeated() {
-        return super.isDefeated || !!this.actor?.statuses.has("dead") || !!this.actor?.statuses.has("knockedOut");
+    get isOutOfCombat() {
+        return this.isDefeated || !!this.actor?.statuses.has("dead") || !!this.actor?.statuses.has("knockedOut");
     }
 
     /**
