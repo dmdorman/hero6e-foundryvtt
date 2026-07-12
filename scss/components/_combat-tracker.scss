@@ -146,13 +146,13 @@ $combat-tracker-hero-dispositions: (
     color: #ecc94b !important;
 }
 
-/* Member rows live in a pinned container built by the render hook; it caps at
-   20vh and scrolls when more holders than that pile up */
+/* Member rows live in a pinned container built by the render hook; it caps out
+   and scrolls when more holders than that pile up */
 .combat-tracker .hero-held-scroll-wrapper {
     position: sticky;
     top: 28px; /* header height (26px) + its bottom margin */
     z-index: 5;
-    max-height: 20vh;
+    max-height: max(15vh, 200px);
     overflow-y: auto;
     margin: 0;
     padding: 0;
