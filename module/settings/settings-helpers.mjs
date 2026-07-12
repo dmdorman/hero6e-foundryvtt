@@ -407,6 +407,16 @@ export default class SettingsHelpers {
             requiresReload: false,
         });
 
+        game.settings.register(module, "lrAutoElevate", {
+            name: game.i18n.localize("Settings.lrAutoElevate.Name"),
+            hint: game.i18n.localize("Settings.lrAutoElevate.Hint"),
+            scope: "world",
+            config: true,
+            type: Boolean,
+            default: false,
+            requiresReload: false,
+        });
+
         game.settings.register(module, "CombatMovementOnlyOnActorsPhase", {
             name: game.i18n.localize("Settings.CombatMovementOnlyOnActorsPhase.Name"),
             hint: game.i18n.localize("Settings.CombatMovementOnlyOnActorsPhase.Hint"),

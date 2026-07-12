@@ -447,6 +447,25 @@ Hooks.on("renderChatMessageHTML", (app, html, data) => {
     // Display action buttons
     chat.displayChatActionButtons(app, $(html), data);
     //HeroSystem6eCardHelpers.onMessageRendered($(html));
+
+    // Lightning Reflexes segment prompts: wire the whispered Act Early button
+    html.querySelectorAll("button.hero-lr-act-early").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            event.preventDefault();
+            const combat = game.combats.get(button.dataset.combatId);
+            const combatant = combat?.combatants.get(button.dataset.combatantId);
+            if (!combat?.started || !combatant?.isOwner) return;
+            if (ui.combat?.viewed?.id !== combat.id) {
+                return ui.notifications.warn("Open the active combat in the tracker to act early.");
+            }
+            if (ui.combat._lrElevationState?.(combatant) !== "available") {
+                return ui.notifications.warn(
+                    `The Lightning Reflexes window for ${combatant.name} has passed this Segment.`,
+                );
+            }
+            ui.combat._onToggleLrElevation(combatant.id);
+        });
+    });
 });
 
 // Hooks.on("renderChatLog", (app, html) => HeroSystem6eCardHelpers.chatListeners(html));

@@ -1,6 +1,7 @@
 import { HeroCompatibility } from "./utility/compatibility.mjs";
 import { HeroSystem6eCombatantSingle } from "./combatant-single.mjs";
 import { expireManeuverNextPhaseEffects } from "./item/maneuver.mjs";
+import { whisperUserTargetsForActor } from "./utility/util.mjs";
 
 export class HeroSystem6eCombatSingle extends Combat {
     /**
@@ -304,7 +305,122 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         const result = await HeroCompatibility.updateEmbedded(this, "combatants", combatantUpdates, startPayload);
         if (!HeroCompatibility.isV14) this._turns = null;
+
+        // Combat opens on Segment 12: offer/apply Lightning Reflexes right away
+        // (the started flag short-circuits _onUpdate's boundary maintenance)
+        await this._segmentStartLightningReflexes();
         return result;
+    }
+
+    /**
+     * Combatants who could elevate a scoped Lightning Reflexes purchase in the
+     * current segment: a natural Phase here, no hold or spent action, not already
+     * up, and not locked out by Stunned or an abort.
+     * @returns {Combatant[]}
+     * @private
+     */
+    _lrElevationCandidates() {
+        const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
+        const activeId = this.combatant?.id;
+        return this.combatants.filter((c) => {
+            const actor = c.actor;
+            if (!actor) return false;
+            if (!c.lightningReflexes?.scoped) return false;
+            if (c.id === activeId) return false;
+            if (c.lrElevatedAbs === currentAbs) return false;
+            if (!c.hasPhaseInSegment(this.segment)) return false;
+            if (actor.statuses.has("holding")) return false;
+            if (c.spentHoldInSegment?.(this.segment)) return false;
+            if (actor.statuses.has("stunned")) return false;
+            if (actor.statuses.has("aborted") && (c.abortAppliesAtAbs?.(currentAbs) ?? true)) return false;
+            if ((this.settings?.skipDefeated ?? false) && c.isOutOfCombat) return false;
+            return true;
+        });
+    }
+
+    /**
+     * Segment-start Lightning Reflexes handling. With the lrAutoElevate world
+     * setting on, every candidate is elevated immediately (preempting the pointer
+     * when a stop outranks the incoming actor); otherwise each candidate's owners
+     * get a whispered prompt with an Act Early button — players rarely watch the
+     * tracker at the top of a segment.
+     * @private
+     */
+    async _segmentStartLightningReflexes() {
+        if (!this.started) return;
+        const candidates = this._lrElevationCandidates();
+        if (candidates.length === 0) return;
+
+        let autoElevate = false;
+        try {
+            autoElevate = !!game.settings.get(game.system.id, "lrAutoElevate");
+        } catch (e) {
+            console.warn(`Unable to read the Lightning Reflexes auto setting`, e);
+        }
+
+        const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
+        const escapeHTML = foundry.utils.escapeHTML ?? ((value) => Handlebars.escapeExpression(value));
+
+        if (!autoElevate) {
+            for (const combatant of candidates) {
+                const scoped = combatant.lightningReflexes.scoped;
+                const whisper = whisperUserTargetsForActor(combatant.actor);
+                if (whisper.length === 0) continue;
+                const effectiveDex = Math.floor(this.getInitiativePriority(combatant, this.segment) + scoped.levels);
+                await ChatMessage.create({
+                    speaker: ChatMessage.getSpeaker({ actor: combatant.actor }),
+                    whisper,
+                    content: `<p><b>Segment ${this.segment}</b>: ${escapeHTML(combatant.actor.name)} can act early at effective DEX ${effectiveDex} with Lightning Reflexes (only: ${escapeHTML(scoped.label)}).</p>
+                        <button type="button" class="hero-lr-act-early" data-combat-id="${this.id}" data-combatant-id="${combatant.id}">⚡ Act Early (DEX ${effectiveDex})</button>`,
+                });
+            }
+            return;
+        }
+
+        // Auto mode: elevate every candidate up front. The active id is captured
+        // before the write — the re-sort shifts the stored turn index on V13
+        const activeId = this.combatant?.id ?? null;
+        await this.updateEmbeddedDocuments(
+            "Combatant",
+            candidates.map((c) => ({ _id: c.id, [`flags.${game.system.id}.lrElevatedAbs`]: currentAbs })),
+        );
+
+        const announce = (list, whisper) =>
+            list.length > 0
+                ? ChatMessage.create({
+                      speaker: { alias: "Lightning Reflexes" },
+                      content: `${escapeHTML(list.map((c) => c.actor.name).join(", "))} act${list.length === 1 ? "s" : ""} early this Segment (Lightning Reflexes).`,
+                      ...(whisper ? { whisper } : {}),
+                  })
+                : Promise.resolve();
+        await announce(
+            candidates.filter((c) => !c.hidden),
+            null,
+        );
+        await announce(
+            candidates.filter((c) => c.hidden),
+            ChatMessage.getWhisperRecipients("GM"),
+        );
+
+        // A stop that outranks the incoming actor preempts the pointer, exactly as a
+        // manual elevation would
+        const sorted = [...candidates].sort((a, b) => this._comparePriority(a, b, this, this.segment));
+        const top = sorted[0];
+        const topPriority = top ? this.getInitiativePriority(top, this.segment) : -Infinity;
+        const actingPriority = this.getFlag(game.system.id, "actingPriority") ?? -Infinity;
+        if (top && top.id !== activeId && topPriority > actingPriority) {
+            if (!HeroCompatibility.isV14) {
+                this._turns = null;
+                this.setupTurns();
+            }
+            const index = this.turns.findIndex((t) => t.id === top.id);
+            if (index !== -1) {
+                await this.update(
+                    { turn: index, [`flags.${game.system.id}.actingPriority`]: topPriority },
+                    { direction: 1, previousCombatantId: top.id },
+                );
+            }
+        }
     }
 
     /**
@@ -1094,6 +1210,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                 if (turnAdvance) await this._consumeExpiredHeldActions(null);
                 await this._clearExpiredAborts(elapsedSegments);
                 await this._consumeActiveCombatantHold(prevId);
+                await this._segmentStartLightningReflexes();
             })().catch((e) => console.error(e));
         } else {
             // Turn-only advance within a segment: the natural-turn clear still applies

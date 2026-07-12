@@ -1476,6 +1476,119 @@ export function registerCombatTests(quench) {
                     );
                 });
 
+                it("Should auto-elevate scoped Lightning Reflexes at segment start when enabled", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+                    const autoSetting = game.settings.get(game.system.id, "lrAutoElevate");
+                    await game.settings.set(game.system.id, "lrAutoElevate", true);
+
+                    try {
+                        const fast = await Actor.create({
+                            name: "_Quench LR Auto Fast",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: { dex: { value: 25, max: 25 }, spd: { value: 2, max: 2 } },
+                            },
+                        });
+                        const mika = await Actor.create({
+                            name: "_Quench LR Auto Mika",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                            },
+                        });
+                        actorDocuments.push(fast, mika);
+
+                        await HeroSystem6eItem.create(
+                            HeroSystem6eItem.itemDataFromXml(
+                                `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000007" BASECOST="0.0" LEVELS="8" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                                mika,
+                            ),
+                            { parent: mika },
+                        );
+
+                        const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [{ actorId: fast.id }, { actorId: mika.id }]);
+                        await combat.startCombat();
+                        ui.combat.viewed = combat;
+
+                        // Combat opens with the elevation applied and the LR stop preempting
+                        const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                        expect(mikaCombatant.lrElevatedAbs, "auto-elevated at combat start").to.equal(24);
+                        expect(combat.combatant.actorId, "LR stop goes first").to.equal(mika.id);
+                        expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(28);
+
+                        // Normal split flow after the stop: displaced actor, then remainder
+                        await combat.nextTurn();
+                        expect(combat.combatant.actorId).to.equal(fast.id);
+                        await combat.nextTurn();
+                        expect(combat.combatant.actorId, "Phase remainder").to.equal(mika.id);
+
+                        // The next segment auto-elevates again via boundary maintenance
+                        await combat.nextTurn();
+                        expect(combat.segment).to.equal(6);
+                        const reElevated = await waitUntil(() => combat.combatant?.actorId === mika.id);
+                        expect(reElevated, "auto-elevated and preempting in the fresh segment").to.be.true;
+                        expect(mikaCombatant.lrElevatedAbs).to.equal(30);
+                    } finally {
+                        await game.settings.set(game.system.id, "lrAutoElevate", autoSetting);
+                    }
+                });
+
+                it("Should whisper an Act Early prompt to scoped LR owners at segment start", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+                    const autoSetting = game.settings.get(game.system.id, "lrAutoElevate");
+                    await game.settings.set(game.system.id, "lrAutoElevate", false);
+
+                    try {
+                        const fast = await Actor.create({
+                            name: "_Quench LR Prompt Fast",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: { dex: { value: 25, max: 25 }, spd: { value: 2, max: 2 } },
+                            },
+                        });
+                        const mika = await Actor.create({
+                            name: "_Quench LR Prompt Mika",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                            },
+                        });
+                        actorDocuments.push(fast, mika);
+
+                        await HeroSystem6eItem.create(
+                            HeroSystem6eItem.itemDataFromXml(
+                                `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000008" BASECOST="0.0" LEVELS="5" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                                mika,
+                            ),
+                            { parent: mika },
+                        );
+
+                        const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [{ actorId: fast.id }, { actorId: mika.id }]);
+                        await combat.startCombat();
+
+                        // startCombat awaits the prompt pass: a whispered card with the
+                        // Act Early button exists for the LR holder
+                        const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                        const prompt = game.messages.contents
+                            .slice(-5)
+                            .find((m) => m.content?.includes(`data-combatant-id="${mikaCombatant.id}"`));
+                        expect(prompt, "prompt whispered to the owner").to.exist;
+                        expect(prompt.whisper.length, "whispered, not public").to.be.greaterThan(0);
+                        expect(prompt.content).to.include("hero-lr-act-early");
+                        expect(mikaCombatant.lrElevatedAbs, "not auto-elevated without the setting").to.equal(null);
+                    } finally {
+                        await game.settings.set(game.system.id, "lrAutoElevate", autoSetting);
+                    }
+                });
+
                 it("Should re-evaluate initiative order when DEX changes mid-combat and skip aborted combatants", async function () {
                     const alpha = await Actor.create({
                         name: "_Quench Dex Alpha",
