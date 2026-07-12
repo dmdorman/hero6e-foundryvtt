@@ -130,9 +130,12 @@ export class HeroSystem6eCombatSingle extends Combat {
      * Evaluates a combatant's precise initiative value including characteristic scores and offsets.
      * @param {Combatant} combatant - The participant document to calculate priority for
      * @param {number} [targetSegment] - Optional segment window context (defaults to active segment)
+     * @param {object} [options]
+     * @param {boolean} [options.ignoreHold] - Score the natural Phase position even when a
+     *   positional hold exists (used for the position a combatant just acted at)
      * @returns {number} Comprehensive decimal initiative priority score
      */
-    getInitiativePriority(combatant, targetSegment) {
+    getInitiativePriority(combatant, targetSegment, { ignoreHold = false } = {}) {
         if (!combatant?.actor) return 0;
 
         const parentCombat = combatant.combat ?? this;
@@ -160,7 +163,8 @@ export class HeroSystem6eCombatSingle extends Combat {
         const hasPhase = combatant.hasPhaseInSegment ? combatant.hasPhaseInSegment(activeSegment) : false;
         // A positional Held Action slots the combatant at their declared DEX in the declared
         // segment; event/generic holds occupy no initiative position (tracker panel instead)
-        const positionalHold = combatant.holdsPositionInSegment?.(activeSegment) ? combatant.heldAction : null;
+        const positionalHold =
+            !ignoreHold && combatant.holdsPositionInSegment?.(activeSegment) ? combatant.heldAction : null;
 
         if (resolvedSpd <= 0 || (!hasPhase && !positionalHold)) {
             return 0;
@@ -291,20 +295,59 @@ export class HeroSystem6eCombatSingle extends Combat {
      */
     async nextTurn() {
         const allCombatants = this.combatants.contents;
-        const turns = this.turns;
-        const startIndex = (this.turn ?? -1) + 1;
         const activeSegment = this.segment;
-        let targetIndex = -1;
+        const currentAbsNow = this.round * 12 + activeSegment;
 
-        for (let i = startIndex; i < turns.length; i++) {
-            if (this._takesTurnInSegment(turns[i], activeSegment)) {
-                targetIndex = i;
-                break;
+        // Within-segment selection runs on LIVE priorities rather than the cached turns
+        // array, so a positional hold declared mid-segment re-enters the order at its
+        // declared DEX without waiting for a re-sort. The ending combatant's acting
+        // position is their natural Phase unless they just acted at their held slot.
+        const ending = this.combatant ?? null;
+        const endingHold = ending?.heldAction;
+        const endingAtHeldSlot =
+            endingHold?.mode === "position" &&
+            endingHold.segmentAbs === currentAbsNow &&
+            ending.getFlag(game.system.id, "heldSlotTakenAbs") === currentAbsNow;
+        const endingPriority = ending
+            ? this.getInitiativePriority(ending, activeSegment, { ignoreHold: !endingAtHeldSlot })
+            : Infinity;
+
+        const stillToAct = allCombatants.filter((c) => {
+            if (!this._takesTurnInSegment(c, activeSegment)) return false;
+            const cHold = c.heldAction;
+            const cHeldHere = cHold?.mode === "position" && cHold.segmentAbs === currentAbsNow;
+            // A held slot only comes up once
+            if (cHeldHere && c.getFlag(game.system.id, "heldSlotTakenAbs") === currentAbsNow) return false;
+            // The ending combatant re-enters the segment only via an unused held slot
+            if (c.id === ending?.id && !cHeldHere) return false;
+            const priority = this.getInitiativePriority(c, activeSegment);
+            if (priority < endingPriority) return true;
+            return priority === endingPriority && !!ending && c.id !== ending.id && c.id.localeCompare(ending.id) > 0;
+        });
+
+        if (stillToAct.length > 0) {
+            stillToAct.sort((a, b) => this._comparePriority(a, b, this, activeSegment));
+            const target = stillToAct[0];
+            const targetIndex = this.turns.findIndex((t) => t.id === target.id);
+            if (targetIndex !== -1) {
+                // Landing on a positional holder's declared slot marks it taken in the
+                // same update, so ending that turn consumes the hold race-free
+                const inlineCombatantUpdates = [];
+                const targetHold = target.heldAction;
+                if (targetHold?.mode === "position" && targetHold.segmentAbs === currentAbsNow) {
+                    inlineCombatantUpdates.push({
+                        _id: target.id,
+                        [`flags.${game.system.id}.heldSlotTakenAbs`]: currentAbsNow,
+                    });
+                }
+                return HeroCompatibility.updateEmbedded(
+                    this,
+                    "combatants",
+                    inlineCombatantUpdates,
+                    { turn: targetIndex },
+                    { direction: 1, previousCombatantId: ending?.id },
+                );
             }
-        }
-
-        if (targetIndex !== -1) {
-            return this.update({ turn: targetIndex }, { direction: 1, previousCombatantId: this.combatant?.id });
         }
 
         let nextSegment = activeSegment;
@@ -382,6 +425,13 @@ export class HeroSystem6eCombatSingle extends Combat {
                 initiative: this.getInitiativePriority(combatant, nextSegment),
             });
         });
+
+        // Landing on a positional holder's declared slot marks it taken in the same update
+        const incomingHold = this.combatants.get(targetCombatantId)?.heldAction;
+        if (incomingHold?.mode === "position" && incomingHold.segmentAbs === nextRoundCycle * 12 + nextSegment) {
+            const targetUpdate = combatantUpdates.find((u) => u._id === targetCombatantId);
+            if (targetUpdate) targetUpdate[`flags.${game.system.id}.heldSlotTakenAbs`] = incomingHold.segmentAbs;
+        }
 
         const recompiledTurns = this.combatants.map((c) => {
             const match = combatantUpdates.find((u) => u._id === c.id);
@@ -899,15 +949,22 @@ export class HeroSystem6eCombatSingle extends Combat {
         if (previousCombatant?.actor) {
             this._expireCustomSystemEffects(previousCombatant.actor);
 
-            // A positional hold is spent the moment its held turn passes within the same
-            // segment; cross-segment passes are handled by _clearPassedPositionalHolds.
+            // A positional hold is spent the moment its held turn ends within the same
+            // segment — used if the pointer actually took the slot, forfeit if it was
+            // passed over; cross-segment endings go through _clearPassedPositionalHolds.
             // A hold declared THIS segment hasn't had its slot yet (the ending turn was
-            // the declarer's natural Phase), so declaredAbs === currentAbs is exempt.
+            // the declarer's natural Phase), so declaredAbs === currentAbs is exempt
+            // unless the slot was taken.
             const hold = previousCombatant.heldAction;
             if (hold?.mode === "position") {
                 const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
-                if (hold.segmentAbs === currentAbs && hold.declaredAbs !== currentAbs) {
-                    this._spendPassedHold(previousCombatant).catch((e) => console.error(e));
+                if (hold.segmentAbs === currentAbs) {
+                    const slotTaken = previousCombatant.getFlag(game.system.id, "heldSlotTakenAbs") === currentAbs;
+                    if (slotTaken) {
+                        this._spendPassedHold(previousCombatant, { used: true }).catch((e) => console.error(e));
+                    } else if (hold.declaredAbs !== currentAbs) {
+                        this._spendPassedHold(previousCombatant).catch((e) => console.error(e));
+                    }
                 }
             }
         }
@@ -1006,23 +1063,28 @@ export class HeroSystem6eCombatSingle extends Combat {
         for (const combatant of this.combatants) {
             const hold = combatant.heldAction;
             if (hold?.mode !== "position" || hold.segmentAbs >= currentAbs) continue;
-            await this._spendPassedHold(combatant);
+            const used = combatant.getFlag(game.system.id, "heldSlotTakenAbs") === hold.segmentAbs;
+            await this._spendPassedHold(combatant, { used });
         }
     }
 
     /**
-     * Deletes a passed positional hold with its chat card.
+     * Deletes a spent positional hold with its chat card.
      * @param {Combatant} combatant
+     * @param {object} [options]
+     * @param {boolean} [options.used] - The holder actually acted at their held slot
      * @private
      */
-    async _spendPassedHold(combatant) {
+    async _spendPassedHold(combatant, { used = false } = {}) {
         const actor = combatant.actor;
         const effect = actor?.effects.find((e) => e.statuses.has("holding"));
         if (!effect) return;
         await effect.delete();
         await ChatMessage.create({
             speaker: ChatMessage.getSpeaker({ actor }),
-            content: `${actor.name}'s held turn passed without being used; the Held Action is spent.`,
+            content: used
+                ? `${actor.name} used their Held Action.`
+                : `${actor.name}'s held turn passed without being used; the Held Action is spent.`,
         });
     }
 
