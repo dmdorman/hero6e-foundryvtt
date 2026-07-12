@@ -66,8 +66,6 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             element.querySelectorAll("li.combatant.hero-held-row").forEach((li) => {
                 const combatant = app.viewed.combatants.get(li.dataset.combatantId);
                 if (!combatant?.actor?.statuses.has("holding")) return;
-                // A spent hold only marks the acted position; no controls
-                if (combatant.heldAction?.spentAbs) return;
                 const controls = li.querySelector(".combatant-controls");
                 if (!controls || controls.querySelector(".hero-use-held, .hero-held-condition")) return;
 
@@ -222,9 +220,10 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 // Core filters hidden combatants out of player-facing turns; match it here
                 if (c.hidden && !game.user.isGM) return false;
                 if (c.hasPhaseInSegment(segment)) return true;
-                // A positional Held Action occupies exactly its declared slot;
+                // A positional Held Action occupies exactly its declared slot, and a spent
+                // hold keeps displaying at the acted position until the segment ends;
                 // event/generic holds render in the Held Actions panel instead
-                return !isPast && c.holdsPositionAtAbs(abs);
+                return !isPast && (c.holdsPositionAtAbs(abs) || c.spentHoldAtAbs(abs));
             });
         };
 
@@ -452,11 +451,14 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                     }
 
                     // Positional holds render at their declared slot with the held marker;
-                    // the holder's natural-Phase rows stay unmarked (that is where the
-                    // hold expires and a normal Phase takes over)
+                    // spent holds keep the row at the acted position; the holder's
+                    // natural-Phase rows stay unmarked
                     if (!isPast && combatant.holdsPositionAtAbs(abs)) {
                         row.css = `${row.css} is-holding-action hero-held-row`.trim();
                         row.name = `⏳ ${row.name} (held)`;
+                    } else if (!isPast && combatant.spentHoldAtAbs(abs)) {
+                        row.css = `${row.css} is-holding-action`.trim();
+                        row.name = `${row.name} (acted)`;
                     }
 
                     row.css = `${row.css} ${stateCss}`.trim();
@@ -657,11 +659,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 icon: "fa-solid fa-bolt",
                 visible: (li) => {
                     const combatant = getCombatant(li);
-                    return (
-                        !!combatant?.isOwner &&
-                        !!combatant.actor?.statuses.has("holding") &&
-                        !combatant.heldAction?.spentAbs
-                    );
+                    return !!combatant?.isOwner && !!combatant.actor?.statuses.has("holding");
                 },
                 onClick: (event, li) => this._onUseHeldAction(li.dataset.combatantId),
             },
@@ -670,11 +668,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 icon: "fa-solid fa-hand",
                 visible: (li) => {
                     const combatant = getCombatant(li);
-                    return (
-                        !!combatant?.isOwner &&
-                        !!combatant.actor?.statuses.has("holding") &&
-                        !combatant.heldAction?.spentAbs
-                    );
+                    return !!combatant?.isOwner && !!combatant.actor?.statuses.has("holding");
                 },
                 onClick: (event, li) => this._onReleaseHeldAction(li.dataset.combatantId),
             },
@@ -828,7 +822,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const combatant = this.viewed?.combatants.get(combatantId);
         const actor = combatant?.actor;
         const effect = actor?.effects.find((e) => e.statuses.has("holding"));
-        if (!combatant?.isOwner || !effect || combatant.heldAction?.spentAbs) return;
+        if (!combatant?.isOwner || !effect) return;
         await effect.delete();
         await this._holdCard(combatant, `${actor.name} uses their Held Action.`);
     }
@@ -842,7 +836,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const combatant = this.viewed?.combatants.get(combatantId);
         const actor = combatant?.actor;
         const effect = actor?.effects.find((e) => e.statuses.has("holding"));
-        if (!combatant?.isOwner || !effect || combatant.heldAction?.spentAbs) return;
+        if (!combatant?.isOwner || !effect) return;
         await effect.delete();
         await this._holdCard(combatant, `${actor.name} releases their Held Action without acting.`);
     }

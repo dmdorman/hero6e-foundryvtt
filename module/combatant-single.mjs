@@ -79,6 +79,34 @@ export class HeroSystem6eCombatantSingle extends Combatant {
     }
 
     /**
+     * Display-only record of a spent positional hold: the combatant keeps sorting at
+     * the DEX they acted at for the rest of that segment, without the holding effect.
+     * Written on consumption, cleaned up at segment boundaries.
+     * @type {{segmentAbs: number, dex: number}|null}
+     */
+    get spentHoldPosition() {
+        if (!game.system?.id) return null;
+        return this.getFlag(game.system.id, "spentHoldPosition") ?? null;
+    }
+
+    /**
+     * @param {number} abs
+     * @returns {boolean}
+     */
+    spentHoldAtAbs(abs) {
+        return this.spentHoldPosition?.segmentAbs === abs;
+    }
+
+    /**
+     * @param {number} segmentNumber - 1-12
+     * @returns {boolean}
+     */
+    spentHoldInSegment(segmentNumber) {
+        const spent = this.spentHoldPosition;
+        return !!spent && ((spent.segmentAbs - 1) % 12) + 1 === segmentNumber;
+    }
+
+    /**
      * Defeated also covers the dead and knocked out status conditions, not just the
      * tracker's manual defeated toggle, so "Skip Defeated" passes over them.
      * @override
