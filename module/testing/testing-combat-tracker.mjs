@@ -787,7 +787,7 @@ export function registerCombatTests(quench) {
                     expect(combat.segment).to.equal(6);
                 });
 
-                it("Should consume the abort's declared next Phase, not one already used", async function () {
+                it("Should refuse an abort after acting and spend the current Phase when active", async function () {
                     const bruiser = await Actor.create({
                         name: "_Quench Abort Bruiser",
                         type: "pc",
@@ -821,22 +821,31 @@ export function registerCombatTests(quench) {
                     expect(combat.segment).to.equal(6);
                     expect(combat.combatant.actorId).to.equal(dodger.id);
 
-                    // Aborting after acting must spend the NEXT Phase (Segment 12), not
-                    // the Segment 6 Phase already used (6E2 22)
+                    // The bruiser already used their Segment 6 Phase: a character cannot
+                    // Abort again until the next Segment (6E2 22; 5ER 361)
                     ui.combat.viewed = combat;
-                    const dodgerCombatant = combat.combatants.find((c) => c.actorId === dodger.id);
-                    await ui.combat._onToggleAbort(dodgerCombatant.id);
-                    expect(dodger.statuses.has("aborted")).to.be.true;
-                    expect(dodgerCombatant.abortSpentAbs, "abort consumes the Segment 12 Phase").to.equal(36);
+                    const bruiserCombatant = combat.combatants.find((c) => c.actorId === bruiser.id);
+                    const refused = await ui.combat._declareAbort(bruiserCombatant);
+                    expect(refused, "abort refused after acting this Segment").to.be.false;
+                    expect(bruiser.statuses.has("aborted")).to.be.false;
 
-                    // Segment 12: the spent Phase is skipped and the abort persists there
+                    // The pointer sits on the dodger without them having acted (a Held
+                    // Action interrupt shape): the abort replaces the CURRENT Phase and
+                    // ends the turn
+                    const dodgerCombatant = combat.combatants.find((c) => c.actorId === dodger.id);
+                    const applied = await ui.combat._declareAbort(dodgerCombatant);
+                    expect(applied).to.be.true;
+                    expect(combat.segment, "turn ended by the abort").to.equal(12);
+                    expect(combat.combatant.actorId).to.equal(bruiser.id);
+
+                    // Only the current Phase was consumed: the Segment 12 Phase comes
+                    // after the aborted one, so the dodger still acts there and the
+                    // status clears once Segment 6 has passed (asserted behaviorally —
+                    // the boundary maintenance may clear the status at any moment)
                     await combat.nextTurn();
                     expect(combat.segment).to.equal(12);
-                    expect(combat.combatant.actorId, "aborted Phase skipped").to.equal(bruiser.id);
-                    await combat.nextTurn();
-                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId, "Phase after the aborted one is free").to.equal(dodger.id);
 
-                    // Once the spent Phase's segment has passed, the status clears
                     const cleared = await waitUntil(() => !dodger.statuses.has("aborted"));
                     expect(cleared, "aborted status cleared after the spent Phase passed").to.be.true;
                 });
@@ -875,7 +884,7 @@ export function registerCombatTests(quench) {
                     // Phase: the abort consumes their Segment 3 Phase
                     ui.combat.viewed = combat;
                     const reactorCombatant = combat.combatants.find((c) => c.actorId === reactor.id);
-                    await ui.combat._onToggleAbort(reactorCombatant.id);
+                    await ui.combat._declareAbort(reactorCombatant);
                     expect(reactorCombatant.abortSpentAbs, "abort consumes the Segment 3 Phase").to.equal(27);
 
                     // Segment 3 (reactor's spent Phase, nobody else) is passed over entirely
@@ -891,6 +900,151 @@ export function registerCombatTests(quench) {
 
                     const cleared = await waitUntil(() => !reactor.statuses.has("aborted"));
                     expect(cleared, "aborted status cleared after the spent Phase passed").to.be.true;
+                });
+
+                it("Should spend the Held Action when aborting while holding, losing no Phase", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench AbortHold Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const holder = await Actor.create({
+                        name: "_Quench AbortHold Holder",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, holder);
+
+                    await holder.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Holding An Action", img: "icons/svg/clockwork.svg", statuses: ["holding"] },
+                    ]);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: holder.id }]);
+                    await combat.startCombat();
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+
+                    // Aborting while holding spends the held Phase: no aborted lockout, and
+                    // the replaced natural Phase is recorded so it cannot be used again
+                    // (6E2 22; 5ER 361)
+                    ui.combat.viewed = combat;
+                    const holderCombatant = combat.combatants.find((c) => c.actorId === holder.id);
+                    const applied = await ui.combat._declareAbort(holderCombatant, {
+                        toAction: "Dodge",
+                        statusId: "dodge",
+                    });
+                    expect(applied).to.be.true;
+                    expect(holder.statuses.has("holding"), "hold consumed by the abort").to.be.false;
+                    expect(holder.statuses.has("aborted"), "no aborted lockout when a held Phase absorbs it").to.be
+                        .false;
+                    expect(holder.statuses.has("dodge"), "the defensive maneuver status is applied").to.be.true;
+                    expect(holderCombatant.spentHoldPosition?.segmentAbs, "acted position recorded").to.equal(24);
+                    expect(combat._takesTurnInSegment(holderCombatant, 12), "no second action this segment").to.be
+                        .false;
+
+                    // The holder's replaced Segment 12 Phase is skipped, but their next
+                    // natural Phase is intact — no further Phase was lost
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId, "next natural Phase intact").to.equal(holder.id);
+                });
+
+                it("Should block aborts and Held Action use while Stunned or abort-locked", async function () {
+                    const guard = await Actor.create({
+                        name: "_Quench Guard",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 25, max: 25 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const stunny = await Actor.create({
+                        name: "_Quench Stunny",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(guard, stunny);
+
+                    await stunny.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Stunned", img: "icons/svg/daze.svg", statuses: ["stunned"] },
+                    ]);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: guard.id }, { actorId: stunny.id }]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+                    const stunnyCombatant = combat.combatants.find((c) => c.actorId === stunny.id);
+
+                    // A Stunned character can take no Action — not even Aborting (6E2 105)
+                    const refused = await ui.combat._declareAbort(stunnyCombatant);
+                    expect(refused, "abort refused while Stunned").to.be.false;
+                    expect(stunny.statuses.has("aborted")).to.be.false;
+                    expect(ui.combat._blockedActionReason(stunnyCombatant)).to.include("Stunned");
+
+                    // Recovered from being Stunned, the abort goes through and locks out
+                    // all other actions until the spent Phase passes (6E2 22)
+                    await stunny.effects.find((e) => e.statuses.has("stunned")).delete();
+                    const applied = await ui.combat._declareAbort(stunnyCombatant);
+                    expect(applied).to.be.true;
+                    expect(stunny.statuses.has("aborted")).to.be.true;
+                    expect(ui.combat._blockedActionReason(stunnyCombatant)).to.include("Aborted");
+
+                    // Even a (bare-status) Held Action cannot be used during the lockout
+                    await stunny.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Holding An Action", img: "icons/svg/clockwork.svg", statuses: ["holding"] },
+                    ]);
+                    await ui.combat._onUseHeldAction(stunnyCombatant.id);
+                    expect(stunny.statuses.has("holding"), "held use blocked during the abort lockout").to.be.true;
+                });
+
+                it("Should consume two Phases when aborting to an Extra Phase power", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench ExtraPhase Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const burner = await Actor.create({
+                        name: "_Quench ExtraPhase Burner",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 4, max: 4 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, burner);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: burner.id }]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+
+                    // Aborting to an Extra Phase power consumes the next TWO Phases
+                    // (6E2 22): the Segment 12 Phase not yet used plus the Segment 3 one.
+                    // The recorded spentAbs is the later Phase, so the lockout spans both.
+                    const burnerCombatant = combat.combatants.find((c) => c.actorId === burner.id);
+                    const applied = await ui.combat._declareAbort(burnerCombatant, { extraPhase: true });
+                    expect(applied).to.be.true;
+                    expect(burnerCombatant.abortSpentAbs, "lockout extends to the second Phase").to.equal(27);
+                    expect(burnerCombatant.abortAppliesAtAbs(24), "first consumed Phase covered").to.be.true;
+                    expect(burnerCombatant.abortAppliesAtAbs(27), "second consumed Phase covered").to.be.true;
+                    expect(burnerCombatant.abortAppliesAtAbs(28), "free after the second Phase").to.be.false;
                 });
 
                 it("Should mark knocked out combatants defeated via the tracker toggle", async function () {
