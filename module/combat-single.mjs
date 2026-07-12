@@ -795,6 +795,19 @@ export class HeroSystem6eCombatSingle extends Combat {
     }
 
     /**
+     * Posts a combat-flow chat card, whispered to the GM for hidden combatants so
+     * their names and tactical state don't leak to players.
+     * @param {Combatant} combatant
+     * @param {string} content
+     * @private
+     */
+    _combatCard(combatant, content) {
+        const data = { speaker: ChatMessage.getSpeaker({ actor: combatant.actor }), content };
+        if (combatant.hidden) data.whisper = ChatMessage.getWhisperRecipients("GM");
+        return ChatMessage.create(data);
+    }
+
+    /**
      * Combatant flag resets for a rewind: slot-taken markers and spent-hold display
      * records at or after the target position must not survive, or replayed held
      * slots are skipped as already used.
@@ -1076,10 +1089,10 @@ export class HeroSystem6eCombatSingle extends Combat {
         if (!holdingEffect) return;
         await holdingEffect.delete();
 
-        await ChatMessage.create({
-            speaker: ChatMessage.getSpeaker({ actor }),
-            content: `${actor.name}'s Held Action was replaced by their natural Phase in Segment ${this.segment}.`,
-        });
+        await this._combatCard(
+            combatant,
+            `${actor.name}'s Held Action was replaced by their natural Phase in Segment ${this.segment}.`,
+        );
     }
 
     /**
@@ -1118,10 +1131,10 @@ export class HeroSystem6eCombatSingle extends Combat {
                     const lockoutEndAbs = Math.max(oldNext, newNext);
                     if (lockoutEndAbs > currentAbs) {
                         update[`flags.${game.system.id}.spdLockout`] = { previousSpd: knownSpd, lockoutEndAbs };
-                        await ChatMessage.create({
-                            speaker: ChatMessage.getSpeaker({ actor: combatant.actor }),
-                            content: `${combatant.actor.name}'s SPD changed from ${knownSpd} to ${spd}. They cannot act until both SPDs would have had a Phase (Segment ${((lockoutEndAbs - 1) % 12) + 1}).`,
-                        });
+                        await this._combatCard(
+                            combatant,
+                            `${combatant.actor.name}'s SPD changed from ${knownSpd} to ${spd}. They cannot act until both SPDs would have had a Phase (Segment ${((lockoutEndAbs - 1) % 12) + 1}).`,
+                        );
                     }
                 }
                 combatantUpdates.push(update);
@@ -1194,12 +1207,12 @@ export class HeroSystem6eCombatSingle extends Combat {
                 dex: hold.dex,
             });
         }
-        await ChatMessage.create({
-            speaker: ChatMessage.getSpeaker({ actor }),
-            content: used
+        await this._combatCard(
+            combatant,
+            used
                 ? `${actor.name} used their Held Action.`
                 : `${actor.name}'s held turn passed without being used; the Held Action is spent.`,
-        });
+        );
     }
 
     /**
@@ -1224,10 +1237,10 @@ export class HeroSystem6eCombatSingle extends Combat {
             // The hold is consumed by the rule, not by a duration, so delete it explicitly
             await holdingEffect.delete();
 
-            await ChatMessage.create({
-                speaker: ChatMessage.getSpeaker({ actor }),
-                content: `${actor.name}'s Held Action was consumed by their natural Phase${segment !== null ? ` in Segment ${segment}` : ""}.`,
-            });
+            await this._combatCard(
+                combatant,
+                `${actor.name}'s Held Action was consumed by their natural Phase${segment !== null ? ` in Segment ${segment}` : ""}.`,
+            );
         }
     }
 
@@ -1259,10 +1272,10 @@ export class HeroSystem6eCombatSingle extends Combat {
 
             await abortedEffect.delete();
 
-            await ChatMessage.create({
-                speaker: ChatMessage.getSpeaker({ actor }),
-                content: `${actor.name}'s aborted Phase has passed; they may act again on their next Phase.`,
-            });
+            await this._combatCard(
+                combatant,
+                `${actor.name}'s aborted Phase has passed; they may act again on their next Phase.`,
+            );
         }
     }
 
