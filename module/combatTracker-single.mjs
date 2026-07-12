@@ -1078,27 +1078,14 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
             // Elevating above the unacted current actor preempts the pointer: the
             // count has not reached that position, so the LR stop goes first and the
-            // displaced actor re-enters via the acting-priority threshold afterwards
+            // displaced actor re-enters via the acting-priority threshold afterwards.
+            // lrPreemptPointer re-checks and, for players, relays through the GM.
             const actingPriority =
                 combat.getFlag(game.system.id, "actingPriority") ??
                 (activeId ? combat.getInitiativePriority(combat.combatants.get(activeId), combat.segment) : -Infinity);
             if (activeId && activeId !== combatant.id && elevatedPriority > actingPriority) {
-                if (!HeroCompatibility.isV14) {
-                    combat._turns = null;
-                    combat.setupTurns();
-                }
-                const index = combat.turns.findIndex((t) => t.id === combatant.id);
-                if (index !== -1) {
-                    try {
-                        await combat.update(
-                            { turn: index, [`flags.${game.system.id}.actingPriority`]: elevatedPriority },
-                            { direction: 1, previousCombatantId: combatant.id },
-                        );
-                    } catch (e) {
-                        console.warn(`Unable to preempt the turn pointer for Lightning Reflexes`, e);
-                    }
-                    return;
-                }
+                await combat.lrPreemptPointer(combatant.id, activeId);
+                return;
             }
         }
 

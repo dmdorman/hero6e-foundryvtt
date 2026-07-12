@@ -1,7 +1,7 @@
 import { HeroCompatibility } from "./utility/compatibility.mjs";
 import { HeroSystem6eCombatantSingle } from "./combatant-single.mjs";
 import { expireManeuverNextPhaseEffects } from "./item/maneuver.mjs";
-import { whisperUserTargetsForActor } from "./utility/util.mjs";
+import { gmActive, whisperUserTargetsForActor } from "./utility/util.mjs";
 
 export class HeroSystem6eCombatSingle extends Combat {
     /**
@@ -417,29 +417,81 @@ export class HeroSystem6eCombatSingle extends Combat {
         // manual elevation would
         const sorted = [...candidates].sort((a, b) => this._comparePriority(a, b, this, this.segment));
         const top = sorted[0];
-        const topPriority = top ? this.getInitiativePriority(top, this.segment) : -Infinity;
-        const actingPriority = this.getFlag(game.system.id, "actingPriority") ?? -Infinity;
-        if (top && top.id !== activeId && topPriority > actingPriority) {
-            if (!HeroCompatibility.isV14) {
-                this._turns = null;
-                this.setupTurns();
-            }
-            const index = this.turns.findIndex((t) => t.id === top.id);
-            if (index !== -1) {
-                await this.update(
-                    { turn: index, [`flags.${game.system.id}.actingPriority`]: topPriority },
-                    { direction: 1, previousCombatantId: top.id },
-                );
-            }
+        if (top) await this.lrPreemptPointer(top.id, activeId);
+    }
+
+    /**
+     * Moves the turn pointer onto an elevated Lightning Reflexes stop when it
+     * outranks the position the current actor is acting at. Shared by the manual
+     * tracker toggle, the chat Act Early button, and segment-start auto-elevation.
+     * Non-GM callers relay to the GM: the update carries the actingPriority flag,
+     * which core forbids players from writing.
+     * @param {string} combatantId - The elevated combatant
+     * @param {string|null} [activeId] - The active combatant captured BEFORE the
+     *   elevation flag was written (flag writes re-sort the turns array under the
+     *   stored index, so the live lookup can drift)
+     * @returns {Promise<void>}
+     */
+    async lrPreemptPointer(combatantId, activeId = this.combatant?.id ?? null) {
+        if (!game.user.isGM) {
+            this._requestGmTurnAction("lrPreempt", { combatantId, activeId });
+            return;
         }
+        const combatant = this.combatants.get(combatantId);
+        const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
+        if (!this.started || combatant?.lrElevatedAbs !== currentAbs) return;
+        if (!activeId || activeId === combatantId) return;
+
+        const elevatedPriority = this.getInitiativePriority(combatant, this.segment);
+        const active = this.combatants.get(activeId);
+        const actingPriority =
+            this.getFlag(game.system.id, "actingPriority") ??
+            (active ? this.getInitiativePriority(active, this.segment) : -Infinity);
+        if (elevatedPriority <= actingPriority) return;
+
+        if (!HeroCompatibility.isV14) {
+            this._turns = null;
+            this.setupTurns();
+        }
+        const index = this.turns.findIndex((t) => t.id === combatantId);
+        if (index === -1) return;
+        await this.update(
+            { turn: index, [`flags.${game.system.id}.actingPriority`]: elevatedPriority },
+            { direction: 1, previousCombatantId: combatantId },
+        );
+    }
+
+    /**
+     * Relays a turn-flow operation to the active GM over the system socket. Core
+     * permits non-GM Combat updates only on round/turn/combatants, and every
+     * advance here carries system flags (segment, acting priority, tie-breaker
+     * rolls), so players cannot commit them directly.
+     * @param {string} operation
+     * @param {object} [payload]
+     * @returns {this}
+     * @private
+     */
+    _requestGmTurnAction(operation, payload = {}) {
+        if (!gmActive()) {
+            ui.notifications.warn(`Could not perform this operation because there is no GM connected.`);
+            return this;
+        }
+        game.socket.emit(`system.${game.system.id}`, {
+            operation,
+            combatId: this.id,
+            userId: game.user.id,
+            ...payload,
+        });
+        return this;
     }
 
     /**
      * Advance down the turn index loop, checking for fresh-phase held action overwrites.
      * @override
      */
-    /** @override */
     async nextTurn() {
+        if (!game.user.isGM) return this._requestGmTurnAction("nextTurn");
+
         const allCombatants = this.combatants.contents;
         const activeSegment = this.segment;
         const currentAbsNow = this.round * 12 + activeSegment;
@@ -742,6 +794,8 @@ export class HeroSystem6eCombatSingle extends Combat {
      * @override
      */
     async previousTurn() {
+        if (!game.user.isGM) return this._requestGmTurnAction("previousTurn");
+
         if (this.round === 1 && this.segment === 12 && (this.turn ?? 0) === 0) {
             console.log(`[${game.system.id}] Rewinding past initial turn boundary. Resetting encounter state...`);
 
@@ -931,6 +985,8 @@ export class HeroSystem6eCombatSingle extends Combat {
      * @override
      */
     async nextRound() {
+        if (!game.user.isGM) return this._requestGmTurnAction("nextRound");
+
         const updateData = {
             round: this.round + 1,
             turn: 0,
@@ -968,6 +1024,8 @@ export class HeroSystem6eCombatSingle extends Combat {
      * @override
      */
     async previousRound() {
+        if (!game.user.isGM) return this._requestGmTurnAction("previousRound");
+
         let targetRound = this.round - 1;
         if (targetRound < 1) targetRound = 1;
 
