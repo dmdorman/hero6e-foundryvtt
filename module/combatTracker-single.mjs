@@ -37,7 +37,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             const activeId = app.viewed.combatant?.id;
             if (activeId) {
                 const activeRow = element.querySelector(
-                    `.current-segment-member:not(.hero-group-parent)[data-combatant-id="${activeId}"], .current-segment-member:not(.hero-group-parent)[data-id="${activeId}"]`,
+                    `.current-segment-member:not(.hero-group-parent):not(.hero-lr-shadow)[data-combatant-id="${activeId}"], .current-segment-member:not(.hero-group-parent):not(.hero-lr-shadow)[data-id="${activeId}"]`,
                 );
                 if (activeRow) {
                     activeRow.classList.add("active");
@@ -110,29 +110,33 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
             // Lightning Reflexes: owners of scoped-LR combatants get an act-early
             // toggle on their current-segment row while the position is reachable
-            element.querySelectorAll("li.combatant.current-segment-member:not(.hero-group-parent)").forEach((li) => {
-                const combatant = app.viewed.combatants.get(li.dataset.combatantId);
-                const state = app._lrElevationState?.(combatant);
-                if (!state) return;
-                const controls = li.querySelector(".combatant-controls");
-                if (!controls || controls.querySelector(".hero-lr-elevate")) return;
+            element
+                .querySelectorAll("li.combatant.current-segment-member:not(.hero-group-parent):not(.hero-lr-shadow)")
+                .forEach((li) => {
+                    const combatant = app.viewed.combatants.get(li.dataset.combatantId);
+                    const state = app._lrElevationState?.(combatant);
+                    if (!state) return;
+                    const controls = li.querySelector(".combatant-controls");
+                    if (!controls || controls.querySelector(".hero-lr-elevate")) return;
 
-                const button = document.createElement("button");
-                button.type = "button";
-                const label =
-                    state === "elevated" ? "Cancel Act Early (Lightning Reflexes)" : "Act Early (Lightning Reflexes)";
-                button.setAttribute("aria-label", label);
-                button.dataset.tooltip = label;
-                button.className = `inline-control combatant-control icon fa-solid fa-bolt-lightning hero-lr-elevate${
-                    state === "elevated" ? " hero-lr-elevated" : ""
-                }`;
-                button.addEventListener("click", (clickEvent) => {
-                    clickEvent.preventDefault();
-                    clickEvent.stopPropagation();
-                    app._onToggleLrElevation(li.dataset.combatantId);
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    const label =
+                        state === "elevated"
+                            ? "Cancel Act Early (Lightning Reflexes)"
+                            : "Act Early (Lightning Reflexes)";
+                    button.setAttribute("aria-label", label);
+                    button.dataset.tooltip = label;
+                    button.className = `inline-control combatant-control icon fa-solid fa-bolt-lightning hero-lr-elevate${
+                        state === "elevated" ? " hero-lr-elevated" : ""
+                    }`;
+                    button.addEventListener("click", (clickEvent) => {
+                        clickEvent.preventDefault();
+                        clickEvent.stopPropagation();
+                        app._onToggleLrElevation(li.dataset.combatantId);
+                    });
+                    controls.prepend(button);
                 });
-                controls.prepend(button);
-            });
         };
 
         Hooks.on("renderCombatTracker", onRenderTracker);
@@ -397,16 +401,39 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
             if (!expanded) continue;
 
+            // An elevated scoped-LR combatant occupies two visible positions: the LR
+            // stop, and a shadow row where the rest of the Phase lands at natural DEX
+            const entries = [];
+            for (const combatant of members) {
+                const priority = combat.getInitiativePriority(combatant, segment);
+                entries.push({ combatant, priority, lrShadow: false });
+                if (combatant.lrElevatedAbs === abs) {
+                    const scopedLevels = combatant.lightningReflexes?.scoped?.levels ?? 0;
+                    if (scopedLevels > 0) {
+                        entries.push({ combatant, priority: priority - scopedLevels, lrShadow: true });
+                    }
+                }
+            }
+            // Same order _comparePriority produces: priority descending, id tiebreak
+            entries.sort((a, b) => b.priority - a.priority || a.combatant.id.localeCompare(b.combatant.id));
+
             // Tokens of the same root actor tied on the same priority act back to back;
             // collapse them into a single row with a count. The row represents the active
             // member when the group contains it so click/hover target the acting token.
             const groups = [];
-            for (const combatant of members) {
-                const key = combatant.actorId || combatant.id;
-                const priority = combat.getInitiativePriority(combatant, segment);
+            for (const entry of entries) {
+                const key = `${entry.combatant.actorId || entry.combatant.id}${entry.lrShadow ? ":lr-shadow" : ""}`;
                 const prev = groups.at(-1);
-                if (prev && prev.key === key && prev.priority === priority) prev.combatants.push(combatant);
-                else groups.push({ key, priority, combatants: [combatant] });
+                if (prev && prev.key === key && prev.priority === entry.priority) {
+                    prev.combatants.push(entry.combatant);
+                } else {
+                    groups.push({
+                        key,
+                        priority: entry.priority,
+                        combatants: [entry.combatant],
+                        lrShadow: entry.lrShadow,
+                    });
+                }
             }
 
             for (const group of groups) {
@@ -498,14 +525,19 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                         row.name = `${row.name} (aborted)`;
                     }
 
-                    // An elevated scoped-LR combatant acts early this segment only
-                    if (combatant.lrElevatedAbs === abs) {
+                    // An elevated scoped-LR combatant acts early this segment only; the
+                    // shadow row marks where the rest of the Phase lands afterwards
+                    if (!group.lrShadow && combatant.lrElevatedAbs === abs) {
                         row.css = `${row.css} hero-lr-row`.trim();
                         row.name = `↯ ${row.name} (LR)`;
+                    } else if (group.lrShadow) {
+                        row.css = `${row.css} hero-lr-shadow`.trim();
+                        row.name = `${row.name} (rest of Phase)`;
+                        row.effects = { icons: [], tooltip: "" };
                     }
 
                     row.css = `${row.css} ${stateCss}`.trim();
-                    if (isCurrent && combatant.id === activeCombatantId) {
+                    if (isCurrent && combatant.id === activeCombatantId && !group.lrShadow) {
                         row.active = true;
                         row.css = `${row.css} active`.trim();
                     }

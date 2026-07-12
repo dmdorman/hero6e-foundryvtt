@@ -236,6 +236,15 @@ $combat-tracker-hero-dispositions: (
     color: $hero-lr-accent;
 }
 
+/* Shadow row: where the rest of the Phase lands once the LR stop is done */
+.combat-tracker li.combatant.hero-lr-shadow {
+    opacity: 0.55;
+}
+
+.combat-tracker li.combatant.hero-lr-shadow .name {
+    font-style: italic;
+}
+
 /* 2i. ABORTED: THE CONSUMED PHASE ROW STAYS VISIBLE, GREYED OUT */
 .combat-tracker li.combatant.hero-aborted-row {
     opacity: 0.55;
