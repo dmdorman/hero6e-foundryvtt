@@ -1,5 +1,6 @@
 import { HeroCompatibility } from "./utility/compatibility.mjs";
 import { HeroSystem6eCombatantSingle } from "./combatant-single.mjs";
+import { expireManeuverNextPhaseEffects } from "./item/maneuver.mjs";
 
 export class HeroSystem6eCombatSingle extends Combat {
     /**
@@ -137,14 +138,10 @@ export class HeroSystem6eCombatSingle extends Combat {
         const activeSegment = targetSegment ?? parentCombat?.segment ?? 12;
         const statuses = combatant.actor.statuses;
 
-        if (statuses.has("aborted")) {
-            // Map the queried segment number to its absolute position relative to the
-            // combat; a recorded abort only zeroes the combatant through its spent Phase
-            const combatSegment = parentCombat?.segment ?? activeSegment;
-            const combatAbs = HeroSystem6eCombatantSingle.absoluteSegment(parentCombat?.round ?? 0, combatSegment);
-            const queryAbs = combatAbs + ((activeSegment - combatSegment + 12) % 12);
-            if (combatant.abortAppliesAtAbs?.(queryAbs) ?? true) return 0;
-        }
+        // Aborted combatants keep their natural priority: the skip lives entirely in
+        // _takesTurnInSegment. Zeroing here re-sorted them mid-segment (turn is an
+        // index into the sorted array) and rendered the consumed Phase at 0.00 instead
+        // of struck through at its DEX position.
 
         const actorDoc = combatant.actor;
         const characteristicKey = actorDoc.system?.initiativeCharacteristic ?? "dex";
@@ -1097,6 +1094,15 @@ export class HeroSystem6eCombatSingle extends Combat {
             ) {
                 activeCombatant.setFlag(game.system.id, "heldSlotTakenAbs", nowAbs).catch((e) => console.error(e));
             }
+        }
+
+        // The incoming combatant's Phase begins: maneuver effects that last "until your
+        // next Phase" (Dodge, Block, Brace…) expire now. Effects created at the current
+        // world time survive — they were declared this instant. Because aborted Phases
+        // are skipped outright, an abort's modifiers naturally persist to the Phase
+        // after the spent one (6E2 22).
+        if (activeCombatant?.actor) {
+            expireManeuverNextPhaseEffects(activeCombatant.actor).catch((e) => console.error(e));
         }
     }
 

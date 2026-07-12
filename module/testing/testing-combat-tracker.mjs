@@ -944,7 +944,13 @@ export function registerCombatTests(quench) {
                     expect(holder.statuses.has("holding"), "hold consumed by the abort").to.be.false;
                     expect(holder.statuses.has("aborted"), "no aborted lockout when a held Phase absorbs it").to.be
                         .false;
-                    expect(holder.statuses.has("dodge"), "the defensive maneuver status is applied").to.be.true;
+                    // The dialog activates the real DODGE maneuver when the actor has one,
+                    // otherwise it falls back to the bare status icon
+                    const holderDodgeItem = holder.items.find((i) => i.system?.XMLID === "DODGE");
+                    const dodgeApplied = holderDodgeItem
+                        ? holderDodgeItem.isActive === true
+                        : holder.statuses.has("dodge");
+                    expect(dodgeApplied, "the defensive maneuver is applied").to.be.true;
                     expect(holderCombatant.spentHoldPosition?.segmentAbs, "acted position recorded").to.equal(24);
                     expect(combat._takesTurnInSegment(holderCombatant, 12), "no second action this segment").to.be
                         .false;
@@ -1047,6 +1053,61 @@ export function registerCombatTests(quench) {
                     expect(burnerCombatant.abortAppliesAtAbs(28), "free after the second Phase").to.be.false;
                 });
 
+                it("Should expire a Dodge maneuver at the start of the actor's next Phase", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench Expiry Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const weaver = await Actor.create({
+                        name: "_Quench Expiry Weaver",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, weaver);
+                    if (!weaver.items.find((i) => i.system?.XMLID === "DODGE")) {
+                        await weaver.addHeroSystemManeuvers();
+                    }
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: weaver.id }]);
+                    await combat.startCombat();
+                    // Maneuver activation checks actor.inCombat, which reads the viewed combat
+                    ui.combat.viewed = combat;
+
+                    // Weaver dodges as their Segment 12 Phase action
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(weaver.id);
+                    const dodgeItem = weaver.items.find((i) => i.system?.XMLID === "DODGE");
+                    await dodgeItem.toggle();
+                    const hasManeuverAe = () =>
+                        weaver.temporaryEffects.some(
+                            (ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect",
+                        );
+                    expect(hasManeuverAe(), "dodge effect active after declaring").to.be.true;
+
+                    // Someone else's Phase starting must not expire it: the Dodge lasts
+                    // until the weaver's own next Phase (6E2 22)
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+                    expect(hasManeuverAe(), "dodge persists through other combatants' Phases").to.be.true;
+
+                    // The weaver's next Phase begins: the boundary maintenance switches
+                    // the maneuver back off
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(weaver.id);
+                    const expired = await waitUntil(() => !hasManeuverAe() && dodgeItem.isActive !== true);
+                    expect(expired, "dodge expired at the start of the actor's next Phase").to.be.true;
+                });
+
                 it("Should mark knocked out combatants defeated via the tracker toggle", async function () {
                     const sleeper = await Actor.create({
                         name: "_Quench KO Sleeper",
@@ -1133,7 +1194,7 @@ export function registerCombatTests(quench) {
                     expect(combat.combatant.actorId).to.equal(lrActor.id);
                 });
 
-                it("Should re-evaluate initiative order when DEX changes mid-combat and zero out aborted combatants", async function () {
+                it("Should re-evaluate initiative order when DEX changes mid-combat and skip aborted combatants", async function () {
                     const alpha = await Actor.create({
                         name: "_Quench Dex Alpha",
                         type: "pc",
@@ -1174,12 +1235,17 @@ export function registerCombatTests(quench) {
                     expect(combat.segment).to.equal(6);
                     expect(combat.combatant.actorId, "raised DEX acts first in the next segment").to.equal(bravo.id);
 
-                    // An aborted combatant used their Phase early and sorts to zero priority
+                    // An aborted combatant keeps their natural priority (the row stays at
+                    // its DEX position, struck through) but receives no turn — the skip
+                    // lives in _takesTurnInSegment, not in the sort
                     await alpha.createEmbeddedDocuments("ActiveEffect", [
                         { name: "Aborted", img: "icons/svg/downgrade.svg", statuses: ["aborted"] },
                     ]);
                     const alphaCombatant = combat.combatants.find((c) => c.actorId === alpha.id);
-                    expect(combat.getInitiativePriority(alphaCombatant, 6)).to.equal(0);
+                    expect(Math.floor(combat.getInitiativePriority(alphaCombatant, 6)), "priority unchanged").to.equal(
+                        20,
+                    );
+                    expect(combat._takesTurnInSegment(alphaCombatant, 6), "no turn while aborted").to.be.false;
 
                     // Aborting spends Alpha's Phase: advancing skips their turn entirely and
                     // crosses into Segment 12; once the Segment containing the spent Phase

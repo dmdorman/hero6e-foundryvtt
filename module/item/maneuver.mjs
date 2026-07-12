@@ -2,7 +2,7 @@ import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mj
 import { HeroCompatibility } from "../utility/compatibility.mjs";
 import { roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { calculateVelocityInSystemUnits } from "../utility/units.mjs";
-import { dehydrateAttackItem } from "./item-attack.mjs";
+import { dehydrateAttackItem, rehydrateAttackItem } from "./item-attack.mjs";
 
 /**
  * Maneuvers have some rules of their own that should be considered.
@@ -82,6 +82,40 @@ function buildManeuverFlags(item, type) {
             dehydratedManeuverActorUuid: item.actor.uuid,
         },
     };
+}
+
+/**
+ * Expires maneuver effects that last "until the character's next Phase" (Dodge, Block,
+ * Brace, …) at the start of that Phase. Toggleable maneuvers are switched off through
+ * their item so activation state stays in sync; loose effects are deleted. Effects
+ * created at the current world time are kept — they were declared this instant.
+ * Mirrors the legacy stack's _onStartTurn cleanup (combat.mjs) for the single stack.
+ * @param {Actor} actor
+ */
+export async function expireManeuverNextPhaseEffects(actor) {
+    const maneuverAes = (actor?.temporaryEffects ?? []).filter(
+        (ae) =>
+            ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect" &&
+            ae.duration.startTime !== game.time.worldTime,
+    );
+
+    const expiryPromises = maneuverAes.map((ae) => {
+        const flags = ae.flags[game.system.id];
+        if (flags?.toggle) {
+            let maneuver = null;
+            try {
+                maneuver =
+                    fromUuidSync(flags.itemUuid) ||
+                    rehydrateAttackItem(flags.dehydratedManeuverItem, fromUuidSync(flags.dehydratedManeuverActorUuid))
+                        .item;
+            } catch (e) {
+                console.warn(`Unable to resolve maneuver item for expiring effect ${ae.name}`, e);
+            }
+            if (maneuver?.isActive) return maneuver.toggle();
+        }
+        return ae.delete();
+    });
+    await Promise.all(expiryPromises);
 }
 
 /**

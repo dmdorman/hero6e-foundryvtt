@@ -459,9 +459,14 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                     } else if (!isPast && combatant.spentHoldAtAbs(abs)) {
                         row.css = `${row.css} is-holding-action`.trim();
                         row.name = `${row.name} (acted)`;
-                    } else if (!isPast && combatant.abortSpentAbs === abs) {
+                    } else if (
+                        !isPast &&
+                        (combatant.abortSpentAbs === abs ||
+                            (combatant.abortSpentAbs === null && combatant.abortAppliesAtAbs?.(abs)))
+                    ) {
                         // The Phase an abort consumed stays visible but greyed, so the
-                        // table can see where the cost lands (6E2 22)
+                        // table can see where the cost lands (6E2 22). Unrecorded aborts
+                        // (bare status toggles) grey every Phase while the status binds.
                         row.css = `${row.css} hero-aborted-row`.trim();
                         row.name = `${row.name} (aborted)`;
                     }
@@ -1017,7 +1022,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             }
         }
 
-        if (statusId) await actor.toggleStatusEffect(statusId, { active: true });
+        if (statusId) await this._applyAbortDefense(actor, statusId);
 
         // A held Phase absorbs the abort — no further Phases are lost (6E2 22; 5ER 361)
         const holdingEffect = actor.effects.find((e) => e.statuses.has("holding"));
@@ -1066,8 +1071,29 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
     }
 
     /**
+     * Applies the defensive maneuver chosen in the abort dialog through the actor's
+     * real maneuver item, so the effect carries its CV changes and the standard
+     * next-Phase expiry flags. Falls back to the bare status icon for actors without
+     * the item (e.g. tokens that never went through upload).
+     * @param {Actor} actor
+     * @param {string} statusId - dodge or block
+     * @private
+     */
+    async _applyAbortDefense(actor, statusId) {
+        const xmlid = { dodge: "DODGE", block: "BLOCK" }[statusId];
+        const maneuverItem = xmlid
+            ? actor.items.find((i) => ["maneuver", "martialart"].includes(i.type) && i.system?.XMLID === xmlid)
+            : null;
+        if (maneuverItem) {
+            if (!maneuverItem.isActive) await maneuverItem.toggle();
+            return;
+        }
+        await actor.toggleStatusEffect(statusId, { active: true });
+    }
+
+    /**
      * Opens the abort declaration dialog: what the character aborts to (flavor for
-     * the chat card; Dodge and Block also apply their maneuver status) and, for the
+     * the chat card; Dodge and Block also activate their maneuver) and, for the
      * GM, whether the power takes an Extra Phase. Blocked aborts warn players; the
      * GM may override.
      * @param {string} combatantId
