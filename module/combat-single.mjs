@@ -284,6 +284,9 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         const absoluteStartTurnIndex = finalTargetTurnsArray.findIndex((t) => t.id === targetCombatantId);
         startPayload.turn = absoluteStartTurnIndex !== -1 ? absoluteStartTurnIndex : 0;
+        startPayload[`flags.${game.system.id}.actingPriority`] = targetActorDoc
+            ? this.getInitiativePriority(targetActorDoc, 12)
+            : null;
 
         const result = await HeroCompatibility.updateEmbedded(this, "combatants", combatantUpdates, startPayload);
         if (!HeroCompatibility.isV14) this._turns = null;
@@ -309,9 +312,13 @@ export class HeroSystem6eCombatSingle extends Combat {
             endingHold?.mode === "position" &&
             endingHold.segmentAbs === currentAbsNow &&
             ending.getFlag(game.system.id, "heldSlotTakenAbs") === currentAbsNow;
-        const endingPriority = ending
-            ? this.getInitiativePriority(ending, activeSegment, { ignoreHold: !endingAtHeldSlot })
-            : Infinity;
+        // The threshold is the position the ending combatant ACTED at, recorded when
+        // their turn began — live priorities move mid-segment (Aid/Drain) and would
+        // re-admit combatants who already acted or skip ones who have not
+        const storedActingPriority = this.getFlag(game.system.id, "actingPriority");
+        const endingPriority =
+            storedActingPriority ??
+            (ending ? this.getInitiativePriority(ending, activeSegment, { ignoreHold: !endingAtHeldSlot }) : Infinity);
 
         const stillToAct = allCombatants.filter((c) => {
             if (!this._takesTurnInSegment(c, activeSegment)) return false;
@@ -372,7 +379,10 @@ export class HeroSystem6eCombatSingle extends Combat {
                     this,
                     "combatants",
                     inlineCombatantUpdates,
-                    { turn: targetIndex },
+                    {
+                        turn: targetIndex,
+                        [`flags.${game.system.id}.actingPriority`]: this.getInitiativePriority(target, activeSegment),
+                    },
                     { direction: 1, previousCombatantId: ending?.id },
                 );
                 if (!HeroCompatibility.isV14) {
@@ -515,6 +525,10 @@ export class HeroSystem6eCombatSingle extends Combat {
         updateData.round = nextRoundCycle;
         updateData.turn = absoluteTargetTurnIndex !== -1 ? absoluteTargetTurnIndex : 0;
         updateData[`flags.${game.system.id}.currentSegment`] = nextSegment;
+        const incomingCombatant = this.combatants.get(targetCombatantId);
+        updateData[`flags.${game.system.id}.actingPriority`] = incomingCombatant
+            ? this.getInitiativePriority(incomingCombatant, nextSegment)
+            : null;
 
         const updateOptions = {
             direction: 1,
@@ -587,7 +601,10 @@ export class HeroSystem6eCombatSingle extends Combat {
                 this._turns = null;
             }
 
-            const inlineUpdateData = { turn: masterTargetIndex !== -1 ? masterTargetIndex : 0 };
+            const inlineUpdateData = {
+                turn: masterTargetIndex !== -1 ? masterTargetIndex : 0,
+                [`flags.${game.system.id}.actingPriority`]: this.getInitiativePriority(targetCombatant, activeSegment),
+            };
             const rewindResets = this._rewindHoldFlagResets(this.round * 12 + activeSegment);
 
             const result = await HeroCompatibility.updateEmbedded(this, "combatants", rewindResets, inlineUpdateData);
@@ -689,6 +706,10 @@ export class HeroSystem6eCombatSingle extends Combat {
         updateData.round = prevRoundCycle;
         updateData.turn = absoluteTargetTurnIndex !== -1 ? absoluteTargetTurnIndex : 0;
         updateData[`flags.${game.system.id}.currentSegment`] = prevSegment;
+        const rewindTarget = this.combatants.get(targetCombatantId);
+        updateData[`flags.${game.system.id}.actingPriority`] = rewindTarget
+            ? this.getInitiativePriority(rewindTarget, prevSegment)
+            : null;
 
         const updateOptions = { direction: -1, previousCombatantId: this.combatant?.id };
         if (segmentDeltaCount < 0) {
@@ -726,6 +747,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             turn: 0,
         };
         updateData[`flags.${game.system.id}.currentSegment`] = this.segment;
+        updateData[`flags.${game.system.id}.actingPriority`] = null;
 
         // Skipping a full Turn crosses Post-Segment 12 exactly once
         if (this.started && this.round > 0) {
@@ -769,6 +791,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             round: targetRound,
             turn: 0,
         };
+        updateData[`flags.${game.system.id}.actingPriority`] = null;
 
         // Test 3 requires checking if resetting to turn 0 under an unstarted/rewound
         // boundary should forcefully clamp the timeline back to the initial segment threshold (12).
@@ -862,6 +885,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             "currentSegment",
             "segmentRolls",
             "recoveredRounds",
+            "actingPriority",
         ]);
 
         // 4. Update parent properties and children simultaneously through your compatibility bridge

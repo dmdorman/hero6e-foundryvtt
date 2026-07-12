@@ -769,7 +769,10 @@ export function registerCombatTests(quench) {
                     expect(combat.combatant.actorId).to.equal(alpha.id);
 
                     // Using the hold out of turn consumes this segment's action: it takes
-                    // the place of the Phase (6E2 20; 5ER 360)
+                    // the place of the Phase (6E2 20; 5ER 360). Tracker handlers resolve
+                    // through ui.combat.viewed, which lags the freshly created combat in
+                    // headless runs — pin it first.
+                    ui.combat.viewed = combat;
                     const holderCombatant = combat.combatants.find((c) => c.actorId === holder.id);
                     await ui.combat._onUseHeldAction(holderCombatant.id);
 
@@ -820,6 +823,7 @@ export function registerCombatTests(quench) {
 
                     // Aborting after acting must spend the NEXT Phase (Segment 12), not
                     // the Segment 6 Phase already used (6E2 22)
+                    ui.combat.viewed = combat;
                     const dodgerCombatant = combat.combatants.find((c) => c.actorId === dodger.id);
                     await ui.combat._onToggleAbort(dodgerCombatant.id);
                     expect(dodger.statuses.has("aborted")).to.be.true;
