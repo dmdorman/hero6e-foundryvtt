@@ -13,6 +13,9 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
          * Enforces complete null guards to accommodate unlinked V14 Quench test models.
          */
         const onRenderTracker = (app, html) => {
+            // AppV2 fires renderCombatTracker for every subclass: the legacy tracker's
+            // rows lack this tracker's classes, so touching them only strips state
+            if (!(app instanceof HeroSystem6eCombatTrackerSingle)) return;
             // Exit out immediately if combat hasn't formally begun, if the instance is missing,
             // or if core tracking parameters haven't finished compiling yet.
             if (!app?.viewed || !app.viewed.started) return;
@@ -790,11 +793,16 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             },
         );
 
-        // Mirror the V14 entry fields onto the V13 names so both cores render them
+        // Mirror the V14 entry fields onto the V13 names so both cores render them.
+        // V13's ContextMenu inserts the icon string as raw markup, so bare Font
+        // Awesome classes must be wrapped; V14 accepts either form.
         for (const option of options) {
             option.name ??= option.label;
             option.condition ??= option.visible;
             option.callback ??= (li) => option.onClick?.(null, li);
+            if (option.icon && !option.icon.startsWith("<")) {
+                option.icon = `<i class="${option.icon}"></i>`;
+            }
         }
         return options;
     }

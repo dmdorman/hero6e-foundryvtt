@@ -765,7 +765,10 @@ export class HeroSystem6eCombatSingle extends Combat {
             };
             const rewindResets = this._rewindHoldFlagResets(this.round * 12 + activeSegment);
 
-            const result = await HeroCompatibility.updateEmbedded(this, "combatants", rewindResets, inlineUpdateData);
+            const result = await HeroCompatibility.updateEmbedded(this, "combatants", rewindResets, inlineUpdateData, {
+                direction: -1,
+                previousCombatantId: this.combatant?.id,
+            });
 
             if (!HeroCompatibility.isV14) {
                 this._turns = null;
