@@ -1299,14 +1299,15 @@ export function registerCombatTests(quench) {
                     expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(25);
                     expect(combat.combatant.actorId, "pointer stays on the active combatant").to.equal(alpha.id);
 
-                    // Mika acts at the elevated position; once reached it cannot be cancelled
+                    // Mika's elevated turn arrives; while the pointer is on her the Phase
+                    // is unspent, so standing down is still offered
                     await combat.nextTurn();
                     expect(combat.segment).to.equal(12);
                     expect(combat.combatant.actorId, "elevated turn arrives").to.equal(mika.id);
-                    expect(ui.combat._lrElevationState(mikaCombatant)).to.equal(null);
+                    expect(ui.combat._lrElevationState(mikaCombatant)).to.equal("elevated");
 
-                    // The elevation is a single-segment record: swept at the boundary,
-                    // back to natural DEX in the next segment
+                    // She acts there: the elevation is a single-segment record, swept at
+                    // the boundary, back to natural DEX in the next segment
                     await combat.nextTurn();
                     expect(combat.segment).to.equal(6);
                     expect(combat.combatant.actorId).to.equal(alpha.id);
@@ -1315,6 +1316,77 @@ export function registerCombatTests(quench) {
                     expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 6)), "natural DEX again").to.equal(
                         20,
                     );
+                });
+
+                it("Should return an unspent elevated Phase to natural DEX when standing down", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+
+                    const alpha = await Actor.create({
+                        name: "_Quench LR SD Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const beta = await Actor.create({
+                        name: "_Quench LR SD Beta",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 22, max: 22 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const mika = await Actor.create({
+                        name: "_Quench LR SD Mika",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, beta, mika);
+
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000005" BASECOST="0.0" LEVELS="5" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                            mika,
+                        ),
+                        { parent: mika },
+                    );
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [
+                        { actorId: alpha.id },
+                        { actorId: beta.id },
+                        { actorId: mika.id },
+                    ]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+
+                    // Mika elevates above Beta (25 vs 22) and her turn arrives second
+                    const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId, "elevated above Beta").to.equal(mika.id);
+
+                    // Standing down on the unacted elevated turn: the pointer moves on to
+                    // Beta, and Mika re-enters the segment at her natural DEX
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    expect(mikaCombatant.lrElevatedAbs, "elevation cleared").to.equal(null);
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "Beta acts next").to.equal(beta.id);
+
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId, "Mika re-enters at natural DEX").to.equal(mika.id);
+                    expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(20);
+
+                    // The natural Phase is still just one action: after it, the segment moves on
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
                 });
 
                 it("Should re-evaluate initiative order when DEX changes mid-combat and skip aborted combatants", async function () {

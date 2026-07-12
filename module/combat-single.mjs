@@ -311,7 +311,14 @@ export class HeroSystem6eCombatSingle extends Combat {
      * Advance down the turn index loop, checking for fresh-phase held action overwrites.
      * @override
      */
-    async nextTurn() {
+    /**
+     * @param {object} [options]
+     * @param {string|null} [options.lrStandDownId] - Combatant who just cancelled a
+     *   Lightning Reflexes elevation on their own (unacted) turn: they re-enter the
+     *   segment at their natural DEX instead of being excluded as the ending combatant
+     * @override
+     */
+    async nextTurn({ lrStandDownId = null } = {}) {
         const allCombatants = this.combatants.contents;
         const activeSegment = this.segment;
         const currentAbsNow = this.round * 12 + activeSegment;
@@ -341,7 +348,8 @@ export class HeroSystem6eCombatSingle extends Combat {
             // A held slot only comes up once
             if (cHeldHere && c.getFlag(game.system.id, "heldSlotTakenAbs") === currentAbsNow) return false;
             // The ending combatant re-enters the segment only via an unused held slot
-            if (c.id === ending?.id && !cHeldHere) return false;
+            // or by standing down from an unacted Lightning Reflexes elevation
+            if (c.id === ending?.id && !cHeldHere && c.id !== lrStandDownId) return false;
             const priority = this.getInitiativePriority(c, activeSegment);
             if (priority < endingPriority) return true;
             return priority === endingPriority && !!ending && c.id !== ending.id && c.id.localeCompare(ending.id) > 0;

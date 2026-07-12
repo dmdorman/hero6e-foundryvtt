@@ -980,7 +980,11 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const reached = turnIndex !== -1 && turnIndex <= (combat.turn ?? 0);
 
         if (combatant.lrElevatedAbs === currentAbs) {
-            return reached ? null : "elevated";
+            // Cancellable until the elevated Phase is USED: while the pointer sits on
+            // the combatant they have not acted yet and may stand down to their
+            // natural DEX; once passed, the Phase is spent
+            const acted = turnIndex !== -1 && turnIndex < (combat.turn ?? 0);
+            return acted ? null : "elevated";
         }
 
         // Elevation moves this segment's natural Phase earlier: it needs a Phase here,
@@ -1017,8 +1021,22 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const activeId = combat.combatant?.id ?? null;
 
         if (state === "elevated") {
+            const standingDownFromOwnTurn = combat.combatant?.id === combatant.id;
             await combatant.unsetFlag(game.system.id, "lrElevatedAbs");
             await this._holdCard(combatant, `${actor.name} stands down to their natural DEX.`);
+            // Standing down ON the elevated turn keeps the Phase unspent: the pointer
+            // moves on and the combatant re-enters the segment at natural DEX. The
+            // pointer is re-synced first so the advance sees them as the ending
+            // combatant even after the un-set re-sorted them downward (V13 index lag)
+            if (standingDownFromOwnTurn) {
+                await this._resyncTurnPointer(combat, combatant.id);
+                try {
+                    await combat.nextTurn({ lrStandDownId: combatant.id });
+                } catch (e) {
+                    console.warn(`Unable to advance the turn after standing down`, e);
+                }
+                return;
+            }
         } else {
             const blocked = this._blockedActionReason(combatant);
             if (blocked) return void ui.notifications.warn(blocked);
