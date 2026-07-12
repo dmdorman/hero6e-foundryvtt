@@ -4,7 +4,7 @@ import { HeroSystem6eCombat } from "./combat.mjs";
 import { HeroSystem6eCombatTracker } from "./combatTracker.mjs";
 import { HeroSystem6eCombatant } from "./combatant.mjs";
 
-import { HeroSystem6eCombatSingle } from "./combat-single.mjs";
+import { HeroSystem6eCombatSingle, migrateCombatsToSingleCombatantTracker } from "./combat-single.mjs";
 import { HeroSystem6eCombatTrackerSingle } from "./combatTracker-single.mjs";
 import { HeroSystem6eCombatantSingle } from "./combatant-single.mjs";
 
@@ -153,6 +153,7 @@ Hooks.once("init", async function () {
         },
         rollItemMacro: rollItemMacro,
         config: HERO,
+        migrateCombatsToSingleCombatantTracker,
     };
     CONFIG.HERO = { ...CONFIG.HERO, ...HERO };
 

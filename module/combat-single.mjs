@@ -1692,3 +1692,142 @@ export class HeroSystem6eCombatSingle extends Combat {
         return HeroCompatibility.updateEmbedded(this, "combatants", combatantUpdates);
     }
 }
+
+// Legacy combatant/combat bookkeeping keys the single-combatant model does not use,
+// plus single-stack transients that must not survive a model conversion.
+const LEGACY_COMBATANT_FLAG_KEYS = [
+    "initiative",
+    "initiativeCharacteristic",
+    "segment",
+    "spd",
+    "initiativeTooltip",
+    "lightningReflexes",
+    "spentEndOn",
+    "endUsedForMovement",
+    "heroHistory",
+    "heldSlotTakenAbs",
+    "spentHoldPosition",
+    "lrElevatedAbs",
+    "spdLockout",
+    "knownSpd",
+];
+const LEGACY_COMBAT_FLAG_KEYS = [
+    "segment",
+    "postSegment12Round",
+    "heroCurrent",
+    "currentSegment",
+    "segmentRolls",
+    "recoveredRounds",
+    "actingPriority",
+    "segmentHighWater",
+];
+
+/**
+ * Console migration for existing combats into the single-combatant data model.
+ * The legacy tracker keeps one combatant per Phase segment (doubled for Lightning
+ * Reflexes); this collapses each token to a single combatant, purges legacy turn
+ * bookkeeping, and resets every combat to its pre-start state — the segment
+ * timeline is rebuilt when combat is begun again. Deliberately NOT wired to a
+ * version gate; run it manually after enabling the single combatant tracker:
+ *
+ *   game.herosystem6e.migrateCombatsToSingleCombatantTracker()
+ *   game.herosystem6e.migrateCombatsToSingleCombatantTracker({ dryRun: true })
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.dryRun] - Log the plan without writing anything
+ * @param {boolean} [options.force] - Run even while the legacy tracker is active
+ * @returns {Promise<object[]>} Per-combat report of what was (or would be) changed
+ */
+export async function migrateCombatsToSingleCombatantTracker({ dryRun = false, force = false } = {}) {
+    if (!game.user.isGM) {
+        ui.notifications.warn(`Only a GM can migrate combats.`);
+        return [];
+    }
+    let singleTrackerActive = false;
+    try {
+        singleTrackerActive =
+            game.settings.get(game.system.id, "alphaTesting") &&
+            game.settings.get(game.system.id, "singleCombatantTracker");
+    } catch (e) {
+        console.warn(`Unable to read the single combatant tracker settings`, e);
+    }
+    if (!singleTrackerActive && !force) {
+        ui.notifications.warn(
+            `Enable the Single Combatant Tracker (alpha) setting and reload before migrating, or pass { force: true }.`,
+        );
+        return [];
+    }
+
+    const report = [];
+    for (const combat of game.combats) {
+        // One combatant per token (or per actor for tokenless combatants); the
+        // legacy per-segment and Lightning Reflexes duplicates are removed.
+        // Keepers prefer a live actor so broken references are the ones culled.
+        const keepers = new Map();
+        const deleteIds = [];
+        for (const combatant of combat.combatants) {
+            const key = combatant.tokenId || combatant.actorId || combatant.id;
+            const kept = keepers.get(key);
+            if (!kept) {
+                keepers.set(key, combatant);
+            } else if (!kept.actor && combatant.actor) {
+                deleteIds.push(kept.id);
+                keepers.set(key, combatant);
+            } else {
+                deleteIds.push(combatant.id);
+            }
+        }
+
+        const combatantUpdates = [];
+        for (const combatant of keepers.values()) {
+            const update = { _id: combatant.id };
+            if (combatant.initiative !== null) update.initiative = null;
+
+            const flagDeletes = {};
+            const systemFlags = combatant.flags?.[game.system.id] ?? {};
+            const staleKeys = LEGACY_COMBATANT_FLAG_KEYS.filter((key) => systemFlags[key] !== undefined);
+            if (staleKeys.length > 0) flagDeletes[game.system.id] = HeroCompatibility.forceDelete(staleKeys);
+            // The legacy hold marker lives outside the system scope
+            if (combatant.flags?.holdingAnAction !== undefined) {
+                Object.assign(flagDeletes, HeroCompatibility.forceDelete(["holdingAnAction"]));
+            }
+            if (Object.keys(flagDeletes).length > 0) update.flags = flagDeletes;
+
+            if (Object.keys(update).length > 1) combatantUpdates.push(update);
+        }
+
+        const combatFlags = combat.flags?.[game.system.id] ?? {};
+        const staleCombatKeys = LEGACY_COMBAT_FLAG_KEYS.filter((key) => combatFlags[key] !== undefined);
+        const needsReset = combat.started || combat.round !== 0 || staleCombatKeys.length > 0;
+        const resetPayload = { started: false, round: 0, turn: null };
+        if (staleCombatKeys.length > 0) {
+            resetPayload[`flags.${game.system.id}`] = HeroCompatibility.forceDelete(staleCombatKeys);
+        }
+
+        const entry = {
+            combat: combat.id,
+            scene: combat.scene?.name ?? null,
+            wasStarted: combat.started,
+            combatantsRemoved: deleteIds.length,
+            combatantsKept: keepers.size,
+            combatantsCleaned: combatantUpdates.length,
+            combatFlagsPurged: staleCombatKeys,
+            reset: needsReset,
+        };
+        report.push(entry);
+
+        if (dryRun) continue;
+        if (deleteIds.length > 0) await combat.deleteEmbeddedDocuments("Combatant", deleteIds);
+        if (combatantUpdates.length > 0) await combat.updateEmbeddedDocuments("Combatant", combatantUpdates);
+        if (needsReset) await combat.update(resetPayload);
+    }
+
+    console.table(report);
+    const touched = report.filter((r) => r.combatantsRemoved || r.combatantsCleaned || r.reset);
+    ui.notifications.info(
+        dryRun
+            ? `Single tracker migration dry run: ${touched.length} of ${report.length} combat(s) would change (see console).`
+            : `Single tracker migration: ${touched.length} of ${report.length} combat(s) converted; begin combat again to rebuild the timeline.`,
+    );
+    return report;
+}
