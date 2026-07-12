@@ -328,25 +328,49 @@ export class HeroSystem6eCombatSingle extends Combat {
         if (stillToAct.length > 0) {
             stillToAct.sort((a, b) => this._comparePriority(a, b, this, activeSegment));
             const target = stillToAct[0];
-            const targetIndex = this.turns.findIndex((t) => t.id === target.id);
+
+            // A mid-segment hold changes live priorities, and any embedded combatant write
+            // re-sorts the turns array — so the turn index must address the RE-SORTED
+            // order, and every client must actually re-sort. Refreshing all initiatives
+            // forces the re-sort deterministically; the index comes from a prediction
+            // using the same comparator setupTurns uses.
+            const inlineCombatantUpdates = this.combatants.map((c) => ({
+                _id: c.id,
+                initiative: this.getInitiativePriority(c, activeSegment),
+            }));
+
+            // Landing on a positional holder's declared slot marks it taken in the
+            // same update, so ending that turn consumes the hold race-free
+            const targetHold = target.heldAction;
+            if (targetHold?.mode === "position" && targetHold.segmentAbs === currentAbsNow) {
+                const targetUpdate = inlineCombatantUpdates.find((u) => u._id === target.id);
+                if (targetUpdate) targetUpdate[`flags.${game.system.id}.heldSlotTakenAbs`] = currentAbsNow;
+            }
+
+            let predictedTurns = [...allCombatants].sort((a, b) => this._sortCombatants(a, b, this));
+            if (HeroCompatibility.isV14) {
+                predictedTurns = predictedTurns.filter(
+                    (t) =>
+                        (t.hasPhaseInSegment?.(activeSegment) ?? false) ||
+                        (t.holdsPositionInSegment?.(activeSegment) ?? false),
+                );
+            }
+            const targetIndex = predictedTurns.findIndex((t) => t.id === target.id);
+
             if (targetIndex !== -1) {
-                // Landing on a positional holder's declared slot marks it taken in the
-                // same update, so ending that turn consumes the hold race-free
-                const inlineCombatantUpdates = [];
-                const targetHold = target.heldAction;
-                if (targetHold?.mode === "position" && targetHold.segmentAbs === currentAbsNow) {
-                    inlineCombatantUpdates.push({
-                        _id: target.id,
-                        [`flags.${game.system.id}.heldSlotTakenAbs`]: currentAbsNow,
-                    });
-                }
-                return HeroCompatibility.updateEmbedded(
+                if (!HeroCompatibility.isV14) this._turns = null;
+                const result = await HeroCompatibility.updateEmbedded(
                     this,
                     "combatants",
                     inlineCombatantUpdates,
                     { turn: targetIndex },
                     { direction: 1, previousCombatantId: ending?.id },
                 );
+                if (!HeroCompatibility.isV14) {
+                    this._turns = null;
+                    this.setupTurns();
+                }
+                return result;
             }
         }
 
