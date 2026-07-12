@@ -137,7 +137,14 @@ export class HeroSystem6eCombatSingle extends Combat {
         const activeSegment = targetSegment ?? parentCombat?.segment ?? 12;
         const statuses = combatant.actor.statuses;
 
-        if (statuses.has("aborted")) return 0;
+        if (statuses.has("aborted")) {
+            // Map the queried segment number to its absolute position relative to the
+            // combat; a recorded abort only zeroes the combatant through its spent Phase
+            const combatSegment = parentCombat?.segment ?? activeSegment;
+            const combatAbs = HeroSystem6eCombatantSingle.absoluteSegment(parentCombat?.round ?? 0, combatSegment);
+            const queryAbs = combatAbs + ((activeSegment - combatSegment + 12) % 12);
+            if (combatant.abortAppliesAtAbs?.(queryAbs) ?? true) return 0;
+        }
 
         const actorDoc = combatant.actor;
         const characteristicKey = actorDoc.system?.initiativeCharacteristic ?? "dex";
@@ -210,7 +217,11 @@ export class HeroSystem6eCombatSingle extends Combat {
         const actor = combatant?.actor;
         if (!actor) return false;
         if ((this.settings?.skipDefeated ?? false) && combatant.isOutOfCombat) return false;
-        if (!ignoreAbort && actor.statuses.has("aborted")) return false;
+        if (!ignoreAbort && actor.statuses.has("aborted")) {
+            const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
+            const queryAbs = currentAbs + ((segment - this.segment + 12) % 12);
+            if (combatant.abortAppliesAtAbs?.(queryAbs) ?? true) return false;
+        }
         // A spent hold already consumed this segment's action (using a Held Action
         // replaces the Phase: he cannot have two Phases in one Segment, 6E2 20)
         if (combatant.spentHoldInSegment?.(segment)) return false;

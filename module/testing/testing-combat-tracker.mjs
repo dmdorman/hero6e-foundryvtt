@@ -841,6 +841,58 @@ export function registerCombatTests(quench) {
                     expect(cleared, "aborted status cleared after the spent Phase passed").to.be.true;
                 });
 
+                it("Should not skip the Phase after an abort's spent Phase for a top-DEX combatant", async function () {
+                    const reactor = await Actor.create({
+                        name: "_Quench Abort Reactor",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 4, max: 4 } },
+                        },
+                    });
+                    const pacer = await Actor.create({
+                        name: "_Quench Abort Pacer",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 6, max: 6 } },
+                        },
+                    });
+                    actorDocuments.push(reactor, pacer);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: reactor.id }, { actorId: pacer.id }]);
+                    await combat.startCombat();
+
+                    // Segment 12: reactor (30) then pacer (20); Segment 2 is the pacer's alone
+                    await combat.nextTurn();
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(2);
+                    expect(combat.combatant.actorId).to.equal(pacer.id);
+
+                    // Reactor (SPD 4: 3/6/9/12) aborts during Segment 2, where they have no
+                    // Phase: the abort consumes their Segment 3 Phase
+                    ui.combat.viewed = combat;
+                    const reactorCombatant = combat.combatants.find((c) => c.actorId === reactor.id);
+                    await ui.combat._onToggleAbort(reactorCombatant.id);
+                    expect(reactorCombatant.abortSpentAbs, "abort consumes the Segment 3 Phase").to.equal(27);
+
+                    // Segment 3 (reactor's spent Phase, nobody else) is passed over entirely
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(4);
+                    expect(combat.combatant.actorId).to.equal(pacer.id);
+
+                    // Segment 6: the abort is spent, so the top-DEX reactor must act FIRST
+                    // even though the status document is still awaiting boundary cleanup
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId, "spent abort must not cost a second Phase").to.equal(reactor.id);
+
+                    const cleared = await waitUntil(() => !reactor.statuses.has("aborted"));
+                    expect(cleared, "aborted status cleared after the spent Phase passed").to.be.true;
+                });
+
                 it("Should mark knocked out combatants defeated via the tracker toggle", async function () {
                     const sleeper = await Actor.create({
                         name: "_Quench KO Sleeper",

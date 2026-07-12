@@ -136,6 +136,21 @@ export class HeroSystem6eCombatantSingle extends Combatant {
     }
 
     /**
+     * Whether the aborted status still binds at the given absolute segment. A recorded
+     * abort stops applying once its spent Phase has passed, even while the status
+     * document awaits the asynchronous boundary cleanup — otherwise target selection
+     * for the following segment mis-sorts the aborter to the bottom. Unrecorded aborts
+     * (bare status toggles) bind until the status is removed.
+     * @param {number} abs
+     * @returns {boolean}
+     */
+    abortAppliesAtAbs(abs) {
+        if (!this.actor?.statuses.has("aborted")) return false;
+        const spentAbs = this.abortSpentAbs;
+        return spentAbs === null || abs <= spentAbs;
+    }
+
+    /**
      * Whether this combatant occupies an initiative position in the segment: a spent
      * hold's acted position, a positional hold's declared slot, or a natural Phase.
      * A positional hold commits the banked Phase to its slot, so natural Phases don't
