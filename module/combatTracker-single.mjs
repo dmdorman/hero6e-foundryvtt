@@ -65,6 +65,16 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 });
                 controls.prepend(button);
             });
+
+            // Pin the Held Actions panel to the top of the scrolling list; member rows
+            // stack beneath the header with cumulative offsets
+            let stickyTop = 0;
+            element
+                .querySelectorAll(".combatant.hero-held-panel-header, li.combatant.hero-held-panel-member")
+                .forEach((li) => {
+                    li.style.top = `${stickyTop}px`;
+                    stickyTop += li.offsetHeight;
+                });
         };
 
         Hooks.on("renderCombatTracker", onRenderTracker);
@@ -240,50 +250,52 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             );
 
         const panelExpanded = expansionOverrides["held"] ?? true;
-        const panelHeader = {
-            id: "held-panel-header",
-            _id: "held-panel-header",
-            name: `${panelExpanded ? "▼" : "▶"} ⏳ Held Actions (${panelHolders.length})`,
-            img: "icons/svg/clockwork.svg",
-            css: [
-                "hero-timeline-header-row",
-                "collapsible-segment-header-slot",
-                "hero-held-panel-header",
-                panelExpanded ? "segment-expanded" : "segment-collapsed",
-            ].join(" "),
-            hasRolled: true,
-            initiative: panelHolders.length,
-            isFakeHeader: true,
-            active: false,
-        };
-        Object.defineProperty(panelHeader, "token", { get: () => null, configurable: true, enumerable: true });
-        Object.defineProperty(panelHeader, "actor", { get: () => null, configurable: true, enumerable: true });
-        timelineTurns.push(panelHeader);
+        if (panelHolders.length > 0) {
+            const panelHeader = {
+                id: "held-panel-header",
+                _id: "held-panel-header",
+                name: `${panelExpanded ? "▼" : "▶"} ⏳ Held Actions (${panelHolders.length})`,
+                img: "icons/svg/clockwork.svg",
+                css: [
+                    "hero-timeline-header-row",
+                    "collapsible-segment-header-slot",
+                    "hero-held-panel-header",
+                    panelExpanded ? "segment-expanded" : "segment-collapsed",
+                ].join(" "),
+                hasRolled: true,
+                initiative: panelHolders.length,
+                isFakeHeader: true,
+                active: false,
+            };
+            Object.defineProperty(panelHeader, "token", { get: () => null, configurable: true, enumerable: true });
+            Object.defineProperty(panelHeader, "actor", { get: () => null, configurable: true, enumerable: true });
+            timelineTurns.push(panelHeader);
 
-        if (panelExpanded) {
-            for (const combatant of panelHolders) {
-                const hold = combatant.heldAction;
-                const base = masterById.get(combatant.id);
-                const row = base
-                    ? { ...base }
-                    : {
-                          id: combatant.id,
-                          _id: combatant.id,
-                          name: combatant.name,
-                          img: combatant.img ?? combatant.actor?.img ?? "icons/svg/mystery-man.svg",
-                          hidden: combatant.hidden,
-                          defeated: combatant.isDefeated,
-                          css: "",
-                      };
-                const condition = hold.mode === "event" && hold.trigger ? `until: ${hold.trigger}` : "generic";
-                row.name = `⏳ ${row.name} — ${condition}`;
-                row.initiative = null;
-                row.hasRolled = true;
-                row.active = false;
-                row.effects = { icons: [], tooltip: "" };
-                row.css = `${(row.css || "").replace(/\bactive\b/g, "").trim()} hero-held-row hero-held-panel-member`;
-                if (dispositionTint) row.css = `${row.css} ${this._dispositionClass(combatant)}`.trim();
-                timelineTurns.push(row);
+            if (panelExpanded) {
+                for (const combatant of panelHolders) {
+                    const hold = combatant.heldAction;
+                    const base = masterById.get(combatant.id);
+                    const row = base
+                        ? { ...base }
+                        : {
+                              id: combatant.id,
+                              _id: combatant.id,
+                              name: combatant.name,
+                              img: combatant.img ?? combatant.actor?.img ?? "icons/svg/mystery-man.svg",
+                              hidden: combatant.hidden,
+                              defeated: combatant.isDefeated,
+                              css: "",
+                          };
+                    const condition = hold.mode === "event" && hold.trigger ? `until: ${hold.trigger}` : "generic";
+                    row.name = `⏳ ${row.name} — ${condition}`;
+                    row.initiative = null;
+                    row.hasRolled = true;
+                    row.active = false;
+                    row.effects = { icons: [], tooltip: "" };
+                    row.css = `${(row.css || "").replace(/\bactive\b/g, "").trim()} hero-held-row hero-held-panel-member`;
+                    if (dispositionTint) row.css = `${row.css} ${this._dispositionClass(combatant)}`.trim();
+                    timelineTurns.push(row);
+                }
             }
         }
 
