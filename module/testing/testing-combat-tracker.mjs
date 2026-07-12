@@ -1299,26 +1299,29 @@ export function registerCombatTests(quench) {
                     expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(25);
                     expect(combat.combatant.actorId, "pointer stays on the active combatant").to.equal(alpha.id);
 
-                    // Mika's elevated turn arrives; while the pointer is on her the Phase
-                    // is unspent, so standing down is still offered
+                    // Mika's elevated turn arrives for the scoped action only
                     await combat.nextTurn();
                     expect(combat.segment).to.equal(12);
                     expect(combat.combatant.actorId, "elevated turn arrives").to.equal(mika.id);
-                    expect(ui.combat._lrElevationState(mikaCombatant)).to.equal("elevated");
 
-                    // She acts there: the elevation is a single-segment record, swept at
-                    // the boundary, back to natural DEX in the next segment
+                    // Ending the elevated stop spends only the scoped action: the rest
+                    // of the Phase re-enters the segment at natural DEX
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "rest of the Phase at natural DEX").to.equal(mika.id);
+                    expect(mikaCombatant.lrElevatedAbs, "elevation consumed by the LR stop").to.equal(null);
+                    expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(20);
+
+                    // The remainder is one action: after it, the segment moves on
                     await combat.nextTurn();
                     expect(combat.segment).to.equal(6);
                     expect(combat.combatant.actorId).to.equal(alpha.id);
-                    const swept = await waitUntil(() => mikaCombatant.lrElevatedAbs === null);
-                    expect(swept, "elevation swept at the segment boundary").to.be.true;
                     expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 6)), "natural DEX again").to.equal(
                         20,
                     );
                 });
 
-                it("Should return an unspent elevated Phase to natural DEX when standing down", async function () {
+                it("Should slot the Phase remainder below intermediates after an elevated LR stop", async function () {
                     const { HeroSystem6eItem } = await import("../item/item.mjs");
 
                     const alpha = await Actor.create({
@@ -1366,24 +1369,30 @@ export function registerCombatTests(quench) {
                     ui.combat.viewed = combat;
                     expect(combat.combatant.actorId).to.equal(alpha.id);
 
-                    // Mika elevates above Beta (25 vs 22) and her turn arrives second
+                    // Cancelling before the stop arrives removes it; the position is
+                    // still ahead of the count, so it can be re-declared
                     const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    expect(mikaCombatant.lrElevatedAbs, "cancelled before arrival").to.equal(null);
+                    expect(ui.combat._lrElevationState(mikaCombatant)).to.equal("available");
+
+                    // Mika elevates above Beta (25 vs 22) and her stop arrives second
                     await ui.combat._onToggleLrElevation(mikaCombatant.id);
                     await combat.nextTurn();
                     expect(combat.combatant.actorId, "elevated above Beta").to.equal(mika.id);
 
-                    // Standing down on the unacted elevated turn: the pointer moves on to
-                    // Beta, and Mika re-enters the segment at her natural DEX
-                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
-                    expect(mikaCombatant.lrElevatedAbs, "elevation cleared").to.equal(null);
+                    // Ending the LR stop: Beta (22) acts before the Phase remainder (20)
+                    await combat.nextTurn();
                     expect(combat.segment).to.equal(12);
                     expect(combat.combatant.actorId, "Beta acts next").to.equal(beta.id);
+                    expect(mikaCombatant.lrElevatedAbs, "elevation consumed").to.equal(null);
 
                     await combat.nextTurn();
-                    expect(combat.combatant.actorId, "Mika re-enters at natural DEX").to.equal(mika.id);
+                    expect(combat.combatant.actorId, "remainder at natural DEX").to.equal(mika.id);
                     expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(20);
 
-                    // The natural Phase is still just one action: after it, the segment moves on
+                    // The remainder is one action: after it, the segment moves on
                     await combat.nextTurn();
                     expect(combat.segment).to.equal(6);
                     expect(combat.combatant.actorId).to.equal(alpha.id);
