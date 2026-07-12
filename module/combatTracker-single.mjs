@@ -860,7 +860,11 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const actor = combatant?.actor;
         const effect = actor?.effects.find((e) => e.statuses.has("holding"));
         if (!combatant?.isOwner || !effect) return;
+        const hold = combatant.heldAction;
         await effect.delete();
+        // Releasing at the held slot still forfeits that position (the banked Phase is
+        // gone); releasing an event/generic hold costs nothing — the natural Phase stays
+        if (hold?.mode === "position") await this._recordSpentAction(combatant, hold);
         await this._holdCard(combatant, `${actor.name} releases their Held Action without acting.`);
     }
 
