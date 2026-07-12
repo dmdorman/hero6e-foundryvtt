@@ -149,12 +149,18 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         const baseScore = characteristicObj?.value ?? 10;
 
-        // LIGHTNING_REFLEXES_ALL raises effective DEX for initiative order only (6E1 116; 5ER 96).
-        // The single-action variant requires GM adjudication per action, so it is not auto-applied.
-        const lightningReflexesLevels =
-            parseInt(
-                actorDoc.items?.find?.((i) => i.system?.XMLID === "LIGHTNING_REFLEXES_ALL")?.system?.LEVELS ?? 0,
-            ) || 0;
+        // Lightning Reflexes raises effective DEX for acting order only (6E1 116; 5ER 96).
+        // Unrestricted All Actions levels always apply; scoped purchases (single action,
+        // group, HTH/ranged — the character may only execute that action when acting
+        // early) apply only while the combatant elevated themselves this segment.
+        const lr = combatant.lightningReflexes ?? { always: 0, scoped: null };
+        let lightningReflexesLevels = lr.always;
+        if (lr.scoped && combatant.lrElevatedAbs !== null) {
+            const combatSegment = parentCombat?.segment ?? activeSegment;
+            const combatAbs = HeroSystem6eCombatantSingle.absoluteSegment(parentCombat?.round ?? 0, combatSegment);
+            const queryAbs = combatAbs + ((activeSegment - combatSegment + 12) % 12);
+            if (combatant.lrElevatedAbs === queryAbs) lightningReflexesLevels += lr.scoped.levels;
+        }
 
         const spdObj = actorDoc.system?.characteristics?.spd;
         const resolvedSpd = spdObj?.value ?? 2;
@@ -856,6 +862,9 @@ export class HeroSystem6eCombatSingle extends Combat {
             if ((combatant.spentHoldPosition?.segmentAbs ?? -1) >= targetAbs) {
                 update[`flags.${game.system.id}.spentHoldPosition`] = null;
             }
+            if ((combatant.lrElevatedAbs ?? -1) >= targetAbs) {
+                update[`flags.${game.system.id}.lrElevatedAbs`] = null;
+            }
             if (Object.keys(update).length > 0) resets.push({ _id: combatant.id, ...update });
         }
         return resets;
@@ -878,6 +887,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                 initiative: null,
                 [`flags.${game.system.id}.heldSlotTakenAbs`]: null,
                 [`flags.${game.system.id}.spentHoldPosition`]: null,
+                [`flags.${game.system.id}.lrElevatedAbs`]: null,
             });
         });
 
@@ -1222,6 +1232,11 @@ export class HeroSystem6eCombatSingle extends Combat {
             const spent = combatant.spentHoldPosition;
             if (spent && spent.segmentAbs < currentAbs) {
                 await combatant.unsetFlag(game.system.id, "spentHoldPosition");
+            }
+            // Lightning Reflexes elevation is likewise a single-segment record
+            const lrAbs = combatant.lrElevatedAbs;
+            if (lrAbs !== null && lrAbs < currentAbs) {
+                await combatant.unsetFlag(game.system.id, "lrElevatedAbs");
             }
         }
     }

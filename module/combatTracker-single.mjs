@@ -1,4 +1,5 @@
 import { HeroSystem6eCombatantSingle } from "./combatant-single.mjs";
+import { HeroCompatibility } from "./utility/compatibility.mjs";
 
 const { CombatTracker } = foundry.applications.sidebar.tabs;
 
@@ -104,6 +105,32 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 } else {
                     button.className = "inline-control combatant-control icon fa-solid fa-bolt hero-use-held";
                 }
+                controls.prepend(button);
+            });
+
+            // Lightning Reflexes: owners of scoped-LR combatants get an act-early
+            // toggle on their current-segment row while the position is reachable
+            element.querySelectorAll("li.combatant.current-segment-member:not(.hero-group-parent)").forEach((li) => {
+                const combatant = app.viewed.combatants.get(li.dataset.combatantId);
+                const state = app._lrElevationState?.(combatant);
+                if (!state) return;
+                const controls = li.querySelector(".combatant-controls");
+                if (!controls || controls.querySelector(".hero-lr-elevate")) return;
+
+                const button = document.createElement("button");
+                button.type = "button";
+                const label =
+                    state === "elevated" ? "Cancel Act Early (Lightning Reflexes)" : "Act Early (Lightning Reflexes)";
+                button.setAttribute("aria-label", label);
+                button.dataset.tooltip = label;
+                button.className = `inline-control combatant-control icon fa-solid fa-bolt-lightning hero-lr-elevate${
+                    state === "elevated" ? " hero-lr-elevated" : ""
+                }`;
+                button.addEventListener("click", (clickEvent) => {
+                    clickEvent.preventDefault();
+                    clickEvent.stopPropagation();
+                    app._onToggleLrElevation(li.dataset.combatantId);
+                });
                 controls.prepend(button);
             });
         };
@@ -471,6 +498,12 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                         row.name = `${row.name} (aborted)`;
                     }
 
+                    // An elevated scoped-LR combatant acts early this segment only
+                    if (combatant.lrElevatedAbs === abs) {
+                        row.css = `${row.css} hero-lr-row`.trim();
+                        row.name = `↯ ${row.name} (LR)`;
+                    }
+
                     row.css = `${row.css} ${stateCss}`.trim();
                     if (isCurrent && combatant.id === activeCombatantId) {
                         row.active = true;
@@ -694,6 +727,18 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                 onClick: (event, li) => this._onReleaseHeldAction(li.dataset.combatantId),
             },
             {
+                label: "Act Early (Lightning Reflexes)",
+                icon: "fa-solid fa-bolt-lightning",
+                visible: (li) => this._lrElevationState(getCombatant(li)) === "available",
+                onClick: (event, li) => this._onToggleLrElevation(li.dataset.combatantId),
+            },
+            {
+                label: "Cancel Act Early (LR)",
+                icon: "fa-solid fa-rotate-left",
+                visible: (li) => this._lrElevationState(getCombatant(li)) === "elevated",
+                onClick: (event, li) => this._onToggleLrElevation(li.dataset.combatantId),
+            },
+            {
                 label: "Abort…",
                 icon: "fa-solid fa-shield-halved",
                 visible: (li) => {
@@ -757,10 +802,9 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         const currentAbs = combat.round * 12 + combat.segment;
         const characteristicKey = actor.system?.initiativeCharacteristic ?? "dex";
         const ownDex = actor.system?.characteristics?.[characteristicKey]?.value ?? 10;
-        const lightningReflexes =
-            parseInt(actor.items?.find?.((i) => i.system?.XMLID === "LIGHTNING_REFLEXES_ALL")?.system?.LEVELS ?? 0) ||
-            0;
-        const actingDex = ownDex + lightningReflexes;
+        // Only unrestricted All Actions LR raises the holding position — holding is
+        // not the scoped action a restricted purchase was bought for
+        const actingDex = ownDex + (combatant.lightningReflexes?.always ?? 0);
 
         // Legal window: from now up to (not including) the segment of the next natural
         // Phase — a Held Action is lost the moment that segment begins (null zone)
@@ -914,6 +958,104 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         // gone); releasing an event/generic hold costs nothing — the natural Phase stays
         if (hold?.mode === "position") await this._recordSpentAction(combatant, hold);
         await this._holdCard(combatant, `${actor.name} releases their Held Action without acting.`);
+    }
+
+    /**
+     * Whether a scoped Lightning Reflexes elevation is possible for this combatant
+     * right now: "available" while the elevated position is still ahead of the
+     * segment's count, "elevated" while an elevation can still be cancelled (its
+     * turn has not arrived), null otherwise.
+     * @param {Combatant|null} combatant
+     * @returns {"available"|"elevated"|null}
+     * @protected
+     */
+    _lrElevationState(combatant) {
+        const combat = this.viewed;
+        if (!combat?.started || !combatant?.isOwner || !combatant.actor) return null;
+        const scoped = combatant.lightningReflexes?.scoped;
+        if (!scoped) return null;
+
+        const currentAbs = combat.round * 12 + combat.segment;
+        const turnIndex = combat.turns?.findIndex((t) => t.id === combatant.id) ?? -1;
+        const reached = turnIndex !== -1 && turnIndex <= (combat.turn ?? 0);
+
+        if (combatant.lrElevatedAbs === currentAbs) {
+            return reached ? null : "elevated";
+        }
+
+        // Elevation moves this segment's natural Phase earlier: it needs a Phase here,
+        // an action still unspent, and an elevated position the count has not passed
+        if (!combatant.hasPhaseInSegment(combat.segment)) return null;
+        if (combatant.actor.statuses.has("holding")) return null;
+        if (combatant.spentHoldInSegment?.(combat.segment)) return null;
+        if (reached) return null;
+        const elevatedPriority = combat.getInitiativePriority(combatant, combat.segment) + scoped.levels;
+        const actingPriority =
+            combat.getFlag(game.system.id, "actingPriority") ??
+            (combat.combatant ? combat.getInitiativePriority(combat.combatant, combat.segment) : Infinity);
+        if (elevatedPriority >= actingPriority) return null;
+        return "available";
+    }
+
+    /**
+     * Toggles a scoped Lightning Reflexes elevation for the current segment. The
+     * elevated character acts at DEX + LR but may only execute the scoped action
+     * (6E1 116; 5ER 96); cancelling before the elevated turn arrives restores the
+     * natural position. The pointer is re-synced to the same active combatant, since
+     * the flag write re-sorts the turns array under the stored index.
+     * @param {string} combatantId
+     * @protected
+     */
+    async _onToggleLrElevation(combatantId) {
+        const combat = this.viewed;
+        const combatant = combat?.combatants.get(combatantId);
+        const actor = combatant?.actor;
+        if (!combat?.started || !combatant?.isOwner || !actor) return;
+
+        const state = this._lrElevationState(combatant);
+        if (!state) return;
+        const activeId = combat.combatant?.id ?? null;
+
+        if (state === "elevated") {
+            await combatant.unsetFlag(game.system.id, "lrElevatedAbs");
+            await this._holdCard(combatant, `${actor.name} stands down to their natural DEX.`);
+        } else {
+            const blocked = this._blockedActionReason(combatant);
+            if (blocked) return void ui.notifications.warn(blocked);
+            const currentAbs = combat.round * 12 + combat.segment;
+            await combatant.setFlag(game.system.id, "lrElevatedAbs", currentAbs);
+            const effectiveDex = Math.floor(combat.getInitiativePriority(combatant, combat.segment));
+            await this._holdCard(
+                combatant,
+                `${actor.name} acts early at effective DEX ${effectiveDex} (Lightning Reflexes — only: ${combatant.lightningReflexes.scoped.label}).`,
+            );
+        }
+
+        await this._resyncTurnPointer(combat, activeId);
+    }
+
+    /**
+     * Points the turn index back at the given combatant after a mid-segment priority
+     * change re-sorted the turns array. previousCombatantId is the active combatant
+     * itself so the natural-turn hold consumption's self-advance guard skips this
+     * pointer-only update.
+     * @param {Combat} combat
+     * @param {string|null} activeId
+     * @private
+     */
+    async _resyncTurnPointer(combat, activeId) {
+        if (!combat?.started || activeId === null) return;
+        if (!HeroCompatibility.isV14) {
+            combat._turns = null;
+            combat.setupTurns();
+        }
+        const index = combat.turns.findIndex((t) => t.id === activeId);
+        if (index === -1 || index === combat.turn) return;
+        try {
+            await combat.update({ turn: index }, { direction: 1, previousCombatantId: activeId });
+        } catch (e) {
+            console.warn(`Unable to re-sync the turn pointer`, e);
+        }
     }
 
     /**

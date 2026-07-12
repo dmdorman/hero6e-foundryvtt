@@ -1,6 +1,7 @@
 $hero-held-accent: #d9a520;
 $hero-held-text: #ecc94b;
 $hero-next-turn: #ff9f43;
+$hero-lr-accent: #4fc3f7;
 $combat-tracker-hero-disposition-opacity-default: 0.05;
 $combat-tracker-hero-disposition-opacity-hover: 0.2;
 $combat-tracker-hero-disposition-opacity-active: 0.6;
@@ -218,6 +219,21 @@ $combat-tracker-hero-dispositions: (
 /* Panel rows stay slim: the ⚡ condition control is the only button */
 .combat-tracker li.combatant.hero-held-panel-member .combatant-control:not(.hero-use-held) {
     display: none;
+}
+
+/* 2h2. LIGHTNING REFLEXES: ELEVATED ROWS AND THE ACT-EARLY TOGGLE */
+.combat-tracker li.combatant.hero-lr-row {
+    box-shadow: inset 3px 0 0 rgba($hero-lr-accent, 0.8);
+    background: rgba($hero-lr-accent, 0.06);
+}
+
+.combat-tracker li.combatant .hero-lr-elevate {
+    color: rgba($hero-lr-accent, 0.55);
+}
+
+.combat-tracker li.combatant .hero-lr-elevate:hover,
+.combat-tracker li.combatant .hero-lr-elevate.hero-lr-elevated {
+    color: $hero-lr-accent;
 }
 
 /* 2i. ABORTED: THE CONSUMED PHASE ROW STAYS VISIBLE, GREYED OUT */

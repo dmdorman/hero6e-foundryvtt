@@ -125,6 +125,51 @@ export class HeroSystem6eCombatantSingle extends Combatant {
     }
 
     /**
+     * Lightning Reflexes raises effective DEX for acting order only (6E1 116; 5ER 96).
+     * HD encodes every 6e scope under LIGHTNING_REFLEXES_ALL, distinguished by
+     * OPTIONID; 5e single-action LR is its own XMLID. Only the unrestricted All
+     * Actions scope applies automatically — scoped purchases restrict the character
+     * to the scoped action when acting early, so they elevate on demand. Multiple
+     * scoped purchases keep the highest levels.
+     * @type {{always: number, scoped: {levels: number, label: string}|null}}
+     */
+    get lightningReflexes() {
+        const result = { always: 0, scoped: null };
+        for (const item of this.actor?.items ?? []) {
+            const xmlid = item.system?.XMLID;
+            if (xmlid !== "LIGHTNING_REFLEXES_ALL" && xmlid !== "LIGHTNING_REFLEXES_SINGLE") continue;
+            const levels = parseInt(item.system?.LEVELS ?? 0) || 0;
+            if (levels <= 0) continue;
+            const optionId = item.system?.OPTIONID || "ALL";
+            if (xmlid === "LIGHTNING_REFLEXES_ALL" && optionId === "ALL") {
+                result.always += levels;
+                continue;
+            }
+            if (levels > (result.scoped?.levels ?? 0)) {
+                const label =
+                    item.system?.NAME ||
+                    item.system?.INPUT ||
+                    item.system?.OPTION_ALIAS ||
+                    item.name ||
+                    "Lightning Reflexes";
+                result.scoped = { levels, label };
+            }
+        }
+        return result;
+    }
+
+    /**
+     * The absolute segment this combatant elevated themselves to their scoped
+     * Lightning Reflexes position in, or null. Display/sort flag for the current
+     * segment only; swept at segment boundaries.
+     * @type {number|null}
+     */
+    get lrElevatedAbs() {
+        if (!game.system?.id) return null;
+        return this.getFlag(game.system.id, "lrElevatedAbs") ?? null;
+    }
+
+    /**
      * The absolute segment of the Phase this combatant's abort consumes, recorded at
      * declaration (6E2 22: aborting uses the NEXT full Phase). Null for aborts applied
      * without the tracker (bare status toggles), which fall back to segment matching.
