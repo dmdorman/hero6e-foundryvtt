@@ -180,7 +180,7 @@ $combat-tracker-hero-dispositions: (
     align-items: center;
     height: auto !important;
     min-height: 0;
-    padding: 2px 4px;
+    padding: 0 4px;
 }
 
 .combat-tracker li.combatant.hero-held-panel-member .token-image {
@@ -200,7 +200,6 @@ $combat-tracker-hero-dispositions: (
 .combat-tracker li.combatant.hero-held-panel-member .name {
     flex: 0 0 1.1rem;
     font-size: var(--font-size-12);
-    line-height: 1.1;
 }
 
 .combat-tracker li.combatant.hero-held-panel-member .combatant-controls {
