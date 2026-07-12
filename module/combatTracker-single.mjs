@@ -71,7 +71,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
                 const isPanelRow = li.classList.contains("hero-held-panel-member");
                 const hold = combatant.heldAction;
-                const conditionLabel = hold?.mode === "event" ? hold.trigger || "Event" : "Generic";
+                const conditionLabel = (hold?.mode === "event" && hold.trigger) || "Held Action";
 
                 if (!combatant.isOwner) {
                     if (isPanelRow) {

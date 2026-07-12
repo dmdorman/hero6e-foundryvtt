@@ -198,6 +198,7 @@ $combat-tracker-hero-dispositions: (
 }
 
 .combat-tracker li.combatant.hero-held-panel-member .name {
+    flex: 0 0 1.1rem;
     font-size: var(--font-size-12);
     line-height: 1.1;
 }
