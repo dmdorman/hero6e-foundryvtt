@@ -986,9 +986,12 @@ export class HeroSystem6eCombatSingle extends Combat {
     }
 
     /**
-     * Combatant flag resets for a rewind: slot-taken markers and spent-hold display
-     * records at or after the target position must not survive, or replayed held
-     * slots are skipped as already used.
+     * Combatant flag resets for a rewind. Slot-taken markers on LIVE holds at or
+     * after the target position are cleared so replayed held slots come up again.
+     * Spent-hold records are retained: spending deleted the holding effect, and
+     * nothing can restore it — clearing the record would re-admit the holder for a
+     * second action in the replayed segment. Undoing a spent hold is a manual GM
+     * correction (re-declare the hold).
      * @param {number} targetAbs
      * @returns {object[]} Combatant update payloads keyed by _id
      * @private
@@ -997,11 +1000,11 @@ export class HeroSystem6eCombatSingle extends Combat {
         const resets = [];
         for (const combatant of this.combatants) {
             const update = {};
-            if ((combatant.getFlag(game.system.id, "heldSlotTakenAbs") ?? -1) >= targetAbs) {
+            if (
+                combatant.heldAction?.mode === "position" &&
+                (combatant.getFlag(game.system.id, "heldSlotTakenAbs") ?? -1) >= targetAbs
+            ) {
                 update[`flags.${game.system.id}.heldSlotTakenAbs`] = null;
-            }
-            if ((combatant.spentHoldPosition?.segmentAbs ?? -1) >= targetAbs) {
-                update[`flags.${game.system.id}.spentHoldPosition`] = null;
             }
             if ((combatant.lrElevatedAbs ?? -1) >= targetAbs) {
                 update[`flags.${game.system.id}.lrElevatedAbs`] = null;
