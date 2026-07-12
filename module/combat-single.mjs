@@ -382,7 +382,14 @@ export class HeroSystem6eCombatSingle extends Combat {
         // combatants with a Phase in the segment now ending have already spent it.
         const abortSpentIds = new Set(
             allCombatants
-                .filter((c) => (c.actor?.statuses.has("aborted") ?? false) && c.hasPhaseInSegment(activeSegment))
+                .filter((c) => {
+                    if (!(c.actor?.statuses.has("aborted") ?? false)) return false;
+                    // Declared aborts record the exact Phase they consume; bare statuses
+                    // fall back to matching the ending segment
+                    const spentAbs = c.abortSpentAbs;
+                    if (spentAbs !== null) return spentAbs <= currentAbsNow;
+                    return c.hasPhaseInSegment(activeSegment);
+                })
                 .map((c) => c.id),
         );
 
@@ -404,7 +411,10 @@ export class HeroSystem6eCombatSingle extends Combat {
 
             const foundActors = allCombatants.filter((c) => {
                 if ((c.actor?.statuses.has("aborted") ?? false) && !abortSpentIds.has(c.id)) {
-                    if (c.hasPhaseInSegment(nextSegment)) abortSpentIds.add(c.id);
+                    const spentAbs = c.abortSpentAbs;
+                    const scanAbs = nextRoundCycle * 12 + nextSegment;
+                    const spendsHere = spentAbs !== null ? spentAbs <= scanAbs : c.hasPhaseInSegment(nextSegment);
+                    if (spendsHere) abortSpentIds.add(c.id);
                     return false;
                 }
                 return this._takesTurnInSegment(c, nextSegment, { ignoreAbort: true });
@@ -1195,10 +1205,17 @@ export class HeroSystem6eCombatSingle extends Combat {
     async _clearExpiredAborts(elapsedSegments) {
         if (elapsedSegments === undefined) return;
 
+        const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
         for (const combatant of this.combatants) {
             const actor = combatant.actor;
             if (!actor?.statuses.has("aborted")) continue;
-            if (elapsedSegments !== null && !elapsedSegments.some((s) => combatant.hasPhaseInSegment(s))) continue;
+            const spentAbs = combatant.abortSpentAbs;
+            if (spentAbs !== null) {
+                // The spent Phase's segment must have fully passed
+                if (currentAbs <= spentAbs) continue;
+            } else if (elapsedSegments !== null && !elapsedSegments.some((s) => combatant.hasPhaseInSegment(s))) {
+                continue;
+            }
 
             const abortedEffect = actor.effects.find((e) => e.statuses.has("aborted"));
             if (!abortedEffect) continue;

@@ -107,6 +107,17 @@ export class HeroSystem6eCombatantSingle extends Combatant {
     }
 
     /**
+     * The absolute segment of the Phase this combatant's abort consumes, recorded at
+     * declaration (6E2 22: aborting uses the NEXT full Phase). Null for aborts applied
+     * without the tracker (bare status toggles), which fall back to segment matching.
+     * @type {number|null}
+     */
+    get abortSpentAbs() {
+        const effect = this.actor?.effects.find((e) => e.statuses.has("aborted"));
+        return effect?.getFlag(game.system.id, "abort")?.spentAbs ?? null;
+    }
+
+    /**
      * Whether this combatant occupies an initiative position in the segment: a spent
      * hold's acted position, a positional hold's declared slot, or a natural Phase.
      * A positional hold commits the banked Phase to its slot, so natural Phases don't

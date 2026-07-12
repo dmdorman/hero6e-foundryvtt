@@ -906,5 +906,22 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         }
 
         await actor.toggleStatusEffect("aborted", { active: true });
+
+        // Record which Phase the abort consumes (6E2 22: the NEXT full Phase — a phase
+        // already used this segment cannot be the one spent). Approximates "already
+        // acted" by the combatant's position relative to the turn pointer.
+        const combat = this.viewed;
+        if (combat?.started && combatant.combatSpd > 0) {
+            const currentAbs = combat.round * 12 + combat.segment;
+            const turnIndex = combat.turns?.findIndex((t) => t.id === combatant.id) ?? -1;
+            const alreadyActed =
+                combatant.hasPhaseInSegment(combat.segment) && turnIndex !== -1 && turnIndex <= (combat.turn ?? -1);
+            const spentAbs = HeroSystem6eCombatantSingle.nextPhaseAbs(
+                combatant.combatSpd,
+                alreadyActed ? currentAbs + 1 : currentAbs,
+            );
+            const abortEffect = actor.effects.find((e) => e.statuses.has("aborted"));
+            if (abortEffect) await abortEffect.setFlag(game.system.id, "abort", { spentAbs });
+        }
     }
 }
