@@ -109,12 +109,12 @@ export class HeroSystem6eCombatSingle extends Combat {
      * @returns {number} Sorting weight integer
      * @protected
      */
-    _comparePriority(a, b, combatDoc, targetSegment) {
+    _comparePriority(a, b, combatDoc, targetSegment, { queryAbs = null } = {}) {
         const parentCombat = combatDoc ?? this ?? a.combat;
         if (!parentCombat) return 0;
 
-        const priorityA = parentCombat.getInitiativePriority(a, targetSegment);
-        const priorityB = parentCombat.getInitiativePriority(b, targetSegment);
+        const priorityA = parentCombat.getInitiativePriority(a, targetSegment, { queryAbs });
+        const priorityB = parentCombat.getInitiativePriority(b, targetSegment, { queryAbs });
 
         if (priorityA !== priorityB) {
             return priorityB - priorityA; // Descending order (highest score acts first)
@@ -130,14 +130,22 @@ export class HeroSystem6eCombatSingle extends Combat {
      * @param {object} [options]
      * @param {boolean} [options.ignoreHold] - Score the natural Phase position even when a
      *   positional hold exists (used for the position a combatant just acted at)
+     * @param {number} [options.queryAbs] - Exact absolute segment being scored. Segment
+     *   numbers alias across Turns (the same number recurs every 12 segments), so
+     *   callers scoring a position outside the current Turn must pass it; the default
+     *   resolves to the first occurrence at or after the current combat position.
      * @returns {number} Comprehensive decimal initiative priority score
      */
-    getInitiativePriority(combatant, targetSegment, { ignoreHold = false } = {}) {
+    getInitiativePriority(combatant, targetSegment, { ignoreHold = false, queryAbs = null } = {}) {
         if (!combatant?.actor) return 0;
 
         const parentCombat = combatant.combat ?? this;
         const activeSegment = targetSegment ?? parentCombat?.segment ?? 12;
         const statuses = combatant.actor.statuses;
+
+        const combatSegment = parentCombat?.segment ?? activeSegment;
+        const combatAbs = HeroSystem6eCombatantSingle.absoluteSegment(parentCombat?.round ?? 0, combatSegment);
+        const scoredAbs = queryAbs ?? combatAbs + ((activeSegment - combatSegment + 12) % 12);
 
         // Aborted combatants keep their natural priority: the skip lives entirely in
         // _takesTurnInSegment. Zeroing here re-sorted them mid-segment (turn is an
@@ -156,23 +164,19 @@ export class HeroSystem6eCombatSingle extends Combat {
         // early) apply only while the combatant elevated themselves this segment.
         const lr = combatant.lightningReflexes ?? { always: 0, scoped: null };
         let lightningReflexesLevels = lr.always;
-        if (lr.scoped && combatant.lrElevatedAbs !== null) {
-            const combatSegment = parentCombat?.segment ?? activeSegment;
-            const combatAbs = HeroSystem6eCombatantSingle.absoluteSegment(parentCombat?.round ?? 0, combatSegment);
-            const queryAbs = combatAbs + ((activeSegment - combatSegment + 12) % 12);
-            if (combatant.lrElevatedAbs === queryAbs) lightningReflexesLevels += lr.scoped.levels;
+        if (lr.scoped && combatant.lrElevatedAbs === scoredAbs) {
+            lightningReflexesLevels += lr.scoped.levels;
         }
 
         const spdObj = actorDoc.system?.characteristics?.spd;
         const resolvedSpd = spdObj?.value ?? 2;
 
-        const hasPhase = combatant.hasPhaseInSegment ? combatant.hasPhaseInSegment(activeSegment) : false;
+        const hasPhase = combatant.hasPhaseInSegment ? combatant.hasPhaseInSegment(activeSegment, scoredAbs) : false;
         // A positional Held Action slots the combatant at their declared DEX in the declared
         // segment; event/generic holds occupy no initiative position (tracker panel instead).
         // A spent hold keeps the acted position for display sorting until the segment ends.
-        const positionalHold =
-            !ignoreHold && combatant.holdsPositionInSegment?.(activeSegment) ? combatant.heldAction : null;
-        const spentHold = combatant.spentHoldInSegment?.(activeSegment) ? combatant.spentHoldPosition : null;
+        const positionalHold = !ignoreHold && combatant.holdsPositionAtAbs?.(scoredAbs) ? combatant.heldAction : null;
+        const spentHold = combatant.spentHoldAtAbs?.(scoredAbs) ? combatant.spentHoldPosition : null;
 
         if (resolvedSpd <= 0 || (!hasPhase && !positionalHold && !spentHold)) {
             return 0;
@@ -214,25 +218,32 @@ export class HeroSystem6eCombatSingle extends Combat {
      * @param {object} [options]
      * @param {boolean} [options.ignoreAbort] - Treat a lingering aborted status as spent
      *   because the aborted Phase already passed earlier in the same advance
+     * @param {number} [options.queryAbs] - Exact absolute segment being probed. A 12-step
+     *   scan ends on the same segment NUMBER in the next round, so position-bound
+     *   records (spent holds, abort spends, held slots) must compare by absolute
+     *   position or this round's records block next round's Phase.
+     * @param {boolean} [options.ignoreHold] - Evaluate the natural Phase as if a pending
+     *   positional hold were already consumed (used for the ending combatant whose
+     *   taken held slot is spent asynchronously after the advance commits)
      * @returns {boolean}
      * @protected
      */
-    _takesTurnInSegment(combatant, segment, { ignoreAbort = false } = {}) {
+    _takesTurnInSegment(combatant, segment, { ignoreAbort = false, queryAbs = null, ignoreHold = false } = {}) {
         const actor = combatant?.actor;
         if (!actor) return false;
         if ((this.settings?.skipDefeated ?? false) && combatant.isOutOfCombat) return false;
+        const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
+        const abs = queryAbs ?? currentAbs + ((segment - this.segment + 12) % 12);
         if (!ignoreAbort && actor.statuses.has("aborted")) {
-            const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
-            const queryAbs = currentAbs + ((segment - this.segment + 12) % 12);
-            if (combatant.abortAppliesAtAbs?.(queryAbs) ?? true) return false;
+            if (combatant.abortAppliesAtAbs?.(abs) ?? true) return false;
         }
         // A spent hold already consumed this segment's action (using a Held Action
         // replaces the Phase: he cannot have two Phases in one Segment, 6E2 20)
-        if (combatant.spentHoldInSegment?.(segment)) return false;
-        const hold = combatant.heldAction;
+        if (combatant.spentHoldAtAbs?.(abs)) return false;
+        const hold = ignoreHold ? null : combatant.heldAction;
         // A positional hold commits the banked Phase to its declared slot
-        if (hold?.mode === "position") return combatant.holdsPositionInSegment(segment);
-        return combatant.hasPhaseInSegment?.(segment) ?? false;
+        if (hold?.mode === "position") return combatant.holdsPositionAtAbs(abs);
+        return combatant.hasPhaseInSegment?.(segment, abs) ?? false;
     }
 
     /**
@@ -464,7 +475,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             (ending ? this.getInitiativePriority(ending, activeSegment, { ignoreHold: !endingAtHeldSlot }) : Infinity);
 
         const stillToAct = allCombatants.filter((c) => {
-            if (!this._takesTurnInSegment(c, activeSegment)) return false;
+            if (!this._takesTurnInSegment(c, activeSegment, { queryAbs: currentAbsNow })) return false;
             const cHold = c.heldAction;
             const cHeldHere = cHold?.mode === "position" && cHold.segmentAbs === currentAbsNow;
             // A held slot only comes up once
@@ -580,15 +591,23 @@ export class HeroSystem6eCombatSingle extends Combat {
                 await this._executePostSegment12Recovery(nextRoundCycle - 1);
             }
 
+            const scanAbs = nextRoundCycle * 12 + nextSegment;
             const foundActors = allCombatants.filter((c) => {
                 if ((c.actor?.statuses.has("aborted") ?? false) && !abortSpentIds.has(c.id)) {
                     const spentAbs = c.abortSpentAbs;
-                    const scanAbs = nextRoundCycle * 12 + nextSegment;
-                    const spendsHere = spentAbs !== null ? spentAbs <= scanAbs : c.hasPhaseInSegment(nextSegment);
+                    const spendsHere =
+                        spentAbs !== null ? spentAbs <= scanAbs : c.hasPhaseInSegment(nextSegment, scanAbs);
                     if (spendsHere) abortSpentIds.add(c.id);
                     return false;
                 }
-                return this._takesTurnInSegment(c, nextSegment, { ignoreAbort: true });
+                // The ending combatant's taken held slot is spent by the post-update
+                // maintenance; the scan already treats the hold as consumed or the
+                // still-live effect blocks every probe and the advance dead-ends
+                return this._takesTurnInSegment(c, nextSegment, {
+                    ignoreAbort: true,
+                    queryAbs: scanAbs,
+                    ignoreHold: c.id === ending?.id && endingAtHeldSlot,
+                });
             });
             if (foundActors.length > 0) {
                 segmentActorsFound = true;
@@ -610,14 +629,19 @@ export class HeroSystem6eCombatSingle extends Combat {
         }
         updateData[`flags.${game.system.id}.segmentRolls`] = masterRollsCache;
 
+        const nextAbs = nextRoundCycle * 12 + nextSegment;
         let targetCombatantId = null;
         const upcomingActors = allCombatants.filter((c) =>
-            this._takesTurnInSegment(c, nextSegment, { ignoreAbort: abortSpentIds.has(c.id) }),
+            this._takesTurnInSegment(c, nextSegment, {
+                ignoreAbort: abortSpentIds.has(c.id),
+                queryAbs: nextAbs,
+                ignoreHold: c.id === ending?.id && endingAtHeldSlot,
+            }),
         );
 
         if (upcomingActors.length > 0) {
             upcomingActors.sort((a, b) => {
-                return this._comparePriority(a, b, this, nextSegment);
+                return this._comparePriority(a, b, this, nextSegment, { queryAbs: nextAbs });
             });
             targetCombatantId = upcomingActors[0]?.id || null;
         }
@@ -626,7 +650,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         this.combatants.forEach((combatant) => {
             combatantUpdates.push({
                 _id: combatant.id,
-                initiative: this.getInitiativePriority(combatant, nextSegment),
+                initiative: this.getInitiativePriority(combatant, nextSegment, { queryAbs: nextAbs }),
             });
         });
 
@@ -664,7 +688,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             const aE = a.occupiesSegment?.(nextSegment) ?? false;
             const bE = b.occupiesSegment?.(nextSegment) ?? false;
             if (aE !== bE) return aE ? -1 : 1;
-            return this._comparePriority(a, b, this, nextSegment);
+            return this._comparePriority(a, b, this, nextSegment, { queryAbs: nextAbs });
         });
 
         const finalTargetTurnsArray = HeroCompatibility.isV14
@@ -678,7 +702,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         updateData[`flags.${game.system.id}.currentSegment`] = nextSegment;
         const incomingCombatant = this.combatants.get(targetCombatantId);
         updateData[`flags.${game.system.id}.actingPriority`] = incomingCombatant
-            ? this.getInitiativePriority(incomingCombatant, nextSegment)
+            ? this.getInitiativePriority(incomingCombatant, nextSegment, { queryAbs: nextAbs })
             : null;
         // A fresh segment has no completed turns yet
         updateData[`flags.${game.system.id}.segmentHighWater`] = null;
@@ -802,7 +826,10 @@ export class HeroSystem6eCombatSingle extends Combat {
                 }
             }
 
-            const foundActors = allCombatants.filter((c) => this._takesTurnInSegment(c, prevSegment));
+            const rewindProbeAbs = prevRoundCycle * 12 + prevSegment;
+            const foundActors = allCombatants.filter((c) =>
+                this._takesTurnInSegment(c, prevSegment, { queryAbs: rewindProbeAbs }),
+            );
             if (foundActors.length > 0) {
                 segmentActorsFound = true;
                 break;
@@ -811,14 +838,15 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         if (!segmentActorsFound) return this;
 
+        const prevAbs = prevRoundCycle * 12 + prevSegment;
         const combatantUpdates = [];
         this.combatants.forEach((combatant) => {
             combatantUpdates.push({
                 _id: combatant.id,
-                initiative: this.getInitiativePriority(combatant, prevSegment),
+                initiative: this.getInitiativePriority(combatant, prevSegment, { queryAbs: prevAbs }),
             });
         });
-        for (const reset of this._rewindHoldFlagResets(prevRoundCycle * 12 + prevSegment)) {
+        for (const reset of this._rewindHoldFlagResets(prevAbs)) {
             const existing = combatantUpdates.find((u) => u._id === reset._id);
             if (existing) Object.assign(existing, reset);
             else combatantUpdates.push(reset);
@@ -842,7 +870,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             const aE = a.occupiesSegment?.(prevSegment) ?? false;
             const bE = b.occupiesSegment?.(prevSegment) ?? false;
             if (aE !== bE) return aE ? -1 : 1;
-            return this._comparePriority(a, b, this, prevSegment);
+            return this._comparePriority(a, b, this, prevSegment, { queryAbs: prevAbs });
         });
 
         const finalTargetTurnsArray = HeroCompatibility.isV14
@@ -850,11 +878,13 @@ export class HeroSystem6eCombatSingle extends Combat {
             : recompiledTurns;
 
         let targetCombatantId = null;
-        const targetActors = allCombatants.filter((c) => this._takesTurnInSegment(c, prevSegment));
+        const targetActors = allCombatants.filter((c) =>
+            this._takesTurnInSegment(c, prevSegment, { queryAbs: prevAbs }),
+        );
 
         if (targetActors.length > 0) {
             targetActors.sort((a, b) => {
-                return this._comparePriority(a, b, this, prevSegment);
+                return this._comparePriority(a, b, this, prevSegment, { queryAbs: prevAbs });
             });
             targetCombatantId = targetActors[targetActors.length - 1]?.id || null;
         }
@@ -866,7 +896,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         updateData[`flags.${game.system.id}.currentSegment`] = prevSegment;
         const rewindTarget = this.combatants.get(targetCombatantId);
         updateData[`flags.${game.system.id}.actingPriority`] = rewindTarget
-            ? this.getInitiativePriority(rewindTarget, prevSegment)
+            ? this.getInitiativePriority(rewindTarget, prevSegment, { queryAbs: prevAbs })
             : null;
         updateData[`flags.${game.system.id}.segmentHighWater`] = null;
 

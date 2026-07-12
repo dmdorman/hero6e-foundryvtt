@@ -370,8 +370,11 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             const isNextTurn = round > combat.round;
             const expanded = isCurrent || (expansionOverrides[segment] ?? windowAbs.has(abs));
 
-            // _comparePriority breaks priority ties by combatant id, keeping the order stable
-            const members = membersAt(abs).sort((a, b) => combat._comparePriority(a, b, combat, segment));
+            // _comparePriority breaks priority ties by combatant id, keeping the order stable;
+            // the exact position matters because segment numbers alias across Turns
+            const members = membersAt(abs).sort((a, b) =>
+                combat._comparePriority(a, b, combat, segment, { queryAbs: abs }),
+            );
 
             const roundLabel = round === combat.round ? "" : ` (Turn ${round})`;
             const stateLabel = isCurrent ? " — Current" : isPast ? " — Passed" : "";
@@ -408,7 +411,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             // stop, and a shadow row where the rest of the Phase lands at natural DEX
             const entries = [];
             for (const combatant of members) {
-                const priority = combat.getInitiativePriority(combatant, segment);
+                const priority = combat.getInitiativePriority(combatant, segment, { queryAbs: abs });
                 entries.push({ combatant, priority, lrShadow: false });
                 if (combatant.lrElevatedAbs === abs) {
                     const scopedLevels = combatant.lightningReflexes?.scoped?.levels ?? 0;

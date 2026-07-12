@@ -252,9 +252,12 @@ export class HeroSystem6eCombatantSingle extends Combatant {
      * Evaluates if this participant possesses an active action phase
      * in the specified speed chart calendar segment index.
      * @param {number} segmentIndex - Speed Chart segment column to examine (1-12)
+     * @param {number} [queryAbs] - Exact absolute segment being probed; segment numbers
+     *   alias across Turns, so scans reaching into the next round pass the position.
+     *   Defaults to the first occurrence at or after the current combat position.
      * @returns {boolean} True if the combatant is capable of taking a turn
      */
-    hasPhaseInSegment(segmentIndex) {
+    hasPhaseInSegment(segmentIndex, queryAbs = null) {
         const spd = this.combatSpd;
         if (spd <= 0) return false;
 
@@ -270,9 +273,8 @@ export class HeroSystem6eCombatantSingle extends Combatant {
         if (lockout?.lockoutEndAbs && combat?.started) {
             const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(combat.round, combat.segment);
             const currentSegment = ((currentAbs - 1) % 12) + 1;
-            // First occurrence of the queried segment at or after the current combat position
-            const queryAbs = currentAbs + ((segmentIndex - currentSegment + 12) % 12);
-            if (queryAbs < lockout.lockoutEndAbs) return false;
+            const abs = queryAbs ?? currentAbs + ((segmentIndex - currentSegment + 12) % 12);
+            if (abs < lockout.lockoutEndAbs) return false;
         }
 
         return true;

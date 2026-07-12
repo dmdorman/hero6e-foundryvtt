@@ -787,6 +787,150 @@ export function registerCombatTests(quench) {
                     expect(combat.segment).to.equal(6);
                 });
 
+                it("Should advance past a spent same-segment hold into the next Turn's matching segment", async function () {
+                    const slug = await Actor.create({
+                        name: "_Quench Freeze Slug",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 1, max: 1 } },
+                        },
+                    });
+                    actorDocuments.push(slug);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: slug.id }]);
+                    await combat.startCombat();
+
+                    // SPD 1 phases only in Segment 7: the first advance crosses into Turn 2
+                    await combat.nextTurn();
+                    expect(combat.round).to.equal(2);
+                    expect(combat.segment).to.equal(7);
+                    const combatant = combat.combatants.find((c) => c.actorId === slug.id);
+                    expect(combat.combatant?.id).to.equal(combatant.id);
+
+                    // Same-segment positional hold to a lower DEX; ending the turn re-enters
+                    // the pointer at the held slot
+                    const currentAbs = combat.round * 12 + combat.segment;
+                    await slug.toggleStatusEffect("holding", { active: true });
+                    const holdEffect = slug.effects.find((e) => e.statuses.has("holding"));
+                    await holdEffect.setFlag(game.system.id, "hold", {
+                        mode: "position",
+                        segmentAbs: currentAbs,
+                        dex: 10,
+                        declaredAbs: currentAbs,
+                    });
+                    await combat.nextTurn();
+                    expect(combat.combatant?.id, "held slot taken in the same segment").to.equal(combatant.id);
+
+                    // Ending the held turn spends the hold. The spent record is bound to
+                    // THIS Turn's Segment 7 and must not block Segment 7 of the NEXT Turn —
+                    // the scan's 12th probe lands on the same segment number
+                    await combat.nextTurn();
+                    expect(combat.round, "advanced into the next Turn").to.equal(3);
+                    expect(combat.segment).to.equal(7);
+                    expect(combat.combatant?.id).to.equal(combatant.id);
+                    const spent = await waitUntil(() => !slug.statuses.has("holding"));
+                    expect(spent, "hold spent once its held turn passed").to.be.true;
+                });
+
+                it("Should consume a solo combatant's event hold at their next natural Phase", async function () {
+                    const loner = await Actor.create({
+                        name: "_Quench Solo Holder",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(loner);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: loner.id }]);
+                    await combat.startCombat();
+                    expect(combat.combatant?.actorId).to.equal(loner.id);
+
+                    // Event hold declared on the Segment 12 Phase; every subsequent advance
+                    // leads from the holder back to the holder (previousCombatantId is
+                    // always their own id), which must not shield the hold forever
+                    const declaredAbs = combat.round * 12 + combat.segment;
+                    await loner.toggleStatusEffect("holding", { active: true });
+                    const holdEffect = loner.effects.find((e) => e.statuses.has("holding"));
+                    await holdEffect.setFlag(game.system.id, "hold", {
+                        mode: "event",
+                        trigger: "if the door opens",
+                        declaredAbs,
+                    });
+
+                    // The arriving Segment 6 Phase replaces the banked one (6E2 20)
+                    await combat.nextTurn();
+                    expect(combat.round).to.equal(2);
+                    expect(combat.segment).to.equal(6);
+                    const consumed = await waitUntil(() => !loner.statuses.has("holding"));
+                    expect(consumed, "event hold replaced by the next natural Phase").to.be.true;
+                });
+
+                it("Should preserve a just-declared hold when the turn is rewound within the segment", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench Rewind Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const holder = await Actor.create({
+                        name: "_Quench Rewind Holder",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const gamma = await Actor.create({
+                        name: "_Quench Rewind Gamma",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 10, max: 10 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, holder, gamma);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [
+                        { actorId: alpha.id },
+                        { actorId: holder.id },
+                        { actorId: gamma.id },
+                    ]);
+                    await combat.startCombat();
+                    await combat.nextTurn();
+                    expect(combat.combatant?.actorId).to.equal(holder.id);
+
+                    // Declare on the holder's Phase and end the turn, as the dialog does
+                    const declaredAbs = combat.round * 12 + combat.segment;
+                    await holder.toggleStatusEffect("holding", { active: true });
+                    const holdEffect = holder.effects.find((e) => e.statuses.has("holding"));
+                    await holdEffect.setFlag(game.system.id, "hold", {
+                        mode: "event",
+                        trigger: "if the guard turns around",
+                        declaredAbs,
+                    });
+                    await combat.nextTurn();
+                    expect(combat.combatant?.actorId).to.equal(gamma.id);
+
+                    // A rewind must not run forward turn-flow side effects: the naive
+                    // direction would see the holder active on a natural Phase and consume
+                    // the hold they just declared
+                    await combat.previousTurn();
+                    expect(combat.combatant?.actorId).to.equal(holder.id);
+                    await new Promise((resolve) => setTimeout(resolve, 300));
+                    expect(holder.statuses.has("holding"), "hold survives the rewind").to.be.true;
+                });
+
                 it("Should refuse an abort after acting and spend the current Phase when active", async function () {
                     const bruiser = await Actor.create({
                         name: "_Quench Abort Bruiser",
