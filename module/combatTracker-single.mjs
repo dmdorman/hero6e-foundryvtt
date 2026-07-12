@@ -920,10 +920,10 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             const round = Math.floor((segmentAbs - 1) / 12);
             description = `until DEX ${dex} in Segment ${segment}${round === combat.round ? "" : ` (Turn ${round})`}`;
         } else if (result.mode === "event") {
-            hold = { mode: "event", trigger: result.trigger };
+            hold = { mode: "event", trigger: result.trigger, declaredAbs: currentAbs };
             description = result.trigger ? `— until: ${result.trigger}` : "until a declared event";
         } else {
-            hold = { mode: "generic" };
+            hold = { mode: "generic", declaredAbs: currentAbs };
             description = "with no declared condition";
         }
 

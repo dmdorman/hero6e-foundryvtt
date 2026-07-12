@@ -1285,11 +1285,14 @@ export class HeroSystem6eCombatSingle extends Combat {
 
     /**
      * Clears an event/generic hold when the holder's natural turn comes around: the
-     * arriving Phase replaces the banked one. Guarded against self-advance — when the
-     * turn arrived directly from the holder's own ending turn (declaring a hold ends
-     * the turn, and in sparse combats the next stop can be the holder's own next
-     * Phase), the hold survives to the next full cycle. Positional holds are exempt;
-     * they expire with their slot.
+     * arriving Phase replaces the banked one. Guarded against self-advance from the
+     * declaring Phase itself (declaring a hold ends the turn, which would otherwise
+     * consume the hold in the same breath). In sparse combats every advance leads
+     * from the holder back to the holder, so the guard checks the recorded
+     * declaration position rather than exempting all self-advances — otherwise a
+     * solo holder banks an extra action forever. Bare-status holds carry no record
+     * and stay GM-adjudicated. Positional holds are exempt; they expire with their
+     * slot.
      * @param {string|undefined} previousCombatantId
      * @private
      */
@@ -1298,7 +1301,11 @@ export class HeroSystem6eCombatSingle extends Combat {
         const combatant = this.combatant;
         const actor = combatant?.actor;
         if (!actor?.statuses.has("holding")) return;
-        if (combatant.id === previousCombatantId) return;
+        if (combatant.id === previousCombatantId) {
+            const declaredAbs = combatant.heldAction?.declaredAbs;
+            const currentAbs = HeroSystem6eCombatantSingle.absoluteSegment(this.round, this.segment);
+            if (declaredAbs === undefined || declaredAbs >= currentAbs) return;
+        }
         if (!combatant.hasPhaseInSegment(this.segment)) return;
         // Positional holds expire with their slot, never at a natural Phase
         if (combatant.heldAction?.mode === "position") return;
