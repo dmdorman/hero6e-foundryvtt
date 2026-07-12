@@ -1323,6 +1323,10 @@ export class HeroSystem6eCombatSingle extends Combat {
             this._consumeActiveCombatantHold(prevId).catch((e) => console.error(e));
         }
 
+        // Only pointer movement starts a new Phase: flag-only bookkeeping updates
+        // must not run spend/expiry side effects against the still-active combatant
+        if (!turnChanged && !roundChanged && newSegment === undefined && !turnAdvance) return;
+
         const previousCombatant = prevId ? this.combatants.get(prevId) : null;
         if (previousCombatant?.actor) {
             this._expireCustomSystemEffects(previousCombatant.actor);

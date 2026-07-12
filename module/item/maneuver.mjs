@@ -93,10 +93,13 @@ function buildManeuverFlags(item, type) {
  * @param {Actor} actor
  */
 export async function expireManeuverNextPhaseEffects(actor) {
+    // V14 migrated duration.startTime to the top-level start.time field; reading
+    // only the V13 shape makes the created-this-instant guard never match there
+    const effectStartTime = (ae) => ae.duration?.startTime ?? ae.start?.time ?? null;
     const maneuverAes = (actor?.temporaryEffects ?? []).filter(
         (ae) =>
             ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect" &&
-            ae.duration.startTime !== game.time.worldTime,
+            effectStartTime(ae) !== game.time.worldTime,
     );
 
     const expiryPromises = maneuverAes.map((ae) => {
@@ -432,6 +435,11 @@ export async function activateManeuver(item) {
         if (HeroCompatibility.isV14) {
             if (activeEffect.duration?.value === Infinity) {
                 activeEffect.duration.value = null;
+            }
+            // V14 moved the start time to the top-level start field; core migrates it
+            // on create but not on the re-activation update of a reused template AE
+            if (activeEffect.duration?.startTime !== undefined) {
+                activeEffect.start = { time: activeEffect.duration.startTime };
             }
         }
 

@@ -13,6 +13,7 @@ export function registerCombatTests(quench) {
             describe(`Hero System 6e Speed Chart Turn Progression Matrix (Foundry Gen: ${generationLabel})`, function () {
                 const actorDocuments = [];
                 const combatDocuments = [];
+                let savedLrAutoElevate;
 
                 before(async function () {
                     const isSingleTracker =
@@ -25,6 +26,11 @@ export function registerCombatTests(quench) {
                         );
                         this.skip(); // Safely skips every internal "it" statement dynamically
                     }
+
+                    // The tests assume the prompt-mode default; a world with the
+                    // auto-elevate setting on would pre-elevate every scoped LR combatant
+                    savedLrAutoElevate = game.settings.get(game.system.id, "lrAutoElevate");
+                    if (savedLrAutoElevate) await game.settings.set(game.system.id, "lrAutoElevate", false);
 
                     console.log(
                         `[${game.system.id}] QUENCH | Platform Version: ${foundryVersion} (Gen ${generationLabel})`,
@@ -64,6 +70,8 @@ export function registerCombatTests(quench) {
 
                 after(async function () {
                     console.log(`[${game.system.id}] QUENCH | Cleaning up test documents...`);
+
+                    if (savedLrAutoElevate) await game.settings.set(game.system.id, "lrAutoElevate", true);
 
                     for (const actor of actorDocuments) {
                         if (typeof actor?.delete === "function") await actor.delete();
