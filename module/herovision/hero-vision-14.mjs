@@ -1,18 +1,9 @@
 import { gridUnitsToMeters } from "../utility/units.mjs";
 
-class HeroUnifiedDetectionModeV14 extends foundry.canvas.perception.DetectionMode {
-    static get TYPE() {
-        return foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT;
-    }
-
+class BaseHeroDetectionModeV14 extends foundry.canvas.perception.DetectionMode {
     /**
-     * Main entry point evaluating enhanced individual senses and group baselines.
-     * @override
-     */
-    /**
-     * Main entry point evaluating enhanced individual senses and group baselines.
-     * Fully accounts for square diagonal and hex adjacency distance tolerances.
-     * @override
+     * Core V14 loop executor. Scans items dynamically on every single frame tick.
+     * Hardened to patch unlinked actor maps before parent engine execution blocks fire.
      */
     _canDetect(visionSource, target, level) {
         const basicCheck = super._canDetect(visionSource, target, level);
@@ -198,37 +189,64 @@ class HeroUnifiedDetectionModeV14 extends foundry.canvas.perception.DetectionMod
      * @protected
      */
     _resolveSensoryMatrix(senses, inv, distance, basicCheck) {
+        const TYPE_SIGHT = foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT;
+        const isTargetingPipeline = this.constructor.TYPE === TYPE_SIGHT;
+
         // A. Radio Group Checks
         if (senses.RADIO.TARGETING) {
-            if (this._evaluateSenseWithFringe(inv.RADIO, inv, distance, 100)) return true;
+            if (this._evaluateSenseWithFringe(inv.RADIO, inv, distance, 100)) {
+                console.log(`${this.name} RADIO.TARGETING`);
+                return true;
+            }
         }
 
         // B. Hearing Group Checks
         if (senses.HEARING.TARGETING) {
-            if (this._evaluateSenseWithFringe(inv.HEARING, inv, distance, 40)) return true;
+            if (this._evaluateSenseWithFringe(inv.HEARING, inv, distance, 40)) {
+                return isTargetingPipeline;
+            }
+        } else if (senses.HEARING.NORMAL && !isTargetingPipeline) {
+            return true;
         }
 
         // C. Mental Group Checks
         if (senses.MENTAL.TARGETING) {
-            if (this._evaluateSenseWithFringe(inv.MENTAL, inv, distance, 80)) return true;
+            if (this._evaluateSenseWithFringe(inv.MENTAL, inv, distance, 80)) {
+                console.log(`${this.name} MENTAL.TARGETING`);
+                return true;
+            }
         }
 
         // D. Smell Group Checks
         if (senses.SMELL.TARGETING) {
-            if (this._evaluateSenseWithFringe(inv.SMELL, inv, distance, 20)) return true;
+            if (this._evaluateSenseWithFringe(inv.SMELL, inv, distance, 20)) {
+                console.log(`${this.name} SMELL.TARGETING`);
+                return true;
+            }
+        } else if (senses.SMELL.NORMAL && !isTargetingPipeline) {
+            return true;
         }
 
         // E. Touch Group Checks
         if (senses.TOUCH.TARGETING) {
-            if (this._evaluateSenseWithFringe(inv.TOUCH, inv, distance, 1)) return true;
+            if (this._evaluateSenseWithFringe(inv.TOUCH, inv, distance, 1)) {
+                console.log(`${this.name} TOUCH.TARGETING`);
+                return true;
+            }
+        } else if (senses.TOUCH.NORMAL && !isTargetingPipeline) {
+            return true;
         }
 
         // F. Sight Group Resolution (Maintains unique sub-sense bypass rules like Infrared)
         if (foundry.utils.hasProperty(senses, "SIGHT")) {
             // 1. Enhanced Senses Bypass Check
             if (inv.SIGHT.ANY) {
-                if (senses.SIGHT.INFRARED && !inv.SIGHT.INFRARED) return true;
-                if (senses.SIGHT.ULTRAVIOLET && !inv.SIGHT.ULTRAVIOLET) return true;
+                if (senses.SIGHT.INFRARED && !inv.SIGHT.INFRARED) {
+                    return true;
+                }
+                if (senses.SIGHT.ULTRAVIOLET && !inv.SIGHT.ULTRAVIOLET) {
+                    return true;
+                }
             }
 
             // 2. Normal Sight Baseline with Universal Fringe
@@ -274,24 +292,44 @@ class HeroUnifiedDetectionModeV14 extends foundry.canvas.perception.DetectionMod
     }
 }
 
-// ==========================================
-// 3. REGISTRATION INITIALIZATION
-// ==========================================
+// 2. CHILD CLASS: Targeting Senses (Full Graphics)
+class HeroTargetingDetectionModeV14 extends BaseHeroDetectionModeV14 {
+    static get TYPE() {
+        return foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT;
+    }
+}
+
+// 3. CHILD CLASS: Non-Targeting Senses (Ambient/Silhouette Tracking)
+class HeroNonTargetingDetectionModeV14 extends BaseHeroDetectionModeV14 {
+    static get TYPE() {
+        return foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SOUND;
+    }
+    static getDetectionFilter() {
+        return (this._detectionFilter ??= OutlineOverlayFilter.create({
+            //outlineColor: [1, 1, 1, 1],
+            //thickness: 1,
+            knockout: false,
+            wave: true,
+        }));
+    }
+}
+
+/**
+ * 4. Initialization: Registers custom detection modes with V14 engine.
+ */
 export function initializeHeroVisionV14() {
-    const isV14 = game.release ? game.release.generation >= 14 : false;
+    const isV14 = game.release?.generation >= 14;
     if (!isV14) return;
 
-    CONFIG.Canvas.detectionModes["heroUnifiedDetectionV14"] = new HeroUnifiedDetectionModeV14({
-        id: "heroUnifiedDetectionV14",
-        label: "HERO: Sensory Processor (v14)",
+    CONFIG.Canvas.detectionModes["heroTargetingV14"] = new HeroTargetingDetectionModeV14({
+        id: "heroTargetingV14",
+        label: "HERO: Targeting Senses (v14)",
         type: foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT,
     });
 
-    CONFIG.Canvas.visionModes["heroUnifiedVisionV14"] = new foundry.canvas.perception.VisionMode({
-        id: "heroUnifiedVisionV14",
-        label: "HERO: Dynamic System Vision",
-        tokenConfig: true,
-        detectionMode: "heroUnifiedDetectionV14",
-        canvas: {},
+    CONFIG.Canvas.detectionModes["heroNonTargetingV14"] = new HeroNonTargetingDetectionModeV14({
+        id: "heroNonTargetingV14",
+        label: "HERO: Non-Targeting Senses (v14)",
+        type: foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SOUND,
     });
 }

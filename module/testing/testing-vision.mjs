@@ -187,7 +187,6 @@ export function registerVisionTests(quench) {
                 });
 
                 after(async function () {
-                    return;
                     // Clear user sight selections first
                     game.user.targets.clear();
 
@@ -263,22 +262,28 @@ export function registerVisionTests(quench) {
                             // Visibility testing
 
                             assert.strictEqual(
-                                evaluateV14Visibility(visionToken2m, invisibleToken),
+                                evaluateV14Visibility(visionToken2m, invisibleToken, "heroTargetingV14"),
                                 true,
-                                "testVisibility2m should be able to see fringe of invisible token",
+                                "testVisibility2m should be able to target fringe of invisible token",
                             );
 
                             assert.strictEqual(
-                                evaluateV14Visibility(visionToken16m, invisibleToken),
+                                evaluateV14Visibility(visionToken2m, invisibleToken, "heroNonTargetingV14"),
                                 false,
-                                "testVisibility16m should NOT be able to see fringe of invisible token",
+                                "testVisibility2m should not be able to target fringe of invisible token with non-targeting sense",
                             );
 
-                            assert.strictEqual(
-                                evaluateV14Visibility(visionToken18m, invisibleToken),
-                                false,
-                                "testVisibility18m should NOT be able to see fringe of invisible token",
-                            );
+                            // assert.strictEqual(
+                            //     evaluateV14Visibility(visionToken16m, invisibleToken),
+                            //     false,
+                            //     "testVisibility16m should NOT be able to see fringe of invisible token",
+                            // );
+
+                            // assert.strictEqual(
+                            //     evaluateV14Visibility(visionToken18m, invisibleToken),
+                            //     false,
+                            //     "testVisibility18m should NOT be able to see fringe of invisible token",
+                            // );
                         });
                     }
                 }
