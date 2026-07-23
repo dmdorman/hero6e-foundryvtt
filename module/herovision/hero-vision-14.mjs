@@ -305,8 +305,9 @@ class HeroNonTargetingDetectionModeV14 extends BaseHeroDetectionModeV14 {
         return foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SOUND;
     }
     static getDetectionFilter() {
+        //return super.getDetectionFilter();
         return (this._detectionFilter ??= OutlineOverlayFilter.create({
-            //outlineColor: [1, 1, 1, 1],
+            outlineColor: [1, 0, 1, 0.5],
             //thickness: 1,
             knockout: false,
             wave: true,
