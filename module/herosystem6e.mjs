@@ -4,7 +4,7 @@ import { HeroSystem6eCombat } from "./combat.mjs";
 import { HeroSystem6eCombatTracker } from "./combatTracker.mjs";
 import { HeroSystem6eCombatant } from "./combatant.mjs";
 
-import { HeroSystem6eCombatSingle } from "./combat-single.mjs";
+import { HeroSystem6eCombatSingle, migrateCombatsToSingleCombatantTracker } from "./combat-single.mjs";
 import { HeroSystem6eCombatTrackerSingle } from "./combatTracker-single.mjs";
 import { HeroSystem6eCombatantSingle } from "./combatant-single.mjs";
 
@@ -153,6 +153,7 @@ Hooks.once("init", async function () {
         },
         rollItemMacro: rollItemMacro,
         config: HERO,
+        migrateCombatsToSingleCombatantTracker,
     };
     CONFIG.HERO = { ...CONFIG.HERO, ...HERO };
 
@@ -447,6 +448,25 @@ Hooks.on("renderChatMessageHTML", (app, html, data) => {
     // Display action buttons
     chat.displayChatActionButtons(app, $(html), data);
     //HeroSystem6eCardHelpers.onMessageRendered($(html));
+
+    // Lightning Reflexes segment prompts: wire the whispered Act Early button
+    html.querySelectorAll("button.hero-lr-act-early").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            event.preventDefault();
+            const combat = game.combats.get(button.dataset.combatId);
+            const combatant = combat?.combatants.get(button.dataset.combatantId);
+            if (!combat?.started || !combatant?.isOwner) return;
+            if (ui.combat?.viewed?.id !== combat.id) {
+                return ui.notifications.warn("Open the active combat in the tracker to act early.");
+            }
+            if (ui.combat._lrElevationState?.(combatant) !== "available") {
+                return ui.notifications.warn(
+                    `The Lightning Reflexes window for ${combatant.name} has passed this Segment.`,
+                );
+            }
+            ui.combat._onToggleLrElevation(combatant.id);
+        });
+    });
 });
 
 // Hooks.on("renderChatLog", (app, html) => HeroSystem6eCardHelpers.chatListeners(html));
@@ -930,6 +950,10 @@ async function _outOfCombatRecovery(actor, multiplier) {
     let recoveryDate;
     let enduranceReserveDate;
     if (actor.inCombat) return;
+    // Actor#inCombat only consults the *viewed* combat (game.combat = ui.combat.viewed).
+    // Actors in any other started combat get their recoveries from Post-Segment 12, so a
+    // worldTime advance must not also recover them.
+    if (game.combats.some((c) => c.started && c.getCombatantsByActor(actor).length > 0)) return;
     if (multiplier <= 0) return;
 
     const automation = game.settings.get(HEROSYS.module, "automation");

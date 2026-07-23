@@ -97,20 +97,18 @@ export class HeroCompatibility {
             return parentDoc.update(mergedV14Payload, options);
         }
 
-        // V13 Fallback: Safely restructure properties into flat path keys for legacy core database handlers
-        const flattenedV13Payload = { ...topLevelUpdates };
-
-        for (const updateData of embeddedUpdates) {
-            const { _id, ...fields } = updateData;
-            if (!_id) continue;
-
-            for (const [property, value] of Object.entries(fields)) {
-                // Flat path construction happens strictly here, keeping feature implementations clean
-                flattenedV13Payload[`${embeddedKey}.${_id}.${property}`] = value;
-            }
+        // V13 fallback: object-keyed embedded paths inside a parent update are silently
+        // DROPPED during field casting (ArrayField._cast discards non-integer keys), so
+        // the embedded collection and the parent document update separately. The parent
+        // update carries the turn-flow options.
+        const documentName = { combatants: "Combatant", effects: "ActiveEffect" }[embeddedKey] ?? embeddedKey;
+        if (Array.isArray(embeddedUpdates) && embeddedUpdates.length > 0) {
+            await parentDoc.updateEmbeddedDocuments(documentName, embeddedUpdates);
         }
-
-        return parentDoc.update(flattenedV13Payload, options);
+        if (Object.keys(topLevelUpdates).length > 0) {
+            return parentDoc.update(topLevelUpdates, options);
+        }
+        return parentDoc;
     }
 
     /**

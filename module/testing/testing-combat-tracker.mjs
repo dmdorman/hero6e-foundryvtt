@@ -13,6 +13,7 @@ export function registerCombatTests(quench) {
             describe(`Hero System 6e Speed Chart Turn Progression Matrix (Foundry Gen: ${generationLabel})`, function () {
                 const actorDocuments = [];
                 const combatDocuments = [];
+                let savedLrAutoElevate;
 
                 before(async function () {
                     const isSingleTracker =
@@ -25,6 +26,11 @@ export function registerCombatTests(quench) {
                         );
                         this.skip(); // Safely skips every internal "it" statement dynamically
                     }
+
+                    // The tests assume the prompt-mode default; a world with the
+                    // auto-elevate setting on would pre-elevate every scoped LR combatant
+                    savedLrAutoElevate = game.settings.get(game.system.id, "lrAutoElevate");
+                    if (savedLrAutoElevate) await game.settings.set(game.system.id, "lrAutoElevate", false);
 
                     console.log(
                         `[${game.system.id}] QUENCH | Platform Version: ${foundryVersion} (Gen ${generationLabel})`,
@@ -64,6 +70,8 @@ export function registerCombatTests(quench) {
 
                 after(async function () {
                     console.log(`[${game.system.id}] QUENCH | Cleaning up test documents...`);
+
+                    if (savedLrAutoElevate) await game.settings.set(game.system.id, "lrAutoElevate", true);
 
                     for (const actor of actorDocuments) {
                         if (typeof actor?.delete === "function") await actor.delete();
@@ -464,6 +472,1460 @@ export function registerCombatTests(quench) {
                     expect(testCombatDocument.round).to.equal(0);
                     expect(testCombatDocument.turn).to.equal(0);
                     expect(testCombatDocument.segment).to.equal(12);
+                });
+
+                // Some combat side effects (held-action consumption) run async after the update commits
+                async function waitUntil(condition, timeoutMs = 3000, intervalMs = 50) {
+                    const start = Date.now();
+                    while (Date.now() - start < timeoutMs) {
+                        if (condition()) return true;
+                        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+                    }
+                    return condition();
+                }
+
+                it("Should give SPD 1-12 characters their book speed chart phases", async function () {
+                    // 6E1 17; 5ER 20
+                    const bookSpeedChart = {
+                        1: [7],
+                        2: [6, 12],
+                        3: [4, 8, 12],
+                        4: [3, 6, 9, 12],
+                        5: [3, 5, 8, 10, 12],
+                        6: [2, 4, 6, 8, 10, 12],
+                        7: [2, 4, 6, 7, 9, 11, 12],
+                        8: [2, 3, 5, 6, 8, 9, 11, 12],
+                        9: [2, 3, 4, 6, 7, 8, 10, 11, 12],
+                        10: [2, 3, 4, 5, 6, 8, 9, 10, 11, 12],
+                        11: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                        12: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                    };
+
+                    const chartActors = [];
+                    for (let spd = 1; spd <= 12; spd++) {
+                        const actor = await Actor.create({
+                            name: `_Quench Chart SPD ${spd}`,
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 10, max: 10 },
+                                    spd: { value: spd, max: spd },
+                                },
+                            },
+                        });
+                        actorDocuments.push(actor);
+                        chartActors.push(actor);
+                    }
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments(
+                        "Combatant",
+                        chartActors.map((a) => ({ actorId: a.id })),
+                    );
+
+                    for (let spd = 1; spd <= 12; spd++) {
+                        const combatant = combat.combatants.find((c) => c.actorId === chartActors[spd - 1].id);
+                        const phases = [];
+                        for (let segment = 1; segment <= 12; segment++) {
+                            if (combatant.hasPhaseInSegment(segment)) phases.push(segment);
+                        }
+                        expect(phases, `SPD ${spd}`).to.deep.equal(bookSpeedChart[spd]);
+                    }
+                });
+
+                it("Should apply Post-Segment 12 Recovery through TakeRecovery exactly once per turn boundary", async function () {
+                    const automationSetting = game.settings.get(game.system.id, "automation");
+                    await game.settings.set(game.system.id, "automation", "all");
+
+                    try {
+                        const actor = await Actor.create({
+                            name: "_Quench Recovery PC",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 10, max: 10 },
+                                    spd: { value: 2, max: 2 },
+                                },
+                            },
+                        });
+                        actorDocuments.push(actor);
+
+                        const rec = actor.system.characteristics.rec.value;
+                        const stunMax = actor.system.characteristics.stun.max;
+                        const endMax = actor.system.characteristics.end.max;
+                        expect(rec, "test actor has positive REC").to.be.greaterThan(0);
+
+                        // Damage well below max so the recovery isn't capped
+                        await actor.update({
+                            "system.characteristics.stun.value": stunMax - rec - 3,
+                            "system.characteristics.end.value": endMax - rec - 3,
+                        });
+
+                        const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [{ actorId: actor.id }]);
+                        await combat.startCombat();
+                        expect(combat.segment).to.equal(12);
+
+                        // Crossing out of Segment 12 applies the Post-Segment 12 Recovery
+                        await combat.nextTurn();
+                        expect(combat.round).to.equal(2);
+                        expect(combat.segment).to.equal(6);
+                        expect(actor.system.characteristics.stun.value).to.equal(stunMax - 3);
+                        expect(actor.system.characteristics.end.value).to.equal(endMax - 3);
+
+                        // Rewind across the boundary and advance again: the recoveredRounds ledger
+                        // must prevent a second application
+                        await combat.previousTurn();
+                        expect(combat.round).to.equal(1);
+                        expect(combat.segment).to.equal(12);
+
+                        await combat.nextTurn();
+                        expect(combat.round).to.equal(2);
+                        expect(actor.system.characteristics.stun.value).to.equal(stunMax - 3);
+                        expect(actor.system.characteristics.end.value).to.equal(endMax - 3);
+                    } finally {
+                        await game.settings.set(game.system.id, "automation", automationSetting);
+                    }
+                });
+
+                it("Should apply Post-Segment 12 Recovery to unlinked token actors", async function () {
+                    const automationSetting = game.settings.get(game.system.id, "automation");
+                    await game.settings.set(game.system.id, "automation", "all");
+
+                    let tokenDoc = null;
+                    try {
+                        let scene = game.scenes.active ?? game.scenes.contents?.[0];
+                        if (!scene) {
+                            scene = await Scene.create({ name: "_Quench Recovery Arena" });
+                        }
+
+                        const npcActor = await Actor.create({
+                            name: "_Quench Recovery NPC",
+                            type: "npc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 10, max: 10 },
+                                    spd: { value: 2, max: 2 },
+                                },
+                            },
+                            prototypeToken: { actorLink: false },
+                        });
+                        actorDocuments.push(npcActor);
+
+                        [tokenDoc] = await scene.createEmbeddedDocuments("Token", [
+                            await npcActor.getTokenDocument({ x: 0, y: 0, actorLink: false }),
+                        ]);
+                        expect(tokenDoc.actor.isToken, "token actor is synthetic (unlinked)").to.be.true;
+
+                        const rec = tokenDoc.actor.system.characteristics.rec.value;
+                        const stunMax = tokenDoc.actor.system.characteristics.stun.max;
+                        expect(rec, "test npc has positive REC").to.be.greaterThan(0);
+
+                        await tokenDoc.actor.update({
+                            "system.characteristics.stun.value": stunMax - rec - 3,
+                        });
+                        const worldStun = npcActor.system.characteristics.stun.value;
+
+                        const combat = await Combat.create({ scene: scene.id, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [
+                            { actorId: npcActor.id, tokenId: tokenDoc.id, sceneId: scene.id },
+                        ]);
+                        await combat.startCombat();
+                        await combat.nextTurn();
+
+                        expect(combat.round).to.equal(2);
+                        expect(
+                            tokenDoc.actor.system.characteristics.stun.value,
+                            "unlinked token actor received the recovery",
+                        ).to.equal(stunMax - 3);
+                        expect(npcActor.system.characteristics.stun.value, "world actor was not modified").to.equal(
+                            worldStun,
+                        );
+                    } finally {
+                        if (tokenDoc) await tokenDoc.delete();
+                        await game.settings.set(game.system.id, "automation", automationSetting);
+                    }
+                });
+
+                it("Should slot positional Held Actions, bench generic holds, and spend both when passed", async function () {
+                    const automationSetting = game.settings.get(game.system.id, "automation");
+                    await game.settings.set(game.system.id, "automation", "none");
+
+                    try {
+                        const holder = await Actor.create({
+                            name: "_Quench Holder",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 20, max: 20 },
+                                    spd: { value: 2, max: 2 },
+                                },
+                            },
+                        });
+                        const rusher = await Actor.create({
+                            name: "_Quench Rusher",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 25, max: 25 },
+                                    spd: { value: 3, max: 3 },
+                                },
+                            },
+                        });
+                        actorDocuments.push(holder, rusher);
+
+                        const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [
+                            { actorId: holder.id },
+                            { actorId: rusher.id },
+                        ]);
+                        await combat.startCombat();
+
+                        // Segment 12: Rusher (DEX 25) acts before Holder (DEX 20)
+                        expect(combat.segment).to.equal(12);
+                        expect(combat.combatant.actorId).to.equal(rusher.id);
+
+                        await combat.nextTurn();
+                        expect(combat.combatant.actorId).to.equal(holder.id);
+
+                        // Holder declares a positional Held Action on their Phase: Segment 2 of the
+                        // next Turn at DEX 12 (legal window for SPD 2 at T1S12 spans through Segment 5)
+                        await holder.createEmbeddedDocuments("ActiveEffect", [
+                            {
+                                name: "Holding An Action",
+                                img: "icons/svg/clockwork.svg",
+                                statuses: ["holding"],
+                                flags: { [game.system.id]: { hold: { mode: "position", segmentAbs: 26, dex: 12 } } },
+                            },
+                        ]);
+                        // Rusher banks a generic hold (bare status): no initiative slot at all
+                        await rusher.createEmbeddedDocuments("ActiveEffect", [
+                            { name: "Holding An Action", img: "icons/svg/clockwork.svg", statuses: ["holding"] },
+                        ]);
+
+                        const holderCombatant = combat.combatants.find((c) => c.actorId === holder.id);
+                        const rusherCombatant = combat.combatants.find((c) => c.actorId === rusher.id);
+
+                        // The positional hold slots at the declared DEX in the declared segment only
+                        expect(Math.floor(combat.getInitiativePriority(holderCombatant, 2))).to.equal(12);
+                        expect(combat.getInitiativePriority(holderCombatant, 1)).to.equal(0);
+                        // Generic holds occupy no position and receive no turn
+                        expect(combat.getInitiativePriority(rusherCombatant, 2)).to.equal(0);
+
+                        // Segment 1 is empty; the advance lands on the holder's declared slot in Segment 2
+                        await combat.nextTurn();
+                        expect(combat.round).to.equal(2);
+                        expect(combat.segment).to.equal(2);
+                        expect(combat.combatant.actorId).to.equal(holder.id);
+                        expect(holder.statuses.has("holding"), "hold persists at its declared slot").to.be.true;
+
+                        // Segment 3 is empty; Segment 4 is the rusher's natural SPD 3 Phase, which
+                        // replaces their generic hold (6E2 20; 5ER 360)
+                        await combat.nextTurn();
+                        expect(combat.segment).to.equal(4);
+                        expect(combat.combatant.actorId).to.equal(rusher.id);
+                        const rusherConsumed = await waitUntil(() => !rusher.statuses.has("holding"));
+                        expect(rusherConsumed, "generic hold consumed by the natural Phase").to.be.true;
+
+                        // The holder's held turn came and went in Segment 2 without being used,
+                        // so the positional hold is spent, not carried forward
+                        const spent = await waitUntil(() => !holder.statuses.has("holding"));
+                        expect(spent, "positional hold spent once its held turn passed").to.be.true;
+                    } finally {
+                        await game.settings.set(game.system.id, "automation", automationSetting);
+                    }
+                });
+
+                it("Should replace the natural Phase when a Held Action is used in its segment", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench Replace Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const holder = await Actor.create({
+                        name: "_Quench Replace Holder",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, holder);
+
+                    // Generic hold banked before combat; the holder also has a natural
+                    // Phase in Segment 12
+                    await holder.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Holding An Action", img: "icons/svg/clockwork.svg", statuses: ["holding"] },
+                    ]);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: holder.id }]);
+                    await combat.startCombat();
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+
+                    // Using the hold out of turn consumes this segment's action: it takes
+                    // the place of the Phase (6E2 20; 5ER 360). Tracker handlers resolve
+                    // through ui.combat.viewed, which lags the freshly created combat in
+                    // headless runs — pin it first.
+                    ui.combat.viewed = combat;
+                    const holderCombatant = combat.combatants.find((c) => c.actorId === holder.id);
+                    await ui.combat._onUseHeldAction(holderCombatant.id);
+
+                    expect(holder.statuses.has("holding"), "hold consumed by use").to.be.false;
+                    expect(holderCombatant.spentHoldPosition?.segmentAbs, "acted position recorded").to.equal(24);
+                    expect(Math.floor(combat.getInitiativePriority(holderCombatant, 12))).to.equal(20);
+                    expect(combat._takesTurnInSegment(holderCombatant, 12), "no second action this segment").to.be
+                        .false;
+
+                    // Advancing skips the holder's replaced natural Phase entirely
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                });
+
+                it("Should advance past a spent same-segment hold into the next Turn's matching segment", async function () {
+                    const slug = await Actor.create({
+                        name: "_Quench Freeze Slug",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 1, max: 1 } },
+                        },
+                    });
+                    actorDocuments.push(slug);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: slug.id }]);
+                    await combat.startCombat();
+
+                    // SPD 1 phases only in Segment 7: the first advance crosses into Turn 2
+                    await combat.nextTurn();
+                    expect(combat.round).to.equal(2);
+                    expect(combat.segment).to.equal(7);
+                    const combatant = combat.combatants.find((c) => c.actorId === slug.id);
+                    expect(combat.combatant?.id).to.equal(combatant.id);
+
+                    // Same-segment positional hold to a lower DEX; ending the turn re-enters
+                    // the pointer at the held slot
+                    const currentAbs = combat.round * 12 + combat.segment;
+                    await slug.toggleStatusEffect("holding", { active: true });
+                    const holdEffect = slug.effects.find((e) => e.statuses.has("holding"));
+                    await holdEffect.setFlag(game.system.id, "hold", {
+                        mode: "position",
+                        segmentAbs: currentAbs,
+                        dex: 10,
+                        declaredAbs: currentAbs,
+                    });
+                    await combat.nextTurn();
+                    expect(combat.combatant?.id, "held slot taken in the same segment").to.equal(combatant.id);
+
+                    // Ending the held turn spends the hold. The spent record is bound to
+                    // THIS Turn's Segment 7 and must not block Segment 7 of the NEXT Turn —
+                    // the scan's 12th probe lands on the same segment number
+                    await combat.nextTurn();
+                    expect(combat.round, "advanced into the next Turn").to.equal(3);
+                    expect(combat.segment).to.equal(7);
+                    expect(combat.combatant?.id).to.equal(combatant.id);
+                    const spent = await waitUntil(() => !slug.statuses.has("holding"));
+                    expect(spent, "hold spent once its held turn passed").to.be.true;
+                });
+
+                it("Should consume a solo combatant's event hold at their next natural Phase", async function () {
+                    const loner = await Actor.create({
+                        name: "_Quench Solo Holder",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(loner);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: loner.id }]);
+                    await combat.startCombat();
+                    expect(combat.combatant?.actorId).to.equal(loner.id);
+
+                    // Event hold declared on the Segment 12 Phase; every subsequent advance
+                    // leads from the holder back to the holder (previousCombatantId is
+                    // always their own id), which must not shield the hold forever
+                    const declaredAbs = combat.round * 12 + combat.segment;
+                    await loner.toggleStatusEffect("holding", { active: true });
+                    const holdEffect = loner.effects.find((e) => e.statuses.has("holding"));
+                    await holdEffect.setFlag(game.system.id, "hold", {
+                        mode: "event",
+                        trigger: "if the door opens",
+                        declaredAbs,
+                    });
+
+                    // The arriving Segment 6 Phase replaces the banked one (6E2 20)
+                    await combat.nextTurn();
+                    expect(combat.round).to.equal(2);
+                    expect(combat.segment).to.equal(6);
+                    const consumed = await waitUntil(() => !loner.statuses.has("holding"));
+                    expect(consumed, "event hold replaced by the next natural Phase").to.be.true;
+                });
+
+                it("Should preserve a just-declared hold when the turn is rewound within the segment", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench Rewind Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const holder = await Actor.create({
+                        name: "_Quench Rewind Holder",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const gamma = await Actor.create({
+                        name: "_Quench Rewind Gamma",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 10, max: 10 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, holder, gamma);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [
+                        { actorId: alpha.id },
+                        { actorId: holder.id },
+                        { actorId: gamma.id },
+                    ]);
+                    await combat.startCombat();
+                    await combat.nextTurn();
+                    expect(combat.combatant?.actorId).to.equal(holder.id);
+
+                    // Declare on the holder's Phase and end the turn, as the dialog does
+                    const declaredAbs = combat.round * 12 + combat.segment;
+                    await holder.toggleStatusEffect("holding", { active: true });
+                    const holdEffect = holder.effects.find((e) => e.statuses.has("holding"));
+                    await holdEffect.setFlag(game.system.id, "hold", {
+                        mode: "event",
+                        trigger: "if the guard turns around",
+                        declaredAbs,
+                    });
+                    await combat.nextTurn();
+                    expect(combat.combatant?.actorId).to.equal(gamma.id);
+
+                    // A rewind must not run forward turn-flow side effects: the naive
+                    // direction would see the holder active on a natural Phase and consume
+                    // the hold they just declared
+                    await combat.previousTurn();
+                    expect(combat.combatant?.actorId).to.equal(holder.id);
+                    await new Promise((resolve) => setTimeout(resolve, 300));
+                    expect(holder.statuses.has("holding"), "hold survives the rewind").to.be.true;
+                });
+
+                it("Should refuse an abort after acting and spend the current Phase when active", async function () {
+                    const bruiser = await Actor.create({
+                        name: "_Quench Abort Bruiser",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const dodger = await Actor.create({
+                        name: "_Quench Abort Dodger",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(bruiser, dodger);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [
+                        { actorId: bruiser.id },
+                        { actorId: dodger.id },
+                    ]);
+                    await combat.startCombat();
+
+                    // March to Segment 6 and let the dodger act on their Phase
+                    await combat.nextTurn(); // dodger, Segment 12
+                    await combat.nextTurn(); // bruiser, Segment 6
+                    await combat.nextTurn(); // dodger, Segment 6
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId).to.equal(dodger.id);
+
+                    // The bruiser already used their Segment 6 Phase: a character cannot
+                    // Abort again until the next Segment (6E2 22; 5ER 361)
+                    ui.combat.viewed = combat;
+                    const bruiserCombatant = combat.combatants.find((c) => c.actorId === bruiser.id);
+                    const refused = await ui.combat._declareAbort(bruiserCombatant);
+                    expect(refused, "abort refused after acting this Segment").to.be.false;
+                    expect(bruiser.statuses.has("aborted")).to.be.false;
+
+                    // The pointer sits on the dodger without them having acted (a Held
+                    // Action interrupt shape): the abort replaces the CURRENT Phase and
+                    // ends the turn
+                    const dodgerCombatant = combat.combatants.find((c) => c.actorId === dodger.id);
+                    const applied = await ui.combat._declareAbort(dodgerCombatant);
+                    expect(applied).to.be.true;
+                    expect(combat.segment, "turn ended by the abort").to.equal(12);
+                    expect(combat.combatant.actorId).to.equal(bruiser.id);
+
+                    // Only the current Phase was consumed: the Segment 12 Phase comes
+                    // after the aborted one, so the dodger still acts there and the
+                    // status clears once Segment 6 has passed (asserted behaviorally —
+                    // the boundary maintenance may clear the status at any moment)
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "Phase after the aborted one is free").to.equal(dodger.id);
+
+                    const cleared = await waitUntil(() => !dodger.statuses.has("aborted"));
+                    expect(cleared, "aborted status cleared after the spent Phase passed").to.be.true;
+                });
+
+                it("Should not skip the Phase after an abort's spent Phase for a top-DEX combatant", async function () {
+                    const reactor = await Actor.create({
+                        name: "_Quench Abort Reactor",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 4, max: 4 } },
+                        },
+                    });
+                    const pacer = await Actor.create({
+                        name: "_Quench Abort Pacer",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 6, max: 6 } },
+                        },
+                    });
+                    actorDocuments.push(reactor, pacer);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: reactor.id }, { actorId: pacer.id }]);
+                    await combat.startCombat();
+
+                    // Segment 12: reactor (30) then pacer (20); Segment 2 is the pacer's alone
+                    await combat.nextTurn();
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(2);
+                    expect(combat.combatant.actorId).to.equal(pacer.id);
+
+                    // Reactor (SPD 4: 3/6/9/12) aborts during Segment 2, where they have no
+                    // Phase: the abort consumes their Segment 3 Phase
+                    ui.combat.viewed = combat;
+                    const reactorCombatant = combat.combatants.find((c) => c.actorId === reactor.id);
+                    await ui.combat._declareAbort(reactorCombatant);
+                    expect(reactorCombatant.abortSpentAbs, "abort consumes the Segment 3 Phase").to.equal(27);
+
+                    // Segment 3 (reactor's spent Phase, nobody else) is passed over entirely
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(4);
+                    expect(combat.combatant.actorId).to.equal(pacer.id);
+
+                    // Segment 6: the abort is spent, so the top-DEX reactor must act FIRST
+                    // even though the status document is still awaiting boundary cleanup
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId, "spent abort must not cost a second Phase").to.equal(reactor.id);
+
+                    const cleared = await waitUntil(() => !reactor.statuses.has("aborted"));
+                    expect(cleared, "aborted status cleared after the spent Phase passed").to.be.true;
+                });
+
+                it("Should spend the Held Action when aborting while holding, losing no Phase", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench AbortHold Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const holder = await Actor.create({
+                        name: "_Quench AbortHold Holder",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, holder);
+
+                    await holder.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Holding An Action", img: "icons/svg/clockwork.svg", statuses: ["holding"] },
+                    ]);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: holder.id }]);
+                    await combat.startCombat();
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+
+                    // Aborting while holding spends the held Phase: no aborted lockout, and
+                    // the replaced natural Phase is recorded so it cannot be used again
+                    // (6E2 22; 5ER 361)
+                    ui.combat.viewed = combat;
+                    const holderCombatant = combat.combatants.find((c) => c.actorId === holder.id);
+                    const applied = await ui.combat._declareAbort(holderCombatant, {
+                        toAction: "Dodge",
+                        statusId: "dodge",
+                    });
+                    expect(applied).to.be.true;
+                    expect(holder.statuses.has("holding"), "hold consumed by the abort").to.be.false;
+                    expect(holder.statuses.has("aborted"), "no aborted lockout when a held Phase absorbs it").to.be
+                        .false;
+                    // The dialog activates the real DODGE maneuver when the actor has one,
+                    // otherwise it falls back to the bare status icon
+                    const holderDodgeItem = holder.items.find((i) => i.system?.XMLID === "DODGE");
+                    const dodgeApplied = holderDodgeItem
+                        ? holderDodgeItem.isActive === true
+                        : holder.statuses.has("dodge");
+                    expect(dodgeApplied, "the defensive maneuver is applied").to.be.true;
+                    expect(holderCombatant.spentHoldPosition?.segmentAbs, "acted position recorded").to.equal(24);
+                    expect(combat._takesTurnInSegment(holderCombatant, 12), "no second action this segment").to.be
+                        .false;
+
+                    // The holder's replaced Segment 12 Phase is skipped, but their next
+                    // natural Phase is intact — no further Phase was lost
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId, "next natural Phase intact").to.equal(holder.id);
+                });
+
+                it("Should block aborts and Held Action use while Stunned or abort-locked", async function () {
+                    const guard = await Actor.create({
+                        name: "_Quench Guard",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 25, max: 25 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const stunny = await Actor.create({
+                        name: "_Quench Stunny",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(guard, stunny);
+
+                    await stunny.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Stunned", img: "icons/svg/daze.svg", statuses: ["stunned"] },
+                    ]);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: guard.id }, { actorId: stunny.id }]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+                    const stunnyCombatant = combat.combatants.find((c) => c.actorId === stunny.id);
+
+                    // A Stunned character can take no Action — not even Aborting (6E2 105)
+                    const refused = await ui.combat._declareAbort(stunnyCombatant);
+                    expect(refused, "abort refused while Stunned").to.be.false;
+                    expect(stunny.statuses.has("aborted")).to.be.false;
+                    expect(ui.combat._blockedActionReason(stunnyCombatant)).to.include("Stunned");
+
+                    // Recovered from being Stunned, the abort goes through and locks out
+                    // all other actions until the spent Phase passes (6E2 22)
+                    await stunny.effects.find((e) => e.statuses.has("stunned")).delete();
+                    const applied = await ui.combat._declareAbort(stunnyCombatant);
+                    expect(applied).to.be.true;
+                    expect(stunny.statuses.has("aborted")).to.be.true;
+                    expect(ui.combat._blockedActionReason(stunnyCombatant)).to.include("Aborted");
+
+                    // Even a (bare-status) Held Action cannot be used during the lockout
+                    await stunny.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Holding An Action", img: "icons/svg/clockwork.svg", statuses: ["holding"] },
+                    ]);
+                    await ui.combat._onUseHeldAction(stunnyCombatant.id);
+                    expect(stunny.statuses.has("holding"), "held use blocked during the abort lockout").to.be.true;
+                });
+
+                it("Should consume two Phases when aborting to an Extra Phase power", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench ExtraPhase Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const burner = await Actor.create({
+                        name: "_Quench ExtraPhase Burner",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 4, max: 4 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, burner);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: burner.id }]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+
+                    // Aborting to an Extra Phase power consumes the next TWO Phases
+                    // (6E2 22): the Segment 12 Phase not yet used plus the Segment 3 one.
+                    // The recorded spentAbs is the later Phase, so the lockout spans both.
+                    const burnerCombatant = combat.combatants.find((c) => c.actorId === burner.id);
+                    const applied = await ui.combat._declareAbort(burnerCombatant, { extraPhase: true });
+                    expect(applied).to.be.true;
+                    expect(burnerCombatant.abortSpentAbs, "lockout extends to the second Phase").to.equal(27);
+                    expect(burnerCombatant.abortAppliesAtAbs(24), "first consumed Phase covered").to.be.true;
+                    expect(burnerCombatant.abortAppliesAtAbs(27), "second consumed Phase covered").to.be.true;
+                    expect(burnerCombatant.abortAppliesAtAbs(28), "free after the second Phase").to.be.false;
+                });
+
+                it("Should expire a Dodge maneuver at the start of the actor's next Phase", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench Expiry Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const weaver = await Actor.create({
+                        name: "_Quench Expiry Weaver",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, weaver);
+                    if (!weaver.items.find((i) => i.system?.XMLID === "DODGE")) {
+                        await weaver.addHeroSystemManeuvers();
+                    }
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: weaver.id }]);
+                    await combat.startCombat();
+                    // Maneuver activation checks actor.inCombat, which reads the viewed combat
+                    ui.combat.viewed = combat;
+
+                    // Weaver dodges as their Segment 12 Phase action
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(weaver.id);
+                    const dodgeItem = weaver.items.find((i) => i.system?.XMLID === "DODGE");
+                    await dodgeItem.toggle();
+                    const hasManeuverAe = () =>
+                        weaver.temporaryEffects.some(
+                            (ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect",
+                        );
+                    expect(hasManeuverAe(), "dodge effect active after declaring").to.be.true;
+
+                    // Someone else's Phase starting must not expire it: the Dodge lasts
+                    // until the weaver's own next Phase (6E2 22)
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+                    expect(hasManeuverAe(), "dodge persists through other combatants' Phases").to.be.true;
+
+                    // The weaver's next Phase begins: the boundary maintenance switches
+                    // the maneuver back off
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(weaver.id);
+                    const expired = await waitUntil(() => !hasManeuverAe() && dodgeItem.isActive !== true);
+                    expect(expired, "dodge expired at the start of the actor's next Phase").to.be.true;
+                });
+
+                it("Should mark knocked out combatants defeated via the tracker toggle", async function () {
+                    const sleeper = await Actor.create({
+                        name: "_Quench KO Sleeper",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 10, max: 10 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(sleeper);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: sleeper.id }]);
+
+                    await sleeper.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Knocked Out", img: "icons/svg/unconscious.svg", statuses: ["knockedOut"] },
+                    ]);
+
+                    const combatant = combat.combatants.find((c) => c.actorId === sleeper.id);
+                    expect(combatant.isDefeated, "KO alone is not core-defeated").to.be.false;
+                    expect(combatant.isOutOfCombat, "KO skips turns").to.be.true;
+
+                    // The skull toggle must still be able to MARK a KO'd combatant defeated
+                    await ui.combat._onToggleDefeatedStatus(combatant);
+                    expect(combatant.defeated, "defeated flag set").to.be.true;
+                    expect(combatant.isDefeated).to.be.true;
+
+                    await ui.combat._onToggleDefeatedStatus(combatant);
+                    expect(combatant.defeated, "defeated flag cleared").to.be.false;
+                });
+
+                it("Should apply LIGHTNING_REFLEXES_ALL to initiative order", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+
+                    const lrActor = await Actor.create({
+                        name: "_Quench Lightning Reflexes",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 15, max: 15 },
+                                spd: { value: 2, max: 2 },
+                            },
+                        },
+                    });
+                    const opponent = await Actor.create({
+                        name: "_Quench LR Opponent",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 20, max: 20 },
+                                spd: { value: 2, max: 2 },
+                            },
+                        },
+                    });
+                    actorDocuments.push(lrActor, opponent);
+
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000001" BASECOST="0.0" LEVELS="10" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SEX="Neutral" MINCOSTS="No" MAXCOSTS="No" NAME="" OPTION="ALL" OPTIONID="ALL" OPTION_ALIAS="All Actions"></TALENT>`,
+                            lrActor,
+                        ),
+                        { parent: lrActor },
+                    );
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [
+                        { actorId: lrActor.id },
+                        { actorId: opponent.id },
+                    ]);
+
+                    // Effective DEX 15 + 10 beats DEX 20 for action order only
+                    const lrCombatant = combat.combatants.find((c) => c.actorId === lrActor.id);
+                    const oppCombatant = combat.combatants.find((c) => c.actorId === opponent.id);
+                    expect(Math.floor(combat.getInitiativePriority(lrCombatant, 12))).to.equal(25);
+                    expect(combat.getInitiativePriority(lrCombatant, 12)).to.be.greaterThan(
+                        combat.getInitiativePriority(oppCombatant, 12),
+                    );
+
+                    await combat.startCombat();
+                    expect(combat.combatant.actorId).to.equal(lrActor.id);
+                });
+
+                it("Should not auto-apply scoped Lightning Reflexes purchases", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+
+                    const sniper = await Actor.create({
+                        name: "_Quench LR Sniper",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    // LIGHTNING_REFLEXES_SINGLE is a 5e-only power, so its holder is 5e
+                    const fiver = await Actor.create({
+                        name: "_Quench LR Fiver",
+                        type: "pc",
+                        system: {
+                            is5e: true,
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(sniper, fiver);
+
+                    // 6e scoped LR shares XMLID LIGHTNING_REFLEXES_ALL, distinguished by OPTIONID
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000002" BASECOST="0.0" LEVELS="5" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                            sniper,
+                        ),
+                        { parent: sniper },
+                    );
+                    // 5e single-action LR has its own XMLID
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_SINGLE" ID="1735000000003" BASECOST="0.0" LEVELS="2" ALIAS="Lightning Reflexes: +2 DEX to act first with Single Action" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="" INPUT="Single Action"></TALENT>`,
+                            fiver,
+                        ),
+                        { parent: fiver },
+                    );
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: sniper.id }, { actorId: fiver.id }]);
+                    await combat.startCombat();
+
+                    // Scoped purchases restrict the character to the scoped action when
+                    // acting early, so they only apply on demand (6E1 116; 5ER 96)
+                    const sniperCombatant = combat.combatants.find((c) => c.actorId === sniper.id);
+                    const fiverCombatant = combat.combatants.find((c) => c.actorId === fiver.id);
+                    expect(Math.floor(combat.getInitiativePriority(sniperCombatant, 12))).to.equal(20);
+                    expect(Math.floor(combat.getInitiativePriority(fiverCombatant, 12))).to.equal(20);
+                    expect(sniperCombatant.lightningReflexes.always).to.equal(0);
+                    expect(sniperCombatant.lightningReflexes.scoped, "scope resolved").to.deep.equal({
+                        levels: 5,
+                        label: "Shuriken",
+                    });
+                    expect(fiverCombatant.lightningReflexes.scoped?.levels, "5e scoped levels").to.equal(2);
+                });
+
+                it("Should elevate a scoped Lightning Reflexes combatant for one segment on demand", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+
+                    const alpha = await Actor.create({
+                        name: "_Quench LR Elev Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const mika = await Actor.create({
+                        name: "_Quench LR Elev Mika",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, mika);
+
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000004" BASECOST="0.0" LEVELS="5" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                            mika,
+                        ),
+                        { parent: mika },
+                    );
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: mika.id }]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+
+                    // The elevated position (25) is still below the acting DEX 30, so
+                    // acting early is on offer; taking it re-sorts without moving the
+                    // pointer off the active combatant
+                    const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                    expect(ui.combat._lrElevationState(mikaCombatant)).to.equal("available");
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    expect(mikaCombatant.lrElevatedAbs).to.equal(24);
+                    expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(25);
+                    expect(combat.combatant.actorId, "pointer stays on the active combatant").to.equal(alpha.id);
+
+                    // Mika's elevated turn arrives for the scoped action only
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "elevated turn arrives").to.equal(mika.id);
+
+                    // Ending the elevated stop spends only the scoped action: the rest
+                    // of the Phase re-enters the segment at natural DEX
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "rest of the Phase at natural DEX").to.equal(mika.id);
+                    expect(mikaCombatant.lrElevatedAbs, "elevation consumed by the LR stop").to.equal(null);
+                    expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(20);
+
+                    // The remainder is one action: after it, the segment moves on
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+                    expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 6)), "natural DEX again").to.equal(
+                        20,
+                    );
+                });
+
+                it("Should slot the Phase remainder below intermediates after an elevated LR stop", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+
+                    const alpha = await Actor.create({
+                        name: "_Quench LR SD Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 30, max: 30 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const beta = await Actor.create({
+                        name: "_Quench LR SD Beta",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 22, max: 22 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const mika = await Actor.create({
+                        name: "_Quench LR SD Mika",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(alpha, beta, mika);
+
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000005" BASECOST="0.0" LEVELS="5" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                            mika,
+                        ),
+                        { parent: mika },
+                    );
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [
+                        { actorId: alpha.id },
+                        { actorId: beta.id },
+                        { actorId: mika.id },
+                    ]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+
+                    // Cancelling before the stop arrives removes it; the position is
+                    // still ahead of the count, so it can be re-declared
+                    const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    expect(mikaCombatant.lrElevatedAbs, "cancelled before arrival").to.equal(null);
+                    expect(ui.combat._lrElevationState(mikaCombatant)).to.equal("available");
+
+                    // Mika elevates above Beta (25 vs 22) and her stop arrives second
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId, "elevated above Beta").to.equal(mika.id);
+
+                    // Ending the LR stop: Beta (22) acts before the Phase remainder (20)
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "Beta acts next").to.equal(beta.id);
+                    expect(mikaCombatant.lrElevatedAbs, "elevation consumed").to.equal(null);
+
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId, "remainder at natural DEX").to.equal(mika.id);
+                    expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(20);
+
+                    // The remainder is one action: after it, the segment moves on
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+                });
+
+                it("Should preempt the segment's first actor when elevating above them", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+
+                    const fast = await Actor.create({
+                        name: "_Quench LR Pre Fast",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 25, max: 25 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const delta = await Actor.create({
+                        name: "_Quench LR Pre Delta",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 22, max: 22 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    const mika = await Actor.create({
+                        name: "_Quench LR Pre Mika",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                        },
+                    });
+                    actorDocuments.push(fast, delta, mika);
+
+                    await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(
+                            `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000006" BASECOST="0.0" LEVELS="8" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                            mika,
+                        ),
+                        { parent: mika },
+                    );
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [
+                        { actorId: fast.id },
+                        { actorId: delta.id },
+                        { actorId: mika.id },
+                    ]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+                    expect(combat.combatant.actorId).to.equal(fast.id);
+
+                    // Nothing has completed a turn yet, so an elevated position ABOVE
+                    // the (unacted) first actor is reachable and preempts the pointer
+                    const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                    expect(ui.combat._lrElevationState(mikaCombatant)).to.equal("available");
+                    await ui.combat._onToggleLrElevation(mikaCombatant.id);
+                    expect(combat.combatant.actorId, "LR stop preempts the first actor").to.equal(mika.id);
+                    expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(28);
+
+                    // Ending the LR stop: the displaced actor acts, and the completed
+                    // stop raises the high-water mark so re-elevating is off the table
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId, "displaced actor re-enters").to.equal(fast.id);
+                    expect(ui.combat._lrElevationState(mikaCombatant), "no second elevation this segment").to.equal(
+                        null,
+                    );
+
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(delta.id);
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId, "Phase remainder at natural DEX").to.equal(mika.id);
+
+                    // A fresh segment resets the high-water mark: elevation is on offer again
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId).to.equal(fast.id);
+                    expect(ui.combat._lrElevationState(mikaCombatant), "fresh segment, fresh Phase").to.equal(
+                        "available",
+                    );
+                });
+
+                it("Should auto-elevate scoped Lightning Reflexes at segment start when enabled", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+                    const autoSetting = game.settings.get(game.system.id, "lrAutoElevate");
+                    await game.settings.set(game.system.id, "lrAutoElevate", true);
+
+                    try {
+                        const fast = await Actor.create({
+                            name: "_Quench LR Auto Fast",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: { dex: { value: 25, max: 25 }, spd: { value: 2, max: 2 } },
+                            },
+                        });
+                        const mika = await Actor.create({
+                            name: "_Quench LR Auto Mika",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                            },
+                        });
+                        actorDocuments.push(fast, mika);
+
+                        await HeroSystem6eItem.create(
+                            HeroSystem6eItem.itemDataFromXml(
+                                `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000007" BASECOST="0.0" LEVELS="8" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                                mika,
+                            ),
+                            { parent: mika },
+                        );
+
+                        const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [{ actorId: fast.id }, { actorId: mika.id }]);
+                        await combat.startCombat();
+                        ui.combat.viewed = combat;
+
+                        // Combat opens with the elevation applied and the LR stop preempting
+                        const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                        expect(mikaCombatant.lrElevatedAbs, "auto-elevated at combat start").to.equal(24);
+                        expect(combat.combatant.actorId, "LR stop goes first").to.equal(mika.id);
+                        expect(Math.floor(combat.getInitiativePriority(mikaCombatant, 12))).to.equal(28);
+
+                        // Normal split flow after the stop: displaced actor, then remainder
+                        await combat.nextTurn();
+                        expect(combat.combatant.actorId).to.equal(fast.id);
+                        await combat.nextTurn();
+                        expect(combat.combatant.actorId, "Phase remainder").to.equal(mika.id);
+
+                        // The next segment auto-elevates again via boundary maintenance
+                        await combat.nextTurn();
+                        expect(combat.segment).to.equal(6);
+                        const reElevated = await waitUntil(() => combat.combatant?.actorId === mika.id);
+                        expect(reElevated, "auto-elevated and preempting in the fresh segment").to.be.true;
+                        expect(mikaCombatant.lrElevatedAbs).to.equal(30);
+                    } finally {
+                        await game.settings.set(game.system.id, "lrAutoElevate", autoSetting);
+                    }
+                });
+
+                it("Should whisper an Act Early prompt to scoped LR owners at segment start", async function () {
+                    const { HeroSystem6eItem } = await import("../item/item.mjs");
+                    const autoSetting = game.settings.get(game.system.id, "lrAutoElevate");
+                    await game.settings.set(game.system.id, "lrAutoElevate", false);
+
+                    try {
+                        const fast = await Actor.create({
+                            name: "_Quench LR Prompt Fast",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: { dex: { value: 25, max: 25 }, spd: { value: 2, max: 2 } },
+                            },
+                        });
+                        const mika = await Actor.create({
+                            name: "_Quench LR Prompt Mika",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: { dex: { value: 20, max: 20 }, spd: { value: 2, max: 2 } },
+                            },
+                        });
+                        actorDocuments.push(fast, mika);
+
+                        await HeroSystem6eItem.create(
+                            HeroSystem6eItem.itemDataFromXml(
+                                `<TALENT XMLID="LIGHTNING_REFLEXES_ALL" ID="1735000000008" BASECOST="0.0" LEVELS="5" ALIAS="Lightning Reflexes" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" NAME="Shuriken" OPTION="SINGLE" OPTIONID="SINGLE" OPTION_ALIAS="Single Action"></TALENT>`,
+                                mika,
+                            ),
+                            { parent: mika },
+                        );
+
+                        const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [{ actorId: fast.id }, { actorId: mika.id }]);
+                        await combat.startCombat();
+
+                        // startCombat awaits the prompt pass: a whispered card with the
+                        // Act Early button exists for the LR holder
+                        const mikaCombatant = combat.combatants.find((c) => c.actorId === mika.id);
+                        const prompt = game.messages.contents
+                            .slice(-5)
+                            .find((m) => m.content?.includes(`data-combatant-id="${mikaCombatant.id}"`));
+                        expect(prompt, "prompt whispered to the owner").to.exist;
+                        expect(prompt.whisper.length, "whispered, not public").to.be.greaterThan(0);
+                        expect(prompt.content).to.include("hero-lr-act-early");
+                        expect(mikaCombatant.lrElevatedAbs, "not auto-elevated without the setting").to.equal(null);
+                    } finally {
+                        await game.settings.set(game.system.id, "lrAutoElevate", autoSetting);
+                    }
+                });
+
+                it("Should re-evaluate initiative order when DEX changes mid-combat and skip aborted combatants", async function () {
+                    const alpha = await Actor.create({
+                        name: "_Quench Dex Alpha",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 20, max: 20 },
+                                spd: { value: 2, max: 2 },
+                            },
+                        },
+                    });
+                    const bravo = await Actor.create({
+                        name: "_Quench Dex Bravo",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 15, max: 15 },
+                                spd: { value: 2, max: 2 },
+                            },
+                        },
+                    });
+                    actorDocuments.push(alpha, bravo);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: alpha.id }, { actorId: bravo.id }]);
+                    await combat.startCombat();
+
+                    expect(combat.combatant.actorId).to.equal(alpha.id);
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(bravo.id);
+
+                    // Simulate an Aid to DEX on Bravo; order is re-evaluated each segment
+                    await bravo.update({ "system.characteristics.dex.value": 25 });
+
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId, "raised DEX acts first in the next segment").to.equal(bravo.id);
+
+                    // An aborted combatant keeps their natural priority (the row stays at
+                    // its DEX position, struck through) but receives no turn — the skip
+                    // lives in _takesTurnInSegment, not in the sort
+                    await alpha.createEmbeddedDocuments("ActiveEffect", [
+                        { name: "Aborted", img: "icons/svg/downgrade.svg", statuses: ["aborted"] },
+                    ]);
+                    const alphaCombatant = combat.combatants.find((c) => c.actorId === alpha.id);
+                    expect(Math.floor(combat.getInitiativePriority(alphaCombatant, 6)), "priority unchanged").to.equal(
+                        20,
+                    );
+                    expect(combat._takesTurnInSegment(alphaCombatant, 6), "no turn while aborted").to.be.false;
+
+                    // Aborting spends Alpha's Phase: advancing skips their turn entirely and
+                    // crosses into Segment 12; once the Segment containing the spent Phase
+                    // passes they may act again on their next Phase (6E2 22)
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "aborted combatant's turn is skipped").to.equal(bravo.id);
+
+                    const abortCleared = await waitUntil(() => !alpha.statuses.has("aborted"));
+                    expect(abortCleared, "aborted status cleared after the spent Phase segment passed").to.be.true;
+
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId, "recovered combatant acts on their next Phase").to.equal(alpha.id);
+                });
+
+                it("Should apply Post-Segment 12 Recovery when nextRound skips a full Turn", async function () {
+                    const automationSetting = game.settings.get(game.system.id, "automation");
+                    await game.settings.set(game.system.id, "automation", "all");
+
+                    try {
+                        const actor = await Actor.create({
+                            name: "_Quench Round Recovery PC",
+                            type: "pc",
+                            system: {
+                                initiativeCharacteristic: "dex",
+                                characteristics: {
+                                    dex: { value: 10, max: 10 },
+                                    spd: { value: 2, max: 2 },
+                                },
+                            },
+                        });
+                        actorDocuments.push(actor);
+
+                        const rec = actor.system.characteristics.rec.value;
+                        const stunMax = actor.system.characteristics.stun.max;
+                        expect(rec, "test actor has positive REC").to.be.greaterThan(0);
+
+                        await actor.update({
+                            "system.characteristics.stun.value": stunMax - rec - 3,
+                        });
+
+                        const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                        combatDocuments.push(combat);
+                        await combat.createEmbeddedDocuments("Combatant", [{ actorId: actor.id }]);
+                        await combat.startCombat();
+
+                        // Skipping a full Turn crosses Post-Segment 12 exactly once
+                        await combat.nextRound();
+                        expect(combat.round).to.equal(2);
+                        expect(combat.segment).to.equal(12);
+                        expect(actor.system.characteristics.stun.value).to.equal(stunMax - 3);
+
+                        // Rewinding and skipping forward again must not double-apply
+                        await combat.previousRound();
+                        expect(combat.round).to.equal(1);
+
+                        await combat.nextRound();
+                        expect(combat.round).to.equal(2);
+                        expect(actor.system.characteristics.stun.value).to.equal(stunMax - 3);
+                    } finally {
+                        await game.settings.set(game.system.id, "automation", automationSetting);
+                    }
+                });
+
+                it("Should lock out a combatant whose SPD changes until both SPDs would have had a Phase", async function () {
+                    const slow = await Actor.create({
+                        name: "_Quench SPD Change",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 20, max: 20 },
+                                spd: { value: 2, max: 2 },
+                            },
+                        },
+                    });
+                    const pacer = await Actor.create({
+                        name: "_Quench SPD Pacer",
+                        type: "pc",
+                        system: {
+                            initiativeCharacteristic: "dex",
+                            characteristics: {
+                                dex: { value: 10, max: 10 },
+                                spd: { value: 12, max: 12 },
+                            },
+                        },
+                    });
+                    actorDocuments.push(slow, pacer);
+
+                    const combat = await Combat.create({ scene: canvas.scene?.id || null, active: true });
+                    combatDocuments.push(combat);
+                    await combat.createEmbeddedDocuments("Combatant", [{ actorId: slow.id }, { actorId: pacer.id }]);
+                    await combat.startCombat();
+
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId).to.equal(slow.id);
+                    await combat.nextTurn(); // Pacer in Segment 12
+                    await combat.nextTurn(); // Crosses into Round 2, Segment 1 (Pacer only)
+                    expect(combat.segment).to.equal(1);
+
+                    // SPD bookkeeping is seeded at the first segment boundary; wait for it so the
+                    // change below is detected against the old SPD
+                    const slowCombatant = combat.combatants.find((c) => c.actorId === slow.id);
+                    const seeded = await waitUntil(
+                        () => slowCombatant.getFlag(game.system.id, "knownSpd") !== undefined,
+                    );
+                    expect(seeded, "knownSpd seeded at the first segment boundary").to.be.true;
+
+                    // Aid the SPD mid-Turn: SPD 2 (Phases 6, 12) becomes SPD 4 (Phases 3, 6, 9, 12)
+                    await slow.update({ "system.characteristics.spd.value": 4 });
+
+                    await combat.nextTurn(); // Crosses into Segment 2; boundary detects the change
+                    expect(combat.segment).to.equal(2);
+                    const detected = await waitUntil(() => !!slowCombatant.getFlag(game.system.id, "spdLockout"));
+                    expect(detected, "SPD change detected at the segment boundary").to.be.true;
+
+                    // Old SPD 2 would next act in Segment 6, new SPD 4 in Segment 3, so no actions
+                    // until Segment 6 (6E2 17)
+                    expect(slowCombatant.hasPhaseInSegment(3), "locked out of the new SPD Segment 3 Phase").to.be.false;
+                    expect(slowCombatant.hasPhaseInSegment(6), "acts once both SPDs would have had a Phase").to.be.true;
+
+                    await combat.nextTurn();
+                    expect(combat.segment).to.equal(3);
+                    expect(combat.combatant.actorId, "locked-out combatant does not act in Segment 3").to.equal(
+                        pacer.id,
+                    );
+
+                    let guard = 0;
+                    while (combat.segment !== 6 && guard++ < 12) {
+                        await combat.nextTurn();
+                    }
+                    expect(combat.segment).to.equal(6);
+                    expect(combat.combatant.actorId, "DEX 20 acts first on the new SPD chart").to.equal(slow.id);
                 });
             });
         },
