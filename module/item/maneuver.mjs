@@ -2,7 +2,7 @@ import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mj
 import { HeroCompatibility } from "../utility/compatibility.mjs";
 import { roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { calculateVelocityInSystemUnits } from "../utility/units.mjs";
-import { dehydrateAttackItem } from "./item-attack.mjs";
+import { dehydrateAttackItem, rehydrateAttackItem } from "./item-attack.mjs";
 
 /**
  * Maneuvers have some rules of their own that should be considered.
@@ -82,6 +82,43 @@ function buildManeuverFlags(item, type) {
             dehydratedManeuverActorUuid: item.actor.uuid,
         },
     };
+}
+
+/**
+ * Expires maneuver effects that last "until the character's next Phase" (Dodge, Block,
+ * Brace, …) at the start of that Phase. Toggleable maneuvers are switched off through
+ * their item so activation state stays in sync; loose effects are deleted. Effects
+ * created at the current world time are kept — they were declared this instant.
+ * Mirrors the legacy stack's _onStartTurn cleanup (combat.mjs) for the single stack.
+ * @param {Actor} actor
+ */
+export async function expireManeuverNextPhaseEffects(actor) {
+    // V14 migrated duration.startTime to the top-level start.time field; reading
+    // only the V13 shape makes the created-this-instant guard never match there
+    const effectStartTime = (ae) => ae.duration?.startTime ?? ae.start?.time ?? null;
+    const maneuverAes = (actor?.temporaryEffects ?? []).filter(
+        (ae) =>
+            ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect" &&
+            effectStartTime(ae) !== game.time.worldTime,
+    );
+
+    const expiryPromises = maneuverAes.map((ae) => {
+        const flags = ae.flags[game.system.id];
+        if (flags?.toggle) {
+            let maneuver = null;
+            try {
+                maneuver =
+                    fromUuidSync(flags.itemUuid) ||
+                    rehydrateAttackItem(flags.dehydratedManeuverItem, fromUuidSync(flags.dehydratedManeuverActorUuid))
+                        .item;
+            } catch (e) {
+                console.warn(`Unable to resolve maneuver item for expiring effect ${ae.name}`, e);
+            }
+            if (maneuver?.isActive) return maneuver.toggle();
+        }
+        return ae.delete();
+    });
+    await Promise.all(expiryPromises);
 }
 
 /**
@@ -398,6 +435,11 @@ export async function activateManeuver(item) {
         if (HeroCompatibility.isV14) {
             if (activeEffect.duration?.value === Infinity) {
                 activeEffect.duration.value = null;
+            }
+            // V14 moved the start time to the top-level start field; core migrates it
+            // on create but not on the re-activation update of a reused template AE
+            if (activeEffect.duration?.startTime !== undefined) {
+                activeEffect.start = { time: activeEffect.duration.startTime };
             }
         }
 

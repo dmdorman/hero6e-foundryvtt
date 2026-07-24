@@ -27,17 +27,21 @@ export class HeroSocketHandler {
                     await game.combat.nextHeroCombatantSingle();
                     break;
                 case "nextRound":
-                    if (game.user !== game.users.activeGM) return;
-                    await game.combat.nextRound();
-                    break;
                 case "nextTurn":
-                    if (game.user !== game.users.activeGM) return;
-                    await game.combat.nextTurn();
-                    break;
                 case "previousTurn":
+                case "previousRound": {
                     if (game.user !== game.users.activeGM) return;
-                    await game.combat.previousTurn();
+                    // combatId is sent by the single-combatant stack; legacy emits omit it
+                    const combat = game.combats.get(data.combatId) ?? game.combat;
+                    await combat?.[data.operation]?.();
                     break;
+                }
+                case "lrPreempt": {
+                    if (game.user !== game.users.activeGM) return;
+                    const combat = game.combats.get(data.combatId) ?? game.combat;
+                    await combat?.lrPreemptPointer?.(data.combatantId, data.activeId ?? null);
+                    break;
+                }
                 case "updateChatMessage": {
                     if (game.user !== game.users.activeGM) return;
 

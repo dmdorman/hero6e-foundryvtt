@@ -394,6 +394,8 @@ export default class SettingsHelpers {
             requiresReload: false,
         });
 
+        // TODO(post-alpha): remove this setting in favour of FoundryVTT's core
+        // combatTrackerConfig.turnMarker.disposition setting
         game.settings.register(module, "combatTrackerDispositionHighlighting", {
             name: game.i18n.localize("Settings.combatTrackerDispositionHighlighting.Name"),
             hint: game.i18n.localize("Settings.combatTrackerDispositionHighlighting.Hint"),
@@ -402,6 +404,16 @@ export default class SettingsHelpers {
             type: Boolean,
             default: true,
             onChange: () => ui.combat.render(),
+            requiresReload: false,
+        });
+
+        game.settings.register(module, "lrAutoElevate", {
+            name: game.i18n.localize("Settings.lrAutoElevate.Name"),
+            hint: game.i18n.localize("Settings.lrAutoElevate.Hint"),
+            scope: "world",
+            config: true,
+            type: Boolean,
+            default: false,
             requiresReload: false,
         });
 

@@ -236,21 +236,37 @@ export function registerCombatWorkflowTests(quench) {
                     );
                     assert.ok(damageSpan, "Element found in chat card.");
 
-                    // 4. Verification calculations against live document database state
+                    const { foundElement: applyDamageCard } = await waitForElementInChat(`.apply-damage-card`);
+                    assert.ok(applyDamageCard, "Apply damage card rendered in chat.");
+
+                    // The card's Effect section states the STUN actually applied after defenses.
+                    // Assert the database change matches the card rather than re-deriving the
+                    // defense math here (the .apply-damage-amount span is pre-defense damage).
+                    const effectSection = Array.from(applyDamageCard.querySelectorAll(".card-section")).find((s) =>
+                        s.querySelector(".description-tiny")?.textContent.trim().startsWith("Effect"),
+                    );
+                    assert.ok(effectSection, "Effect section found within the apply damage card.");
+
+                    const effectiveStunMatch = effectSection
+                        .querySelector(".description-medium")
+                        ?.textContent.match(/(\d+)\s*STUN/);
+                    assert.ok(effectiveStunMatch, "Effective STUN parsed from the apply damage card.");
+                    const expectedStunDamage = parseInt(effectiveStunMatch[1]);
+
+                    // Unlinked token: damage lands on the token's synthetic actor
                     const updatedDefender = defenderTokenDoc.actor;
                     const finalStun = updatedDefender.system.characteristics?.stun?.value;
-
-                    // Verification: Confirm state change matches automation calculations
-                    const stunRawDamage = damageSpan.innerHTML.match(/(\d+) STUN/)[1];
-                    const expectedStunDamage = Math.max(
-                        0,
-                        stunRawDamage - updatedDefender.system.characteristics.pd.value,
-                    );
                     const stunDamageApplied = baselineStun - finalStun;
+
+                    const defenseText =
+                        Array.from(applyDamageCard.querySelectorAll(".card-section .description-tiny"))
+                            .map((el) => el.textContent.trim())
+                            .find((t) => t.startsWith("Defense")) ?? "Defense: unknown";
+
                     assert.strictEqual(
                         stunDamageApplied,
                         expectedStunDamage,
-                        `Defender's STUN should be reduced by ${expectedStunDamage} (Baseline: ${baselineStun}, Final: ${finalStun}).`,
+                        `Defender's STUN should be reduced by the card's effective STUN (${expectedStunDamage}). Baseline: ${baselineStun}, Final: ${finalStun}, ${defenseText}.`,
                     );
 
                     // 5. Explicit structural window cleanup

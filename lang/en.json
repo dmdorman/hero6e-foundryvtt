@@ -254,6 +254,10 @@
             "Name": "Combat Tracker Disposition Highlighting",
             "Hint": "The background color of combatants in the combat tracker will match the color associated with the token disposition. Players with a friendly disposition will be green."
         },
+        "lrAutoElevate": {
+            "Name": "Lightning Reflexes: Always Act Early",
+            "Hint": "Automatically place combatants with scoped Lightning Reflexes at their elevated position at the start of each Segment (single combatant tracker only). When off, owners instead receive a whispered prompt with an Act Early button."
+        },
         "defaultDexInitiative": {
             "Name": "Default DEX for Initiative",
             "Hint": "Character should use EGO for initiative when using Mental Powers. By default initiative will use EGO for initiative when it is higher then DEX. Checking this setting will always default to DEX (regardless of EGO value), when uploading an HDC file. You can always change DEX/EGO initiative in the OTHERS tab of a character sheet."
