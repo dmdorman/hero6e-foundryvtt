@@ -2,7 +2,9 @@
 
 ### Version 4.3.17 So far... [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
 
+- This is the last version that supports Foundry v13. Please upgrade to v14 if you wish to receive enhancements and bug fixes.
 - Add support for SECTIONAL_DEFENSE XMLID. [#4534](https://github.com/dmdorman/hero6e-foundryvtt/issues/4534)
+- Improved FoundryVTT v14 detection of invisible tokens with enhanced visions.
 
 ### Version 4.3.16 20260718
 
