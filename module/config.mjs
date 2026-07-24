@@ -7911,6 +7911,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 };
                 ae.name = `${item.system.ALIAS || item.system.XMLID || item.name}: ${item.system.XMLID} ${item.is5e ? item.system.LEVELS : item.system.OPTIONID}`;
                 ae.img = "icons/svg/invisible.svg";
+                ae.showIcon = 2;
                 ae.changes = [];
                 ae.statuses ??= new Set();
                 ae.statuses.add("invisible");

@@ -2978,7 +2978,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             const heroJson = {};
             HeroSystem6eActor._xmlToJsonNode(heroJson, xml.children);
 
-            // Need count of maneuvers for progress bar (might be switching betwen 5/6e so an estimate)
+            // Need count of maneuvers for progress bar (might be switching between 5/6e so an estimate)
             const powerListTentative = this.system.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
             const freeStuffFilter = (power) =>
                 (!(power.behaviors.includes("adder") || power.behaviors.includes("modifier")) &&
