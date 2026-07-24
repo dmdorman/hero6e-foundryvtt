@@ -1,6 +1,32 @@
 import { gridUnitsToMeters } from "../utility/units.mjs";
 
+// Volatile-free, top-level static tracker to store frame state deduplication
+if (!globalThis.HERO_VISION_DEBUG_CACHE) {
+    globalThis.HERO_VISION_DEBUG_CACHE = new Map();
+}
+
 class BaseHeroDetectionModeV14 extends foundry.canvas.perception.DetectionMode {
+    /**
+     * Calculates metric scale distance between two token bounding vectors.
+     * @protected
+     */
+    _getDistanceInMeters(sourceToken, targetToken) {
+        if (!sourceToken || !targetToken) return Infinity;
+
+        // Use a clean local variable for grid math safety
+        const ray = new foundry.canvas.geometry.Ray(sourceToken.center, targetToken.center);
+        const pixels = ray.distance;
+
+        // Convert pixels to canvas grid units
+        const gridUnits = (pixels / canvas.dimensions.size) * canvas.dimensions.distance;
+
+        // Factor ruleset matrix bounds (Convert 5e inches/hexes to 6e meters if system.is5e is flagged)
+        const actor = sourceToken.actor;
+        const is5e = actor?.system?.is5e === true;
+
+        return is5e ? gridUnits * 2.0 : gridUnits;
+    }
+
     /**
      * Core V14 loop executor. Scans items dynamically on every single frame tick.
      * Hardened to patch unlinked actor maps before parent engine execution blocks fire.
@@ -8,69 +34,53 @@ class BaseHeroDetectionModeV14 extends foundry.canvas.perception.DetectionMode {
     _canDetect(visionSource, target, level) {
         const basicCheck = super._canDetect(visionSource, target, level);
 
-        // 1. Validate Target/Source Documents (V14 Standard Validation)
-        const targetToken = target.document?.documentName === "Token" ? target : null;
+        // 1. Gather Target Context (Token or Document Match)
+        let targetToken = null;
+        if (target instanceof Token) targetToken = target;
+        else if (target.object instanceof Token) targetToken = target.object;
+        else if (target.document instanceof TokenDocument) targetToken = target.document.object;
+
         const targetActor = targetToken?.actor;
         if (!targetActor) return basicCheck;
 
-        const sourceToken = visionSource.object?.document?.documentName === "Token" ? visionSource.object : null;
-        const sourceActor = sourceToken?.actor;
-        if (!sourceActor) return basicCheck;
+        // 2. Clear Actor/Token Swaps for the Source
+        let sourceActor;
+        let sourceToken;
 
-        // 2. Gather state parameters using specialized sub-functions
-        const activeSenses = this._getObserverSenses(sourceToken, sourceActor);
-        const targetInvisibility = this._getTargetInvisibility(targetToken, targetActor);
-
-        // 3. Compute V14 Path Measurements
-        const waypoints = [
-            { x: sourceToken.center.x, y: sourceToken.center.y },
-            { x: targetToken.center.x, y: targetToken.center.y },
-        ];
-
-        const pathMeasurement = canvas.grid.measurePath(waypoints);
-        const rawGridDistance = pathMeasurement?.distance ?? 0;
-
-        // Extract the specific parent scene context for this token
-        const tokenScene = sourceToken.document.parent;
-
-        // SAFE HIGH-FREQUENCY INVOKATION: Passes context to ensure zero interface lag
-        const distanceMultiplier = gridUnitsToMeters({
-            silent: true,
-            scene: tokenScene,
-        });
-
-        let distanceInMeters = rawGridDistance * distanceMultiplier;
-
-        // ====================================================================
-        // GRID ADJACENCY PROTECTION MATRIX
-        // Handles fractional diagonals (2.8m square) and hex vertex adjustments
-        // ====================================================================
-        if (canvas.grid.type !== foundry.CONST.GRID_TYPES.GRIDLESS) {
-            const sourceClust = canvas.grid.getOffset({ x: sourceToken.x, y: sourceToken.y });
-            const targetClust = canvas.grid.getOffset({ x: targetToken.x, y: targetToken.y });
-
-            const dx = Math.abs(sourceClust.i - targetClust.i);
-            const dy = Math.abs(sourceClust.j - targetClust.j);
-
-            // Check if the tokens occupy immediately touching grid cells
-            const isAdjacent = dx <= 1 && dy <= 1;
-
-            // Calculate what 1 single grid space equals in true metric length on this scene
-            const metersPerSingleGridSpace = (canvas.scene.grid.distance ?? 1) * distanceMultiplier;
-
-            // If adjacent, force the proximity range check to match exactly 1 single space length
-            // This stops 2.8m square diagonals or 2.3m hex offsets from dropping out of the 2m fringe!
-            if (
-                isAdjacent &&
-                distanceInMeters > metersPerSingleGridSpace &&
-                distanceInMeters <= metersPerSingleGridSpace * 1.5
-            ) {
-                distanceInMeters = metersPerSingleGridSpace;
-            }
+        // In V14 visionSource.object can occasionally evaluate directly to the Actor instance
+        if (visionSource.object instanceof Actor) {
+            sourceActor = visionSource.object;
+            // Map back to the live canvas proxy token from the native contents Map array
+            sourceToken = canvas.tokens.contents.find((t) => t.actor?.id === sourceActor.id) || null;
+        } else {
+            // Standard vision source fallback assignment
+            sourceToken = visionSource.object;
+            sourceActor = sourceToken?.actor || null;
         }
 
-        // 4. Resolve sensory processing matrix
-        return this._resolveSensoryMatrix(activeSenses, targetInvisibility, distanceInMeters, basicCheck);
+        // Strict variable safety gate before executing system math
+        if (!sourceActor || !sourceToken) return basicCheck;
+
+        // 3. Grid Adjacency Protection Matrix
+        const distanceInMeters = this._getDistanceInMeters(sourceToken, targetToken);
+        if (distanceInMeters <= 2) {
+            return true;
+        }
+
+        // 4. Invoke your method with the exact expected order: (Token, Actor)
+        const activeSenses = this._getObserverSenses(sourceToken, sourceActor);
+        const targetInvisibility = this._getTargetInvisibility(sourceToken, sourceActor);
+
+        const hasSenseLock = this._resolveSensoryMatrix(
+            activeSenses,
+            targetInvisibility,
+            distanceInMeters,
+            basicCheck,
+            sourceToken,
+            targetToken,
+        );
+
+        return hasSenseLock;
     }
 
     /**
@@ -188,74 +198,140 @@ class BaseHeroDetectionModeV14 extends foundry.canvas.perception.DetectionMode {
      * Standardizes Fringe handling universally across all physical categories.
      * @protected
      */
-    _resolveSensoryMatrix(senses, inv, distance, basicCheck) {
+    _resolveSensoryMatrix(senses, inv, distance, basicCheck, sourceToken, targetToken) {
         const TYPE_SIGHT = foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT;
         const isTargetingPipeline = this.constructor.TYPE === TYPE_SIGHT;
 
+        const sName = sourceToken?.name || "Unknown Observer";
+        const tName = targetToken?.name || "Unknown Target";
+        const modeLabel = isTargetingPipeline ? "[TARGETING]" : "[NON-TARGETING]";
+        const uniqueTraceKey = `${sourceToken?.id}-${targetToken?.id}-${this.constructor.name}`;
+
+        const evaluateSense = (senseGroup, invGroup, dist, maxDist) =>
+            this._evaluateSenseWithFringe(senseGroup, invGroup, dist, maxDist);
+
         // A. Radio Group Checks
-        if (senses.RADIO.TARGETING) {
-            if (this._evaluateSenseWithFringe(inv.RADIO, inv, distance, 100)) {
-                console.log(`${this.name} RADIO.TARGETING`);
+        if (isTargetingPipeline && senses.RADIO.TARGETING) {
+            if (evaluateSense(inv.RADIO, inv, distance, 100)) {
+                console.debug(
+                    `👀 HERO Vision ${modeLabel}: ${sName} detects ${tName} via RADAR/RADIO (Dist: ${distance.toFixed(1)}m)`,
+                );
+                globalThis.HERO_VISION_DEBUG_CACHE.delete(uniqueTraceKey);
                 return true;
             }
         }
 
         // B. Hearing Group Checks
-        if (senses.HEARING.TARGETING) {
-            if (this._evaluateSenseWithFringe(inv.HEARING, inv, distance, 40)) {
-                return isTargetingPipeline;
+        if (isTargetingPipeline) {
+            if (senses.HEARING.TARGETING && evaluateSense(inv.HEARING, inv, distance, 40)) {
+                console.debug(
+                    `👀 HERO Vision ${modeLabel}: ${sName} detects ${tName} via TARGETING HEARING (Dist: ${distance.toFixed(1)}m)`,
+                );
+                globalThis.HERO_VISION_DEBUG_CACHE.delete(uniqueTraceKey);
+                return true;
             }
-        } else if (senses.HEARING.NORMAL && !isTargetingPipeline) {
-            return true;
+        } else {
+            if (senses.HEARING.NORMAL && evaluateSense(inv.HEARING, inv, distance, 40)) {
+                console.debug(
+                    `👀 HERO Vision ${modeLabel}: ${sName} detects ${tName} via AMBIENT/NORMAL HEARING (Dist: ${distance.toFixed(1)}m)`,
+                );
+                globalThis.HERO_VISION_DEBUG_CACHE.delete(uniqueTraceKey);
+                return true;
+            }
         }
 
         // C. Mental Group Checks
-        if (senses.MENTAL.TARGETING) {
-            if (this._evaluateSenseWithFringe(inv.MENTAL, inv, distance, 80)) {
-                console.log(`${this.name} MENTAL.TARGETING`);
+        if (isTargetingPipeline && senses.MENTAL.TARGETING) {
+            if (evaluateSense(inv.MENTAL, inv, distance, 80)) {
+                console.debug(
+                    `👀 HERO Vision ${modeLabel}: ${sName} detects ${tName} via MENTAL SENSE (Dist: ${distance.toFixed(1)}m)`,
+                );
+                globalThis.HERO_VISION_DEBUG_CACHE.delete(uniqueTraceKey);
                 return true;
             }
         }
 
         // D. Smell Group Checks
-        if (senses.SMELL.TARGETING) {
-            if (this._evaluateSenseWithFringe(inv.SMELL, inv, distance, 20)) {
-                console.log(`${this.name} SMELL.TARGETING`);
+        if (isTargetingPipeline) {
+            if (senses.SMELL.TARGETING && evaluateSense(inv.SMELL, inv, distance, 20)) {
+                console.debug(
+                    `👀 HERO Vision ${modeLabel}: ${sName} detects ${tName} via TARGETING SMELL (Dist: ${distance.toFixed(1)}m)`,
+                );
+                globalThis.HERO_VISION_DEBUG_CACHE.delete(uniqueTraceKey);
                 return true;
             }
-        } else if (senses.SMELL.NORMAL && !isTargetingPipeline) {
-            return true;
+        } else {
+            if (senses.SMELL.NORMAL && evaluateSense(inv.SMELL, inv, distance, 20)) {
+                console.debug(
+                    `👀 HERO Vision ${modeLabel}: ${sName} detects ${tName} via AMBIENT/NORMAL SMELL (Dist: ${distance.toFixed(1)}m)`,
+                );
+                globalThis.HERO_VISION_DEBUG_CACHE.delete(uniqueTraceKey);
+                return true;
+            }
         }
 
         // E. Touch Group Checks
-        if (senses.TOUCH.TARGETING) {
-            if (this._evaluateSenseWithFringe(inv.TOUCH, inv, distance, 1)) {
-                console.log(`${this.name} TOUCH.TARGETING`);
+        if (isTargetingPipeline) {
+            if (senses.TOUCH.TARGETING && evaluateSense(inv.TOUCH, inv, distance, 1)) {
+                console.debug(
+                    `👀 HERO Vision ${modeLabel}: ${sName} detects ${tName} via TARGETING TOUCH (Dist: ${distance.toFixed(1)}m)`,
+                );
+                globalThis.HERO_VISION_DEBUG_CACHE.delete(uniqueTraceKey);
                 return true;
             }
-        } else if (senses.TOUCH.NORMAL && !isTargetingPipeline) {
-            return true;
+        } else {
+            if (senses.TOUCH.NORMAL && evaluateSense(inv.TOUCH, inv, distance, 1)) {
+                console.debug(
+                    `👀 HERO Vision ${modeLabel}: ${sName} detects ${tName} via AMBIENT/NORMAL TOUCH (Dist: ${distance.toFixed(1)}m)`,
+                );
+                globalThis.HERO_VISION_DEBUG_CACHE.delete(uniqueTraceKey);
+                return true;
+            }
         }
 
-        // F. Sight Group Resolution (Maintains unique sub-sense bypass rules like Infrared)
-        if (foundry.utils.hasProperty(senses, "SIGHT")) {
-            // 1. Enhanced Senses Bypass Check
-            if (inv.SIGHT.ANY) {
-                if (senses.SIGHT.INFRARED && !inv.SIGHT.INFRARED) {
-                    return true;
-                }
-                if (senses.SIGHT.ULTRAVIOLET && !inv.SIGHT.ULTRAVIOLET) {
+        // F. Sight Group Resolution
+        if (isTargetingPipeline && senses.SIGHT?.NORMAL) {
+            if (this._evaluateSenseWithFringe(inv.SIGHT.NORMAL, inv, distance, Infinity)) {
+                if (!inv.SIGHT.NORMAL ? basicCheck : true) {
+                    console.debug(
+                        `👀 HERO Vision ${modeLabel}: ${sName} detects ${tName} via NORMAL SIGHT (Dist: ${distance.toFixed(1)}m)`,
+                    );
+                    globalThis.HERO_VISION_DEBUG_CACHE.delete(uniqueTraceKey);
                     return true;
                 }
             }
+        }
 
-            // 2. Normal Sight Baseline with Universal Fringe
-            if (senses.SIGHT.NORMAL) {
-                if (this._evaluateSenseWithFringe(inv.SIGHT.NORMAL, inv, distance, Infinity)) {
-                    // If the target is NOT invisible to normal sight, return Foundry's true geometry check
-                    return !inv.SIGHT.NORMAL ? basicCheck : true;
-                }
-            }
+        // ====================================================================
+        // EXHAUSTIVE THROTTLED FALL-THROUGH LOGGING BLOCK
+        // Tracks exactly why sense resolution failed without spamming frame ticks
+        // ====================================================================
+        const lastLoggedState = globalThis.HERO_VISION_DEBUG_CACHE.get(uniqueTraceKey);
+        const currentFailStateString = `${senses.SMELL.TARGETING}-${inv.SMELL}-${distance}`;
+
+        if (lastLoggedState !== currentFailStateString) {
+            globalThis.HERO_VISION_DEBUG_CACHE.set(uniqueTraceKey, currentFailStateString);
+
+            console.groupCollapsed(
+                `❌ HERO Vision FAIL ${modeLabel}: ${sName} CANNOT detect ${tName} (Dist: ${distance.toFixed(1)}m)`,
+            );
+            console.debug(`Pipeline Target Status:`, { isTargetingPipeline, currentModeClass: this.constructor.name });
+            console.debug(`Smell Sense Configuration:`, {
+                hasSmellSense: !!senses.SMELL,
+                isSmellTargeting: senses.SMELL.TARGETING,
+                isSmellNormal: senses.SMELL.NORMAL,
+            });
+            console.debug(`Target Invisibility Payload:`, {
+                isInvisibleToSmell: inv.SMELL,
+                hasNoFringeAdder: inv.NO_FRINGE,
+                hasBrightFringeAdder: inv.BRIGHT_FRINGE,
+            });
+            console.debug(`Range Limitations:`, {
+                currentDistance: `${distance.toFixed(1)}m`,
+                maxAllowedSmellRange: "20m",
+                withinRangeBounds: distance <= 20,
+            });
+            console.groupEnd();
         }
 
         return false;
@@ -297,22 +373,47 @@ class HeroTargetingDetectionModeV14 extends BaseHeroDetectionModeV14 {
     static get TYPE() {
         return foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT;
     }
+
+    // testVisibility(visionSource, mode, config) {
+    //     // Force the execution path directly through our custom sensory calculation block
+    //     return this._canDetect(visionSource, config.object, config.level);
+    // }
 }
 
 // 3. CHILD CLASS: Non-Targeting Senses (Ambient/Silhouette Tracking)
-class HeroNonTargetingDetectionModeV14 extends BaseHeroDetectionModeV14 {
+/**
+ * Custom Non-Targeting Sense Mode for HERO System 6e V14.
+ * @extends {BaseHeroDetectionModeV14}
+ */
+export class HeroNonTargetingDetectionModeV14 extends BaseHeroDetectionModeV14 {
+    constructor(metadata = {}, id = "heroNonTargetingV14") {
+        super(metadata, id);
+        // Explicit instance cache to protect against multi-client volatile states
+        //this._cachedWaveFilter = null;
+    }
+
+    /** @override */
     static get TYPE() {
         return foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SOUND;
     }
-    static getDetectionFilter() {
-        //return super.getDetectionFilter();
-        return (this._detectionFilter ??= OutlineOverlayFilter.create({
-            outlineColor: [1, 0, 1, 0.5],
-            //thickness: 1,
-            knockout: false,
-            wave: true,
-        }));
-    }
+
+    /**
+     * Instance method to retrieve the wave overlay safely without texture flushes.
+     * @override
+     */
+    // getDetectionFilter(visionSource, target) {
+    //     if (typeof OutlineOverlayFilter !== "undefined") {
+    //         if (!this._cachedWaveFilter) {
+    //             this._cachedWaveFilter = OutlineOverlayFilter.create({
+    //                 outlineColor: 0x00ffcc,
+    //                 thickness: 2.0,
+    //                 waveAnimation: true,
+    //             });
+    //         }
+    //         return this._cachedWaveFilter;
+    //     }
+    //     return super.getDetectionFilter(visionSource, target);
+    // }
 }
 
 /**
