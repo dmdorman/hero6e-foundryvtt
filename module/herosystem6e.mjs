@@ -152,15 +152,13 @@ Hooks.once("init", async function () {
 
     SettingsHelpers.initLevelSettings();
 
-    // if (HeroCompatibility.isV14 ) {
-    //     // Custom Expiry Events. Map custom string to a translation path or static text block
-    //     CONFIG.ActiveEffect.expiryEvents = CONFIG.ActiveEffect.expiryEvents || {};
-
-    //     // Registering the label makes it selectable and visible in configuration menus
-    //     for (const [key, value] of Object.entries(HERO.ACTIVE_EFFECT_EXPIRY_EVENTS)) {
-    //         CONFIG.ActiveEffect.expiryEvents[key] = value.label;
-    //     }
-    // }
+    // Hero Custom Expiry Events
+    Object.assign(CONFIG.ActiveEffect.expiryEvents, {
+        "hero.segmentStart": "HERO.ExpirySegmentStart", // "Segment Start"
+        "hero.segmentEnd": "HERO.ExpirySegmentEnd", // "Segment End"
+        "hero.nextTurnStart": "HERO.ExpiryNextTurnStart", // "Actor's Next Turn Start"
+        "hero.nextPhaseEnd": "HERO.ExpiryNextPhaseEnd", // Clears the "aborted" action lock safely
+    });
 
     // Compendiums
     game.CreateHeroCompendiums = CreateHeroCompendiums;
