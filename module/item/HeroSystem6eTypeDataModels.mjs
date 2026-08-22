@@ -1832,18 +1832,27 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
         const ary = [];
         const effectChangesOf = (ae) => (ae.changes?.length ? ae.changes : (ae.system?.changes ?? []));
 
-        // One tooltip line per effect: name, the same "Attacker: Item" origin string the effect
-        // config sheet shows as HERO.Origin, and the seconds left before it fades/expires.
-        const describeEffect = (ae, viaKey) => {
-            const parts = [
-                `${escapeHtmlForTooltip(ae.name)}${viaKey ? ` (via ${escapeHtmlForTooltip(viaKey.toUpperCase())})` : ""}`,
-            ];
+        // One tooltip line per effect: name with the change's signed amount, the same
+        // "Attacker: Item" origin string the effect config sheet shows as HERO.Origin, and the
+        // seconds left before it fades/expires.
+        const describeEffect = (ae, viaKey, change) => {
+            const delta = Number(change?.value);
+            const deltaText = Number.isFinite(delta) && delta !== 0 ? delta.signedString() : "";
+
+            let detail = "";
+            if (viaKey) {
+                detail = ` (${escapeHtmlForTooltip(viaKey.toUpperCase())}${deltaText ? ` ${deltaText}` : ""})`;
+            } else if (deltaText) {
+                detail = ` (${deltaText})`;
+            }
+            const parts = [`${escapeHtmlForTooltip(ae.name)}${detail}`];
 
             const originItem = ae.origin ? fromUuidSync(ae.origin) : null;
             if (originItem) {
                 const originToken = fromUuidSync(ae.origin.match(/(.*).Actor/)?.[1]);
+                const ownerName = originToken?.name || originItem.actor?.name;
                 parts.push(
-                    `${escapeHtmlForTooltip(originToken?.name || originItem.actor?.name)}: ${escapeHtmlForTooltip(originItem.name)}`,
+                    `${ownerName ? `${escapeHtmlForTooltip(ownerName)}: ` : ""}${escapeHtmlForTooltip(originItem.name)}`,
                 );
             }
 
@@ -1866,8 +1875,9 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
 
         // Effects that directly target this characteristic's max.
         for (const ae of applicableEffects) {
-            if (effectChangesOf(ae).find((p) => p.key === `system.characteristics.${this.key}.max`)) {
-                ary.push(describeEffect(ae));
+            const change = effectChangesOf(ae).find((p) => p.key === `system.characteristics.${this.key}.max`);
+            if (change) {
+                ary.push(describeEffect(ae, undefined, change));
             }
         }
 
@@ -1886,9 +1896,10 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
                     if (listed.has(ae.id ?? ae.name)) continue;
                     if (ae.parent !== this.actor) continue;
                     if (!isCalculatedDependent && ae.flags?.[game.system.id]?.type === "adjustment") continue;
-                    if (effectChangesOf(ae).find((p) => p.key === `system.characteristics.${sourceKey}.max`)) {
+                    const change = effectChangesOf(ae).find((p) => p.key === `system.characteristics.${sourceKey}.max`);
+                    if (change) {
                         listed.add(ae.id ?? ae.name);
-                        ary.push(describeEffect(ae, sourceKey));
+                        ary.push(describeEffect(ae, sourceKey, change));
                     }
                 }
             }
