@@ -151,35 +151,6 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
         this.detectionModes.heroTargetingV14 ??= { enabled: true, range: Infinity };
     }
 
-    static async createCombatants(tokens, { combat } = {}) {
-        if (combat === undefined && game.combats.viewed) {
-            combat ??= game.combats.viewed;
-        }
-        if (combat) {
-            console.debug(
-                `createCombatants/before: ${combat.current.name} segment=${combat.current.segment} init=${combat.current.initiative}`,
-                combat,
-            );
-        }
-
-        await super.createCombatants(tokens, combat);
-
-        combat ??= game.combats.viewed;
-        console.debug(
-            `createCombatants/after: ${combat.current.name} segment=${combat.current.segment} init=${combat.current.initiative}`,
-            combat,
-        );
-    }
-
-    static async deleteCombatants(tokens, { combat } = {}) {
-        await super.deleteCombatants(tokens, combat);
-
-        combat ??= game.combats.viewed;
-        if (combat?.extraCombatants) {
-            await combat.extraCombatants();
-        }
-    }
-
     /**
      * Called when the movement is recorded or cleared.
      * @protected

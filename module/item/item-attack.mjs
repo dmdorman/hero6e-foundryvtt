@@ -1500,25 +1500,6 @@ async function doSingleTargetActionToHit(action, options) {
     if (!message) {
         throw new Error(`[HeroSystem6e] ChatMessage was not created!`);
     }
-
-    // If we are in combat, keep track that we made an attack roll.
-    // You typically can't make 2 attacks in the same phase.
-    // Use to skip non lightning reflexes phase.
-    if (token?.combatant) {
-        const masterCombatant = game.combat.getCombatantByToken(token.combatant.tokenId);
-        if (masterCombatant) {
-            const heroHistory = masterCombatant.getFlag(game.system.id, "heroHistory") || {};
-            const key = `r${String(game.combat.round).padStart(2, "0")}s${String(game.combat.segment).padStart(2, "0")}`;
-            heroHistory[key] ??= {};
-            heroHistory[key].action = {
-                combatantName: token.combatant.name,
-                name: item.name,
-                XMLID: item.XMLID,
-                timestamp: Date.now(),
-            };
-            await masterCombatant.setFlag(game.system.id, "heroHistory", heroHistory);
-        }
-    }
 }
 
 export function getAttackTags(item) {

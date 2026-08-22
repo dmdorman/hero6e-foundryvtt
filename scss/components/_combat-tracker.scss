@@ -51,14 +51,11 @@ $combat-tracker-hero-dispositions: (
 
 // Theme variable layer. Dark is the default; light overrides follow core's own
 // precedence model (global body class, or a per-app .themed override).
-.combat-sidebar,
 .combat-tracker {
     @include hero-tracker-vars-dark;
 }
 
-body.theme-light .combat-sidebar,
 body.theme-light .combat-tracker,
-.combat-sidebar.themed.theme-light,
 .themed.theme-light .combat-tracker {
     @include hero-tracker-vars-light;
 }
@@ -68,7 +65,6 @@ body.theme-light .combat-tracker,
 // interface=dark + applications=light, the body.theme-light block above matched
 // even though core paints the element dark — re-assert the element's own theme
 // at higher specificity so mixed setups render coherently.
-.combat-sidebar.themed.theme-dark,
 .themed.theme-dark .combat-tracker {
     @include hero-tracker-vars-dark;
 }
@@ -87,40 +83,18 @@ body.theme-light .combat-tracker,
     font-weight: bold;
 }
 
-// .combat-sidebar covers the legacy tracker, .combat-tracker the single-combatant timeline
 @each $disposition-name, $disposition-color in $combat-tracker-hero-dispositions {
-    .combat-sidebar li.combatant.combat-tracker-hero-disposition-#{$disposition-name},
     .combat-tracker li.combatant.combat-tracker-hero-disposition-#{$disposition-name} {
         background-color: rgba($disposition-color, $combat-tracker-hero-disposition-opacity-default);
     }
 
-    .combat-sidebar li.combatant.combat-tracker-hero-disposition-#{$disposition-name}:hover,
     .combat-tracker li.combatant.combat-tracker-hero-disposition-#{$disposition-name}:hover {
         background-color: rgba($disposition-color, $combat-tracker-hero-disposition-opacity-hover);
     }
 
-    .combat-sidebar li.combatant.combat-tracker-hero-disposition-#{$disposition-name}.active,
     .combat-tracker li.combatant.combat-tracker-hero-disposition-#{$disposition-name}.active {
         background-color: rgba($disposition-color, $combat-tracker-hero-disposition-opacity-active);
     }
-}
-
-.combat-sidebar .segment-content {
-    padding: 0;
-}
-
-// V13 temporary kluge of v12 directory
-.combat-sidebar .combatant:is(.context, .active)::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: transparent;
-    border: 1px solid var(--color-border-highlight, var(--color-shadow-primary, #ff6400));
-}
-
-.combat-sidebar .combatant {
-    border: 1px solid var(--hero-row-border, black);
 }
 
 /* --- HERO SYSTEM 6E SIDEBAR TIMELINE DESIGN MATRIX --- */
@@ -281,7 +255,6 @@ ol.combat-tracker.plain {
     white-space: nowrap;
 }
 
-// Scoped: the legacy tracker's rows keep core's single-line controls
 .hero-single-tracker .combat-tracker li.combatant .combatant-controls {
     flex-wrap: wrap;
     row-gap: 2px;
@@ -508,19 +481,16 @@ ol.combat-tracker.plain {
 
 /* 2l. DEFEATED: core's strike-through drowns in the hero row treatments (#4555) —
    add a red edge, tint, and portrait fade that survive past/future filters */
-.combat-sidebar li.combatant.defeated,
 .combat-tracker li.combatant.defeated {
     background: color-mix(in srgb, var(--hero-defeated-accent) 10%, transparent);
     box-shadow: inset 3px 0 0 var(--hero-defeated-accent);
 }
 
-.combat-sidebar li.combatant.defeated .name,
 .combat-tracker li.combatant.defeated .name {
     color: var(--hero-defeated-accent);
     text-decoration: line-through;
 }
 
-.combat-sidebar li.combatant.defeated .token-image,
 .combat-tracker li.combatant.defeated .token-image {
     opacity: 0.35;
     filter: grayscale(100%);

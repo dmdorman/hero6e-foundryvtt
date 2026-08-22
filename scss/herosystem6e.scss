@@ -117,9 +117,6 @@ form.herosystem6e.theme-hc {
 
 @include meta.load-css("components/chat");
 
-/* Styles for time tracking */
-@include meta.load-css("components/time");
-
 /* Styles for uploading */
 @include meta.load-css("components/upload");
 
@@ -131,6 +128,9 @@ form.herosystem6e.theme-hc {
 
 /* Combat Tracker */
 @include meta.load-css("components/combat-tracker");
+
+/* Settings window group headers */
+@include meta.load-css("components/settings-config");
 
 /* Effects Panel */
 @include meta.load-css("components/effects-panel");
