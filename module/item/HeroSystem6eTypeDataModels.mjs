@@ -1819,7 +1819,6 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
             _valueTitle = "<b>PREVENTING CHANGES</b>\n<ul class='left'>";
             _valueTitle += ary.join("\n ");
             _valueTitle += "</ul>";
-            _valueTitle += "<small><i>Click to unblock</i></small>";
         }
         return _valueTitle;
     }
