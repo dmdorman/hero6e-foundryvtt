@@ -7939,6 +7939,31 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         }
     }
 
+    /**
+     * Rebuild this item from the Hero Designer XML captured at upload.
+     * Mirrors the uploadFromXml update path: ADDER/MODIFIER/POWER arrays are guaranteed so
+     * entries the XML lacks are cleared, and recursive:false drops properties the XML doesn't
+     * define and reverts type conversions. Children keep their own _hdcXml and restore separately.
+     * @returns {Promise<boolean>} true if the item was restored
+     */
+    async restoreFromHdc() {
+        if (!this.system._hdcXml) {
+            return false;
+        }
+
+        const itemData = this.system.hdcJson;
+        itemData.system.ADDER ??= [];
+        itemData.system.MODIFIER ??= [];
+        itemData.system.POWER ??= [];
+
+        await this.update({ name: itemData.name, type: itemData.type, system: itemData.system }, { recursive: false });
+
+        if (this.actor) {
+            await this.setActiveEffects();
+        }
+        return true;
+    }
+
     /*
      * HDC has a bug where subitems of COMPOUNDPOWER can have duplicate IDs.
      * This bug may exist in other places as well.

@@ -2,7 +2,6 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 const { FilePicker } = foundry.applications.apps;
 import {
-    HeroSystem6eItem,
     createModifierOrAdderFromXml,
     replaceBaseCostForHalfDieAdderXml,
     replaceBaseCostForPipAdderXml,
@@ -91,7 +90,6 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
         // the super defines source (roughly item.source), but we want the actual item for getters and such
         context.item = item;
         context.system = item.system;
-        context.config = CONFIG.HERO;
 
         const configPowerInfo = item.baseInfo;
         context.editOptions = configPowerInfo?.editOptions;
@@ -106,7 +104,7 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
 
         // A select list of possible adjustment targets on the character
         if (ADJUSTMENT_XMLIDS.includes(item.system.XMLID)) {
-            const { enhances, reduces } = item.splitAdjustmentSourceAndTarget();
+            const { enhancesArray, reducesArray } = item.splitAdjustmentSourceAndTarget();
 
             const enhancesValidator = ["AID", "ABSORPTION", "SUCCOR", "TRANSFER"].includes(item.system.XMLID)
                 ? adjustmentSourcesStrict
@@ -115,62 +113,57 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
             context.possibleEnhances = enhancesValidator({ actor: this.actor, is5e: item.is5e, item });
             context.possibleReduces = adjustmentSourcesPermissive({ actor: this.actor, is5e: item.is5e, item });
 
-            context.enhances = enhances ? enhances.split(",").map((target) => target.toUpperCase().trim()) : [];
-            context.reduces = reduces ? reduces.split(",").map((target) => target.toUpperCase().trim()) : [];
+            context.enhances = enhancesArray.map((target) => target.toUpperCase());
+            context.reduces = reducesArray.map((target) => target.toUpperCase());
         }
 
-        if (configPowerInfo?.editOptions?.showAttacks?.(item)) {
+        if (configPowerInfo?.editOptions?.showAttacks?.(item) && item.actor) {
             // Enumerate attacks
             context.attacks = [];
-            if (item.actor) {
-                const cslChoices = item.cslChoices;
+            const cslChoices = item.cslChoices;
 
-                // Actual items
-                for (const attackOrFramework of item.actor.cslItems) {
-                    // Make no attempt to disqualify frameworks although we could enumerate and exclude if nothing matches
-                    if (attackOrFramework.type !== "framework" && item.system.XMLID !== "WEAPON_MASTER") {
-                        // Is this attack a potentially good match? CSL needs to provide ocv to match attacks that use ocv
-                        // and omcv for attacks that use omcv.
-                        // If it matches neither, then it's probably a purely defensive CSL and it's ok to show no items.
-                        const attacksWith = attackOrFramework.system.attacksWith;
-                        if (!cslChoices[attacksWith]) {
-                            continue;
-                        }
+            // Actual items
+            for (const attackOrFramework of item.actor.cslItems) {
+                // Make no attempt to disqualify frameworks although we could enumerate and exclude if nothing matches
+                if (attackOrFramework.type !== "framework" && item.system.XMLID !== "WEAPON_MASTER") {
+                    // Is this attack a potentially good match? CSL needs to provide ocv to match attacks that use ocv
+                    // and omcv for attacks that use omcv.
+                    // If it matches neither, then it's probably a purely defensive CSL and it's ok to show no items.
+                    const attacksWith = attackOrFramework.system.attacksWith;
+                    if (!cslChoices[attacksWith]) {
+                        continue;
                     }
-
-                    // Check if there is an adder (if so attack is checked)
-                    const adder = item.adders.find(
-                        (a) => a.ALIAS == attackOrFramework.name && a.targetId === attackOrFramework.id,
-                    );
-
-                    context.attacks.push({
-                        id: attackOrFramework.id,
-                        name: attackOrFramework.name,
-                        checked: adder ? true : false,
-                        title: `${
-                            attackOrFramework.system.XMLID +
-                            (attackOrFramework.system.DISPLAY ? " (" + attackOrFramework.system.DISPLAY + ")" : "")
-                        }: ${attackOrFramework.system.description.replace(/"/g, "&quot;")}`,
-                    });
                 }
 
-                // If there are any custom adders which don't point to real powers include in the list so that
-                // users can uncheck it and make the custom adder go away without having to delete the adder directly
-                // as that's not intuitive.
-                for (const incorrectCustomAdder of item.customLinkAddersWithoutItems) {
-                    const name = `${incorrectCustomAdder.ALIAS} (Invalid)`;
-                    context.attacks.push({
-                        id: null,
-                        name: name,
-                        checked: true,
-                        title: `The ${name} is invalid. Perhaps it was mispelt in Hero Designer or you have since deleted the linked item? Delete or edit the adder with this name from the ADDER section below.`,
-                    });
-                }
+                // Check if there is an adder (if so attack is checked)
+                const adder = item.adders.find(
+                    (a) => a.ALIAS == attackOrFramework.name && a.targetId === attackOrFramework.id,
+                );
+
+                context.attacks.push({
+                    id: attackOrFramework.id,
+                    name: attackOrFramework.name,
+                    checked: adder ? true : false,
+                    title: `${
+                        attackOrFramework.system.XMLID +
+                        (attackOrFramework.system.DISPLAY ? " (" + attackOrFramework.system.DISPLAY + ")" : "")
+                    }: ${attackOrFramework.system.description}`,
+                });
+            }
+
+            // If there are any custom adders which don't point to real powers include in the list so that
+            // users can uncheck it and make the custom adder go away without having to delete the adder directly
+            // as that's not intuitive.
+            for (const incorrectCustomAdder of item.customLinkAddersWithoutItems) {
+                const name = `${incorrectCustomAdder.ALIAS} (Invalid)`;
+                context.attacks.push({
+                    id: null,
+                    name: name,
+                    checked: true,
+                    title: `The ${name} is invalid. Perhaps it was mispelt in Hero Designer or you have since deleted the linked item? Delete or edit the adder with this name from the ADDER section below.`,
+                });
             }
         }
-
-        // PENALTY_SKILL_LEVELS
-        context.penaltyChoices = configPowerInfo?.editOptions?.penaltyChoices;
 
         // ENDURANCERESERVE has a REC rate
         context.isEnduranceReserve = item.system.XMLID === "ENDURANCERESERVE";
@@ -182,38 +175,43 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
         return context;
     }
 
-    _onRender(context, options) {
+    async _renderFrame(options) {
+        const frame = await super._renderFrame(options);
+
+        // Add game.system.version to header
+        const versionElement = document.createElement("div");
+        versionElement.classList.add("game-system-version");
+        versionElement.innerText = game.system.version;
+        versionElement.setAttribute("data-tooltip", `Hero System version ${game.system.version}`);
+        frame.querySelector("HEADER button")?.before(versionElement);
+
+        return frame;
+    }
+
+    async _onFirstRender(context, options) {
+        await super._onFirstRender(context, options);
+
         // Debugging
         globalThis.item = this.item;
 
-        super._onRender(context, options);
-
-        // Show the system version in the window header (the frame persists across re-renders)
-        const windowTitle = this.element.querySelector(".window-header .window-title");
-        if (windowTitle && !windowTitle.querySelector(".system-version")) {
-            const version = document.createElement("span");
-            version.className = "system-version";
-            version.textContent = ` ${game.system.version}`;
-            windowTitle.append(version);
-        }
-
-        if (!this.isEditable) return;
-
-        // Every editable input persists itself through these per-input change listeners;
-        // form-level submits contribute nothing (see _processFormData).
-        // REF: https://foundryvtt.wiki/en/development/api/applicationv2
-        const editableInputs = this.element.querySelectorAll(
-            `input[name]:not([name=""]), textarea[name]:not([name=""]), select[name]:not([name=""])`,
-        );
-        for (const input of editableInputs) {
-            input.addEventListener("change", (e) => this.#onChangeInput(e));
-        }
+        // Every editable input persists itself through this delegated change listener;
+        // form-level submits contribute nothing (see _processFormData). The root element
+        // persists across renders, so one listener covers every re-rendered part.
+        this.element.addEventListener("change", (event) => {
+            const input = event.target.closest(
+                `input[name]:not([name=""]), textarea[name]:not([name=""]), select[name]:not([name=""])`,
+            );
+            if (!input || !this.isEditable) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            this.#onChangeInput(input);
+        });
     }
 
     /**
      * AppV2 form submission serializes every named input on the sheet, so any submit (Enter key, ...)
      * would re-write dozens of fields the user never touched. Every editable input already persists
-     * itself through the per-input change listeners in _onRender, so form-level submits contribute
+     * itself through the delegated change listener in _onFirstRender, so form-level submits contribute
      * no form data. Programmatic submit({updateData}) calls still work: updateData is merged in
      * _prepareSubmitData after this returns.
      */
@@ -230,11 +228,7 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
         return super._processSubmitData(event, form, submitData, options);
     }
 
-    async #onChangeInput(event) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-
-        const input = event.currentTarget;
+    async #onChangeInput(input) {
         const name = input.name;
         const item = this.item;
 
@@ -242,7 +236,13 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
         if (input.dataset.dtype === "Number") {
             value = Number(value);
             // Revert to the original value, like the V1 sheet's NaN scrub did
-            if (Number.isNaN(value)) return this.render();
+            if (Number.isNaN(value)) {
+                if (foundry.utils.hasProperty(item, name)) {
+                    input.value = foundry.utils.getProperty(item, name);
+                    return;
+                }
+                return this.render();
+            }
         }
 
         // CHARGES and CLIPS route through their DataModel helpers
@@ -301,17 +301,20 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
             console.error(`Unhandled INPUT name="${name}"`);
             return;
         }
-        await item.update({ [name]: value });
+
+        const changes = { [name]: value };
 
         // SKILLS: EVERYMAN requires FAMILIARITY
-        if (item.system.EVERYMAN && !item.system.FAMILIARITY) {
-            await item.update({ "system.FAMILIARITY": true });
+        if (name === "system.EVERYMAN" && value && !item.system.FAMILIARITY) {
+            changes["system.FAMILIARITY"] = true;
         }
+
+        await item.update(changes);
     }
 
     async #toggleAttackAdder(attackId, checked) {
         const item = this.item;
-        const attackItem = this.actor?.items.find((o) => o.id === attackId);
+        const attackItem = this.actor?.items.get(attackId);
         if (!attackItem) {
             console.error(`Attack not found`);
             return;
@@ -358,10 +361,12 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
         return this.item.update({ "system.INPUT": newInputStr });
     }
 
+    // Core DocumentSheetV2 ships an editImage action, but it persists the new path via a form
+    // submit, which this sheet deliberately suppresses (_processFormData). Update directly instead.
     static async #onEditImage(event, target) {
         if (!this.isEditable) return;
 
-        const attr = target.dataset.edit || "img";
+        const attr = target.dataset.edit;
         const current = foundry.utils.getProperty(this.document, attr);
         const { img } = this.document.constructor.getDefaultArtwork?.(this.document.toObject()) ?? {};
         const fp = new FilePicker.implementation({
@@ -386,7 +391,8 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
             return ui.notifications.error(`Unable to add adder/modifier.`);
         }
 
-        // Options associated with TYPE (excluding enhancers for now)
+        // Options associated with TYPE (excluding enhancers for now).
+        // addPower guarantees key/name (XMLID/ALIAS) on every config entry that has xml.
         const powers = item.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
         const powersOfType = powers.filter((o) => o.behaviors.includes(adderOrModifier) && o.xml);
 
@@ -397,33 +403,8 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
         }
 
         const optionHTML = powersOfType
-            .sort((a, b) => {
-                const xmlA = new DOMParser().parseFromString(a.xml.trim(), "text/xml");
-                const xmlB = new DOMParser().parseFromString(b.xml.trim(), "text/xml");
-                const nameA = xmlA.children[0].getAttribute("ALIAS");
-                const nameB = xmlB.children[0].getAttribute("ALIAS");
-                if (nameA < nameB) {
-                    return -1;
-                }
-                if (nameA > nameB) {
-                    return 1;
-                }
-
-                // names must be equal
-                return 0;
-            })
-            .map(function (a) {
-                const xmlA = new DOMParser().parseFromString(a.xml.trim(), "text/xml");
-                const alias = xmlA.children[0].getAttribute("ALIAS");
-
-                // Make sure XMLIDs match, if not then skip
-                if (a.key != xmlA.children[0].getAttribute("XMLID")) {
-                    console.warn(`XMLID mismatch`, a, xmlA.children[0]);
-                    return "";
-                }
-
-                return `<option value='${a.key}'>${alias}</option>`;
-            });
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((a) => `<option value='${a.key}'>${a.name}</option>`);
 
         const content = `
             <p>
@@ -489,20 +470,17 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
     }
 
     #findAdderOrModifier(target) {
-        const xmlid = target.closest("[data-xmlid]")?.dataset.xmlid;
         const adderId = target.closest("[data-adder-id]")?.dataset.adderId;
         const modifierId = target.closest("[data-modifier-id]")?.dataset.modifierId;
         if (!adderId && !modifierId) {
             return null;
         }
 
-        const adderOrModifier =
+        return (
             this.item.system.ADDER.find((m) => m.ID == adderId) ||
-            this.item.system.MODIFIER.find((m) => m.ID == modifierId);
-        if (!adderOrModifier || adderOrModifier.XMLID !== xmlid) {
-            return null;
-        }
-        return adderOrModifier;
+            this.item.system.MODIFIER.find((m) => m.ID == modifierId) ||
+            null
+        );
     }
 
     static async #onModifierEdit(event, target) {
@@ -513,7 +491,13 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
             return ui.notifications.error(`Unable to edit adder/modifier.`);
         }
 
-        await new ItemModifierApplicationV2({ item: this.item, mod: adderOrModifier }).render(true);
+        // One editor per adder/modifier: refocus an existing window instead of stacking a duplicate
+        const appId = `ItemModifierApplication-${this.item.id}-${adderOrModifier.ID}`;
+        const existing = foundry.applications.instances.get(appId);
+        if (existing) {
+            return existing.render({ force: true });
+        }
+        await new ItemModifierApplicationV2({ item: this.item, mod: adderOrModifier }, { id: appId }).render(true);
     }
 
     static async #onModifierDelete(event, target) {
@@ -521,7 +505,7 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
 
         const adderOrModifier = this.#findAdderOrModifier(target);
         if (!adderOrModifier) {
-            return ui.notifications.error(`Unable to edit adder/modifier.`);
+            return ui.notifications.error(`Unable to delete adder/modifier.`);
         }
 
         const confirmed = await foundry.applications.api.DialogV2.confirm({
@@ -546,8 +530,7 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
         if (!this.isEditable) return;
 
         const item = this.item;
-        const xml = item.system._hdcXml;
-        if (!xml) return;
+        if (!item.system._hdcXml) return;
 
         const confirmed = await foundry.applications.api.DialogV2.confirm({
             window: { title: `Restore ${item.name}` },
@@ -556,66 +539,46 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
         });
         if (!confirmed) return;
 
-        const itemData = HeroSystem6eItem.itemDataFromXml(xml, item.actor);
-
-        // Guarantee arrays exist so a restore clears entries the XML doesn't carry
-        itemData.system.ADDER ??= [];
-        itemData.system.MODIFIER ??= [];
-        itemData.system.POWER ??= [];
-
-        // recursive:false both allows a type change (e.g. converted equipment) and drops
-        // properties the original XML doesn't define
-        await item.update({ name: itemData.name, type: itemData.type, system: itemData.system }, { recursive: false });
-
-        if (item.actor) {
-            await item.setActiveEffects();
+        if (await item.restoreFromHdc()) {
+            ui.notifications.info(`${item.name} restored from its original Hero Designer data.`);
         }
-
-        ui.notifications.info(`${item.name} restored from its original Hero Designer data.`);
     }
 
     static async #onConvertToPower() {
-        return this.#convertToType("power", "POWER");
+        return this.#convertToType("power");
     }
 
     static async #onConvertToEquipment() {
-        return this.#convertToType("equipment", "EQUIPMENT");
+        return this.#convertToType("equipment");
     }
 
-    async #convertToType(targetType, targetTypeLabel) {
+    async #convertToType(targetType) {
         if (!this.isEditable) return;
 
-        if (this.item.parentItem) {
+        const item = this.item;
+        if (item.parentItem) {
             return ui.notifications.error(
-                `<b>${this.item.name}</b> is a child of <b>${this.item.parentItem.name}</b>.  Converting a child item type is not supported.`,
+                `<b>${item.name}</b> is a child of <b>${item.parentItem.name}</b>.  Converting a child item type is not supported.`,
             );
         }
 
+        if (item.actor && !item.isValidTypeConversion(targetType, item.actor)) {
+            const conversionFailures = item.validationTypeConversionFailures(targetType, item.actor);
+            console.error(conversionFailures);
+            return ui.notifications.error(conversionFailures[0].message);
+        }
+
         const confirmed = await foundry.applications.api.DialogV2.confirm({
-            window: { title: `Confirm ${this.item.name} type change` },
-            content: `Convert ${this.item.name} from a ${this.item.type} to ${targetTypeLabel}`,
+            window: { title: `Confirm ${item.name} type change` },
+            content: `Convert ${item.name} from a ${item.type} to ${targetType.toUpperCase()}`,
         });
 
         if (!confirmed) {
             return;
         }
 
-        await this.item.update(
-            {
-                type: targetType,
-                system: foundry.utils.mergeObject(this.item.system.toObject(), { _type: targetType }),
-            },
-            { recursive: false },
-        );
-
-        for (const childItem of this.item.childItems) {
-            await childItem.update(
-                {
-                    type: targetType,
-                    system: foundry.utils.mergeObject(childItem.system.toObject(), { _type: targetType }),
-                },
-                { recursive: false },
-            );
-        }
+        // Converts this item and its deep child tree in one batched transaction (render: false)
+        await item.convertToType(targetType);
+        this.render();
     }
 }

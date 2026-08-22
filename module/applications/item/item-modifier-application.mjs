@@ -11,13 +11,10 @@ export class ItemModifierApplicationV2 extends HandlebarsApplicationMixin(Applic
     constructor({ item, mod }, options = {}) {
         super(options);
         this.item = item;
+        // Item updates replace the source ADDER/MODIFIER arrays wholesale, so modOrig serves as
+        // the stable identity (ID/xmlTag/baseInfo) while the edited entry is re-resolved from
+        // current source on every use.
         this.modOrig = mod;
-        // Item updates replace the source ADDER/MODIFIER arrays wholesale, so hold on to the
-        // identity of the edited entry and re-resolve it from current source on every use.
-        this.modId = mod.ID;
-        this.xmlTag = mod.xmlTag;
-
-        globalThis.mod = this.modOrig; // Global mod is the database view and not the in process changes
     }
 
     static DEFAULT_OPTIONS = {
@@ -54,7 +51,7 @@ export class ItemModifierApplicationV2 extends HandlebarsApplicationMixin(Applic
     }
 
     #currentModSource() {
-        return this.item._source.system[this.xmlTag]?.find((m) => m.ID == this.modId);
+        return this.item._source.system[this.modOrig.xmlTag]?.find((m) => m.ID == this.modOrig.ID);
     }
 
     async _prepareContext(options) {
@@ -66,7 +63,7 @@ export class ItemModifierApplicationV2 extends HandlebarsApplicationMixin(Applic
 
         context.item = this.item;
         context.mod = this.#currentModSource() ?? this.modOrig._source;
-        context.editOptions = foundry.utils.deepClone(this.modOrig.baseInfo?.editOptions);
+        context.editOptions = this.modOrig.baseInfo?.editOptions;
 
         return context;
     }
@@ -74,8 +71,9 @@ export class ItemModifierApplicationV2 extends HandlebarsApplicationMixin(Applic
     static async #onSubmit(event, form, formData) {
         const expandedData = foundry.utils.expandObject(formData.object);
 
-        const newArray = foundry.utils.deepClone(this.item._source.system[this.xmlTag]);
-        const modSource = newArray.find((m) => m.ID == this.modId);
+        const xmlTag = this.modOrig.xmlTag;
+        const newArray = foundry.utils.deepClone(this.item._source.system[xmlTag]);
+        const modSource = newArray.find((m) => m.ID == this.modOrig.ID);
         if (!modSource) {
             return ui.notifications.error(`Unable to edit ${this.modOrig.XMLID}; it no longer exists on the item.`);
         }
@@ -93,7 +91,7 @@ export class ItemModifierApplicationV2 extends HandlebarsApplicationMixin(Applic
             }
         }
 
-        await this.item.update({ [`system.${this.xmlTag}`]: newArray });
+        await this.item.update({ [`system.${xmlTag}`]: newArray });
 
         // Show any changes from dropdowns
         this.render();

@@ -134,27 +134,24 @@
     }
 
     table.adders-modifiers {
-        tbody {
-            th.adder-name,
-            th.modifier-name,
-            td.adder-name,
-            td.modifier-name {
-                text-align: left;
-            }
+        th.adder-name,
+        th.modifier-name,
+        td.adder-name,
+        td.modifier-name {
+            text-align: left;
+        }
 
-            td.adder-controls,
-            td.modifier-controls {
-                display: flex;
-                gap: 0.25rem;
-            }
+        td.adder-controls {
+            display: flex;
+            gap: 0.25rem;
+        }
 
-            tr.from-parent {
-                font-style: italic;
-            }
+        tr.from-parent {
+            font-style: italic;
+        }
 
-            tr.modifier-adder td:first-child {
-                padding-left: 10px;
-            }
+        tr.modifier-adder td:first-child {
+            padding-left: 10px;
         }
     }
 }
