@@ -2,6 +2,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 const { FilePicker } = foundry.applications.apps;
 import {
+    HeroSystem6eItem,
     createModifierOrAdderFromXml,
     replaceBaseCostForHalfDieAdderXml,
     replaceBaseCostForPipAdderXml,
@@ -36,11 +37,36 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
             editImage: HeroSystemItemSheetV2.#onEditImage,
             convertToPower: HeroSystemItemSheetV2.#onConvertToPower,
             convertToEquipment: HeroSystemItemSheetV2.#onConvertToEquipment,
+            restoreFromHdc: HeroSystemItemSheetV2.#onRestoreFromHdc,
         },
         window: {
             resizable: true,
+            controls: [
+                {
+                    action: "convertToPower",
+                    icon: "fas fa-bolt",
+                    label: "Convert to POWER",
+                    ownership: "OWNER",
+                    visible: HeroSystemItemSheetV2.#canConvertToPower,
+                },
+                {
+                    action: "convertToEquipment",
+                    icon: "fas fa-toolbox",
+                    label: "Convert to EQUIPMENT",
+                    ownership: "OWNER",
+                    visible: HeroSystemItemSheetV2.#canConvertToEquipment,
+                },
+            ],
         },
     };
+
+    static #canConvertToPower() {
+        return this.isEditable && this.item.type === "equipment";
+    }
+
+    static #canConvertToEquipment() {
+        return this.isEditable && ["power", "skill"].includes(this.item.type);
+    }
 
     get title() {
         return `${this.item.type.toUpperCase()}:${this.item.system.XMLID}: ${this.item.name}`;
@@ -514,6 +540,38 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
                     .map((o) => o._source),
             });
         }
+    }
+
+    static async #onRestoreFromHdc() {
+        if (!this.isEditable) return;
+
+        const item = this.item;
+        const xml = item.system._hdcXml;
+        if (!xml) return;
+
+        const confirmed = await foundry.applications.api.DialogV2.confirm({
+            window: { title: `Restore ${item.name}` },
+            content: `<p>Restore <b>${item.name}</b> from its original Hero Designer data?
+                Current values (LEVELS, adders, modifiers, charges, notes) will be replaced.</p>`,
+        });
+        if (!confirmed) return;
+
+        const itemData = HeroSystem6eItem.itemDataFromXml(xml, item.actor);
+
+        // Guarantee arrays exist so a restore clears entries the XML doesn't carry
+        itemData.system.ADDER ??= [];
+        itemData.system.MODIFIER ??= [];
+        itemData.system.POWER ??= [];
+
+        // recursive:false both allows a type change (e.g. converted equipment) and drops
+        // properties the original XML doesn't define
+        await item.update({ name: itemData.name, type: itemData.type, system: itemData.system }, { recursive: false });
+
+        if (item.actor) {
+            await item.setActiveEffects();
+        }
+
+        ui.notifications.info(`${item.name} restored from its original Hero Designer data.`);
     }
 
     static async #onConvertToPower() {
