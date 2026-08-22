@@ -1,7 +1,5 @@
-{{ log 'HEROSYS ITEM MODIFIER' this }}
+<div class="hero auto-overflow" data-item="{{item._id}}" data-modifier="{{mod.ID}}">
 
-<form class="hero flexcol auto-overflow" autocomplete="off" data-item="{{item._id}}" data-modifier="{{mod.ID}}">
-    
     <section class="sheet-body">
 
         <div class="form-group">
@@ -22,9 +20,9 @@
         {{!-- Select for OPTIONID/OPTION/OPTION_ALIAS --}}
         {{#if editOptions.choices}}
             <div class="form-group">
-                <label>option</label>
+                <label>OPTION</label>
                 <select name="mod.OPTION" data-dtype="text">
-                    {{selectOptions editOptions.choices selected=mod.OPTIONID valueAttr="OPTION" labelAttr="OPTION_ALIAS"}}
+                    {{selectOptions editOptions.choices selected=mod.OPTION valueAttr="OPTION" labelAttr="OPTION_ALIAS"}}
                 </select>
             </div>
 
@@ -81,21 +79,21 @@
 
         {{!-- ADDERS --}}
         {{#if mod.ADDER}}
-            <hr\>
+            <hr />
             <table>
-            <tr class="active-effects adders">
-                <th class="left">Adders</th>
-                <th>Cost</th>
-            </tr>
-            {{#each mod.ADDER as |adder XMLID|}}
-                <tr>
-                    <td class="left">{{adder.ALIAS}}</td>
-                    <td>{{adder.BASECOST}}</td>
+                <tr class="active-effects adders">
+                    <th class="left">Adders</th>
+                    <th>Cost</th>
                 </tr>
-            {{/each}}
+                {{#each mod.ADDER as |adder XMLID|}}
+                    <tr>
+                        <td class="left">{{adder.ALIAS}}</td>
+                        <td>{{adder.BASECOST}}</td>
+                    </tr>
+                {{/each}}
+            </table>
         {{/if}}
-        </table>
 
     </section>
 
-</form>
+</div>

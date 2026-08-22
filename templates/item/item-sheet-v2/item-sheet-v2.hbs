@@ -1,30 +1,87 @@
-{{ log 'HEROSYS item-sheet-v2' this }}
-<form class="{{cssClass}} item-sheet scrollable" autocomplete="off" data-item-uuid="{{item.uuid}}">
+{{!-- HandlebarsApplicationMixin parts require a single root element --}}
+<div class="item-sheet-content">
 
-    <header class="sheet-header">
-        <h3 class="item-name">
-            <input name="name" type="text" value="{{item.name}}" placeholder="Name" disabled/>
-        </h3>
-    </header>
+<header class="sheet-header">
+    <img class="profile-img" src="{{item.img}}" data-edit="img" data-action="editImage" title="{{item.name}}" />
+    <div class="header-fields">
+        <h1 class="item-name">{{item.name}}</h1>
+        <div class="xmlid">{{item.system.XMLID}}</div>
+    </div>
+</header>
 
-    <hr\>
+{{!-- Sheet Body --}}
+<section class="sheet-body">
 
-    {{!-- Sheet Body --}}
-    <section class="sheet-body">
+    {{#if isEnduranceReserve}}
+        <div class="form-group">
+            <label>ENDURANCE (current)</label>
+            <input type="text" name="system.value" value="{{system.value}}" data-dtype="Number" />
+        </div>
 
-        {{!-- Common --}}
-        {{> (getModulePath 'item/item-sheet-v2/item-partial-common-v2.hbs') }}
+        <div class="form-group">
+            <label>REC</label>
+            <input type="text" name="rec" value="{{rec}}" data-dtype="Number" />
+        </div>
 
-        {{!-- Active Points --}}
-        {{> (getModulePath 'item/item-sheet-v2/item-partial-active-points-v2.hbs') }}
+        <hr />
+    {{/if}}
 
-        {{!-- Adders & Modifiers --}}
-        {{> (getModulePath 'item/item-sheet-v2/item-partial-adders-modifiers-v2.hbs') }}
-        
-    </section>
+    {{#if (eq item.type "equipment")}}
+        <div class="form-group">
+            <label>Carried</label>
+            <input type="checkbox" name="system.CARRIED" {{checked system.CARRIED}} data-dtype="Boolean" />
+        </div>
 
-    <p>
-        <i>You can change item type by dragging this item from the actor sheet list to the navbar tab of the desired type.</i>
-    </p>
+        <div class="form-group">
+            <label>Active</label>
+            <input type="checkbox" name="system.active" {{checked system.active}} data-dtype="Boolean" />
+        </div>
 
-</form>
+        <div class="form-group">
+            <label>Weight</label>
+            <input type="text" name="system.WEIGHT" value="{{system.WEIGHT}}" data-dtype="Number" />
+        </div>
+
+        <div class="form-group">
+            <label>Price</label>
+            <input type="text" name="system.PRICE" value="{{system.PRICE}}" data-dtype="Number" />
+        </div>
+    {{/if}}
+
+    {{!-- Common --}}
+    {{> (getModulePath 'item/item-sheet-v2/item-partial-common-v2.hbs') }}
+
+    {{!-- Adjustment Targets/Sources (possibly infinite number depending on modifiers and 5e vs 6e) --}}
+    {{#each reduces as |input id|}}
+        <div class="form-group">
+            <label>{{@root/item.system.XMLID}} From {{increment id 1}}</label>
+            <select name="reduces.{{id}}" data-dtype="text">
+                {{selectOptions @root/possibleReduces selected=input}}
+            </select>
+        </div>
+    {{/each}}
+
+    {{#each enhances as |input id|}}
+        <div class="form-group">
+            <label>{{@root/item.system.XMLID}} To {{increment id 1}}</label>
+            <select name="enhances.{{id}}" data-dtype="text">
+                {{selectOptions @root/possibleEnhances selected=input}}
+            </select>
+        </div>
+    {{/each}}
+
+    {{!-- Active Points --}}
+    {{> (getModulePath 'item/item-sheet-v2/item-partial-active-points-v2.hbs') }}
+
+    {{!-- Adders & Modifiers --}}
+    {{> (getModulePath 'item/item-sheet-v2/item-partial-adders-modifiers-v2.hbs') }}
+
+</section>
+
+{{#if (eq item.type "equipment")}}
+    <button type="button" class="convert-item-type" data-action="convertToPower">Convert to POWER</button>
+{{else if (or (eq item.type "power") (eq item.type "skill"))}}
+    <button type="button" class="convert-item-type" data-action="convertToEquipment">Convert to EQUIPMENT</button>
+{{/if}}
+
+</div>

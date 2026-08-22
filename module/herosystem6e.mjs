@@ -51,7 +51,6 @@ import {
     HeroSystem6eItemSkill,
     HeroSystem6eItemTalent,
 } from "./item/HeroSystem6eTypeDataModels.mjs";
-import { HeroSystem6eItemSheet } from "./item/item-sheet.mjs";
 import { HeroSystem6eItem, initializeItemHandlebarsHelpers } from "./item/item.mjs";
 
 import SettingsHelpers from "./settings/settings-helpers.mjs";
@@ -136,7 +135,7 @@ Hooks.once("init", async function () {
     HEROSYS.module = game.system.id;
     game.herosystem6e = {
         applications: {
-            HeroSystem6eItemSheet,
+            HeroSystemItemSheetV2,
         },
         entities: {
             HeroSystem6eActor,
@@ -268,11 +267,14 @@ Hooks.once("init", async function () {
     });
 
     Items.unregisterSheet("core", foundry.appv1.sheets.ItemSheet);
-    Items.registerSheet("herosystem6e", HeroSystem6eItemSheet, {
-        makeDefault: true,
-        label: "Default HeroSystem",
-    });
     Items.registerSheet("herosystem6e", HeroSystemItemSheetV2, {
+        makeDefault: true,
+        themes: {
+            "": "Default",
+            light: "Light",
+            dark: "Dark",
+            hc: "High Contrast",
+        },
         label: "HeroSystem V2",
     });
 
@@ -321,12 +323,7 @@ Hooks.once("init", async function () {
         `systems/${HEROSYS.module}/templates/combat/footer.hbs`,
 
         `systems/${HEROSYS.module}/templates/item/item-action-icons-partial.hbs`,
-        `systems/${HEROSYS.module}/templates/item/item-effects-partial.hbs`,
         `systems/${HEROSYS.module}/templates/item/item-information-modification-icons-partial.hbs`,
-        `systems/${HEROSYS.module}/templates/item/item-sheet-partial.hbs`,
-        `systems/${HEROSYS.module}/templates/item/item-partial-active-points.hbs`,
-        `systems/${HEROSYS.module}/templates/item/item-partial-adders-modifiers.hbs`,
-        `systems/${HEROSYS.module}/templates/item/item-partial-common.hbs`,
 
         `systems/${HEROSYS.module}/templates/item/item-sheet-v2/item-partial-common-v2.hbs`,
         `systems/${HEROSYS.module}/templates/item/item-sheet-v2/item-partial-active-points-v2.hbs`,
@@ -790,10 +787,6 @@ Hooks.on("renderActorSheet", (dialog, html, data) => {
 
     //     html.find("header h4").after(element);
     // }
-});
-
-Hooks.on("renderItemSheet", (dialog, html) => {
-    html.find("header h4").append(`<span>${game.system.version}<span>`);
 });
 
 Hooks.on("getActorDirectoryEntryContext", (_dialog, html) => {

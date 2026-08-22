@@ -1,4 +1,3 @@
-{{ log 'item-partial-common-v2' this }}
 <div class="description">
     {{item.system.description}}
     {{#if item.system.NOTES}}
@@ -85,10 +84,10 @@
 
 {{!-- Martial Arts don't have LEVELS --}}
 {{#if (isdefined item.system.LEVELS)}}
-    {{#unless source.baseInfo.editOptions.hideLEVELS}}
+    {{#unless editOptions.hideLEVELS}}
         <div class="form-group">
             <label>LEVELS</label>
-            <input {{#if (isdefined source.system.PDLEVELS)}}disabled{{/if}} 
+            <input {{#if (isdefined item.system.PDLEVELS item "system.PDLEVELS")}}disabled{{/if}}
             type="text" name="system.LEVELS" value="{{item.system.LEVELS}}" data-dtype="Number" 
             />
         </div>
@@ -127,7 +126,7 @@
         <div class="form-group">
             <label>OPTION</label>
             <select name="system.OPTION" data-dtype="text">
-                {{selectOptions editOptions.choices selected=item.system.OPTIONID valueAttr="OPTION" labelAttr="OPTION_ALIAS"}}
+                {{selectOptions editOptions.choices selected=item.system.OPTION valueAttr="OPTION" labelAttr="OPTION_ALIAS"}}
             </select>
         </div>
 
@@ -244,22 +243,30 @@
 </div>
 {{/if}}
 
-{{#if (isdefined item.system.ADDSTR)}}
-<div class="form-group">    
-    <label>ADDSTR</label>
-    <input type="checkbox" name="system.ADDSTR" {{checked item.system.ADDSTR}} data-dtype="Boolean"/>
+{{!-- RANGE is also a StringField on powers; for martial arts it is a numeric range-modifier offset --}}
+{{#if (and (eq item.type "martialart") (isdefined item.system.RANGE item "system.RANGE"))}}
+<div class="form-group">
+    <label>RANGE</label>
+    <input type="text" name="system.RANGE" value="{{item.system.RANGE}}" data-dtype="Number" />
 </div>
 {{/if}}
 
-{{#if (isdefined system.MAXSTR)}}
-    <div class="form-group">
-        <label>MAXSTR</label>
-        <input type="text" name="system.MAXSTR" value="{{system.MAXSTR}}" data-dtype="text" />
-    </div>
+{{!-- ADDSTR/MAXSTR only carry data on attack maneuvers; framework rows (LIST, Weapon Element) leave them null --}}
+{{#if (and (isdefined item.system.ADDSTR item "system.ADDSTR") (notEqual item.system.ADDSTR null))}}
+<div class="form-group">
+    <label>ADDSTR</label>
+    <input type="checkbox" name="system.ADDSTR" {{checked item.system.ADDSTR}} data-dtype="Boolean"/>
+</div>
+
+<div class="form-group" title="Maximum STR that can add to this maneuver. Hero Designer exports 0 for most maneuvers; weapon-based ones (e.g. Killing Strike) carry a real cap.">
+    <label>MAXSTR</label>
+    <input type="text" name="system.MAXSTR" value="{{system.MAXSTR}}" data-dtype="Number" />
+</div>
 {{/if}}
 
-{{#if (hasProperty item "system.DAMAGETYPE")}}
-    <div class="form-group">
+{{!-- Hero Designer only sets DAMAGETYPE on custom maneuvers; standard maneuvers always export 0 (None) and derive damage from EFFECT --}}
+{{#if item.system.DAMAGETYPE}}
+    <div class="form-group" title="Hero Designer sets this only for custom maneuvers; standard maneuvers always export None and derive their damage from EFFECT.">
         <label>DAMAGETYPE</label>
         {{#if martialArtsDamageTypeChoices}}
             <select name="system.DAMAGETYPE" data-dtype="Number">
@@ -366,7 +373,8 @@
 {{/if}}
 
 
-{{#if (isdefined item.system.LEVELSONLY)}}
+{{!-- These flags exist on other schemas too but are only meaningful for skills --}}
+{{#if (and (eq item.type "skill") (isdefined item.system.LEVELSONLY))}}
 <div class="form-group">
     <label>LEVELSONLY</label>
     <input type="checkbox" name="system.LEVELSONLY" {{checked item.system.LEVELSONLY}} data-dtype="Boolean"  
@@ -374,7 +382,7 @@
 </div>
 {{/if}}
 
-{{#if (isdefined item.system.FAMILIARITY)}}
+{{#if (and (eq item.type "skill") (isdefined item.system.FAMILIARITY))}}
 <div class="form-group">
     <label>FAMILIARITY</label>
     <input type="checkbox" name="system.FAMILIARITY" {{checked item.system.FAMILIARITY}} data-dtype="Boolean" 
@@ -383,7 +391,7 @@
 {{/if}}
 
 {{!-- if FAMILIARITY is present then EVERYMAN can be an option --}}
-{{#if (isdefined item.system.FAMILIARITY)}}
+{{#if (and (eq item.type "skill") (isdefined item.system.FAMILIARITY))}}
 <div class="form-group">
     <label>EVERYMAN</label>
     <input type="checkbox" name="system.EVERYMAN" {{checked item.system.EVERYMAN}} data-dtype="Boolean"  
@@ -391,7 +399,7 @@
 </div>
 {{/if}}
 
-{{#if (isdefined item.system.PROFICIENCY)}}
+{{#if (and (eq item.type "skill") (isdefined item.system.PROFICIENCY))}}
 <div class="form-group">
     <label>PROFICIENCY</label>
     <input type="checkbox" name="system.PROFICIENCY" {{checked item.system.PROFICIENCY}} data-dtype="Boolean"  
@@ -399,7 +407,7 @@
 </div>
 {{/if}}
 
-{{#if (isdefined item.system.NATIVE_TONGUE)}}
+{{#if (and (eq item.type "skill") (isdefined item.system.NATIVE_TONGUE))}}
 <div class="form-group">
     <label>NATIVE TONGUE</label>
     <input type="checkbox" name="system.NATIVE_TONGUE" {{checked item.system.NATIVE_TONGUE}} data-dtype="Boolean" />
@@ -417,22 +425,20 @@
 {{#if item.system.chargeModifier}}
     <div class="form-group">
         <label>Charges</label>
-        <div class="flexrow">
+        <div class="resource-fraction">
             <input type="text" name="system.numCharges" value="{{system.numCharges}}" data-dtype="Number" />
-            <span>/</span>
-            <input disabled title="maximum, edit with modifier" type="text" name="system.chargesMax" value="{{system.chargesMax}}" data-dtype="Number" />
+            <span class="resource-max" title="Maximum; edit with the CHARGES modifier">/ {{system.chargesMax}}</span>
         </div>
     </div>
 
     {{#if item.system.chargeModifier.CLIPS}}
         <div class="form-group">
             <label>Clips</label>
-            <div class="flexrow">
+            <div class="resource-fraction">
                 <input type="text" name="system.clips" value="{{system.clips}}" data-dtype="Number" />
-                <span>/</span>
-                <input disabled  title="maximum, edit with modifier" type="text" name="system.clipsMax" value="{{system.clipsMax}}" data-dtype="Number" />
+                <span class="resource-max" title="Maximum; edit with the CLIPS adder">/ {{system.clipsMax}}</span>
             </div>
-    </div>
+        </div>
     {{/if}}
 {{/if}}
 
