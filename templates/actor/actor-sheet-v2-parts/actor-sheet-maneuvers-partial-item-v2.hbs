@@ -48,8 +48,6 @@
     </div>
 </li>
 
-{{#if (not this.system.collapse)}}
-    {{#each this.childItems }}
-        {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-martial-partial-item-v2.hbs') this }}
-    {{/each}}
-{{/if}}
+{{#each this.childItems }}
+    {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-martial-partial-item-v2.hbs') this }}
+{{/each}}
