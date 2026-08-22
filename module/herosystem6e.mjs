@@ -302,7 +302,17 @@ Hooks.once("init", async function () {
 
     // Assign the Sidebar subclasses
     CONFIG.ui.items = HeroSystem6eItemDirectory;
+
+    // Hero HDP import
     CONFIG.ui.compendium = HeroSystem6eCompendiumDirectory;
+
+    // Ensure these fields are explicitly requested when Foundry indexes item packs
+    const fieldsToAdd = ["system.PARENTID", "system.XMLID", "system.ID"];
+    for (const field of fieldsToAdd) {
+        if (!CONFIG.Item.compendiumIndexFields.includes(field)) {
+            CONFIG.Item.compendiumIndexFields.push(field);
+        }
+    }
 
     GenericRoller.Initialize();
     HeroSocketHandler.Initialize();
@@ -509,8 +519,13 @@ Hooks.on("closeTokenConfig", async (tokenConfig) => {
     }
 });
 
-Hooks.once("devModeReady", ({ registerPackageDebugFlag }) => {
-    registerPackageDebugFlag(HEROSYS.ID);
+Hooks.on("changeSidebarTab", async (app) => {
+    if (!HEROSYS.isSingleCombatantTrackerEnabled) {
+        // Make sure active token is centered in combat tracker when changing Sidebar
+        if (app.tabName === "combat" && game.combat?.active && app.scrollToTurn) {
+            app.scrollToTurn();
+        }
+    }
 });
 
 /* -------------------------------------------- */
@@ -617,6 +632,11 @@ Hooks.on("setup", async () => {
                 permanent: true,
             });
         }
+    }
+
+    console.log("HeroSystem6eCompendium | Setting up module compendiums...");
+    for (const pack of game.packs) {
+        setupCompendiumPack(pack);
     }
 });
 
@@ -1043,9 +1063,26 @@ async function _outOfCombatRecovery(actor, multiplier) {
     }
 }
 
-// If compendium is created you have to reload to get the new application class.
-// This is known issue https://discord.com/channels/170995199584108546/670336275496042502/1255649814096511107
-Hooks.once("setup", function () {
-    // Apply custom application for Compendiums for parent/child features
-    game.packs.filter((p) => p.metadata.type === "Item").forEach((p) => (p.applicationClass = HeroSystem6eCompendium));
+// Catch any newly created packs dynamically later
+Hooks.on("createCompendium", (pack) => {
+    setupCompendiumPack(pack);
 });
+
+/**
+ * Configure an individual compendium pack with the custom application class and initialize its index.
+ * @param {CompendiumCollection} pack   The compendium pack to configure.
+ */
+async function setupCompendiumPack(pack) {
+    if (pack.metadata.type === "Item") {
+        pack.applicationClass = HeroSystem6eCompendium;
+        //console.log(`Assigned HeroSystem6eCompendium and indexing pack: ${pack.collection}`);
+
+        try {
+            if (pack.index) {
+                await pack.getIndex();
+            }
+        } catch (err) {
+            console.error(`HeroSystem6eCompendium | Failed to index pack ${pack.collection}:`, err);
+        }
+    }
+}

@@ -42,7 +42,7 @@ export class HeroSystem6eCompendiumDirectory extends CompendiumDirectory {
             );
             html = html.replace(
                 "Document.</p>",
-                `Document.</p><label>Hero Designer Prefab</label><input name="upload" class="upload" type="file" accept=".hdp" multiple></input>`,
+                `Document.</p><label>Hero Designer Prefabs</label><input name="upload" class="upload" type="file" accept=".hdp" multiple></input>`,
             );
 
             // DialogV2RenderCallback

@@ -10,6 +10,7 @@
 - Compendia now prompt for overwrite if they already exist. [#4592](https://github.com/dmdorman/hero6e-foundryvtt/issues/4592)
 - Hero prefabs can now be imported in bulk. Each prefab is now sorted in the same order as they appear in Hero Designer. [#4593](https://github.com/dmdorman/hero6e-foundryvtt/issues/4593) [#4663](https://github.com/dmdorman/hero6e-foundryvtt/issues/4663)
 - Equipment net worth and weight added to equipment tab. [#4376](https://github.com/dmdorman/hero6e-foundryvtt/issues/4376) [#4074](https://github.com/dmdorman/hero6e-foundryvtt/issues/4074) [#4075](https://github.com/dmdorman/hero6e-foundryvtt/issues/4075)
+- Item Compendiums have improved layout for containers [#4571](https://github.com/dmdorman/hero6e-foundryvtt/issues/4571)
 
 ### Version 4.3.17 20260725
 
