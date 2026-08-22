@@ -7,8 +7,15 @@ import {
     maneuverHasDodgeTrait,
 } from "./item/maneuver.mjs";
 import { userInteractiveVerifyOptionallyPromptThenSpendResources } from "./item/item-resources.mjs";
-import { promptToDeleteAoeInstantRegions } from "./combat.mjs";
-import { expireEffects, forceDeleteKeys, gmActive, toHHMMSS, whisperUserTargetsForActor } from "./utility/util.mjs";
+import { rehydrateAttackItem } from "./item/item-attack.mjs";
+import {
+    expireEffects,
+    forceDeleteKeys,
+    gmActive,
+    isQuenchTestRunning,
+    toHHMMSS,
+    whisperUserTargetsForActor,
+} from "./utility/util.mjs";
 
 const ROLL_RETENTION_SEGMENTS = 24; // two full Turns
 
@@ -2090,11 +2097,14 @@ export class HeroSystem6eCombatSingle extends Combat {
      * their names and tactical state don't leak to players.
      * @param {Combatant} combatant
      * @param {string} content
+     * @param {object} [options]
+     * @param {boolean} [options.ownersOnly] - Whisper to the actor's owners
      * @private
      */
-    _combatCard(combatant, content) {
+    _combatCard(combatant, content, { ownersOnly = false } = {}) {
         const data = { speaker: ChatMessage.getSpeaker({ actor: combatant.actor }), content };
         if (combatant.hidden) data.whisper = ChatMessage.getWhisperRecipients("GM");
+        else if (ownersOnly) data.whisper = whisperUserTargetsForActor(combatant.actor);
         return ChatMessage.create(data);
     }
 
@@ -2298,9 +2308,9 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         const automation = _getSetting("automation", "none");
 
-        let content = `Post-Segment 12 (Turn ${roundToRecover})<ul>`;
-        let contentHidden = `Post-Segment 12 (Turn ${roundToRecover})<ul>`;
-        let hasHidden = false;
+        const heading = `Post-Segment 12 (Turn ${roundToRecover})`;
+        let publicItems = "";
+        let hiddenItems = "";
 
         // Knocked out characters still take Post-Segment 12 Recoveries (that is how they
         // wake up); isDefeated here is core's (defeated toggle or dead), not isOutOfCombat
@@ -2353,28 +2363,26 @@ export class HeroSystem6eCombatSingle extends Combat {
                 if (recoveryText) {
                     const showToAll = !combatant.hidden && (combatant.hasPlayerOwner || actor.type === "pc");
                     if (showToAll) {
-                        content += `<li>${recoveryText}</li>`;
+                        publicItems += `<li>${recoveryText}</li>`;
                     } else {
-                        hasHidden = true;
-                        contentHidden += `<li>${recoveryText}</li>`;
+                        hiddenItems += `<li>${recoveryText}</li>`;
                     }
                 }
             }
         }
-        content += "</ul>";
-        contentHidden += "</ul>";
 
+        // The Turn boundary always announces publicly; NPC recoveries stay GM-only
         const chatData = {
             style: CONST.CHAT_MESSAGE_STYLES.OTHER,
             author: game.user._id,
-            content,
+            content: publicItems ? `${heading}<ul>${publicItems}</ul>` : heading,
         };
         await ChatMessage.create(chatData);
 
-        if (hasHidden) {
+        if (hiddenItems) {
             await ChatMessage.create({
                 ...chatData,
-                content: contentHidden,
+                content: `${heading}<ul>${hiddenItems}</ul>`,
                 whisper: ChatMessage.getWhisperRecipients("GM"),
             });
         }
@@ -2863,8 +2871,9 @@ export class HeroSystem6eCombatSingle extends Combat {
                 content = startContent;
             }
 
-            // BREAKFALL from prone?
-            if (actor.statuses.has("prone")) {
+            // BREAKFALL from prone? Not while Stunned or KO'd — that Phase is
+            // consumed by the recovery, so no maneuver is available
+            if (actor.statuses.has("prone") && !actor.statuses.has("stunned") && !actor.statuses.has("knockedOut")) {
                 const breakFallItem = actor.items.find((o) => o.system.XMLID === "BREAKFALL" && o.isActive);
                 if (breakFallItem) {
                     content += `
@@ -3797,6 +3806,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                     await this._combatCard(
                         combatant,
                         `${actor.name}'s SPD change to ${pending.newSpd} takes effect (Post-Segment 12 has passed).`,
+                        { ownersOnly: true },
                     );
                     await this.logEvent("spd.clear", {
                         combatant,
@@ -3824,6 +3834,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                     await this._combatCard(
                         combatant,
                         `${actor.name}'s SPD was changed from ${known.effective} to ${spd}. A voluntary SPD change takes effect at Post-Segment 12; until then they act at SPD ${known.effective}.`,
+                        { ownersOnly: true },
                     );
                     await this._whisperSpdOverridePrompt(combatant, known.effective, spd);
                     await this.logEvent("spd.deferred", {
@@ -4659,31 +4670,23 @@ const LEGACY_COMBAT_FLAG_KEYS = [
 ];
 
 /**
- * Console migration for existing combats into the single-combatant data model.
- * The legacy tracker keeps one combatant per Phase segment (doubled for Lightning
+ * Migrates existing combats into the single-combatant data model. The retired
+ * legacy tracker kept one combatant per Phase segment (doubled for Lightning
  * Reflexes); this collapses each token to a single combatant, purges legacy turn
  * bookkeeping, and resets every combat to its pre-start state — the segment
- * timeline is rebuilt when combat is begun again. Deliberately NOT wired to a
- * version gate; run it manually after enabling the single combatant tracker:
+ * timeline is rebuilt when combat is begun again. Idempotent; runs from the
+ * version-gated world migration and stays available on the console:
  *
  *   game.herosystem6e.migrateCombatsToSingleCombatantTracker()
  *   game.herosystem6e.migrateCombatsToSingleCombatantTracker({ dryRun: true })
  *
  * @param {object} [options]
  * @param {boolean} [options.dryRun] - Log the plan without writing anything
- * @param {boolean} [options.force] - Run even while the legacy tracker is active
  * @returns {Promise<object[]>} Per-combat report of what was (or would be) changed
  */
-export async function migrateCombatsToSingleCombatantTracker({ dryRun = false, force = false } = {}) {
+export async function migrateCombatsToSingleCombatantTracker({ dryRun = false } = {}) {
     if (!game.user.isGM) {
         ui.notifications.warn(`Only a GM can migrate combats.`);
-        return [];
-    }
-    const singleTrackerActive = _getSetting("singleCombatantTracker", false);
-    if (!singleTrackerActive && !force) {
-        ui.notifications.warn(
-            `Enable the Single Combatant Tracker (alpha) setting and reload before migrating, or pass { force: true }.`,
-        );
         return [];
     }
 
@@ -4746,17 +4749,65 @@ export async function migrateCombatsToSingleCombatantTracker({ dryRun = false, f
         report.push(entry);
 
         if (dryRun) continue;
+        // Reset FIRST: the combatant delete/create hooks reconcile live combat
+        // state only while the combat is started — deleting before the reset
+        // would append removal events to the ledger and re-point the turn,
+        // racing (and dirtying) the very state this purge just cleaned
+        if (needsReset) await combat.update(resetPayload);
         if (deleteIds.length > 0) await combat.deleteEmbeddedDocuments("Combatant", deleteIds);
         if (combatantUpdates.length > 0) await combat.updateEmbeddedDocuments("Combatant", combatantUpdates);
-        if (needsReset) await combat.update(resetPayload);
     }
 
     console.table(report);
     const touched = report.filter((r) => r.combatantsRemoved || r.combatantsCleaned || r.reset);
-    ui.notifications.info(
-        dryRun
-            ? `Single tracker migration dry run: ${touched.length} of ${report.length} combat(s) would change (see console).`
-            : `Single tracker migration: ${touched.length} of ${report.length} combat(s) converted; begin combat again to rebuild the timeline.`,
-    );
+    if (dryRun || touched.length > 0) {
+        ui.notifications.info(
+            dryRun
+                ? `Single tracker migration dry run: ${touched.length} of ${report.length} combat(s) would change (see console).`
+                : `Single tracker migration: ${touched.length} of ${report.length} combat(s) converted; begin combat again to rebuild the timeline.`,
+        );
+    }
     return report;
+}
+
+// Regions already offered for deletion this session. Marked BEFORE each prompt
+// awaits: the tracker asks at every Phase start, and rapid advances (quench
+// loops, End Turn spam) would otherwise queue an unbounded stack of modal
+// dialogs for the same region. A declined region stays deletable by hand.
+const promptedAoeRegionUuids = new Set();
+
+/**
+ * Offers to delete AoE regions whose effective item is INSTANT — once the phase
+ * moves on, an instant AoE template has done its work.
+ * @returns {Promise<void>}
+ */
+export async function promptToDeleteAoeInstantRegions() {
+    // Nobody is present to answer during an unattended test run, and an open
+    // modal stalls the Phase-start chain behind it
+    if (isQuenchTestRunning()) return;
+
+    // We only care about AoEs
+    const regionsToPrompt = Array.from(canvas.regions.viewedDocuments()).filter(
+        (template) => template.flags[game.system.id]?.purpose === "AoE" && !promptedAoeRegionUuids.has(template.uuid),
+    );
+    for (const region of regionsToPrompt) {
+        // The flag snapshot is immutable, so one inspection settles the region
+        // for the session whatever its duration turns out to be
+        promptedAoeRegionUuids.add(region.uuid);
+        const effectiveItem = rehydrateAttackItem(region.flags[game.system.id].effectiveItemJson).item;
+        if (effectiveItem.system.duration !== CONFIG.HERO.DURATION_TYPES.INSTANT) continue;
+
+        const proceed = await foundry.applications.api.DialogV2.confirm({
+            window: {
+                title: `Delete region ${region.name}?`,
+            },
+            content: `<p>The region <b>${region.name}</b> is likely no longer needed. Would you like to delete it?</p>`,
+            rejectClose: false,
+            modal: true,
+        });
+
+        if (proceed) {
+            await region.delete();
+        }
+    }
 }

@@ -1,10 +1,6 @@
 import { HeroSystem6eTemplateLayer } from "./canvas-layer.mjs";
 import * as chat from "./chat.mjs";
 import "./chat/delayed-attack-cards.mjs";
-import { HeroSystem6eCombat } from "./combat.mjs";
-import { HeroSystem6eCombatTracker } from "./combatTracker.mjs";
-import { HeroSystem6eCombatant } from "./combatant.mjs";
-
 import { HeroSystem6eCombatSingle, migrateCombatsToSingleCombatantTracker } from "./combat-single.mjs";
 import { HeroSystem6eCombatTrackerSingle } from "./combatTracker-single.mjs";
 import { HeroSystem6eCombatantSingle } from "./combatant-single.mjs";
@@ -106,12 +102,6 @@ export class HEROSYS {
             console.trace(this.ID, "|", ...args);
         }
     }
-
-    static get isSingleCombatantTrackerEnabled() {
-        // World-scoped only: the combat document classes must match on every client (#4553).
-        // The client-scoped alphaTesting setting merely reveals the config option.
-        return game.settings.get(game.system.id, "singleCombatantTracker");
-    }
 }
 
 Hooks.once("init", async function () {
@@ -162,16 +152,9 @@ Hooks.once("init", async function () {
     // Compendiums
     game.CreateHeroCompendiums = CreateHeroCompendiums;
 
-    if (HEROSYS.isSingleCombatantTrackerEnabled) {
-        CONFIG.Combat.documentClass = HeroSystem6eCombatSingle;
-        CONFIG.Combatant.documentClass = HeroSystem6eCombatantSingle;
-        CONFIG.ui.combat = HeroSystem6eCombatTrackerSingle;
-    } else {
-        CONFIG.Combat.documentClass = HeroSystem6eCombat;
-        CONFIG.Combatant.documentClass = HeroSystem6eCombatant;
-        HeroSystem6eCombatTracker.initializeTemplate();
-        CONFIG.ui.combat = HeroSystem6eCombatTracker;
-    }
+    CONFIG.Combat.documentClass = HeroSystem6eCombatSingle;
+    CONFIG.Combatant.documentClass = HeroSystem6eCombatantSingle;
+    CONFIG.ui.combat = HeroSystem6eCombatTrackerSingle;
 
     CONFIG.Combat.defeatedStatusId = "dead";
     CONFIG.ChatMessage.documentClass = HeroSystem6eChatMessage;
@@ -191,15 +174,6 @@ Hooks.once("init", async function () {
     // stale flag re-suppresses them on every later lapse since nothing ever clears it.
     // TODO: Fix this in the AE overhaul for V14
     CONFIG.ActiveEffect.expiryAction = null;
-
-    /**
-     * Set an initiative formula for the system
-     * @type {String}
-     */
-    CONFIG.Combat.initiative = {
-        formula: "@characteristics.dex.value + (@characteristics.spd.value / 100)",
-        decimals: 2,
-    };
 
     // Define custom Entity classes
     CONFIG.Actor.documentClass = HeroSystem6eActor;
@@ -288,37 +262,9 @@ Hooks.once("init", async function () {
     );
 
     const templatePaths = [
-        `systems/${HEROSYS.module}/templates/actor/active-effect-config.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-attacks.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-characteristics.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-defenses.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-maneuvers.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-martialarts.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-martialarts-item.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-movement.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other-complications.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other-effects.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other-perks.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other-talents.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other-top.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-analysis.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-powers.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-powers-item.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-skills.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-skills-item.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-equipment.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-equipment-item.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-invalid.hbs`,
-
         `systems/${HEROSYS.module}/templates/attack/remove-power-from-automaton.hbs`,
 
         `systems/${HEROSYS.module}/templates/chat/defense-tags-partial.hbs`,
-
-        `systems/${HEROSYS.module}/templates/combat/header.hbs`,
-        `systems/${HEROSYS.module}/templates/combat/tracker.hbs`,
-        `systems/${HEROSYS.module}/templates/combat/footer.hbs`,
 
         `systems/${HEROSYS.module}/templates/item/item-action-icons-partial.hbs`,
         `systems/${HEROSYS.module}/templates/item/item-information-modification-icons-partial.hbs`,
@@ -345,9 +291,7 @@ Hooks.once("init", async function () {
         `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-disadvantages-partial-item-v2.hbs`,
         `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-item-actions-partial-v2.hbs`,
         `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-item-cost-v2.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-item-cost-v2.hbs`,
         `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-item-description-v2.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-item-name-v2.hbs`,
 
         `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-effects-partial-item-v2.hbs`,
     ];
@@ -506,6 +450,34 @@ Hooks.on("renderChatMessageHTML", (app, html, data) => {
 // Hooks.on("renderChatLog", (app, html) => HeroSystem6eCardHelpers.chatListeners(html));
 // Hooks.on("renderChatPopout", (app, html) => HeroSystem6eCardHelpers.chatListeners(html));
 
+// Core only seeds token names at creation; carry an actor rename through to the
+// prototype token and placed tokens whose name still matched. The old name is
+// stashed on options because updateActor only sees the new one.
+Hooks.on("preUpdateActor", (document, changed, options /*, _userId */) => {
+    if (typeof changed.name !== "string" || changed.name === document.name) return;
+    options.heroPreviousName = document.name;
+    if (!foundry.utils.getProperty(changed, "prototypeToken.name") && document.prototypeToken.name === document.name) {
+        foundry.utils.setProperty(changed, "prototypeToken.name", changed.name);
+    }
+});
+
+Hooks.on("updateActor", async (document, _change, options /*, _userId */) => {
+    const previousName = options.heroPreviousName;
+    if (previousName && game.users.activeGM?.isSelf) {
+        // Scenes are independent documents; sweep them concurrently
+        await Promise.all(
+            game.scenes.map((scene) => {
+                const tokenUpdates = scene.tokens
+                    .filter((t) => t.actorId === document.id && t.name === previousName)
+                    .map((t) => ({ _id: t.id, name: document.name }));
+                return tokenUpdates.length > 0 ? scene.updateEmbeddedDocuments("Token", tokenUpdates) : null;
+            }),
+        );
+        // Combatant names derive from their token; the updateToken hook below
+        // re-renders the tracker
+    }
+});
+
 // When actor SPD/DEX (or other initiative inputs) change we need to setupTurns again
 Hooks.on("updateActor", async (document, change /*, _options, _userId */) => {
     const initiativeRelevant =
@@ -516,26 +488,7 @@ Hooks.on("updateActor", async (document, change /*, _options, _userId */) => {
         change?.system?.initiativeCharacteristic !== undefined;
     if (!initiativeRelevant) return;
 
-    if (!HEROSYS.isSingleCombatantTrackerEnabled) {
-        for (const combat of game.combats) {
-            if (combat.active) {
-                const _combatants = combat.combatants.filter((o) => o.actorId === document.id);
-                if (_combatants) {
-                    // Reroll Initiative (based on new spd/dex/ego/int changes)
-                    //await combat.rollAll();
-                    await combat.rollInitiative(_combatants.map((o) => o.id));
-                    await combat.extraCombatants();
-
-                    // Setup Turns in combat tracker based on new spd/dex/ego/int changes)
-                    // Should no longer be needed now that SPD is part of initiative (handled via rollAll/combat:rollInitiative)
-                    //await combat.setupTurns();
-                }
-            }
-        }
-        return;
-    }
-
-    // Single tracker: re-sort on live priorities and keep the pointer on the active
+    // Re-sort on live priorities and keep the pointer on the active
     // combatant. The stored actingPriority threshold is deliberately untouched — it
     // is what stops already-acted combatants from being re-admitted (and unacted
     // ones from being skipped) when priorities move mid-segment. SPD semantics
