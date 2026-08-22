@@ -440,6 +440,34 @@ Hooks.on("renderChatMessageHTML", (app, html, data) => {
 // Hooks.on("renderChatLog", (app, html) => HeroSystem6eCardHelpers.chatListeners(html));
 // Hooks.on("renderChatPopout", (app, html) => HeroSystem6eCardHelpers.chatListeners(html));
 
+// Core only seeds token names at creation; carry an actor rename through to the
+// prototype token and placed tokens whose name still matched. The old name is
+// stashed on options because updateActor only sees the new one.
+Hooks.on("preUpdateActor", (document, changed, options /*, _userId */) => {
+    if (typeof changed.name !== "string" || changed.name === document.name) return;
+    options.heroPreviousName = document.name;
+    if (!foundry.utils.getProperty(changed, "prototypeToken.name") && document.prototypeToken.name === document.name) {
+        foundry.utils.setProperty(changed, "prototypeToken.name", changed.name);
+    }
+});
+
+Hooks.on("updateActor", async (document, _change, options /*, _userId */) => {
+    const previousName = options.heroPreviousName;
+    if (previousName && game.users.activeGM?.isSelf) {
+        // Scenes are independent documents; sweep them concurrently
+        await Promise.all(
+            game.scenes.map((scene) => {
+                const tokenUpdates = scene.tokens
+                    .filter((t) => t.actorId === document.id && t.name === previousName)
+                    .map((t) => ({ _id: t.id, name: document.name }));
+                return tokenUpdates.length > 0 ? scene.updateEmbeddedDocuments("Token", tokenUpdates) : null;
+            }),
+        );
+        // Combatant names derive from their token; the updateToken hook below
+        // re-renders the tracker
+    }
+});
+
 // When actor SPD/DEX (or other initiative inputs) change we need to setupTurns again
 Hooks.on("updateActor", async (document, change /*, _options, _userId */) => {
     const initiativeRelevant =

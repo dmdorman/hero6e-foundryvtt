@@ -1071,7 +1071,33 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             return;
         }
 
+        // A token on another scene level has no canvas object, so core's
+        // control-and-pan silently does nothing — view its level first
+        if (event.type !== "dblclick") {
+            const levelSwitch = this._viewCombatantLevel(this.viewed.combatants.get(combatantId));
+            if (levelSwitch) return levelSwitch.then(() => super._onCombatantMouseDown(event, row));
+        }
+
         return super._onCombatantMouseDown(event, row);
+    }
+
+    /**
+     * Switches the canvas to the level the combatant's token occupies.
+     * @param {Combatant} combatant
+     * @returns {Promise<Scene>|null} The view change, or null when none is needed
+     * @protected
+     */
+    _viewCombatantLevel(combatant) {
+        const levelId = combatant?.token?._source?.level;
+        if (!levelId || !canvas.ready || combatant.sceneId !== canvas.scene?.id) return null;
+        if (canvas.level?.id === levelId || !canvas.scene.levels?.get(levelId)) return null;
+        return canvas.scene.view({ level: levelId });
+    }
+
+    /** @override */
+    async _onPanToCombatant(combatant) {
+        await this._viewCombatantLevel(combatant);
+        return super._onPanToCombatant(combatant);
     }
 
     /**
@@ -1445,11 +1471,24 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
 
         const { escapeHTML } = foundry.utils;
 
+        // The one predicate for both the anchor dropdown and the submit
+        // validation: has the anchor's stop in the CURRENT segment already
+        // passed the acting count? "after" tolerates an equal-priority anchor
+        // the tie order places after the holder (re-admission still reaches the
+        // slot); "before" needs the anchor strictly below the count.
+        const anchorStopPassed = (target, relation, priority) => {
+            priority ??= combat.getInitiativePriority(target, segmentOf(currentAbs), { queryAbs: currentAbs });
+            if (priority > actingThreshold) return true;
+            if (priority < actingThreshold) return false;
+            if (relation === "before") return true;
+            return combat.tieBreakOrder(target, combatant, currentAbs) <= 0;
+        };
+
         // Anchored reentry ("act right after X") tracks the anchor's live position; a
         // numeric DEX cannot, because tie-break fractions re-roll every segment (#4602).
         // Eligible anchors per candidate segment: only combatants who actually receive
-        // a stop there (natural Phase or held slot; defeated/aborted/spent excluded),
-        // ordered by acting position.
+        // a stop there (natural Phase or held slot; defeated/aborted/spent excluded)
+        // that is still reachable, ordered by acting position.
         const anchorChoicesByAbs = {};
         for (const choice of segmentChoices) {
             const segment = segmentOf(choice.abs);
@@ -1460,7 +1499,11 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                     id: c.id,
                     name: c.name,
                     priority: combat.getInitiativePriority(c, segment, { queryAbs: choice.abs }),
+                    combatant: c,
                 }))
+                .filter(
+                    (entry) => choice.abs !== currentAbs || !anchorStopPassed(entry.combatant, "after", entry.priority),
+                )
                 .sort((a, b) => b.priority - a.priority);
         }
         const anchorOptionsHTML = (abs, selectedId) =>
@@ -1611,15 +1654,9 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
                     return null;
                 }
                 const relation = result.relation === "before" ? "before" : "after";
-                // The holder shares the anchor's exact scalar. "Before" an anchor at
-                // or above the count would land above it; "after" the CURRENT acting
-                // position is the canonical re-entry and sequences via equal-priority
-                // re-admission, so only strictly-above anchors are illegal there.
-                const anchorAboveCount =
-                    relation === "before" ? targetPriority >= actingThreshold : targetPriority > actingThreshold;
-                if (segmentAbs === currentAbs && anchorAboveCount) {
+                if (segmentAbs === currentAbs && anchorStopPassed(anchorTarget, relation, targetPriority)) {
                     ui.notifications.warn(
-                        `A same-segment hold must slot below the current acting position (${actingThreshold.toFixed(2)}).`,
+                        `${anchorTarget.name}'s acting position has already passed this Segment — hold next to them in a later Segment instead.`,
                     );
                     return null;
                 }
@@ -2009,6 +2046,14 @@ function decorateTrackerRender(app, html, _context, options) {
         console.warn(`Unable to read the compact tracker setting`, e);
     }
     element.classList.toggle("hero-compact", compact);
+
+    // Core marks row portraits loading="lazy"; every re-render recreates them
+    // and they paint a frame late, flickering on busy trackers. The rows are
+    // already on screen, so decode them eagerly and synchronously.
+    for (const img of element.querySelectorAll("img.token-image")) {
+        img.loading = "eager";
+        img.decoding = "sync";
+    }
 
     // Before the started-guard: the unstarted DEX preview gets tooltips too
     injectInitiativeTooltips(app, element);

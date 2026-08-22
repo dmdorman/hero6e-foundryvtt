@@ -2097,11 +2097,14 @@ export class HeroSystem6eCombatSingle extends Combat {
      * their names and tactical state don't leak to players.
      * @param {Combatant} combatant
      * @param {string} content
+     * @param {object} [options]
+     * @param {boolean} [options.ownersOnly] - Whisper to the actor's owners
      * @private
      */
-    _combatCard(combatant, content) {
+    _combatCard(combatant, content, { ownersOnly = false } = {}) {
         const data = { speaker: ChatMessage.getSpeaker({ actor: combatant.actor }), content };
         if (combatant.hidden) data.whisper = ChatMessage.getWhisperRecipients("GM");
+        else if (ownersOnly) data.whisper = whisperUserTargetsForActor(combatant.actor);
         return ChatMessage.create(data);
     }
 
@@ -2305,9 +2308,9 @@ export class HeroSystem6eCombatSingle extends Combat {
 
         const automation = _getSetting("automation", "none");
 
-        let content = `Post-Segment 12 (Turn ${roundToRecover})<ul>`;
-        let contentHidden = `Post-Segment 12 (Turn ${roundToRecover})<ul>`;
-        let hasHidden = false;
+        const heading = `Post-Segment 12 (Turn ${roundToRecover})`;
+        let publicItems = "";
+        let hiddenItems = "";
 
         // Knocked out characters still take Post-Segment 12 Recoveries (that is how they
         // wake up); isDefeated here is core's (defeated toggle or dead), not isOutOfCombat
@@ -2360,28 +2363,26 @@ export class HeroSystem6eCombatSingle extends Combat {
                 if (recoveryText) {
                     const showToAll = !combatant.hidden && (combatant.hasPlayerOwner || actor.type === "pc");
                     if (showToAll) {
-                        content += `<li>${recoveryText}</li>`;
+                        publicItems += `<li>${recoveryText}</li>`;
                     } else {
-                        hasHidden = true;
-                        contentHidden += `<li>${recoveryText}</li>`;
+                        hiddenItems += `<li>${recoveryText}</li>`;
                     }
                 }
             }
         }
-        content += "</ul>";
-        contentHidden += "</ul>";
 
+        // The Turn boundary always announces publicly; NPC recoveries stay GM-only
         const chatData = {
             style: CONST.CHAT_MESSAGE_STYLES.OTHER,
             author: game.user._id,
-            content,
+            content: publicItems ? `${heading}<ul>${publicItems}</ul>` : heading,
         };
         await ChatMessage.create(chatData);
 
-        if (hasHidden) {
+        if (hiddenItems) {
             await ChatMessage.create({
                 ...chatData,
-                content: contentHidden,
+                content: `${heading}<ul>${hiddenItems}</ul>`,
                 whisper: ChatMessage.getWhisperRecipients("GM"),
             });
         }
@@ -2870,8 +2871,9 @@ export class HeroSystem6eCombatSingle extends Combat {
                 content = startContent;
             }
 
-            // BREAKFALL from prone?
-            if (actor.statuses.has("prone")) {
+            // BREAKFALL from prone? Not while Stunned or KO'd — that Phase is
+            // consumed by the recovery, so no maneuver is available
+            if (actor.statuses.has("prone") && !actor.statuses.has("stunned") && !actor.statuses.has("knockedOut")) {
                 const breakFallItem = actor.items.find((o) => o.system.XMLID === "BREAKFALL" && o.isActive);
                 if (breakFallItem) {
                     content += `
@@ -3804,6 +3806,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                     await this._combatCard(
                         combatant,
                         `${actor.name}'s SPD change to ${pending.newSpd} takes effect (Post-Segment 12 has passed).`,
+                        { ownersOnly: true },
                     );
                     await this.logEvent("spd.clear", {
                         combatant,
@@ -3831,6 +3834,7 @@ export class HeroSystem6eCombatSingle extends Combat {
                     await this._combatCard(
                         combatant,
                         `${actor.name}'s SPD was changed from ${known.effective} to ${spd}. A voluntary SPD change takes effect at Post-Segment 12; until then they act at SPD ${known.effective}.`,
+                        { ownersOnly: true },
                     );
                     await this._whisperSpdOverridePrompt(combatant, known.effective, spd);
                     await this.logEvent("spd.deferred", {
