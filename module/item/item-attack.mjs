@@ -7,7 +7,6 @@ import { getOffHandDefenseDcv } from "../actor/actor-utils.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 
 import { ItemAttackFormApplicationV2 } from "../applications/item/item-attack-application-v2.mjs";
-import { ItemAttackFormApplication } from "../item/item-attack-application.mjs";
 import { HeroCompatibility } from "../utility/compatibility.mjs";
 
 import { ItemAttackClubWeaponApplicationV2 } from "../applications/item/item-attack-application-club-weapon.mjs";
@@ -310,25 +309,11 @@ export async function collectActionDataBeforeToHitOptions(item, options = {}) {
         data.velocitySystemUnits = getSystemDisplayUnits(item.is5e);
     }
 
-    const HeroItemAttackFormApplication = HeroCompatibility.isV14
-        ? ItemAttackFormApplicationV2
-        : ItemAttackFormApplication;
-    if (options.allInOne) {
-        if (item.system.XMLID === "CLUBWEAPON") {
-            data.previousApplication = [];
-            data.nextApplication = HeroItemAttackFormApplication;
-            await new ItemAttackClubWeaponApplicationV2(data).render(true);
-        } else {
-            await new HeroItemAttackFormApplication(data).render(true);
-        }
+    if (item.system.XMLID === "CLUBWEAPON") {
+        data.nextApplication = ItemAttackFormApplicationV2;
+        await new ItemAttackClubWeaponApplicationV2(data).render(true);
     } else {
-        if (item.system.XMLID === "CLUBWEAPON") {
-            data.previousApplication = [];
-            data.nextApplication = HeroItemAttackFormApplication;
-            await new ItemAttackClubWeaponApplicationV2(data).render(true);
-        } else {
-            await new HeroItemAttackFormApplication(data).render(true);
-        }
+        await new ItemAttackFormApplicationV2(data).render(true);
     }
 }
 
