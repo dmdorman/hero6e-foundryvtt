@@ -288,8 +288,6 @@ Hooks.once("init", async function () {
     );
 
     const templatePaths = [
-        `systems/${HEROSYS.module}/templates/actor/active-effect-config.hbs`,
-
         `systems/${HEROSYS.module}/templates/attack/remove-power-from-automaton.hbs`,
 
         `systems/${HEROSYS.module}/templates/chat/defense-tags-partial.hbs`,
