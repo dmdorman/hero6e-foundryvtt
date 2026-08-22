@@ -1,0 +1,73 @@
+.hero-system-compendium {
+    // List styling
+    .folder-header.hero-header-list {
+        background-color: rgb(96 125 139 / 20%);
+        border-left: 3px solid #607d8b;
+
+        i.fa-folder,
+        i.fa-folder-open {
+            color: #607d8b;
+        }
+    }
+
+    .hero-parent-folder.hero-folder-list > .subdirectory {
+        border-left: 3px solid #607d8b;
+    }
+
+    // Compound Power styling
+    .folder-header.hero-header-compoundpower {
+        background-color: rgb(255 152 0 / 20%);
+        border-left: 3px solid #ff9800;
+
+        i.fa-folder,
+        i.fa-folder-open {
+            color: #ff9800;
+        }
+    }
+
+    .hero-parent-folder.hero-folder-compoundpower > .subdirectory {
+        border-left: 3px solid #ff9800;
+    }
+
+    // Multipower styling
+    .folder-header.hero-header-multipower {
+        background-color: rgb(33 150 243 / 20%);
+        border-left: 3px solid #2196f3;
+
+        i.fa-folder,
+        i.fa-folder-open {
+            color: #2196f3;
+        }
+    }
+
+    .hero-parent-folder.hero-folder-multipower > .subdirectory {
+        border-left: 3px solid #2196f3;
+    }
+
+    // VPP styling
+    .folder-header.hero-header-vpp {
+        background-color: rgb(156 39 176 / 20%);
+        border-left: 3px solid #9c27b0;
+
+        i.fa-folder,
+        i.fa-folder-open {
+            color: #9c27b0;
+        }
+    }
+
+    .hero-parent-folder.hero-folder-vpp > .subdirectory {
+        border-left: 3px solid #9c27b0;
+    }
+
+    // Edit button styling
+    .hero-compound-edit {
+        color: var(--color-text-light-heading, #f0f0f0);
+        cursor: pointer;
+        margin-right: 4px;
+
+        &:hover {
+            color: var(--color-shadow-primary, #ff6400);
+            transform: scale(1.1);
+        }
+    }
+}

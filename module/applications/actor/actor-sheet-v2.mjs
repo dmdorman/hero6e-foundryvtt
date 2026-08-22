@@ -1144,7 +1144,6 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         const pack = game.packs.get(folder.pack);
 
         // See if we dropped onto a specific ActorSheet tab.
-        // Need to check event values early on as it appears the compendium.getDocuments changes event.
         const target = event.target ?? event.currentTarget;
         const droppedOnTab = target?.closest?.("[data-tab]")?.dataset?.tab.replace(/(?<!analysi)s$/, "");
         const targetType = droppedOnTab ?? this.tabGroups.primary.replace(/s$/, "").replace("martial", "martialart");
@@ -1163,9 +1162,21 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             itemsToDrop = await pack.getDocuments({ folder__in: allFolderIds });
         }
 
-        // We are expecting at least 1 container
-        //const containerItems = itemsToDrop.filter((i) => i.isContainer);
-        const topItems = itemsToDrop.filter((i) => !i.system.PARENTID);
+        // FIX: Since we are now dragging a folder, find the container item inside it
+        // that matches the folder's name (or serves as the parent container)
+        const containerXmlIds = ["LIST", "COMPOUNDPOWER", "MULTIPOWER", "VPP"];
+        let topItems = itemsToDrop.filter((i) => !i.system.PARENTID);
+
+        if (!topItems.length) {
+            // Fallback: look for an item in the drop list that matches the folder name and is a container
+            const matchingContainer = itemsToDrop.find(
+                (i) => i.name === folder.name && containerXmlIds.includes(i.system?.XMLID),
+            );
+            if (matchingContainer) {
+                topItems = [matchingContainer];
+            }
+        }
+
         if (!topItems.length) {
             throw new Error("Expecting at least one item");
         }
@@ -1193,7 +1204,6 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             this._createFolderItem({
                 itemData,
                 parentId,
-                //itemsToDrop.filter((item) => item.system.ID !== parentData.system.ID),
                 itemsToDrop,
                 itemsToCreate,
             });

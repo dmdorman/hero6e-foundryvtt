@@ -1,61 +1,113 @@
-// v13 has namespaced this. Remove when support is no longer provided. Also remove from eslint template.
-const { Compendium } = foundry.applications.sidebar.apps;
+const HERO_CONTAINER_XMLIDS = ["LIST", "COMPOUNDPOWER", "MULTIPOWER", "VPP"];
 
-export class HeroSystem6eCompendium extends Compendium {
-    async _handleDroppedEntry(target, data) {
-        console.log("_handleDroppedEntry", target, data);
+export class HeroSystem6eCompendium extends foundry.applications.sidebar.apps.Compendium {
+    /** @override */
+    static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+        classes: ["hero-system-compendium"],
+    });
 
-        const item = await fromUuid(data.uuid);
-        if (!item) {
-            console.error("missing item", data.uuid);
-            return;
+    /** @override */
+    async _preparePartContext(partId, context, options) {
+        context = await super._preparePartContext(partId, context, options);
+
+        if (partId === "directory" && context.tree) {
+            const folderNames = new Set(Array.from(this.collection.folders.values()).map((f) => f.name));
+
+            const filterEntries = (entries) => {
+                if (!entries || !Array.isArray(entries)) return entries;
+
+                return entries.filter((entry) => {
+                    const entryId = entry.id || entry._id;
+                    const indexEntry = this.collection.index.get(entryId);
+                    const itemName = indexEntry?.name;
+                    const xmlId = indexEntry?.system?.XMLID;
+
+                    const isContainer = HERO_CONTAINER_XMLIDS.includes(xmlId);
+
+                    if (isContainer && folderNames.has(itemName)) {
+                        return false;
+                    }
+                    return true;
+                });
+            };
+
+            if (context.tree.entries) {
+                context.tree.entries = filterEntries(context.tree.entries);
+            }
+
+            const filterNodes = (nodes) => {
+                if (!nodes || !Array.isArray(nodes)) return;
+
+                for (const node of nodes) {
+                    if (node.entries) {
+                        node.entries = filterEntries(node.entries);
+                    }
+
+                    if (node.children) {
+                        filterNodes(node.children);
+                    }
+                }
+            };
+
+            if (context.tree.children) {
+                filterNodes(context.tree.children);
+            }
         }
 
-        // Don't allow framework items to be moved within ItemDirectory (they should drag/drop the folder)
-        if (item.childItems.length > 0 && item.pack === this.metadata.id) {
-            return ui.notifications.warn(
-                `"Drag/drop <b>${item.name}</b> item is not allowed in this compendium. Use folder instead"`,
-            );
-        }
-
-        // Do super if there is no parent or if this framework is already in ItemDirectory
-        if (item.childItems.length === 0) {
-            return super._handleDroppedEntry(target, data);
-        }
-
-        // Find folder we ard dropping to
-        const closestFolder = target ? target.closest(".folder") : null;
-        if (closestFolder) closestFolder.classList.remove("droptarget");
-        const folderTarget = closestFolder ? await fromUuid(closestFolder.dataset.uuid) : null;
-
-        // Create new folder
-        await this.dropFrameworkItem(folderTarget, item);
+        return context;
     }
 
-    async dropFrameworkItem(folderTarget, item) {
-        if (item.childItems.length > 0) {
-            const newFolder = await Folder.create(
-                { type: "Item", name: item.name, folder: folderTarget?.id },
-                { pack: this.metadata.id },
+    /** @override */
+    async _onRender(context, options) {
+        await super._onRender(context, options);
+
+        const element = this.element;
+        if (!element) return;
+
+        const folderElements = element.querySelectorAll(".directory-item.folder");
+
+        folderElements.forEach((folderEl) => {
+            const folderNameEl = folderEl.querySelector(".folder-name");
+            if (!folderNameEl) return;
+            const folderName = folderNameEl.textContent.trim();
+
+            const parentEntry = Array.from(this.collection.index.values()).find(
+                (o) => o.name === folderName && HERO_CONTAINER_XMLIDS.includes(o.system?.XMLID),
             );
-            await HeroSystem6eItem.create(
-                {
-                    ...item.toObject(),
-                    folder: newFolder?.id,
-                },
-                { pack: this.metadata.id },
-            );
-            for (const childItem of item.childItems) {
-                await this.dropFrameworkItem(newFolder, childItem);
+
+            if (!parentEntry) return;
+
+            const xmlId = parentEntry.system.XMLID.toLowerCase();
+            folderEl.classList.add("hero-parent-folder", `hero-folder-${xmlId}`);
+
+            const headerEl = folderEl.querySelector(".folder-header");
+            if (headerEl) {
+                headerEl.classList.add("hero-parent-header", `hero-header-${xmlId}`);
             }
-        } else {
-            await HeroSystem6eItem.create(
-                {
-                    ...item.toObject(),
-                    folder: folderTarget?.id,
-                },
-                { pack: this.metadata.id },
-            );
-        }
+
+            let controlsEl =
+                folderEl.querySelector(".folder-controls") ||
+                folderEl.querySelector(".directory-item-controls") ||
+                headerEl;
+            if (controlsEl && !controlsEl.querySelector(".hero-compound-edit")) {
+                const editBtn = document.createElement("a");
+                editBtn.className = "hero-compound-edit item-control";
+                editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+                editBtn.title = `Edit ${parentEntry.name} Sheet`;
+
+                editBtn.addEventListener("click", async (ev) => {
+                    ev.stopPropagation();
+                    const doc = await this.collection.getDocument(parentEntry._id);
+                    if (doc) doc.sheet.render(true);
+                });
+
+                const actionBtn = controlsEl.querySelector("[data-action], .fa-suitcase, .fa-backpack, button, a");
+                if (actionBtn && actionBtn !== editBtn) {
+                    controlsEl.insertBefore(editBtn, actionBtn);
+                } else {
+                    controlsEl.appendChild(editBtn);
+                }
+            }
+        });
     }
 }
