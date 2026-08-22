@@ -22,18 +22,13 @@ export class HeroSocketHandler {
             //TODO: Move all the game.user !== game.users.activeGM) checks in the functions, and have every client call the function.
 
             switch (data.operation) {
-                case "nextHeroCombatantSingle":
-                    if (game.user !== game.users.activeGM) return;
-                    await game.combat.nextHeroCombatantSingle();
-                    break;
                 case "nextRound":
                 case "nextTurn":
                 case "previousTurn":
                 case "previousRound": {
                     if (game.user !== game.users.activeGM) return;
-                    // combatId is sent by the single-combatant stack; legacy emits omit it
-                    const combat = game.combats.get(data.combatId) ?? game.combat;
-                    await combat?.[data.operation]?.();
+                    const combat = game.combats.get(data.combatId);
+                    await combat?.[data.operation]();
                     break;
                 }
                 case "lrPreempt": {

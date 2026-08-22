@@ -1,4 +1,3 @@
-import { HEROSYS } from "../herosystem6e.mjs";
 import { getAndSetGameSetting } from "../settings/settings-helpers.mjs";
 import { setQuenchTimeout, waitUntil } from "./quench-helper.mjs";
 
@@ -71,17 +70,6 @@ export function registerCombatTests(quench) {
 
                 before(async function () {
                     preexistingMessageIds = new Set(game.messages.contents.map((m) => m.id));
-
-                    const isSingleTracker =
-                        typeof HEROSYS !== "undefined"
-                            ? HEROSYS.isSingleCombatantTrackerEnabled
-                            : game.settings.get(game.system.id, "singleCombatantTracker");
-                    if (!isSingleTracker) {
-                        console.warn(
-                            `[${game.system.id}] QUENCH | Skipping speed chart tests: singleCombatantTracker is disabled.`,
-                        );
-                        this.skip(); // Safely skips every internal "it" statement dynamically
-                    }
 
                     // The tests assume the prompt-mode default; a world with the
                     // auto-elevate setting on would pre-elevate every scoped LR combatant
@@ -1613,11 +1601,11 @@ export function registerCombatTests(quench) {
     );
 
     quench.registerBatch(
-        `${game.system.id}.combat.alpha-tracker-fixes`,
+        `${game.system.id}.combat.tracker-fixes`,
         (context) => {
             const { after, before, describe, expect, it } = context;
 
-            describe(`Hero System 6e Alpha Tracker Fix Validation`, function () {
+            describe(`Hero System 6e Combat Tracker Fix Validation`, function () {
                 setQuenchTimeout(this);
                 const actorDocuments = [];
                 const combatDocuments = [];
@@ -1626,17 +1614,6 @@ export function registerCombatTests(quench) {
 
                 before(async function () {
                     preexistingMessageIds = new Set(game.messages.contents.map((m) => m.id));
-
-                    const isSingleTracker =
-                        typeof HEROSYS !== "undefined"
-                            ? HEROSYS.isSingleCombatantTrackerEnabled
-                            : game.settings.get(game.system.id, "singleCombatantTracker");
-                    if (!isSingleTracker) {
-                        console.warn(
-                            `[${game.system.id}] QUENCH | Skipping alpha tracker fix tests: singleCombatantTracker is disabled.`,
-                        );
-                        this.skip();
-                    }
                 });
 
                 after(async function () {
@@ -2637,6 +2614,6 @@ export function registerCombatTests(quench) {
                 });
             });
         },
-        { displayName: "HERO SYSTEM 6E: Alpha Tracker Fix Validation" },
+        { displayName: "HERO SYSTEM 6E: Combat Tracker Fix Validation" },
     );
 }

@@ -1,6 +1,7 @@
 import { HeroCompatibility } from "./utility/compatibility.mjs";
 import { HeroProgressBar } from "./utility/progress-bar.mjs";
 import { CreateHeroCompendiums } from "./heroCompendiums.mjs";
+import { migrateCombatsToSingleCombatantTracker } from "./combat-single.mjs";
 import { HeroItemCharacteristic } from "./item/HeroSystem6eTypeDataModels.mjs";
 
 const { Item } = foundry.documents;
@@ -364,6 +365,15 @@ export async function migrateWorld() {
         async () => await migrateHitLocationSettings_5_0_0(),
     );
 
+    // The legacy tracker's per-segment combatants must collapse to one per token
+    await migrateToVersion(
+        "5.0.0",
+        lastMigration,
+        ["run once"],
+        "migrate combats to the single combatant tracker",
+        async () => await migrateCombatsToSingleCombatantTracker(),
+    );
+
     // Placeholder for notifying GM of items missing XMLID
     // await migrateToVersion(
     //     game.system.version,
@@ -461,9 +471,10 @@ async function commitItemsCollectionMigrateDataChanges(item) {
  */
 async function migrateHitLocationSettings_5_0_0() {
     const hitLocationSetting = game.settings.get(game.system.id, "hit locations");
-    if (hitLocationSetting === "true") {
-        // Hit locations enabled. Make this the same as hit locations without sectional defenses.
-        await game.settings.set(game.system.id, "hit locations", "Hit Locations Without Sectional Defenses");
+    // "true"/"false" are the stringified pre-5.0.0 Boolean values; the prose
+    // strings were written by an early 5.0.0 dev build and match no choice key.
+    if (hitLocationSetting === "true" || hitLocationSetting === "Hit Locations Without Sectional Defenses") {
+        await game.settings.set(game.system.id, "hit locations", "hitLocationsWithoutSectional");
 
         const chatData = {
             author: game.user._id,
@@ -472,8 +483,8 @@ async function migrateHitLocationSettings_5_0_0() {
         };
 
         await ChatMessage.create(chatData);
-    } else if (hitLocationSetting === "false") {
-        return game.settings.set(game.system.id, "hit locations", "No Hit Locations");
+    } else if (hitLocationSetting === "false" || hitLocationSetting === "No Hit Locations") {
+        return game.settings.set(game.system.id, "hit locations", "noHitLocations");
     } else {
         // We already converted so we're good.
     }

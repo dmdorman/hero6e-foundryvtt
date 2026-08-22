@@ -2,16 +2,13 @@ import { HEROSYS } from "./herosystem6e.mjs";
 
 export function initializeHandlebarsHelpers() {
     Handlebars.registerHelper("abs", abs);
-    Handlebars.registerHelper("activeSegment", activeSegment);
     Handlebars.registerHelper("actorItemHeroValidation", actorItemHeroValidation);
     Handlebars.registerHelper("actorItemHeroValidationCss", actorItemHeroValidationCss);
     Handlebars.registerHelper("actorHeroValidationCssByItemType", actorHeroValidationCssByItemType);
     Handlebars.registerHelper("actorItemHeroValidation", actorItemHeroValidation);
     Handlebars.registerHelper("appliesTo", appliesTo);
-    Handlebars.registerHelper("checkInit", checkInit);
     Handlebars.registerHelper("calculated5eCharacteristic", calculated5eCharacteristic);
     Handlebars.registerHelper("concat", concat);
-    Handlebars.registerHelper("expandSegment", expandSegment);
     Handlebars.registerHelper("equal", equal);
     Handlebars.registerHelper("figured5eCharacteristic", figured5eCharacteristic);
     Handlebars.registerHelper("gameConfigValue", gameConfigValue);
@@ -24,7 +21,6 @@ export function initializeHandlebarsHelpers() {
     Handlebars.registerHelper("indexOf", indexOf);
     Handlebars.registerHelper("isdefined", isDefined);
     Handlebars.registerHelper("hasProperty", hasProperty);
-    Handlebars.registerHelper("is_active_segment", isActiveSegment);
     Handlebars.registerHelper("notEqual", notEqual);
     Handlebars.registerHelper("signedString", signedString);
     Handlebars.registerHelper("toArray", toArray);
@@ -88,11 +84,6 @@ function toUpperCase(str) {
     return str?.toUpperCase();
 }
 
-function isActiveSegment(actives, index) {
-    console.error("isActiveSegment appears to be deprecated");
-    return actives?.[index];
-}
-
 function concat() {
     let outStr = "";
 
@@ -130,11 +121,6 @@ function hasProperty(actorOrItem, attributeName) {
 function appliesTo(power, attack) {
     if (typeof power?.baseInfo?.appliesTo !== "function") return false;
     return power.baseInfo.appliesTo(attack);
-}
-
-function checkInit(value) {
-    let myValue = Number(value) || 0;
-    return myValue > 0;
 }
 
 function equal(value1, value2) {
@@ -188,31 +174,6 @@ function getScopedFlagValue(obj, scope, ...args) {
         console.error(e);
     }
     return null;
-}
-
-function expandSegment(index, combat) {
-    if (index === game.combat?.segment) {
-        return true;
-    }
-
-    if (index === 12 && combat.round === 0) {
-        return true;
-    }
-
-    return false;
-}
-
-function activeSegment(index, combat) {
-    if (combat.round === 0) {
-        return false;
-    }
-
-    if (index === game.combat?.segment) {
-        //combat.current?.segment is 12 at game load, unclear why this is an issue.
-        return true;
-    }
-
-    return false;
 }
 
 function actorItemHeroValidation(item) {

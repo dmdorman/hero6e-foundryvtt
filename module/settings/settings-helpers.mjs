@@ -256,7 +256,7 @@ export default class SettingsHelpers {
                 hitLocationsWithoutSectional: game.i18n.localize("Settings.HitLocation.Choices.HitWithoutSectional"),
                 hitLocationsWithSectional: game.i18n.localize("Settings.HitLocation.Choices.HitWithSectional"),
             },
-            default: false,
+            default: "noHitLocations",
             onChange: (value) => HEROSYS.log(false, value),
         });
 
@@ -421,28 +421,6 @@ export default class SettingsHelpers {
             requiresReload: false,
         });
 
-        // TODO(post-alpha): remove this setting in favour of FoundryVTT's core
-        // combatTrackerConfig.turnMarker.disposition setting.
-        // Only the legacy tracker reads it, so hide it from config when the
-        // single tracker is on (which follows the core setting instead) — a
-        // visible-but-dead toggle reads as broken. Read from storage directly:
-        // singleCombatantTracker registers later in this function, and its
-        // requiresReload makes the stored value authoritative for this session.
-        const storedSingleTrackerValue = game.settings.storage
-            .get("world")
-            ?.getSetting?.(`${module}.singleCombatantTracker`)?.value;
-        const singleTrackerOn = storedSingleTrackerValue === true || storedSingleTrackerValue === "true";
-        game.settings.register(module, "combatTrackerDispositionHighlighting", {
-            name: game.i18n.localize("Settings.combatTrackerDispositionHighlighting.Name"),
-            hint: game.i18n.localize("Settings.combatTrackerDispositionHighlighting.Hint"),
-            scope: "client",
-            config: !singleTrackerOn,
-            type: Boolean,
-            default: true,
-            onChange: () => ui.combat.render(),
-            requiresReload: false,
-        });
-
         game.settings.register(module, "lrAutoElevate", {
             name: game.i18n.localize("Settings.lrAutoElevate.Name"),
             hint: game.i18n.localize("Settings.lrAutoElevate.Hint"),
@@ -583,26 +561,6 @@ export default class SettingsHelpers {
                 },
             ],
             precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL,
-        });
-
-        // Use new combat tracker. Config visibility: always shown once ENABLED —
-        // the world-scoped effect must never be trapped behind the client-scoped
-        // alphaTesting reveal (a GM who turned alphaTesting off would have no way
-        // to escape the alpha tracker).
-        const storedSingleTracker = game.settings.storage
-            .get("world")
-            ?.getSetting?.(`${module}.singleCombatantTracker`)?.value;
-        game.settings.register(module, "singleCombatantTracker", {
-            name: game.i18n.localize("Settings.AlphaTesting.singleCombatantTracker.Name"),
-            hint: game.i18n.localize("Settings.AlphaTesting.singleCombatantTracker.Hint"),
-            scope: "world",
-            config:
-                game.settings.get(game.system.id, "alphaTesting") ||
-                storedSingleTracker === true ||
-                storedSingleTracker === "true",
-            type: Boolean,
-            default: false,
-            requiresReload: true,
         });
 
         // Per-client density toggle for the single tracker (#3157). Also injected

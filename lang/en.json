@@ -222,11 +222,6 @@
             "stunnedAutoSkip": {
                 "Name": "Auto-Skip Stunned Phases",
                 "Hint": "When a Stunned character's Phase arrives, spend it recovering automatically and advance the tracker. Off = the tracker stops on them so the table can narrate the recovery before ending the turn."
-            },
-
-            "singleCombatantTracker": {
-                "Name": "Single Combatant Tracker",
-                "Hint": "Default combat tracker has a combatant entity per phase, but has issues when combatants are added/removed, also some modules don't like multiple combatants per token. Single Combatant Tracker (a work in progress) has one combatant entity per token, and will eventually support holding/haymaker/etc. Changing this setting may require you to delete and re-create existing combat trackers."
             }
         },
         "Automation": {
@@ -269,13 +264,9 @@
             "Name": "Combat Movement Only On Actors Phase",
             "Hint": "This prevents players from moving their tokens when it isn't their turn."
         },
-        "combatTrackerDispositionHighlighting": {
-            "Name": "Combat Tracker Disposition Highlighting",
-            "Hint": "The background color of combatants in the combat tracker will match the color associated with the token disposition. Players with a friendly disposition will be green."
-        },
         "lrAutoElevate": {
             "Name": "Lightning Reflexes: Always Act Early",
-            "Hint": "Automatically place combatants with scoped Lightning Reflexes at their elevated position at the start of each Segment (single combatant tracker only). When off, owners instead receive a whispered prompt with an Act Early button."
+            "Hint": "Automatically place combatants with scoped Lightning Reflexes at their elevated position at the start of each Segment. When off, owners instead receive a whispered prompt with an Act Early button."
         },
         "DefaultEdition": {
             "Name": "Default System Rules",

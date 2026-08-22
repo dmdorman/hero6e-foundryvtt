@@ -246,8 +246,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
             hiddenPopulation,
         });
 
-        // The single tracker follows only Foundry's own disposition setting; the legacy
-        // combatTrackerDispositionHighlighting system setting applies to the old tracker
+        // Disposition tinting follows Foundry's own turn-marker disposition setting
         let dispositionTint = false;
         try {
             dispositionTint = !!game.settings.get("core", Combat.CONFIG_SETTING)?.turnMarker?.disposition;

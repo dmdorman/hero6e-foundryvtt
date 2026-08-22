@@ -117,9 +117,6 @@ form.herosystem6e.theme-hc {
 
 @include meta.load-css("components/chat");
 
-/* Styles for time tracking */
-@include meta.load-css("components/time");
-
 /* Styles for uploading */
 @include meta.load-css("components/upload");
 
