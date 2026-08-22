@@ -1,0 +1,161 @@
+.herosystem6e.item-sheet-v2 {
+    div.item-sheet-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+
+        > section.sheet-body {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden auto;
+        }
+    }
+
+    header.sheet-header {
+        display: flex;
+        flex-flow: row nowrap;
+        align-items: center;
+        gap: 8px;
+
+        img.profile-img {
+            object-fit: contain;
+            width: 48px;
+            height: 48px;
+            flex: 0 0 48px;
+            cursor: pointer;
+        }
+
+        .header-fields {
+            flex: 1;
+            min-width: 0;
+        }
+
+        h1.item-name {
+            margin: 0;
+            border: none;
+            font-size: var(--font-size-18);
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+
+        div.xmlid {
+            font-size: var(--font-size-12);
+            opacity: 0.7;
+        }
+
+        a.restore-from-hdc {
+            flex: none;
+            margin-left: auto;
+            align-self: flex-start;
+            font-size: var(--font-size-16);
+            opacity: 0.7;
+
+            &:hover {
+                opacity: 1;
+            }
+        }
+    }
+
+    .form-group {
+        clear: both;
+        display: flex;
+        flex-flow: row wrap;
+        margin: 3px 0;
+        align-items: center;
+
+        /* Fixed label basis: with grow-based splits (flex: 2 / flex: 3) each field's
+           padding+border floors its flex-basis-0 size, shifting the field column left
+           on plain-input rows relative to padding-less wrappers */
+        > label {
+            flex: 0 0 40%;
+        }
+
+        > * {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+
+        > input[type="checkbox"] {
+            flex: 0 0 20px;
+            margin-left: auto;
+        }
+
+        /* current / max in one box: the max overlays the input's right edge */
+        > .resource-fraction {
+            position: relative;
+
+            input {
+                width: 100%;
+                padding-right: 3em;
+            }
+
+            .resource-max {
+                position: absolute;
+                top: 50%;
+                right: 0.5rem;
+                transform: translateY(-50%);
+                opacity: 0.8;
+                pointer-events: none;
+            }
+        }
+
+        &.validation {
+            background-color: rgb(255 255 0 / 50%);
+
+            i.fa-regular {
+                color: red;
+            }
+        }
+    }
+
+    div.description {
+        background-color: rgb(0 0 0 / 10%);
+        border: 1px dashed var(--color-tabs-border);
+        margin: 15px 0;
+        padding: 5px;
+        max-width: 100%;
+        user-select: text;
+    }
+
+    div.summary-break {
+        margin-top: 10px;
+        padding: 5px;
+        border-top: 1px solid var(--color-tabs-border);
+        border-bottom: 1px solid var(--color-tabs-border);
+
+        > .end {
+            text-align: center;
+        }
+
+        > .real-cost {
+            text-align: right;
+        }
+    }
+
+    table.adders-modifiers {
+        th.adder-name,
+        th.modifier-name,
+        td.adder-name,
+        td.modifier-name {
+            text-align: left;
+        }
+
+        td.adder-controls {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        tr.from-parent {
+            font-style: italic;
+        }
+
+        tr.validation {
+            background-color: rgb(255 255 0 / 50%);
+        }
+
+        tr.modifier-adder td:first-child {
+            padding-left: 10px;
+        }
+    }
+}

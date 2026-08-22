@@ -1,4 +1,3 @@
-{{ log 'item-partial-common-v2' this }}
 <div class="description">
     {{item.system.description}}
     {{#if item.system.NOTES}}
@@ -9,86 +8,86 @@
 {{#if (isdefined item.system.NAME)}}
     <div class="form-group">
         <label>NAME</label>
-        <input type="text" name="system.NAME" value="{{item.system.NAME}}" data-dtype="text" />
+        <input type="text" name="system.NAME" value="{{item.system.NAME}}" />
     </div>
 {{/if}}
 
 {{#if (isdefined item.system.ALIAS)}}
     <div class="form-group">
         <label>ALIAS</label>
-        <input type="text" name="system.ALIAS" value="{{item.system.ALIAS}}" data-dtype="text" />
+        <input type="text" name="system.ALIAS" value="{{item.system.ALIAS}}" />
     </div>
 {{/if}}
 
 {{#if (isdefined item.system.TEXT item "system.TEXT")}}
     <div class="form-group">
         <label>OVERRIDE TEXT</label>
-        <input type="text" name="system.TEXT" value="{{item.system.TEXT}}" data-dtype="text" />
+        <input type="text" name="system.TEXT" value="{{item.system.TEXT}}" />
     </div>
 {{/if}}
 
 {{#if (isdefined item.system.PHASE)}}
     <div class="form-group">
         <label>PHASE</label>
-        <input type="text" name="system.PHASE" value="{{item.system.PHASE}}" data-dtype="text" />
+        <input type="text" name="system.PHASE" value="{{item.system.PHASE}}" />
     </div>
 {{/if}}
 
 {{#if (isdefined item.system.OCV)}}
     <div class="form-group">
         <label>OCV</label>
-        <input type="text" name="system.OCV" value="{{item.system.OCV}}" data-dtype="text" />
+        <input type="text" name="system.OCV" value="{{item.system.OCV}}" />
     </div>
 {{/if}}
 
 {{#if (isdefined item.system.DCV)}}
     <div class="form-group">
         <label>DCV</label>
-        <input type="text" name="system.DCV" value="{{item.system.DCV}}" data-dtype="text" />
+        <input type="text" name="system.DCV" value="{{item.system.DCV}}" />
     </div>
 {{/if}}
         
 {{#if (isdefined item.system.DC)}}
     <div class="form-group">
         <label>DC</label>
-        <input type="text" name="system.DC" value="{{item.system.DC}}" data-dtype="text" />
+        <input type="text" name="system.DC" value="{{item.system.DC}}" />
     </div>
 {{/if}}
 
 {{#if (isdefined item.system.EFFECT)}}
     <div class="form-group">
         <label>EFFECT</label>
-        <input type="text" name="system.EFFECT" value="{{item.system.EFFECT}}" data-dtype="text" />
+        <input type="text" name="system.EFFECT" value="{{item.system.EFFECT}}" />
     </div>
 {{/if}}
 
 {{#if (isdefined item.system.WEAPONEFFECT)}}
     <div class="form-group">    
         <label>WEAPONEFFECT</label>
-        <input type="text" name="system.WEAPONEFFECT" value="{{item.system.WEAPONEFFECT}}" data-dtype="text" />
+        <input type="text" name="system.WEAPONEFFECT" value="{{item.system.WEAPONEFFECT}}" />
     </div>
 {{/if}}
 
 {{#if (isdefined item.system.BASECOST)}}
     <div class="form-group">
         <label>BASECOST</label>
-        <input type="text" name="system.BASECOST" value="{{item.system.BASECOST}}" data-dtype="text" />
+        <input type="text" name="system.BASECOST" value="{{item.system.BASECOST}}" />
     </div>
 {{/if}}
 
 {{#if (isdefined item.system.ACTIVECOST)}}
     <div class="form-group">
         <label>ACTIVECOST</label>
-        <input type="text" name="system.ACTIVECOST" value="{{item.system.ACTIVECOST}}" data-dtype="text" />
+        <input type="text" name="system.ACTIVECOST" value="{{item.system.ACTIVECOST}}" />
     </div>
 {{/if}}
 
 {{!-- Martial Arts don't have LEVELS --}}
 {{#if (isdefined item.system.LEVELS)}}
-    {{#unless source.baseInfo.editOptions.hideLEVELS}}
+    {{#unless editOptions.hideLEVELS}}
         <div class="form-group">
             <label>LEVELS</label>
-            <input {{#if (isdefined source.system.PDLEVELS)}}disabled{{/if}} 
+            <input {{#if (isdefined item.system.PDLEVELS item "system.PDLEVELS")}}disabled{{/if}}
             type="text" name="system.LEVELS" value="{{item.system.LEVELS}}" data-dtype="Number" 
             />
         </div>
@@ -113,11 +112,11 @@
             {{/if}}
         </label>
         {{#if editOptions.choicesInput}}
-            <select name="system.INPUT" data-dtype="text">
+            <select name="system.INPUT">
                 {{selectOptions editOptions.choicesInput selected=item.system.INPUT valueAttr="INPUT" labelAttr="INPUT"}}
             </select>
         {{else}}
-            <input type="text" name="system.INPUT" value="{{item.system.INPUT}}" data-dtype="text" />
+            <input type="text" name="system.INPUT" value="{{item.system.INPUT}}" />
         {{/if}}
     </div>
 {{/if}}
@@ -126,14 +125,14 @@
     {{#if editOptions.choices}}
         <div class="form-group">
             <label>OPTION</label>
-            <select name="system.OPTION" data-dtype="text">
-                {{selectOptions editOptions.choices selected=item.system.OPTIONID valueAttr="OPTION" labelAttr="OPTION_ALIAS"}}
+            <select name="system.OPTION">
+                {{selectOptions editOptions.choices selected=item.system.OPTION valueAttr="OPTION" labelAttr="OPTION_ALIAS"}}
             </select>
         </div>
 
         <div class="form-group">
             <label>OPTIONID</label>
-            <input disabled type="text" value="{{item.system.OPTIONID}}" data-dtype="text" />
+            <input disabled type="text" value="{{item.system.OPTIONID}}" />
         </div>
 
         <div class="form-group {{#if (itemHeroValidationForProperty item "OPTION_ALIAS")}}validation{{/if}}" 
@@ -145,19 +144,19 @@
                     <i class="fa-regular fa-circle-exclamation"></i>
                 {{/if}}
             </label>
-            <input {{#unless editOptions.editableOption_ALIAS}}disabled{{/unless}} name="system.OPTION_ALIAS" type="text" value="{{item.system.OPTION_ALIAS}}" data-dtype="text" />
+            <input {{#unless editOptions.editableOption_ALIAS}}disabled{{/unless}} name="system.OPTION_ALIAS" type="text" value="{{item.system.OPTION_ALIAS}}" />
         </div>
 
     {{else}}
         <div class="form-group">
             <label>OPTION</label>
-            <input type="text" name="system.OPTION" value="{{item.system.OPTION}}" data-dtype="text" />
+            <input type="text" name="system.OPTION" value="{{item.system.OPTION}}" />
         </div>
 
         {{#if (isdefined item.system.OPTIONID)}}
         <div class="form-group">
             <label>OPTIONID</label>
-            <input type="text" name="system.OPTIONID" value="{{item.system.OPTIONID}}" data-dtype="text" />
+            <input type="text" name="system.OPTIONID" value="{{item.system.OPTIONID}}" />
         </div>
         {{/if}}
 
@@ -166,7 +165,7 @@
             <label>
                 OPTION_ALIAS
             </label>
-            <input type="text" name="system.OPTION_ALIAS" value="{{item.system.OPTION_ALIAS}}" data-dtype="text" />
+            <input type="text" name="system.OPTION_ALIAS" value="{{item.system.OPTION_ALIAS}}" />
         </div>
         {{/if}}
 
@@ -186,7 +185,7 @@
         <div class="form-fields csl-attack-list">
             <ul>
                 {{#each attacks }}
-                    <li><input type="checkbox" name="attacks.{{this.id}}" {{checked this.checked}} data-dtype="Boolean"/>
+                    <li><input type="checkbox" name="attacks.{{this.id}}" {{checked this.checked}}/>
                     <span title="{{this.title}}">
                         {{this.name}}
                     </span>
@@ -197,7 +196,7 @@
     </div>
 {{/if}}
 
-{{#if penaltyChoices}}
+{{#if editOptions.penaltyChoices}}
     <div class="form-group">
         <label>PENALTY</label>
         <div class="form-fields">
@@ -232,7 +231,7 @@
 {{#if (isdefined item.system.TYPE)}}
 <div class="form-group">
     <label>TYPE</label>
-    <input type="text" name="system.TYPE" value="{{system.TYPE}}" data-dtype="text" />
+    <input type="text" name="system.TYPE" value="{{system.TYPE}}" />
 </div>
 {{/if}}
 
@@ -240,26 +239,34 @@
 {{#if (isdefined item.system.USEWEAPON)}}
 <div class="form-group">
     <label>USEWEAPON</label>
-    <input type="checkbox" name="system.USEWEAPON" {{checked item.system.USEWEAPON}} data-dtype="Boolean"/>
+    <input type="checkbox" name="system.USEWEAPON" {{checked item.system.USEWEAPON}}/>
 </div>
 {{/if}}
 
-{{#if (isdefined item.system.ADDSTR)}}
-<div class="form-group">    
+{{!-- RANGE is also a StringField on powers; for martial arts it is a numeric range-modifier offset --}}
+{{#if (and (eq item.type "martialart") (isdefined item.system.RANGE item "system.RANGE"))}}
+<div class="form-group">
+    <label>RANGE</label>
+    <input type="text" name="system.RANGE" value="{{item.system.RANGE}}" data-dtype="Number" />
+</div>
+{{/if}}
+
+{{!-- ADDSTR/MAXSTR only carry data on attack maneuvers; framework rows (LIST, Weapon Element) leave them null --}}
+{{#if (and (isdefined item.system.ADDSTR item "system.ADDSTR") (notEqual item.system.ADDSTR null))}}
+<div class="form-group">
     <label>ADDSTR</label>
-    <input type="checkbox" name="system.ADDSTR" {{checked item.system.ADDSTR}} data-dtype="Boolean"/>
+    <input type="checkbox" name="system.ADDSTR" {{checked item.system.ADDSTR}}/>
+</div>
+
+<div class="form-group" title="Maximum STR that can add to this maneuver. Hero Designer exports 0 for most maneuvers; weapon-based ones (e.g. Killing Strike) carry a real cap.">
+    <label>MAXSTR</label>
+    <input type="text" name="system.MAXSTR" value="{{system.MAXSTR}}" data-dtype="Number" />
 </div>
 {{/if}}
 
-{{#if (isdefined system.MAXSTR)}}
-    <div class="form-group">
-        <label>MAXSTR</label>
-        <input type="text" name="system.MAXSTR" value="{{system.MAXSTR}}" data-dtype="text" />
-    </div>
-{{/if}}
-
-{{#if (hasProperty item "system.DAMAGETYPE")}}
-    <div class="form-group">
+{{!-- Hero Designer only sets DAMAGETYPE on custom maneuvers; standard maneuvers always export 0 (None) and derive damage from EFFECT --}}
+{{#if item.system.DAMAGETYPE}}
+    <div class="form-group" title="Hero Designer sets this only for custom maneuvers; standard maneuvers always export None and derive their damage from EFFECT.">
         <label>DAMAGETYPE</label>
         {{#if martialArtsDamageTypeChoices}}
             <select name="system.DAMAGETYPE" data-dtype="Number">
@@ -326,28 +333,28 @@
 {{#if (isdefined item.system.USESTANDARDEFFECT)}}
 <div class="form-group">
     <label>USESTANDARDEFFECT</label>
-    <input type="checkbox" name="system.USESTANDARDEFFECT" {{checked item.system.USESTANDARDEFFECT}} data-dtype="Boolean"/>
+    <input type="checkbox" name="system.USESTANDARDEFFECT" {{checked item.system.USESTANDARDEFFECT}}/>
 </div>
 {{/if}}
 
 {{#if (isdefined item.system.AFFECTS_PRIMARY)}}
 <div class="form-group">
     <label>AFFECTS_PRIMARY</label>
-    <input type="checkbox" name="system.AFFECTS_PRIMARY" {{checked item.system.AFFECTS_PRIMARY}} data-dtype="Boolean"/>
+    <input type="checkbox" name="system.AFFECTS_PRIMARY" {{checked item.system.AFFECTS_PRIMARY}}/>
 </div>
 {{/if}}
 
 {{#if (isdefined item.system.AFFECTS_TOTAL)}}
 <div class="form-group">
     <label>AFFECTS_TOTAL</label>
-    <input type="checkbox" name="system.AFFECTS_TOTAL" {{checked item.system.AFFECTS_TOTAL}} data-dtype="Boolean"/>
+    <input type="checkbox" name="system.AFFECTS_TOTAL" {{checked item.system.AFFECTS_TOTAL}}/>
 </div>
 {{/if}}
 
 {{#if (isdefined item.system.USE_END_RESERVE)}}
 <div class="form-group">
     <label>USE_END_RESERVE</label>
-    <input type="checkbox" name="system.USE_END_RESERVE" {{checked item.system.USE_END_RESERVE}} data-dtype="Boolean"/>
+    <input type="checkbox" name="system.USE_END_RESERVE" {{checked item.system.USE_END_RESERVE}}/>
 </div>
 {{/if}}
 
@@ -355,54 +362,51 @@
 {{#if (isdefined item.system.CHARACTERISTIC)}}
 <div class="form-group">
     <label>CHARACTERISTIC</label>
-    {{#if skillCharacteristicOptions}}
-        <select name="system.CHARACTERISTIC" data-dtype="text">
-            {{selectOptions skillCharacteristicOptions selected=item.system.CHARACTERISTIC}}
-        </select>
-    {{else}}
-        missing skillCharacteristicOptions
-    {{/if}}
+    <select name="system.CHARACTERISTIC">
+        {{selectOptions skillCharacteristicOptions selected=item.system.CHARACTERISTIC}}
+    </select>
 </div>
 {{/if}}
 
 
-{{#if (isdefined item.system.LEVELSONLY)}}
+{{!-- These flags exist on other schemas too but are only meaningful for skills --}}
+{{#if (and (eq item.type "skill") (isdefined item.system.LEVELSONLY))}}
 <div class="form-group">
     <label>LEVELSONLY</label>
-    <input type="checkbox" name="system.LEVELSONLY" {{checked item.system.LEVELSONLY}} data-dtype="Boolean"  
+    <input type="checkbox" name="system.LEVELSONLY" {{checked item.system.LEVELSONLY}}  
     {{#if (or (or item.system.FAMILIARITY item.system.EVERYMAN) item.system.PROFICIENCY)}}disabled{{/if}}/>
 </div>
 {{/if}}
 
-{{#if (isdefined item.system.FAMILIARITY)}}
+{{#if (and (eq item.type "skill") (isdefined item.system.FAMILIARITY))}}
 <div class="form-group">
     <label>FAMILIARITY</label>
-    <input type="checkbox" name="system.FAMILIARITY" {{checked item.system.FAMILIARITY}} data-dtype="Boolean" 
+    <input type="checkbox" name="system.FAMILIARITY" {{checked item.system.FAMILIARITY}} 
     {{#if (or item.system.LEVELSONLY item.system.PROFICIENCY)}}disabled{{/if}}/>
 </div>
 {{/if}}
 
 {{!-- if FAMILIARITY is present then EVERYMAN can be an option --}}
-{{#if (isdefined item.system.FAMILIARITY)}}
+{{#if (and (eq item.type "skill") (isdefined item.system.FAMILIARITY))}}
 <div class="form-group">
     <label>EVERYMAN</label>
-    <input type="checkbox" name="system.EVERYMAN" {{checked item.system.EVERYMAN}} data-dtype="Boolean"  
+    <input type="checkbox" name="system.EVERYMAN" {{checked item.system.EVERYMAN}}  
     {{#if (or item.system.LEVELSONLY item.system.PROFICIENCY)}}disabled{{/if}}/>
 </div>
 {{/if}}
 
-{{#if (isdefined item.system.PROFICIENCY)}}
+{{#if (and (eq item.type "skill") (isdefined item.system.PROFICIENCY))}}
 <div class="form-group">
     <label>PROFICIENCY</label>
-    <input type="checkbox" name="system.PROFICIENCY" {{checked item.system.PROFICIENCY}} data-dtype="Boolean"  
+    <input type="checkbox" name="system.PROFICIENCY" {{checked item.system.PROFICIENCY}}  
     {{#if (or item.system.LEVELSONLY item.system.FAMILIARITY)}}disabled{{/if}}/>
 </div>
 {{/if}}
 
-{{#if (isdefined item.system.NATIVE_TONGUE)}}
+{{#if (and (eq item.type "skill") (isdefined item.system.NATIVE_TONGUE))}}
 <div class="form-group">
     <label>NATIVE TONGUE</label>
-    <input type="checkbox" name="system.NATIVE_TONGUE" {{checked item.system.NATIVE_TONGUE}} data-dtype="Boolean" />
+    <input type="checkbox" name="system.NATIVE_TONGUE" {{checked item.system.NATIVE_TONGUE}} />
 </div>
 {{/if}}
 
@@ -410,29 +414,27 @@
 {{#if (isdefined item.system.SFX)}}
 <div class="form-group">
     <label>SFX</label>
-    <input type="text" name="system.SFX" value="{{item.system.SFX}}" data-dtype="text" />
+    <input type="text" name="system.SFX" value="{{item.system.SFX}}" />
 </div>
 {{/if}}
 
 {{#if item.system.chargeModifier}}
     <div class="form-group">
         <label>Charges</label>
-        <div class="flexrow">
+        <div class="resource-fraction">
             <input type="text" name="system.numCharges" value="{{system.numCharges}}" data-dtype="Number" />
-            <span>/</span>
-            <input disabled title="maximum, edit with modifier" type="text" name="system.chargesMax" value="{{system.chargesMax}}" data-dtype="Number" />
+            <span class="resource-max" title="Maximum; edit with the CHARGES modifier">/ {{system.chargesMax}}</span>
         </div>
     </div>
 
     {{#if item.system.chargeModifier.CLIPS}}
         <div class="form-group">
             <label>Clips</label>
-            <div class="flexrow">
+            <div class="resource-fraction">
                 <input type="text" name="system.clips" value="{{system.clips}}" data-dtype="Number" />
-                <span>/</span>
-                <input disabled  title="maximum, edit with modifier" type="text" name="system.clipsMax" value="{{system.clipsMax}}" data-dtype="Number" />
+                <span class="resource-max" title="Maximum; edit with the CLIPS adder">/ {{system.clipsMax}}</span>
             </div>
-    </div>
+        </div>
     {{/if}}
 {{/if}}
 
