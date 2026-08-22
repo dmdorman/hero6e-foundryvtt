@@ -72,6 +72,7 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
     constructor(data) {
         super();
         this.data = data;
+        this.data.formData ??= {};
 
         this.#hookIds.targetToken = Hooks.on("targetToken", ItemAttackFormApplicationV2.#targetTokenHandler.bind(this));
         this.#hookIds.controlToken = Hooks.on(
@@ -105,9 +106,7 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
         }
     }
 
-    refresh() {
-        foundry.utils.debounce(this.render(), 100);
-    }
+    refresh = foundry.utils.debounce(() => this.render(), 100);
 
     static DEFAULT_OPTIONS = {
         tag: "form",
@@ -180,7 +179,7 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
             this.data.pushedRealPoints ??= 0;
 
             // Penalty Skill Levels
-            this.data.psls = this.item?.pslRangePenaltyOffsetItems;
+            this.data.psls = this.data.originalItem.allPsls;
 
             // Is there an ENTANGLE on any of the targets
             // If so assume we are targeting the entangle
@@ -611,7 +610,6 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
             }
 
             case "continueMultiattack":
-                this.data.formData ??= {};
                 this.data.formData.continueMultiattack = true;
                 return this.render();
 
@@ -969,7 +967,7 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
 
         return Array.from(canvas.regions.viewedDocuments()).find(
             (template) =>
-                template.color?.css === game.user.color.css &&
+                template.flags[game.system.id]?.userId === game.user.id &&
                 template.flags[game.system.id]?.purpose === "AoE" &&
                 template.flags[game.system.id]?.itemId === effectiveAttackItemOriginalItemId,
         );
@@ -993,6 +991,7 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
             maWeaponId: this.data.maSelectedWeaponId,
             hthAttackItems: isMultipleAttackManeuver ? {} : this.data.hthAttackItems,
             nakedAdvantagesItems: this.data.nakedAdvantagesItems,
+            clubWeaponItem: this.data.clubWeaponItem,
 
             autofire: {
                 shots: this.data.autofireShotsToUse,
@@ -1116,6 +1115,24 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
 
         this.#processFormDataForHthAndNa(extendedFormData);
 
+        // A max of 4 boostable charges may be used and a min of 0.
+        if (extendedFormData.boostableChargesToUse !== undefined) {
+            this.data.boostableChargesToUse = extendedFormData.boostableChargesToUse = Math.clamp(
+                extendedFormData.boostableChargesToUse,
+                0,
+                4,
+            );
+        }
+
+        // A minimum of 1 shot and a maximum of max autofire charges can be used.
+        if (extendedFormData.autofireShotsToUse !== undefined) {
+            this.data.autofireShotsToUse = extendedFormData.autofireShotsToUse = Math.clamp(
+                extendedFormData.autofireShotsToUse,
+                1,
+                this.data.autofireShotsAvailable,
+            );
+        }
+
         // PH: FIXME: Build the item to use. Is there a way to only have this code once in getData?
         this.data.effectiveItem = await this.#buildEffectiveObjectFromOriginalAndData();
         this.data.effectiveItemResourceUsage = calculateRequiredResourcesToUse(
@@ -1127,77 +1144,10 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
                 // only items or linked items of their own (presumably).
                 ...(this.data.effectiveItem.system._active.linked || []).map((linkedInfo) => linkedInfo.item),
             ],
-            formData,
+            extendedFormData,
         );
 
         this.#setAoeAndHitLocationDataForEffectiveItem();
-
-        // if (event.submitter?.name === "roll") {
-
-        //     await this.close();
-
-        //     return processActionToHit(this.data.effectiveItem, extendedFormData, { token: this.data.token });
-        // }
-
-        this.data.formData ??= {};
-
-        // if (event.submitter?.name === "continueMultiattack") {
-        //     this.data.formData.continueMultiattack = true;
-        // } else if (event.submitter?.name === "executeMultiattack") {
-        //     const begin = this.data.action.current.execute === undefined;
-        //     // we pressed the button to execute multiple attacks
-        //     // the first time does not get a roll, but sets up the first attack
-        //     if (begin) {
-        //         this.data.formData.execute = 0;
-        //     } else {
-        //         // the subsequent presses will roll the attack and set up the next attack
-        //         // TODO: if any roll misses, the multiattack ends, and the end cost for the remainding attacks are forfeit
-
-        //         // this is the roll:
-        //         await processActionToHit(this.data.effectiveItem, this.data.formData);
-
-        //         this.data.formData.execute = this.data.action.current.execute + 1;
-        //     }
-
-        //     // Is this is the last step?
-        //     const end = this.data.formData.execute >= this.data.action.maneuver.attackKeys.length;
-        //     if (end) {
-        //         canvas.tokens.activate();
-        //         await this.close();
-        //     } else {
-        //         return await new ItemAttackFormApplicationV2(this.data).render(true);
-        //     }
-        // } else if (event.submitter?.name === "missedMultiattack") {
-        //     // TODO: charge user the end cost for the remaining attacks
-        //     canvas.tokens.activate();
-        //     await this.close();
-        //     return;
-        // } else if (event.submitter?.name === "cancelMultiattack") {
-        //     this.data.formData.continueMultiattack = false;
-
-        //     // PH: FIXME: Do we have to do anything to action to clear it out? Should we just "delete" it?
-
-        //     canvas.tokens.activate();
-        //     await this.close();
-
-        //     return;
-        // } else if (event.submitter?.name === "aoe") {
-        //     return this._spawnAreaOfEffect();
-        // }
-
-        // A max of 4 boostable charges may be used and a min of 0.
-        if (formData.boostableChargesToUse) {
-            this.data.boostableChargesToUse = extendedFormData.boostableChargesToUse = Math.max(
-                0,
-                Math.min(formData.boostableChargesToUse, 4),
-            );
-        }
-
-        // A minimum of 1 shot and a maximum of max autofire charges can be used.
-        this.data.autofireShotsToUse = extendedFormData.autofireShotsToUse = Math.max(
-            1,
-            Math.min(extendedFormData.autofireShotsToUse, this.data.autofireShotsAvailable),
-        );
 
         // Can only push so much
         if (extendedFormData.effectiveActivePoints) {

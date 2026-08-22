@@ -7170,7 +7170,7 @@ export function registerUploadTests(quench) {
                         });
 
                         it("description", function () {
-                            assert.equal(item.system.description, "1/2 Phase, +0 OCV, +0 DCV, Strike");
+                            assert.equal(item.system.description, "1/2 Phase, +0 OCV, +0 DCV, 4d6 Strike");
                         });
 
                         it("realCost", function () {

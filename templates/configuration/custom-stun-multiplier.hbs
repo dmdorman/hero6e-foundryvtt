@@ -1,32 +1,29 @@
-{{log "Custom STUNx Multiplier" this}}
-<form class="{{cssClass}}" autocomplete="off">
-    <section class="sheet-body">
-        <section class="sheet-content">
-            <div class="form-group">
-                <label>{{localize "Settings.NonStandardStunMultiplierForKillingAttack.Template.D6"}}</label>
-                {{numberInput d6Count name="d6Count" step=1 min=-10 max=10}}
-            </div>
+<section class="sheet-body">
+    <section class="sheet-content">
+        <div class="form-group">
+            <label>{{localize "Settings.NonStandardStunMultiplierForKillingAttack.Template.D6"}}</label>
+            {{numberInput d6Count name="d6Count" step=1 min=-10 max=10}}
+        </div>
 
-            <div class="form-group">
-                <label>{{localize "Settings.NonStandardStunMultiplierForKillingAttack.Template.D6minus1"}}</label>
-                {{numberInput d6Less1DieCount name="d6Less1DieCount" step=1 min=-10 max=10}}
-            </div>
+        <div class="form-group">
+            <label>{{localize "Settings.NonStandardStunMultiplierForKillingAttack.Template.D6minus1"}}</label>
+            {{numberInput d6Less1DieCount name="d6Less1DieCount" step=1 min=-10 max=10}}
+        </div>
 
-            <div class="form-group">
-                <label>{{localize "Settings.NonStandardStunMultiplierForKillingAttack.Template.HalfDice"}}</label>
-                {{numberInput halfDieCount name="halfDieCount" step=1 min=-10 max=10}}
-            </div>
+        <div class="form-group">
+            <label>{{localize "Settings.NonStandardStunMultiplierForKillingAttack.Template.HalfDice"}}</label>
+            {{numberInput halfDieCount name="halfDieCount" step=1 min=-10 max=10}}
+        </div>
 
-            <div class="form-group">
-                <label>{{localize "Settings.NonStandardStunMultiplierForKillingAttack.Template.Constant"}}</label>
-                {{numberInput constant name="constant" step=1 min=-10 max=10}}
-            </div>
-        </section>
-
-        <section>
-            <div>
-                {{{localize "Settings.NonStandardStunMultiplierForKillingAttack.Hint"}}}
-            </div>
-        </section>
+        <div class="form-group">
+            <label>{{localize "Settings.NonStandardStunMultiplierForKillingAttack.Template.Constant"}}</label>
+            {{numberInput constant name="constant" step=1 min=-10 max=10}}
+        </div>
     </section>
-</form>
+
+    <section>
+        <div>
+            {{{localize "Settings.NonStandardStunMultiplierForKillingAttack.Hint"}}}
+        </div>
+    </section>
+</section>

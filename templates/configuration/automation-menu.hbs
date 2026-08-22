@@ -1,56 +1,46 @@
-{{ log 'AUTOMATIONMENU' this }}
-<form class="{{cssClass}}" autocomplete="off">
+<section class="sheet-body">
+    <section class="sheet-content"> {{!-- sheet-content scrolls --}}
+        <div class="tab tab-body">
+            <table>
+                <tr>
+                    <td>Automation</td>
+                    <td>
+                        <select name="automation" data-dtype="text">
+                            {{selectOptions choices selected=automation}}
+                        </select>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-    {{!-- Sheet Body --}}
-    <section class="sheet-body">
-        <section class="sheet-content"> {{!-- sheet-content scrolls --}}
+        <p></p>
 
-
+        {{#if settings}}
             <div class="tab tab-body">
                 <table>
                     <tr>
-                        <td>Automation</td>
+                        <th class="sticky">Automation</th>
+                        <th class="sticky">PC/NPC</th>
+                        <th class="sticky" title="Send details to GM chat">GM</th>
+                        <th class="sticky" title="Send details to token OWNER chat">PLAYER</th>
+                    </tr>
+
+                    {{#each settings as |setting|}}
+                    <tr>
+                        <td>{{setting.name}}</td>
                         <td>
-                            <select name="automation" data-dtype="text">
-                              {{selectOptions choices selected=automation}}
-                            </select>
+                            <input name="{{setting.tokenType}}" value="{{setting.tokenType}}" type="text" {{#unless setting.enabled}}DISABLED{{/unless}} />
+                        </td>
+                        <td>
+                            <input name="{{setting.gm}}" type="checkbox" {{checked setting.gm}} data-dtype="Boolean" {{#unless setting.enabled}}DISABLED{{/unless}} />
+                        </td>
+                        <td>
+                            <input name="{{setting.owner}}" type="checkbox" {{checked setting.owner}} data-dtype="Boolean" {{#unless setting.enabled}}DISABLED{{/unless}} />
                         </td>
                     </tr>
+                    {{/each}}
                 </table>
-                
-            </div> 
-            
-            <p></p>
-
-            {{#if settings}}
-                <div class="tab tab-body">
-
-                    <table>
-                        <tr>
-                            <th class="sticky">Automation</th>
-                            <th class="sticky">PC/NPC</th>
-                            <th class="sticky" title="Send details to GM chat">GM</th>
-                            <th class="sticky" title="Send details to token OWNER chat">PLAYER</th>
-                        </tr>
-
-                        {{#each settings as |setting id|}}
-                        <tr>
-                            <td>{{setting.name}}</td>
-                            <td>
-                                <input name="{{setting.tokenType}}" value="{{setting.tokenType}}" type="text" {{#unless setting.enabled}}DISABLED{{/unless}} />
-                            </td>
-                             <td>
-                                <input name="{{setting.gm}}" type="checkbox" {{checked setting.gm}} data-dtype="Boolean" {{#unless setting.enabled}}DISABLED{{/unless}} />
-                            </td>
-                             <td>
-                                <input name="{{setting.owner}}" type="checkbox" {{checked setting.owner}} data-dtype="Boolean" {{#unless setting.enabled}}DISABLED{{/unless}} />
-                            </td>
-                        </tr>
-                        {{/each}}
-                    </table>
-                </div>
-      
-            {{/if}}
-
+            </div>
+        {{/if}}
     </section>
-</form>
+</section>

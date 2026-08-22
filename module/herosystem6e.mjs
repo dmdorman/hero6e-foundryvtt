@@ -288,30 +288,6 @@ Hooks.once("init", async function () {
     );
 
     const templatePaths = [
-        `systems/${HEROSYS.module}/templates/actor/active-effect-config.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-attacks.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-characteristics.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-defenses.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-maneuvers.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-martialarts.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-martialarts-item.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-movement.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other-complications.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other-effects.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other-perks.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other-talents.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-other-top.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-analysis.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-powers.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-powers-item.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-skills.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-skills-item.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-equipment.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-equipment-item.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-partial-invalid.hbs`,
-
         `systems/${HEROSYS.module}/templates/attack/remove-power-from-automaton.hbs`,
 
         `systems/${HEROSYS.module}/templates/chat/defense-tags-partial.hbs`,
@@ -345,9 +321,7 @@ Hooks.once("init", async function () {
         `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-disadvantages-partial-item-v2.hbs`,
         `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-item-actions-partial-v2.hbs`,
         `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-item-cost-v2.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-item-cost-v2.hbs`,
         `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-item-description-v2.hbs`,
-        `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-item-name-v2.hbs`,
 
         `systems/${HEROSYS.module}/templates/actor/actor-sheet-v2-parts/actor-sheet-effects-partial-item-v2.hbs`,
     ];

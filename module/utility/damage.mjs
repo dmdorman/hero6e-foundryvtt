@@ -277,6 +277,11 @@ function isManeuverThatIsUsingAnEmptyHand(item, options) {
     );
 }
 
+// The [ ...DC] damage placeholders that can appear in maneuver EFFECT text ([NORMALDC],
+// [KILLINGDC], [FLASHDC], [NNDDC], and their [WEAPON...] variants). [STRDC] is deliberately
+// excluded — it substitutes a STR value, not a damage formula.
+const replaceableDamagePlaceholderRegex = /\[(?:WEAPON)?(?:NORMAL|KILLING|FLASH|NND)?DC\]/g;
+
 export function getManueverEffectWithPlaceholdersReplaced(item) {
     const maneuverEffect = getManeuverEffect(item);
     if (maneuverEffect) {
@@ -304,15 +309,14 @@ export function getManueverEffectWithPlaceholdersReplaced(item) {
 
                     const diceFormula = `${damageFormula}${nnd ? " NND" : ""}${killing ? (isManeuverHthCategory(item) ? " HKA" : " RKA") : ""}`;
 
-                    effectString = maneuverEffect
-                        .replace("[NORMALDC]", diceFormula)
-                        .replace("[KILLINGDC]", diceFormula)
-                        .replace("[FLASHDC]", diceFormula)
-                        .replace("[NNDDC]", diceFormula)
-                        .replace("[WEAPONDC]", diceFormula)
-                        .replace("[WEAPONKILLINGDC]", diceFormula)
-                        .replace("[WEAPONFLASHDC]", diceFormula)
-                        .replace("[WEAPONNNDDC]", diceFormula);
+                    if (isManeuverThatDoesReplaceableDamageType(item)) {
+                        effectString = maneuverEffect.replace(replaceableDamagePlaceholderRegex, diceFormula);
+                    } else if (parseInt(item.system.DC || 0) > 0) {
+                        // Custom maneuvers have no [DC] placeholder in their effect text; lead with
+                        // the dice the way Hero Designer displays them (e.g. "5 1/2d6 Strike").
+                        // The DC gate keeps placeholderless non-damage maneuvers (Dodge, Escape) clean.
+                        effectString = `${diceFormula} ${maneuverEffect}`;
+                    }
                 }
             }
         }
@@ -332,16 +336,7 @@ export function isManeuverThatDoesReplaceableDamageType(item) {
         return false;
     }
 
-    return (
-        effect.search(/\[NORMALDC\]/) > -1 ||
-        effect.search(/\[NNDDC\]/) > -1 ||
-        effect.search(/\[FLASHDC\]/) > -1 ||
-        effect.search(/\[KILLINGDC\]/) > -1 ||
-        effect.search(/\[WEAPONDC\]/) > -1 ||
-        effect.search(/\[WEAPONNNDDC\]/) > -1 ||
-        effect.search(/\[WEAPONFLASHDC\]/) > -1 ||
-        effect.search(/\[WEAPONKILLINGDC\]/) > -1
-    );
+    return effect.search(replaceableDamagePlaceholderRegex) > -1;
 }
 
 // Maneuver's EFFECT indicates normal damage or is Strike (exception)

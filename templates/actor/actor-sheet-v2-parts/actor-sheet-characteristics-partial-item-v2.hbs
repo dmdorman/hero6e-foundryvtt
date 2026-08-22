@@ -1,9 +1,12 @@
-<li class="item powers draggable expandable-document" data-item-id="{{this.id}}" data-document-uuid="{{this.uuid}}">
-    <div class="item-row {{css}}">
-        <div class="item-column item-value">
+{{!-- Characteristics are not embedded documents: no draggable class or document uuid --}}
+<li class="item powers">
+    <div class="item-row">
+        <div class="item-column item-value"
+            {{#if this.valueTooltip}}data-tooltip="{{{this.valueTooltip}}}"{{/if}}
+        >
             <input name="system.characteristics.{{this.key}}.value" type="number"
                 value="{{this.value}}" data-dtype="Number"
-                class="{{#if (gt this.value this.max)}}over-max{{/if}}{{#if (lt this.value this.max)}} under-max{{/if}}"
+                class="{{this.valueCssClass}}"
                 {{#if this.valueTitle}}disabled{{/if}}
             >
         </div>
@@ -13,7 +16,7 @@
             data-tooltip="{{{this.maxTitle}}}"
         >
             <input type="number"
-                class="{{#if (gt this.max this.expectedMax)}}over-max{{/if}} {{#if (lt this.max this.expectedMax)}}under-max{{/if}}"
+                class="{{this.maxCssClass}}"
                 value="{{this.max}}" data-dtype="Number" disabled
             >
         </div>

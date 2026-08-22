@@ -16,8 +16,6 @@
     </div>
 </li>
 
-{{#if (not this.system.collapse)}}
-    {{#each this.childItems }}
-        {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-powers-partial-item-v2.hbs') this }}
-    {{/each}}
-{{/if}}
+{{#each this.childItems }}
+    {{> (getModulePath 'actor/actor-sheet-v2-parts/actor-sheet-powers-partial-item-v2.hbs') this }}
+{{/each}}

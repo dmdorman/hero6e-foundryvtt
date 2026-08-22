@@ -1059,8 +1059,10 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         await super._onDragStart(event);
         const element = event.currentTarget.closest("[data-document-uuid]");
         if (element) {
-            const uuid = element.dataset.documentUuid;
-            const item = fromUuidSync(uuid);
+            const item = fromUuidSync(element.dataset.documentUuid);
+            if (!item) {
+                return;
+            }
             const dragData = item.toDragData();
             event.dataTransfer.setData("text/plain", JSON.stringify(dragData));
         }

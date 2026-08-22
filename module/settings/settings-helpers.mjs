@@ -4,70 +4,106 @@ import { CreateHeroCompendiums } from "../heroCompendiums.mjs";
 
 export let overrideCanAct = false;
 
-class StunMultiplierMenu extends FormApplication {
-    static get defaultOptions() {
-        const defaultOptions = super.defaultOptions;
-        const options = foundry.utils.mergeObject(defaultOptions, {
-            classes: ["form"],
-            popOut: true,
-            template: `systems/${HEROSYS.module}/templates/configuration/custom-stun-multiplier.hbs`,
-            id: "stun-multiplier-form-application",
-            closeOnSubmit: false, // do not close when submitted
-            submitOnChange: true, // submit when any input changes
-            title: "Custom STUN Multiplier Settings",
-            width: "640",
-        });
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-        return options;
+// Shared shell for AppV2 settings submenus: a form window that persists every change and stays open.
+class HeroSettingsMenu extends HandlebarsApplicationMixin(ApplicationV2) {
+    static DEFAULT_OPTIONS = {
+        tag: "form",
+        classes: ["herosystem6e"],
+        position: {
+            height: "auto",
+        },
+        window: {
+            contentClasses: ["standard-form"],
+        },
+        form: {
+            submitOnChange: true,
+            closeOnSubmit: false,
+        },
+    };
+}
+
+class StunMultiplierMenu extends HeroSettingsMenu {
+    static {
+        Hooks.once("init", () => {
+            StunMultiplierMenu.PARTS = {
+                body: {
+                    template: `systems/${game.system.id}/templates/configuration/custom-stun-multiplier.hbs`,
+                },
+            };
+        });
     }
 
-    async getData() {
+    static DEFAULT_OPTIONS = {
+        id: "stun-multiplier-form-application",
+        position: {
+            width: 640,
+        },
+        window: {
+            title: "Custom STUN Multiplier Settings",
+        },
+        form: {
+            handler: StunMultiplierMenu.#onSubmit,
+        },
+    };
+
+    async _prepareContext(options) {
+        const context = await super._prepareContext(options);
         const customStunMultiplier = game.settings.get(
             game.system.id,
             "NonStandardStunMultiplierForKillingAttackBackingSetting",
         );
 
-        return customStunMultiplier;
+        return foundry.utils.mergeObject(context, customStunMultiplier);
     }
 
-    async _updateObject(_event, formData) {
-        const data = foundry.utils.expandObject(formData);
+    static async #onSubmit(event, form, formData) {
+        const data = foundry.utils.expandObject(formData.object);
 
-        if (typeof data.d6Count !== "number") {
-            data.d6Count = 0;
-        }
-        if (typeof data.halfDieCount !== "number") {
-            data.halfDieCount = 0;
-        }
-        if (typeof data.d6Less1DieCount !== "number") {
-            data.d6Less1DieCount = 0;
-        }
-        if (typeof data.constant !== "number") {
-            data.constant = 0;
+        for (const key of ["d6Count", "halfDieCount", "d6Less1DieCount", "constant"]) {
+            if (typeof data[key] !== "number") {
+                data[key] = 0;
+            }
         }
 
         await game.settings.set(game.system.id, "NonStandardStunMultiplierForKillingAttackBackingSetting", data);
-        await this.render();
+        this.render();
     }
 }
 
-class AutomationMenu extends FormApplication {
-    static get defaultOptions() {
-        let options = super.defaultOptions;
-        options = foundry.utils.mergeObject(options, {
-            classes: ["form"],
-            popOut: true,
-            template: `systems/${HEROSYS.module}/templates/configuration/automation-menu.hbs`,
-            id: "automation-form-application",
-            closeOnSubmit: false, // do not close when submitted
-            submitOnChange: true, // submit when any input changes
-            title: "Automation Settings",
+class AutomationMenu extends HeroSettingsMenu {
+    static {
+        Hooks.once("init", () => {
+            AutomationMenu.PARTS = {
+                body: {
+                    template: `systems/${game.system.id}/templates/configuration/automation-menu.hbs`,
+                },
+            };
         });
-
-        return options;
     }
 
-    async getData() {
+    static DEFAULT_OPTIONS = {
+        id: "automation-form-application",
+        position: {
+            width: 450,
+        },
+        window: {
+            title: "Automation Settings",
+        },
+        form: {
+            handler: AutomationMenu.#onSubmit,
+        },
+    };
+
+    static async #onSubmit(event, form, formData) {
+        const data = foundry.utils.expandObject(formData.object);
+        await game.settings.set(game.system.id, "automation", data.automation);
+        this.render();
+    }
+
+    async _prepareContext(options) {
+        const context = await super._prepareContext(options);
         const automation = game.settings.get(game.system.id, "automation");
         const settings = [
             { name: "Body", enabled: false },
@@ -158,7 +194,7 @@ class AutomationMenu extends FormApplication {
                 break;
         }
 
-        return {
+        return foundry.utils.mergeObject(context, {
             settings,
 
             choices: {
@@ -169,13 +205,7 @@ class AutomationMenu extends FormApplication {
             },
 
             automation,
-        };
-    }
-
-    async _updateObject(_event, formData) {
-        const data = foundry.utils.expandObject(formData);
-        await game.settings.set(game.system.id, "automation", data.automation);
-        await this.render();
+        });
     }
 }
 
@@ -318,7 +348,7 @@ export default class SettingsHelpers {
             name: game.i18n.localize("Settings.Automation.Menu.Name"),
             label: game.i18n.localize("Settings.Automation.Menu.Label"), // The text label used in the button
             icon: "fas fa-bars", // A Font Awesome icon used in the submenu button
-            type: AutomationMenu, // A FormApplication subclass
+            type: AutomationMenu,
             restricted: true, // Restrict this submenu to game master only?
         });
 
