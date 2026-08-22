@@ -202,26 +202,6 @@
 
             "LastMigration": {
                 "Name": "Last Migration"
-            },
-
-            "combatTrackerCompact": {
-                "Name": "Compact Combat Tracker",
-                "Hint": "This client only: shrink non-active combatant rows in the single-combatant tracker (no portrait, tighter spacing). The active combatant keeps the full-size row."
-            },
-
-            "combatTrackerGrouping": {
-                "Name": "Group Same-Actor Combatants",
-                "Hint": "Tokens of the same base actor share one tie-break roll and collapse into a single ×N tracker row. Disable to give every token its own roll and row. Mid-combat changes take effect with the next Segment's tie-break rolls."
-            },
-
-            "fastDrawTieBreak": {
-                "Name": "Fast Draw Breaks DEX Ties",
-                "Hint": "Optional rule: characters with the Fast Draw skill act before others at the same DEX; two Fast Draw characters compare their Fast Draw tie-break rolls. Off = pure random tie-breaks."
-            },
-
-            "stunnedAutoSkip": {
-                "Name": "Auto-Skip Stunned Phases",
-                "Hint": "When a Stunned character's Phase arrives, spend it recovering automatically and advance the tracker. Off = the tracker stops on them so the table can narrate the recovery before ending the turn."
             }
         },
         "Automation": {
@@ -251,8 +231,7 @@
                 "Name": "Campaign Rules Settings",
                 "Label": "Campaign Rules",
                 "Hint": "Configure Campaign Rules for all actors."
-            }
-            ,
+            },
             "Tabs": {
                 "pointLimits": "PointLimits",
                 "characteristicMaxima": "CharacteristicMaxima",
@@ -263,6 +242,27 @@
         "CombatMovementOnlyOnActorsPhase": {
             "Name": "Combat Movement Only On Actors Phase",
             "Hint": "This prevents players from moving their tokens when it isn't their turn."
+        },
+        "combatTrackerCompact": {
+            "Name": "Compact Combat Tracker",
+            "Hint": "This client only: shrink non-active combatant rows in the combat tracker (no portrait, tighter spacing). The active combatant keeps the full-size row."
+        },
+        "combatTrackerGrouping": {
+            "Name": "Group Same-Actor Combatants",
+            "Hint": "Tokens of the same base actor share one tie-break roll and collapse into a single ×N tracker row. Disable to give every token its own roll and row. Mid-combat changes take effect with the next Segment's tie-break rolls."
+        },
+        "fastDrawTieBreak": {
+            "Name": "Fast Draw Breaks DEX Ties",
+            "Hint": "Optional rule: characters with the Fast Draw skill act before others at the same DEX; two Fast Draw characters compare their Fast Draw tie-break rolls. Off = pure random tie-breaks."
+        },
+        "stunnedAutoSkip": {
+            "Name": "Auto-Skip Stunned Phases",
+            "Hint": "When a Stunned character's Phase arrives, spend it recovering automatically and advance the tracker. Off = the tracker stops on them so the table can narrate the recovery before ending the turn."
+        },
+        "Groups": {
+            "RulesCampaign": "Rules & Campaign",
+            "CombatTracker": "Combat Tracker",
+            "ClientDisplay": "Client & Display"
         },
         "lrAutoElevate": {
             "Name": "Lightning Reflexes: Always Act Early",
@@ -320,10 +320,6 @@
                 }
             }
         },
-        "LongTermEndurance": {
-            "Name": "Long-term Endurance",
-            "Hint": "Automate tracking of optional long-term endurance use. Currently a partial implementation. When an actor's average END use per turn exceeds double their REC, max END is lowered."
-        },
         "MetricUnits": {
             "Name": "Use Metric Units",
             "Hint": "Display actor sheet background height and weight in metric units (meters) instead of imperial units (feet)."
@@ -331,7 +327,8 @@
         "NonStandardStunMultiplierForKillingAttack": {
             "Name": "Custom Killing Attack STUN Multiplier",
             "Label": "STUN Multipler Override",
-            "Hint": "The default 6e killing attack STUN multiplier is ½d6.<br>The default 5e killing attack STUN multiplier is 1d6-1[min 1].<br>If you want to override these defaults for ALL 6e and 5e actors then enter the formula in the boxes above.<br>It is recommend that you leave all the boxes at 0 as this will use the default STUN multiplier appropriate for each actor.",
+            "Hint": "Override the default killing attack STUN multiplier (½d6 in 6e, 1d6-1 [min 1] in 5e) for ALL actors. Leave every box at 0 to use each actor's edition default.",
+            "Details": "The default 6e killing attack STUN multiplier is ½d6.<br>The default 5e killing attack STUN multiplier is 1d6-1[min 1].<br>If you want to override these defaults for ALL 6e and 5e actors then enter the formula in the boxes above.<br>It is recommend that you leave all the boxes at 0 as this will use the default STUN multiplier appropriate for each actor.",
             "Template": {
                 "D6": "Number of d6",
                 "D6minus1": "Number of d6-1",
@@ -347,17 +344,18 @@
             "Name": "Optional Maneuvers",
             "Hint": "Add the optional maneuvers to the maneuvers tab."
         },
-        "SecretMindScan": {
-            "Name": "Secret Mind Scan",
-            "Hint": "Mind Scan has several components that the Game Master may wish to keep secret. When enabled players are unable to make Mind Scan rolls. Instead the GM is required to make Mind Scan rolls for the players. When disabled, players can select number of minds and familarity."
-        },
         "ShowAllConditionalDefenses": {
             "Name": "Show all Conditional Defenses",
             "Hint": "Conditional Defenses that provide no obvious defense are hidden by default. There may be some edge cases where these defenses should be applied. Enabling this setting will give the GM an opportunity to apply a conditional defense, even when the automation thinks it does not apply."
         },
         "ShowCombatCharacteristicChanges": {
             "Name": "Show combat characteristic changes",
-            "Hint": "Show BODY & STUN changes to token owners as a private chat."
+            "Hint": "Show BODY & STUN changes to token owners as a private chat.",
+            "Choices": {
+                "All": "All",
+                "PcOnly": "PC only",
+                "None": "None"
+            }
         },
         "ShowGenericRoller": {
             "Name": "Show Generic Dice Roller",

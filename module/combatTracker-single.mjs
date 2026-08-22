@@ -2501,9 +2501,10 @@ function rebuildTurnsAtReady() {
 }
 
 /**
- * Injects the Hero System client preferences into core's Combat Tracker
- * Settings dialog (#3157). The inputs persist immediately on change:
- * core's submit handler discards unknown form fields.
+ * Injects the Hero System preferences into core's Combat Tracker Settings
+ * dialog (#3157). The inputs persist immediately on change: core's submit
+ * handler discards unknown form fields. World settings are shown only to
+ * users who can modify them.
  */
 function injectTrackerConfigFields(_app, html) {
     try {
@@ -2511,24 +2512,30 @@ function injectTrackerConfigFields(_app, html) {
         const root = html;
         if (!root || root.querySelector(".hero-tracker-config")) return;
 
-        const compact = !!game.settings.get(game.system.id, "combatTrackerCompact");
+        const checkboxRow = (id, settingKey) => `
+                    <div class="form-group">
+                        <label for="${id}">${game.i18n.localize(`Settings.${settingKey}.Name`)}</label>
+                        <div class="form-fields">
+                            <input type="checkbox" id="${id}" data-setting-key="${settingKey}"
+                                ${game.settings.get(game.system.id, settingKey) ? "checked" : ""}>
+                        </div>
+                        <p class="hint">${game.i18n.localize(`Settings.${settingKey}.Hint`)}</p>
+                    </div>`;
+
         const fieldset = document.createElement("fieldset");
         fieldset.className = "hero-tracker-config";
         fieldset.innerHTML = `
                     <legend>Hero System</legend>
-                    <div class="form-group">
-                        <label for="hero-tracker-compact">${game.i18n.localize("Settings.AlphaTesting.combatTrackerCompact.Name")}</label>
-                        <div class="form-fields">
-                            <input type="checkbox" id="hero-tracker-compact" ${compact ? "checked" : ""}>
-                        </div>
-                        <p class="hint">${game.i18n.localize("Settings.AlphaTesting.combatTrackerCompact.Hint")}</p>
-                    </div>`;
-        fieldset.querySelector("input").addEventListener("change", (event) => {
-            // Applies live: the setting's onChange re-renders the tracker
-            game.settings
-                .set(game.system.id, "combatTrackerCompact", event.target.checked)
-                .catch((e) => console.error(e));
-        });
+                    ${checkboxRow("hero-tracker-compact", "combatTrackerCompact")}
+                    ${game.user.can("SETTINGS_MODIFY") ? checkboxRow("hero-tracker-grouping", "combatTrackerGrouping") : ""}`;
+        for (const input of fieldset.querySelectorAll("input[data-setting-key]")) {
+            input.addEventListener("change", (event) => {
+                // Applies live: each setting's onChange re-renders the tracker
+                game.settings
+                    .set(game.system.id, event.target.dataset.settingKey, event.target.checked)
+                    .catch((e) => console.error(e));
+            });
+        }
 
         const footer = root.querySelector("footer.form-footer, .form-footer");
         if (footer) footer.before(fieldset);

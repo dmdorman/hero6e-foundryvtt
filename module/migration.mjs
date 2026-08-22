@@ -465,11 +465,12 @@ async function commitItemsCollectionMigrateDataChanges(item) {
 }
 
 /**
- * The settings will have already been registered so previous boolean values of true or false will have been converted into a "true" or "false" string
+ * The settings will have already been registered so previous boolean values of true or false will have been converted into a "true" or "false" string.
+ * Exported for console verification.
  *
  * @returns {Promise}
  */
-async function migrateHitLocationSettings_5_0_0() {
+export async function migrateHitLocationSettings_5_0_0() {
     const hitLocationSetting = game.settings.get(game.system.id, "hit locations");
     // "true"/"false" are the stringified pre-5.0.0 Boolean values; the prose
     // strings were written by an early 5.0.0 dev build and match no choice key.

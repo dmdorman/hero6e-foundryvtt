@@ -129,6 +129,9 @@ form.herosystem6e.theme-hc {
 /* Combat Tracker */
 @include meta.load-css("components/combat-tracker");
 
+/* Settings window group headers */
+@include meta.load-css("components/settings-config");
+
 /* Effects Panel */
 @include meta.load-css("components/effects-panel");
 
