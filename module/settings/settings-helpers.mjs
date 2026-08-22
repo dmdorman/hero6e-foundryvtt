@@ -346,7 +346,7 @@ export default class SettingsHelpers {
             name: game.i18n.localize("Settings.Automation.Menu.Name"),
             label: game.i18n.localize("Settings.Automation.Menu.Label"), // The text label used in the button
             icon: "fas fa-bars", // A Font Awesome icon used in the submenu button
-            type: AutomationMenu, // A FormApplication subclass
+            type: AutomationMenu,
             restricted: true, // Restrict this submenu to game master only?
         });
 

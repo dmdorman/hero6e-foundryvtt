@@ -98,14 +98,6 @@ export class PresenceAttackApplication extends HeroApplication {
         return context;
     }
 
-    async _onFirstRender(context, options) {
-        await super._onFirstRender(context, options);
-    }
-
-    // async _onRender(context, options) {
-    //     console.warn(options);
-    // }
-
     async _onSubmitForm(formConfig, event) {
         await super._onSubmitForm(formConfig, event);
 
@@ -121,11 +113,7 @@ export class PresenceAttackApplication extends HeroApplication {
             });
         }
 
-        const form = event.target.querySelector("form");
-        if (!form) {
-            console.error("unable to locate FORM");
-            return;
-        }
+        const form = event.target;
         const rollModifier = clampFractionalPortionToZeroOrHalf(parseFloat(form.mod.value));
         if (rollModifier !== 0) {
             tags.push({

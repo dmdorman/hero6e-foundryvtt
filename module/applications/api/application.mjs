@@ -37,10 +37,4 @@ export class HeroApplication extends HandlebarsApplicationMixin(ApplicationV2) {
     _processFormData(event, form, formData) {
         return foundry.utils.expandObject(formData.object);
     }
-
-    async _onFirstRender(context, options) {
-        await super._onFirstRender(context, options);
-        globalThis.applicationv2 = this;
-        console.log("HeroApplication", this);
-    }
 }
