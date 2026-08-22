@@ -41,7 +41,7 @@ export class ItemAttackClubWeaponApplicationV2 extends HandlebarsApplicationMixi
         tag: "form",
         form: {
             handler: ItemAttackClubWeaponApplicationV2.#onSubmit,
-            closeOnSubmit: true,
+            closeOnSubmit: false,
         },
         window: {
             icon: "fas fa-screwdriver-wrench",
@@ -104,23 +104,20 @@ export class ItemAttackClubWeaponApplicationV2 extends HandlebarsApplicationMixi
      */
     static async #onSubmit(event, form, formData) {
         const clubWeaponId = formData.get("clubWeaponId");
-        if (clubWeaponId) {
-            const clubWeaponItem = this.data.possibleHkaItems.find((hka) => hka.id === clubWeaponId).item;
-            this.data.clubWeaponItem = clubWeaponItem;
-
-            // Link up so that it can return back to this application
-            if (this.data.nextApplication) {
-                this.data.previousApplication ??= [];
-                this.data.previousApplication.push(ItemAttackClubWeaponApplicationV2);
-
-                const nextApplication = this.data.nextApplication;
-                this.data.nextApplication = null;
-
-                return new nextApplication(this.data).render(true);
-            }
+        const clubWeaponItem = this.data.possibleHkaItems.find((hka) => hka.id === clubWeaponId)?.item;
+        if (!clubWeaponItem) {
+            return ui.notifications.warn("Select a hand-to-hand killing attack to use as a club.");
         }
 
-        return false;
+        this.data.clubWeaponItem = clubWeaponItem;
+        await this.close();
+
+        if (this.data.nextApplication) {
+            const nextApplication = this.data.nextApplication;
+            this.data.nextApplication = null;
+
+            return new nextApplication(this.data).render(true);
+        }
     }
 
     /**
