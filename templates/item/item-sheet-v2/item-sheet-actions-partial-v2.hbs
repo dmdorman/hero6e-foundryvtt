@@ -1,12 +1,11 @@
-{{!-- {{log 'item-sheet-actions-partial-v2' this}} --}}
-
-{{#unless mod.parentId}}
-    <a class="item-control modifier-edit" data-action="edit" title="Edit"><i
-            class="fas fa-edit"></i></a>
-    <a class="item-control modifier-delete" data-action="delete" title="Delete">
-        <i class="fas fa-trash"></i>
-    </a>
-{{/unless}}
-
-<!-- new style isn't ready yet -->
-{{!-- <a class="fa-fw fa-solid fa-ellipsis-vertical" data-action="documentListContext"></a> --}}
+{{!-- Context is a single adder or modifier row. Modifiers inherited from a parent item are not
+      editable here, and non-owners get no controls at all (#3551). --}}
+{{#if @root/editable}}
+    {{#unless this.parentId}}
+        <a class="item-control modifier-edit" data-action="edit" title="Edit"><i
+                class="fas fa-edit"></i></a>
+        <a class="item-control modifier-delete" data-action="delete" title="Delete">
+            <i class="fas fa-trash"></i>
+        </a>
+    {{/unless}}
+{{/if}}

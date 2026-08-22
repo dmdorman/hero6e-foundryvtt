@@ -57,12 +57,20 @@ export function initializeItemHandlebarsHelpers() {
     Handlebars.registerHelper("itemPostHitActionString", itemPostHitActionString);
     Handlebars.registerHelper("hasDefenseActiveEffect", itemHasDefenseActiveEffect);
     Handlebars.registerHelper("itemHeroValidationForProperty", itemHeroValidationForProperty);
+    Handlebars.registerHelper("itemHeroValidationForModifier", itemHeroValidationForModifier);
 }
 
 function itemHeroValidationForProperty(item, property) {
     return item.heroValidation
         .filter((validation) => validation.property === property)
         .map((m) => `${m.message} For example: "${m.example}"`)
+        .join(" ");
+}
+
+function itemHeroValidationForModifier(item, modifierID) {
+    return item.heroValidation
+        .filter((validation) => validation.modifierID == modifierID)
+        .map((m) => (m.example ? `${m.message} For example: "${m.example}"` : m.message))
         .join(" ");
 }
 
@@ -932,7 +940,14 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             for (const modifier of this.modifiers.filter((m) => m.baseInfo?.heroValidation)) {
                 const validationArray = modifier.baseInfo.heroValidation(modifier, this);
                 if (Array.isArray(validationArray) && validationArray.length) {
-                    heroValidations.push(...validationArray.map((m) => ({ ...m, itemId: this.id })));
+                    heroValidations.push(
+                        ...validationArray.map((m) => ({
+                            ...m,
+                            itemId: this.id,
+                            // So sheets can highlight the offending modifier row (#3406)
+                            modifierID: m.modifierID ?? modifier.ID,
+                        })),
+                    );
                 }
             }
         } else {
@@ -7937,6 +7952,48 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 child._getDeepTypeUpdates(targetType, updatesArray);
             }
         }
+    }
+
+    /**
+     * Rebuild this item from the Hero Designer XML captured at upload.
+     * Mirrors the uploadFromXml update path: ADDER/MODIFIER/POWER arrays are guaranteed so
+     * entries the XML lacks are cleared, and recursive:false drops properties the XML doesn't
+     * define and reverts type conversions. Children keep their own _hdcXml and restore separately.
+     * @returns {Promise<boolean>} true if the item was restored
+     */
+    async restoreFromHdc() {
+        if (!this.system._hdcXml) {
+            return false;
+        }
+
+        const itemData = this.system.hdcJson;
+        itemData.system.ADDER ??= [];
+        itemData.system.MODIFIER ??= [];
+        itemData.system.POWER ??= [];
+
+        await this.update({ name: itemData.name, type: itemData.type, system: itemData.system }, { recursive: false });
+
+        // Consumable state (_charges/_clips, END reserve value) isn't in the XML, so the replace
+        // above reset it to schema defaults; a pristine restore means full.
+        const consumableChanges = {};
+        const chargeModifier = this.system.chargeModifier;
+        if (chargeModifier && chargeModifier.parent.item === this) {
+            consumableChanges["system._charges"] = this.system.chargesMax;
+            if (chargeModifier.CLIPS) {
+                consumableChanges["system._clips"] = this.system.clipsMax;
+            }
+        }
+        if (this.system.XMLID === "ENDURANCERESERVE") {
+            consumableChanges["system.value"] = parseInt(this.system.LEVELS) || 0;
+        }
+        if (Object.keys(consumableChanges).length > 0) {
+            await this.update(consumableChanges);
+        }
+
+        if (this.actor) {
+            await this.setActiveEffects();
+        }
+        return true;
     }
 
     /*

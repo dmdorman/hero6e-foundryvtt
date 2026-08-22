@@ -3438,11 +3438,6 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             },
             costPerLevel: function (item) {
                 switch (item.system.OPTIONID) {
-                    case "SINGLESINGLE":
-                        console.debug(
-                            `${item.actor?.name}/${item.detailedName()}: SINGLESINGLE doesn't appear to be a currently supported OPTIONID`,
-                        );
-                        return 1;
                     case "SINGLE":
                         return 2;
                     case "TIGHT":

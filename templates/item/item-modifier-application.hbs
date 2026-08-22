@@ -1,19 +1,17 @@
-{{ log 'HEROSYS ITEM MODIFIER' this }}
+<div class="hero auto-overflow">
 
-<form class="hero flexcol auto-overflow" autocomplete="off" data-item="{{item._id}}" data-modifier="{{mod.ID}}">
-    
     <section class="sheet-body">
 
         <div class="form-group">
             <label>ALIAS</label>
-            <input type="text" name="mod.ALIAS" value="{{mod.ALIAS}}" data-dtype="text" />
+            <input type="text" name="mod.ALIAS" value="{{mod.ALIAS}}" />
         </div>
 
         {{#if (isdefined mod.LEVELS)}}
             {{#unless editOptions.hideLEVELS}}
             <div class="form-group">
                 <label>LEVELS</label>
-                <input type="text" name="mod.LEVELS" value="{{mod.LEVELS}}" data-dtype="text" />
+                <input type="text" name="mod.LEVELS" value="{{mod.LEVELS}}" />
             </div>
             {{/unless}}
         {{/if}}
@@ -22,47 +20,47 @@
         {{!-- Select for OPTIONID/OPTION/OPTION_ALIAS --}}
         {{#if editOptions.choices}}
             <div class="form-group">
-                <label>option</label>
-                <select name="mod.OPTION" data-dtype="text">
-                    {{selectOptions editOptions.choices selected=mod.OPTIONID valueAttr="OPTION" labelAttr="OPTION_ALIAS"}}
+                <label>OPTION</label>
+                <select name="mod.OPTION">
+                    {{selectOptions editOptions.choices selected=mod.OPTION valueAttr="OPTION" labelAttr="OPTION_ALIAS"}}
                 </select>
             </div>
 
             <div class="form-group">
                 <label>OPTIONID</label>
-                <input disabled type="text" value="{{mod.OPTIONID}}" data-dtype="text" />
+                <input disabled type="text" value="{{mod.OPTIONID}}" />
             </div>
 
             <div class="form-group">
                 <label>OPTION_ALIAS</label>
-                <input disabled type="text" value="{{mod.OPTION_ALIAS}}" data-dtype="text" />
+                <input disabled type="text" value="{{mod.OPTION_ALIAS}}" />
             </div>
         {{else}}
             {{#if (isdefined mod.OPTIONID)}}
                 <div class="form-group">
                     <label>OPTIONID</label>
-                    <input type="text" name="mod.OPTIONID" value="{{mod.OPTIONID}}" data-dtype="text" />
+                    <input type="text" name="mod.OPTIONID" value="{{mod.OPTIONID}}" />
                 </div>
             {{/if}}
 
             {{#if (isdefined mod.OPTION)}}
                 <div class="form-group">
                     <label>OPTION</label>
-                    <input type="text" name="mod.OPTION" value="{{mod.OPTION}}" data-dtype="text" />
+                    <input type="text" name="mod.OPTION" value="{{mod.OPTION}}" />
                 </div>
             {{/if}}
 
             {{#if (isdefined mod.OPTION_ALIAS)}}
                 <div class="form-group">
                     <label>OPTION_ALIAS</label>
-                    <input type="text" name="mod.OPTION_ALIAS" value="{{mod.OPTION_ALIAS}}" data-dtype="text" />
+                    <input type="text" name="mod.OPTION_ALIAS" value="{{mod.OPTION_ALIAS}}" />
                 </div>
             {{/if}}
 
             {{#if (isdefined mod.ROLLALIAS)}}
                 <div class="form-group">
                     <label>ROLLALIAS</label>
-                    <input type="text" name="mod.ROLLALIAS" value="{{mod.ROLLALIAS}}" data-dtype="text" />
+                    <input type="text" name="mod.ROLLALIAS" value="{{mod.ROLLALIAS}}" />
                 </div>
             {{/if}}
         {{/if}}
@@ -70,32 +68,32 @@
         {{#if (isdefined mod.COMMENTS)}}
             <div class="form-group">
                 <label>COMMENTS</label>
-                <input type="text" name="mod.COMMENTS" value="{{mod.COMMENTS}}" data-dtype="text" />
+                <input type="text" name="mod.COMMENTS" value="{{mod.COMMENTS}}" />
             </div>
         {{/if}}
 
         <div class="form-group">
             <label>BASECOST</label>
-            <input disabled type="text" name="mod.BASECOST" value="{{mod.BASECOST}}" data-dtype="Number" />
+            <input disabled type="text" value="{{mod.BASECOST}}" />
         </div>
 
         {{!-- ADDERS --}}
         {{#if mod.ADDER}}
-            <hr\>
+            <hr />
             <table>
-            <tr class="active-effects adders">
-                <th class="left">Adders</th>
-                <th>Cost</th>
-            </tr>
-            {{#each mod.ADDER as |adder XMLID|}}
-                <tr>
-                    <td class="left">{{adder.ALIAS}}</td>
-                    <td>{{adder.BASECOST}}</td>
+                <tr class="active-effects adders">
+                    <th class="left">Adders</th>
+                    <th>Cost</th>
                 </tr>
-            {{/each}}
+                {{#each mod.ADDER as |adder|}}
+                    <tr>
+                        <td class="left">{{adder.ALIAS}}</td>
+                        <td>{{adder.BASECOST}}</td>
+                    </tr>
+                {{/each}}
+            </table>
         {{/if}}
-        </table>
 
     </section>
 
-</form>
+</div>

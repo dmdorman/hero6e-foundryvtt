@@ -6,7 +6,7 @@ import {
     getManueverEffectWithPlaceholdersReplaced,
 } from "../utility/damage.mjs";
 import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
-import { calculateVelocityInSystemUnits } from "../utility/units.mjs";
+import { calculateVelocityInSystemUnits, kgsInOneLb } from "../utility/units.mjs";
 import { getPowerInfo, hdcTextNumberToNumeric, squelch } from "../utility/util.mjs";
 import { HeroSystem6eItem } from "./item.mjs";
 import { maneuverHasBlockTrait, maneuverHasFlashEffectTrait } from "./maneuver.mjs";
@@ -1247,7 +1247,7 @@ export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
             POINTS: new StringField(),
             POWDLEVELS: new HeroNumberField({ integer: true }),
             PRE: new StringField(),
-            QUANTITY: new HeroNumberField({ integer: true }),
+            QUANTITY: new HeroNumberField({ integer: true, initial: 1 }),
             RANGE: new StringField(), // PH: FIXME: Shouldn't this be a NumberField?
             STR: new StringField(),
             TARGET: new StringField(),
@@ -1271,8 +1271,8 @@ export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
             DISADPOINTS: new HeroNumberField({ integer: true, min: 0 }),
 
             // Equipment
-            PRICE: new StringField(),
-            WEIGHT: new StringField(),
+            PRICE: new HeroNumberField({ integer: false, min: 0.0, initial: 0.0 }),
+            WEIGHT: new HeroNumberField({ integer: false, min: 0.0, initial: 0.0 }),
         };
     }
 }
@@ -1497,7 +1497,7 @@ export class HeroSystem6eItemTalent extends HeroSystem6eItemTypeDataModelProps {
             CHARACTERISTIC: new StringField(),
             GROUP: new StringField(),
 
-            QUANTITY: new StringField(),
+            QUANTITY: new HeroNumberField({ integer: true }),
             ROLL: new StringField(),
             TEXT: new StringField(),
         };
@@ -2033,7 +2033,7 @@ export class HeroActorCharacterInfoModel extends foundry.abstract.DataModel {
             PLAYER_NAME: new StringField(),
             QUOTE: new StringField(),
             TACTICS: new StringField(),
-            WEIGHT: new HeroNumberField({ initial: 220.46224760379584 }), // internally as lbs
+            WEIGHT: new HeroNumberField({ integer: false, min: 0.0, initial: 220.46224760379584 }), // 100kg as lbs
             RULES: new ObjectField(),
             xmlTag: new StringField(),
             _hdcXml: new StringField(),
@@ -2053,7 +2053,7 @@ export class HeroActorCharacterInfoModel extends foundry.abstract.DataModel {
     get weight() {
         // WEIGHT is stored in pounds in the HDC XML, so we convert to kg if metric units is enabled.
         const metricUnits = game.settings.get(game.system.id, "metricUnits");
-        return metricUnits ? Math.round(this.WEIGHT * 0.45359237) : this.WEIGHT;
+        return metricUnits ? Math.round(this.WEIGHT * kgsInOneLb) : this.WEIGHT;
     }
     // set weight(value) {
     //     const metricUnits = game.settings.get(game.system.id, "metricUnits");

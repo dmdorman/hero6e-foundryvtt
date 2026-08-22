@@ -1,8 +1,21 @@
 import { roundFavorPlayerTowardsZero } from "./round.mjs";
 import { squelch } from "./util.mjs";
 
+export const lbsInOneKg = 2.2046226218;
+export const kgsInOneLb = 1 / lbsInOneKg;
+
+export function getHeftUnits() {
+    const metricUnits = game.settings.get(game.system.id, "metricUnits");
+    return metricUnits ? "kg" : "lbs";
+}
+
+export function getMonetaryUnits(/*actor*/) {
+    // PH: FIXME: Get them from the HDC campaign rules otherwise default to $
+    return "$";
+}
+
 /**
- * A note about units
+ * A note about units reflecting distance
  *
  * Hero System and the FoundryVTT system force us to use a number of different units for measurements.
  *
