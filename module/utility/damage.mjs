@@ -304,15 +304,22 @@ export function getManueverEffectWithPlaceholdersReplaced(item) {
 
                     const diceFormula = `${damageFormula}${nnd ? " NND" : ""}${killing ? (isManeuverHthCategory(item) ? " HKA" : " RKA") : ""}`;
 
-                    effectString = maneuverEffect
-                        .replace("[NORMALDC]", diceFormula)
-                        .replace("[KILLINGDC]", diceFormula)
-                        .replace("[FLASHDC]", diceFormula)
-                        .replace("[NNDDC]", diceFormula)
-                        .replace("[WEAPONDC]", diceFormula)
-                        .replace("[WEAPONKILLINGDC]", diceFormula)
-                        .replace("[WEAPONFLASHDC]", diceFormula)
-                        .replace("[WEAPONNNDDC]", diceFormula);
+                    if (/\[(?:WEAPON)?(?:NORMAL|KILLING|FLASH|NND)?DC\]/.test(maneuverEffect)) {
+                        effectString = maneuverEffect
+                            .replace("[NORMALDC]", diceFormula)
+                            .replace("[KILLINGDC]", diceFormula)
+                            .replace("[FLASHDC]", diceFormula)
+                            .replace("[NNDDC]", diceFormula)
+                            .replace("[WEAPONDC]", diceFormula)
+                            .replace("[WEAPONKILLINGDC]", diceFormula)
+                            .replace("[WEAPONFLASHDC]", diceFormula)
+                            .replace("[WEAPONNNDDC]", diceFormula);
+                    } else if (parseInt(item.system.DC || 0) > 0) {
+                        // Custom maneuvers have no [DC] placeholder in their effect text; lead with
+                        // the dice the way Hero Designer displays them (e.g. "5 1/2d6 Strike").
+                        // The DC gate keeps placeholderless non-damage maneuvers (Dodge, Escape) clean.
+                        effectString = `${diceFormula} ${maneuverEffect}`;
+                    }
                 }
             }
         }
