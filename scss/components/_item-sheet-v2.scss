@@ -150,6 +150,10 @@
             font-style: italic;
         }
 
+        tr.validation {
+            background-color: rgb(255 255 0 / 50%);
+        }
+
         tr.modifier-adder td:first-child {
             padding-left: 10px;
         }

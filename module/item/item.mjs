@@ -57,12 +57,20 @@ export function initializeItemHandlebarsHelpers() {
     Handlebars.registerHelper("itemPostHitActionString", itemPostHitActionString);
     Handlebars.registerHelper("hasDefenseActiveEffect", itemHasDefenseActiveEffect);
     Handlebars.registerHelper("itemHeroValidationForProperty", itemHeroValidationForProperty);
+    Handlebars.registerHelper("itemHeroValidationForModifier", itemHeroValidationForModifier);
 }
 
 function itemHeroValidationForProperty(item, property) {
     return item.heroValidation
         .filter((validation) => validation.property === property)
         .map((m) => `${m.message} For example: "${m.example}"`)
+        .join(" ");
+}
+
+function itemHeroValidationForModifier(item, modifierID) {
+    return item.heroValidation
+        .filter((validation) => validation.modifierID == modifierID)
+        .map((m) => (m.example ? `${m.message} For example: "${m.example}"` : m.message))
         .join(" ");
 }
 
@@ -932,7 +940,14 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             for (const modifier of this.modifiers.filter((m) => m.baseInfo?.heroValidation)) {
                 const validationArray = modifier.baseInfo.heroValidation(modifier, this);
                 if (Array.isArray(validationArray) && validationArray.length) {
-                    heroValidations.push(...validationArray.map((m) => ({ ...m, itemId: this.id })));
+                    heroValidations.push(
+                        ...validationArray.map((m) => ({
+                            ...m,
+                            itemId: this.id,
+                            // So sheets can highlight the offending modifier row (#3406)
+                            modifierID: m.modifierID ?? modifier.ID,
+                        })),
+                    );
                 }
             }
         } else {

@@ -46,8 +46,12 @@
         </th>
     </tr>
     {{#each item.modifiers as |mod|}}
-        <tr class="{{#if mod.parentId}} from-parent{{/if}}" data-modifier-id="{{mod.ID}}">
-            <td class="modifier-name" title="{{mod.XMLID}}">{{mod.ALIAS}} {{mod.OPTION_ALIAS}} {{#if mod.PRIVATE}}p{{/if}}</td>
+        <tr class="{{#if mod.parentId}} from-parent{{/if}}{{#if (itemHeroValidationForModifier @root/item mod.ID)}} validation{{/if}}"
+            data-modifier-id="{{mod.ID}}"
+            {{#if (itemHeroValidationForModifier @root/item mod.ID)}}title="{{itemHeroValidationForModifier @root/item mod.ID}}"{{/if}}>
+            <td class="modifier-name"
+                title="{{#if (itemHeroValidationForModifier @root/item mod.ID)}}{{itemHeroValidationForModifier @root/item mod.ID}}{{else}}{{mod.XMLID}}{{/if}}">
+                {{mod.ALIAS}} {{mod.OPTION_ALIAS}} {{#if mod.PRIVATE}}p{{/if}}</td>
             <td class="adder-cost">{{mod.cost}}</td>
             <td class="adder-controls">
                 {{> (getModulePath 'item/item-sheet-v2/item-sheet-actions-partial-v2.hbs') this }}

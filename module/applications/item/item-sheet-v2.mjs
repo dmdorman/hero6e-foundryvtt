@@ -172,6 +172,13 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
             context.rec = parseInt(power?.LEVELS) || 0;
         }
 
+        // VPP control cost is the LEVELS of a CONTROLCOST adder (6e); 5e derives it from the pool
+        context.isVpp = item.system.XMLID === "VPP";
+        if (context.isVpp) {
+            context.vppControlCost = item.vppControlPoints;
+            context.vppControlCostEditable = !!item.findModsByXmlid("CONTROLCOST");
+        }
+
         return context;
     }
 
@@ -271,6 +278,16 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
             if (ENDURANCERESERVEREC) {
                 ENDURANCERESERVEREC.LEVELS = parseInt(value) || 1;
                 await item.update({ "system.POWER": item.system.POWER });
+            }
+            return;
+        }
+
+        // VPP control cost is the LEVELS of a CONTROLCOST adder
+        if (name === "vppControlCost") {
+            const CONTROLCOST = item.findModsByXmlid("CONTROLCOST");
+            if (CONTROLCOST) {
+                CONTROLCOST.LEVELS = parseInt(value) || 0;
+                await item.update({ [`system.${CONTROLCOST.xmlTag}`]: item.system[CONTROLCOST.xmlTag] });
             }
             return;
         }

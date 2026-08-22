@@ -32,6 +32,14 @@
         <hr />
     {{/if}}
 
+    {{#if isVpp}}
+        <div class="form-group">
+            <label>Control Cost</label>
+            <input type="text" name="vppControlCost" value="{{vppControlCost}}" data-dtype="Number"
+                {{#unless vppControlCostEditable}}disabled title="5e control cost is derived from the pool (pool / 2)"{{/unless}} />
+        </div>
+    {{/if}}
+
     {{#if (eq item.type "equipment")}}
         <div class="form-group">
             <label>Carried</label>
