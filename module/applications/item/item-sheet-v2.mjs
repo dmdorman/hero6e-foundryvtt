@@ -209,6 +209,18 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
     }
 
     /**
+     * Closing with an input still focused (Escape, programmatic close) never fires that input's
+     * change event, which would silently drop the pending edit (#4439). Commit it first.
+     */
+    async close(options) {
+        const active = document.activeElement;
+        if (this.isEditable && active?.name && this.element?.contains(active)) {
+            await this.#onChangeInput(active);
+        }
+        return super.close(options);
+    }
+
+    /**
      * AppV2 form submission serializes every named input on the sheet, so any submit (Enter key, ...)
      * would re-write dozens of fields the user never touched. Every editable input already persists
      * itself through the delegated change listener in _onFirstRender, so form-level submits contribute

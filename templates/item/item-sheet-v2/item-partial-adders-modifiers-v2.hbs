@@ -5,10 +5,12 @@
         <th class="adder-name">Adders</th>
         <th class="adder-cost">Cost</th>
         <th class="adder-controls">
-            <a class="item-control modifier-create" title="Create"
-                data-action="create"
-                data-type="adder">
-                <i class="fas fa-plus"></i></a>
+            {{#if @root/editable}}
+                <a class="item-control modifier-create" title="Create"
+                    data-action="create"
+                    data-type="adder">
+                    <i class="fas fa-plus"></i></a>
+            {{/if}}
         </th>
     </tr>
     {{#each item.adders}}
@@ -34,11 +36,13 @@
         <th class="modifier-name">Modifiers</th>
         <th class="adder-cost">Cost</th>
         <th class="modifier-controls">
-            <a class="item-control modifier-create" title="Create"
-                data-action="create"
-                data-type="modifier">
-                <i class="fas fa-plus"></i>
-            </a>
+            {{#if @root/editable}}
+                <a class="item-control modifier-create" title="Create"
+                    data-action="create"
+                    data-type="modifier">
+                    <i class="fas fa-plus"></i>
+                </a>
+            {{/if}}
         </th>
     </tr>
     {{#each item.modifiers as |mod|}}

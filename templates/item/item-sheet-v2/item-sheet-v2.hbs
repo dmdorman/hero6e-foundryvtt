@@ -7,7 +7,7 @@
         <h1 class="item-name">{{item.name}}</h1>
         <div class="xmlid">{{item.system.XMLID}}</div>
     </div>
-    {{#if system._hdcXml}}
+    {{#if (and editable system._hdcXml)}}
         <a class="restore-from-hdc" data-action="restoreFromHdc"
             data-tooltip="Restore this item from its original Hero Designer data">
             <i class="fas fa-clock-rotate-left"></i>
