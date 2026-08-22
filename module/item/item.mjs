@@ -7958,6 +7958,23 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
         await this.update({ name: itemData.name, type: itemData.type, system: itemData.system }, { recursive: false });
 
+        // Consumable state (_charges/_clips, END reserve value) isn't in the XML, so the replace
+        // above reset it to schema defaults; a pristine restore means full.
+        const consumableChanges = {};
+        const chargeModifier = this.system.chargeModifier;
+        if (chargeModifier && chargeModifier.parent.item === this) {
+            consumableChanges["system._charges"] = this.system.chargesMax;
+            if (chargeModifier.CLIPS) {
+                consumableChanges["system._clips"] = this.system.clipsMax;
+            }
+        }
+        if (this.system.XMLID === "ENDURANCERESERVE") {
+            consumableChanges["system.value"] = parseInt(this.system.LEVELS) || 0;
+        }
+        if (Object.keys(consumableChanges).length > 0) {
+            await this.update(consumableChanges);
+        }
+
         if (this.actor) {
             await this.setActiveEffects();
         }
