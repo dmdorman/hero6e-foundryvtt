@@ -1,5 +1,5 @@
-import { getAndSetGameSetting } from "../settings/settings-helpers.mjs";
-import { setQuenchTimeout, waitUntil } from "./quench-helper.mjs";
+import { getAndSetGameSetting, SETTINGS_GROUPS } from "../settings/settings-helpers.mjs";
+import { messagesSince, setQuenchTimeout, snapshotMessages, waitUntil } from "./quench-helper.mjs";
 
 const { Actor } = foundry.documents;
 
@@ -9,10 +9,10 @@ const abs = (turn, segment) => turn * 12 + segment;
 // Shared actor/combat factories. Each describe passes its own tracking arrays
 // so its after() hook tears down only its own documents.
 function makeHarness({ actorDocuments, combatDocuments }) {
-    async function makeActor(name, { dex = 10, spd = 2, extra = {} } = {}) {
+    async function makeActor(name, { dex = 10, spd = 2, type = "pc", extra = {} } = {}) {
         const actor = await Actor.create({
             name,
-            type: "pc",
+            type,
             system: {
                 initiativeCharacteristic: "dex",
                 characteristics: {
@@ -44,7 +44,20 @@ function makeHarness({ actorDocuments, combatDocuments }) {
 
     const combatantFor = (combat, actor) => combat.combatants.find((c) => c.actorId === actor.id);
 
-    return { makeActor, makeCombat, combatantFor };
+    // Standard "Holding An Action" effect shell; hold carries the position/anchor payload
+    async function makeHoldEffect(combatant, hold) {
+        const [effect] = await combatant.actor.createEmbeddedDocuments("ActiveEffect", [
+            {
+                name: "Holding An Action",
+                img: "icons/svg/clockwork.svg",
+                statuses: ["holding"],
+                flags: { [game.system.id]: { hold: { combatantId: combatant.id, ...hold } } },
+            },
+        ]);
+        return effect;
+    }
+
+    return { makeActor, makeCombat, combatantFor, makeHoldEffect };
 }
 
 export function registerCombatTests(quench) {
@@ -1609,11 +1622,14 @@ export function registerCombatTests(quench) {
                 setQuenchTimeout(this);
                 const actorDocuments = [];
                 const combatDocuments = [];
-                const { makeActor, makeCombat, combatantFor } = makeHarness({ actorDocuments, combatDocuments });
+                const { makeActor, makeCombat, combatantFor, makeHoldEffect } = makeHarness({
+                    actorDocuments,
+                    combatDocuments,
+                });
                 let preexistingMessageIds;
 
                 before(async function () {
-                    preexistingMessageIds = new Set(game.messages.contents.map((m) => m.id));
+                    preexistingMessageIds = snapshotMessages();
                 });
 
                 after(async function () {
@@ -2611,6 +2627,203 @@ export function registerCombatTests(quench) {
                     await combat.rollInitiative([combatant.id]);
                     await combat.rollAll();
                     expect(combatant.initiative, "no core formula written").to.equal(null);
+                });
+
+                it("Should admit an equal-priority anchored held slot right after the anchor's turn (#4689)", async function () {
+                    const anchor = await makeActor("_Quench Slot Anchor", { dex: 20, spd: 3 });
+                    const holder = await makeActor("_Quench Slot Holder", { dex: 15, spd: 2 });
+                    const combat = await makeCombat([anchor, holder]);
+                    await combat.startCombat();
+                    const anchorCombatant = combatantFor(combat, anchor);
+                    const holderCombatant = combatantFor(combat, holder);
+
+                    // Banked for the anchor's next Phase segment (SPD 3 → Segment 4)
+                    const slotAbs = abs(2, 4);
+                    await makeHoldEffect(holderCombatant, {
+                        mode: "position",
+                        segmentAbs: slotAbs,
+                        dex: 15,
+                        anchor: { combatantId: anchorCombatant.id, relation: "after", name: anchorCombatant.name },
+                    });
+
+                    // The playtest shape: identical scalars, adjacency decided by tie order
+                    expect(combat.getInitiativePriority(holderCombatant, 4, { queryAbs: slotAbs })).to.equal(
+                        combat.getInitiativePriority(anchorCombatant, 4, { queryAbs: slotAbs }),
+                    );
+
+                    await combat.nextTurn(); // T1S12 (anchor) → T2S4 (anchor); the holder's Phase is banked
+                    expect(combat.segment).to.equal(4);
+                    expect(combat.combatant.actorId, "anchor acts first at the shared count").to.equal(anchor.id);
+
+                    await combat.nextTurn(); // equal-priority re-admission reaches the held slot
+                    expect(combat.segment, "the slot is inside the same segment").to.equal(4);
+                    expect(combat.combatant.actorId, "the holder acts right after their anchor").to.equal(holder.id);
+                });
+
+                it("Should whisper SPD-change cards to the actor's owners (#4686)", async function () {
+                    const player = await User.create({ name: "_Quench Player", role: CONST.USER_ROLES.PLAYER });
+                    try {
+                        const changer = await makeActor("_Quench SPD Whisper", { dex: 12, spd: 2 });
+                        await changer.update({
+                            ownership: { [player.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER },
+                        });
+                        const pacer = await makeActor("_Quench Whisper Pacer", { dex: 20, spd: 12 });
+                        const combat = await makeCombat([changer, pacer]);
+                        await combat.startCombat();
+                        const combatant = combatantFor(combat, changer);
+
+                        // First boundary seeds the SPD baseline
+                        await combat.nextTurn();
+                        await combat.nextTurn();
+                        await waitUntil(() => combatant.getFlag(game.system.id, "knownSpd") !== undefined);
+
+                        const before = snapshotMessages();
+                        await changer.update({ "system.characteristics.spd.value": 6 });
+                        await combat.nextTurn();
+                        const deferred = await waitUntil(() => !!combatant.getFlag(game.system.id, "pendingSpd"));
+                        expect(deferred, "voluntary change deferred").to.be.true;
+
+                        const card = messagesSince(before).find((m) =>
+                            m.content.includes("voluntary SPD change takes effect at Post-Segment 12"),
+                        );
+                        expect(card, "the deferral card posted").to.exist;
+                        expect(card.whisper.length, "card is whispered, not public").to.be.greaterThan(0);
+                        expect(card.whisper, "the owner is a recipient").to.include(player.id);
+                    } finally {
+                        await player.delete();
+                    }
+                });
+
+                it("Should keep NPC Post-Segment 12 recoveries off the public card (#2419)", async function () {
+                    const automationSetting = await getAndSetGameSetting("automation", "all");
+                    try {
+                        const thug = await makeActor("_Quench P12 Thug", { dex: 10, spd: 2, type: "npc" });
+                        const rec = thug.system.characteristics.rec.value;
+                        await thug.update({
+                            "system.characteristics.stun.value": thug.system.characteristics.stun.max - rec - 3,
+                            "system.characteristics.end.value": thug.system.characteristics.end.max - rec - 3,
+                        });
+
+                        const combat = await makeCombat([thug]);
+                        await combat.startCombat();
+                        const before = snapshotMessages();
+                        await combat.nextTurn(); // crosses Post-Segment 12
+                        expect(combat.round).to.equal(2);
+
+                        const fresh = messagesSince(before);
+                        const publicCard = fresh.find(
+                            (m) => m.content.startsWith("Post-Segment 12") && m.whisper.length === 0,
+                        );
+                        expect(publicCard, "the public Turn marker posted").to.exist;
+                        expect(publicCard.content, "no empty roster on the public card").to.not.include("<ul>");
+                        const gmCard = fresh.find(
+                            (m) => m.content.startsWith("Post-Segment 12") && m.whisper.length > 0,
+                        );
+                        expect(gmCard, "NPC recoveries whisper to the GM").to.exist;
+                        expect(gmCard.content, "the whispered card carries the roster").to.include("<li>");
+                    } finally {
+                        await game.settings.set(game.system.id, "automation", automationSetting);
+                    }
+                });
+
+                it("Should offer Breakfall from prone only when the Phase is not spent recovering (#4682)", async function () {
+                    const tumbler = await makeActor("_Quench Breakfall", { dex: 10, spd: 2 });
+                    await tumbler.createEmbeddedDocuments("Item", [
+                        { name: "Breakfall", type: "skill", system: { XMLID: "BREAKFALL", active: true } },
+                    ]);
+                    await tumbler.toggleStatusEffect("prone", { active: true });
+                    const combat = await makeCombat([tumbler]);
+                    await combat.startCombat();
+                    // startCombat's own Phase-start maintenance posts an upkeep card
+                    // asynchronously; settle it or it lands inside a diff window below
+                    await combat.settleMaintenance();
+                    const combatant = combatantFor(combat, tumbler);
+
+                    const upkeepCards = async () => {
+                        const before = snapshotMessages();
+                        await combat._phaseStartUpkeepCard(combatant, combat.segment);
+                        return messagesSince(before);
+                    };
+
+                    let cards = await upkeepCards();
+                    expect(
+                        cards.some((m) => m.content.includes("roll-breakfall")),
+                        "prone alone offers Breakfall",
+                    ).to.be.true;
+
+                    await tumbler.toggleStatusEffect("stunned", { active: true });
+                    expect(tumbler.statuses.has("stunned"), "precondition: Stunned applied").to.be.true;
+                    cards = await upkeepCards();
+                    expect(cards.length, "the upkeep card itself still posts").to.be.greaterThan(0);
+                    expect(
+                        cards.some((m) => m.content.includes("roll-breakfall")),
+                        "no Breakfall while recovering from Stunned",
+                    ).to.be.false;
+
+                    await tumbler.toggleStatusEffect("stunned", { active: false });
+                    await tumbler.toggleStatusEffect("knockedOut", { active: true });
+                    expect(tumbler.statuses.has("knockedOut"), "precondition: KO applied").to.be.true;
+                    cards = await upkeepCards();
+                    expect(
+                        cards.some((m) => m.content.includes("roll-breakfall")),
+                        "no Breakfall while KO'd",
+                    ).to.be.false;
+                });
+
+                it("Should carry an actor rename to its prototype and matching scene tokens (#4687)", async function () {
+                    const hero = await makeActor("_Quench Renamed Hero", { dex: 10, spd: 2 });
+                    expect(hero.prototypeToken.name).to.equal("_Quench Renamed Hero");
+
+                    const scene = await Scene.create({ name: "_Quench Rename Scene" });
+                    try {
+                        await scene.createEmbeddedDocuments("Token", [
+                            { actorId: hero.id, actorLink: true, name: "_Quench Renamed Hero", x: 100, y: 100 },
+                            { actorId: hero.id, actorLink: true, name: "Custom Callsign", x: 200, y: 200 },
+                        ]);
+
+                        await hero.update({ name: "_Quench Rebranded Hero" });
+                        expect(hero.prototypeToken.name, "prototype follows the rename").to.equal(
+                            "_Quench Rebranded Hero",
+                        );
+
+                        // The token sweep runs from an unawaited hook
+                        const renamed = await waitUntil(() =>
+                            scene.tokens.contents.some((t) => t.name === "_Quench Rebranded Hero"),
+                        );
+                        expect(renamed, "the matching scene token renames").to.be.true;
+                        expect(
+                            scene.tokens.contents.some((t) => t.name === "Custom Callsign"),
+                            "a custom-named token is untouched",
+                        ).to.be.true;
+
+                        // A custom prototype name is deliberate and survives
+                        await hero.update({ "prototypeToken.name": "The Brand" });
+                        await hero.update({ name: "_Quench Rebranded Again" });
+                        expect(hero.prototypeToken.name).to.equal("The Brand");
+                    } finally {
+                        await scene.delete();
+                    }
+                });
+
+                it("Should keep the settings-window group boundaries registered and in order", async function () {
+                    // Group membership derives from registration order at render
+                    // time, so the boundary keys existing IN ORDER is the whole
+                    // contract the header injection depends on
+                    const registeredKeys = [...game.settings.settings.keys()];
+                    const boundaryIndexes = SETTINGS_GROUPS.map((group) => {
+                        const index = registeredKeys.indexOf(`${game.system.id}.${group.firstKey}`);
+                        expect(index, `boundary key ${group.firstKey} is registered`).to.be.greaterThan(-1);
+                        return index;
+                    });
+                    expect(boundaryIndexes, "boundaries appear in group order").to.deep.equal(
+                        [...boundaryIndexes].sort((a, b) => a - b),
+                    );
+                    expect(
+                        game.settings.settings.get(`${game.system.id}.combatTrackerGrouping`).config,
+                        "grouping lives in the tracker dialog, not the settings window",
+                    ).to.be.false;
+                    expect(game.settings.settings.get(`${game.system.id}.fastDrawTieBreak`).config).to.be.true;
+                    expect(game.settings.settings.get(`${game.system.id}.stunnedAutoSkip`).config).to.be.true;
                 });
             });
         },

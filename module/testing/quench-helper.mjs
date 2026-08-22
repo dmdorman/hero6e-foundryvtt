@@ -215,6 +215,24 @@ export async function waitUntil(condition, timeoutMs = 3000, intervalMs = 50) {
     return condition();
 }
 
+/**
+ * Snapshot of the current chat message ids, for later diffing with
+ * {@link messagesSince}.
+ * @returns {Set<string>}
+ */
+export function snapshotMessages() {
+    return new Set(game.messages.contents.map((m) => m.id));
+}
+
+/**
+ * Chat messages created since a {@link snapshotMessages} snapshot.
+ * @param {Set<string>} snapshot
+ * @returns {ChatMessage[]}
+ */
+export function messagesSince(snapshot) {
+    return game.messages.contents.filter((m) => !snapshot.has(m.id));
+}
+
 export async function waitForNotificationQueueToClear(timeout = 5000) {
     // Clear any existing chat rendering backlog to protect Quench execution time limits
     const isQueueActive = () => {
