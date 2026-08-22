@@ -4472,7 +4472,10 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 if (
                     this.system.EFFECT.match(/\[STRDC\]/) ||
                     this.system.EFFECT.match(/\[NORMALDC\]/) ||
-                    this.system.EFFECT.match(/\[KILLINGDC\]/)
+                    this.system.EFFECT.match(/\[KILLINGDC\]/) ||
+                    // Custom maneuvers have no [DC] placeholder; HD exports MAXSTR="0" for
+                    // "no limit", so ADDSTR is the authoritative signal for them.
+                    (this.system.CUSTOM && this.system.ADDSTR)
                 ) {
                     results.usesStrength = true;
                 }
