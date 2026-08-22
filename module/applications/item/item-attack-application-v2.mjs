@@ -72,6 +72,7 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
     constructor(data) {
         super();
         this.data = data;
+        this.data.formData ??= {};
 
         this.#hookIds.targetToken = Hooks.on("targetToken", ItemAttackFormApplicationV2.#targetTokenHandler.bind(this));
         this.#hookIds.controlToken = Hooks.on(
@@ -609,13 +610,11 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
             }
 
             case "continueMultiattack":
-                this.data.formData ??= {};
                 this.data.formData.continueMultiattack = true;
                 return this.render();
 
             case "executeMultiattack":
                 {
-                    this.data.formData ??= {};
                     const begin = this.data.action.current.execute === undefined;
                     // we pressed the button to execute multiple attacks
                     // the first time does not get a roll, but sets up the first attack
@@ -653,7 +652,6 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
                 return;
 
             case "cancelMultiattack":
-                this.data.formData ??= {};
                 this.data.formData.continueMultiattack = false;
 
                 // PH: FIXME: Do we have to do anything to action to clear it out? Should we just "delete" it?
@@ -1117,21 +1115,21 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
 
         this.#processFormDataForHthAndNa(extendedFormData);
 
-        this.data.formData ??= {};
-
         // A max of 4 boostable charges may be used and a min of 0.
         if (extendedFormData.boostableChargesToUse !== undefined) {
-            this.data.boostableChargesToUse = extendedFormData.boostableChargesToUse = Math.max(
+            this.data.boostableChargesToUse = extendedFormData.boostableChargesToUse = Math.clamp(
+                extendedFormData.boostableChargesToUse,
                 0,
-                Math.min(extendedFormData.boostableChargesToUse, 4),
+                4,
             );
         }
 
         // A minimum of 1 shot and a maximum of max autofire charges can be used.
         if (extendedFormData.autofireShotsToUse !== undefined) {
-            this.data.autofireShotsToUse = extendedFormData.autofireShotsToUse = Math.max(
+            this.data.autofireShotsToUse = extendedFormData.autofireShotsToUse = Math.clamp(
+                extendedFormData.autofireShotsToUse,
                 1,
-                Math.min(extendedFormData.autofireShotsToUse, this.data.autofireShotsAvailable),
+                this.data.autofireShotsAvailable,
             );
         }
 

@@ -1,14 +1,12 @@
 {{!-- Characteristics are not embedded documents: no draggable class or document uuid --}}
 <li class="item powers">
     <div class="item-row">
-        {{!-- value colors against max (damage/overheal); at rest it inherits the max column's
-              comparison against expectedMax so an adjusted current reads adjusted too --}}
         <div class="item-column item-value"
-            {{#if this.valueTitle}}data-tooltip="{{{this.valueTitle}}}"{{else if this.maxTitle}}data-tooltip="{{{this.maxTitle}}}"{{/if}}
+            {{#if this.valueTooltip}}data-tooltip="{{{this.valueTooltip}}}"{{/if}}
         >
             <input name="system.characteristics.{{this.key}}.value" type="number"
                 value="{{this.value}}" data-dtype="Number"
-                class="{{#if (gt this.value this.max)}}over-max{{else if (lt this.value this.max)}}under-max{{else if (gt this.max this.expectedMax)}}over-max{{else if (lt this.max this.expectedMax)}}under-max{{/if}}"
+                class="{{this.valueCssClass}}"
                 {{#if this.valueTitle}}disabled{{/if}}
             >
         </div>
@@ -18,7 +16,7 @@
             data-tooltip="{{{this.maxTitle}}}"
         >
             <input type="number"
-                class="{{#if (gt this.max this.expectedMax)}}over-max{{/if}} {{#if (lt this.max this.expectedMax)}}under-max{{/if}}"
+                class="{{this.maxCssClass}}"
                 value="{{this.max}}" data-dtype="Number" disabled
             >
         </div>

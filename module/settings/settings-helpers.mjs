@@ -6,7 +6,25 @@ export let overrideCanAct = false;
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-class StunMultiplierMenu extends HandlebarsApplicationMixin(ApplicationV2) {
+// Shared shell for AppV2 settings submenus: a form window that persists every change and stays open.
+class HeroSettingsMenu extends HandlebarsApplicationMixin(ApplicationV2) {
+    static DEFAULT_OPTIONS = {
+        tag: "form",
+        classes: ["herosystem6e"],
+        position: {
+            height: "auto",
+        },
+        window: {
+            contentClasses: ["standard-form"],
+        },
+        form: {
+            submitOnChange: true,
+            closeOnSubmit: false,
+        },
+    };
+}
+
+class StunMultiplierMenu extends HeroSettingsMenu {
     static {
         Hooks.once("init", () => {
             StunMultiplierMenu.PARTS = {
@@ -19,20 +37,14 @@ class StunMultiplierMenu extends HandlebarsApplicationMixin(ApplicationV2) {
 
     static DEFAULT_OPTIONS = {
         id: "stun-multiplier-form-application",
-        tag: "form",
-        classes: ["herosystem6e"],
         position: {
             width: 640,
-            height: "auto",
         },
         window: {
             title: "Custom STUN Multiplier Settings",
-            contentClasses: ["standard-form"],
         },
         form: {
             handler: StunMultiplierMenu.#onSubmit,
-            submitOnChange: true,
-            closeOnSubmit: false,
         },
     };
 
@@ -60,7 +72,7 @@ class StunMultiplierMenu extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 }
 
-class AutomationMenu extends HandlebarsApplicationMixin(ApplicationV2) {
+class AutomationMenu extends HeroSettingsMenu {
     static {
         Hooks.once("init", () => {
             AutomationMenu.PARTS = {
@@ -73,20 +85,14 @@ class AutomationMenu extends HandlebarsApplicationMixin(ApplicationV2) {
 
     static DEFAULT_OPTIONS = {
         id: "automation-form-application",
-        tag: "form",
-        classes: ["herosystem6e"],
         position: {
             width: 450,
-            height: "auto",
         },
         window: {
             title: "Automation Settings",
-            contentClasses: ["standard-form"],
         },
         form: {
             handler: AutomationMenu.#onSubmit,
-            submitOnChange: true,
-            closeOnSubmit: false,
         },
     };
 
@@ -98,10 +104,6 @@ class AutomationMenu extends HandlebarsApplicationMixin(ApplicationV2) {
 
     async _prepareContext(options) {
         const context = await super._prepareContext(options);
-        return foundry.utils.mergeObject(context, this.#automationChoices());
-    }
-
-    #automationChoices() {
         const automation = game.settings.get(game.system.id, "automation");
         const settings = [
             { name: "Body", enabled: false },
@@ -192,7 +194,7 @@ class AutomationMenu extends HandlebarsApplicationMixin(ApplicationV2) {
                 break;
         }
 
-        return {
+        return foundry.utils.mergeObject(context, {
             settings,
 
             choices: {
@@ -203,7 +205,7 @@ class AutomationMenu extends HandlebarsApplicationMixin(ApplicationV2) {
             },
 
             automation,
-        };
+        });
     }
 }
 

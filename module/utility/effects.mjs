@@ -34,11 +34,7 @@ export async function onManageActiveEffect(event, owner) {
 
             const confirmed = await foundry.applications.api.DialogV2.confirm({
                 window: {
-                    title:
-                        game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title") +
-                        " [" +
-                        effect.name +
-                        "]",
+                    title: `${game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Title")} [${effect.name}]`,
                 },
                 content: game.i18n.localize("HERO6EFOUNDRYVTTV2.confirms.deleteConfirm.Content"),
             });

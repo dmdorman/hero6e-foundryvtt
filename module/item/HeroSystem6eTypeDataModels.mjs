@@ -1069,7 +1069,6 @@ export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeData
             value: new HeroNumberField({ integer: true }), // ENEDURANCERESERVE
             //max: new HeroNumberField({ integer: true }), // ENEDURANCERESERVE (use LEVELS instead)
             active: new BooleanField({ initial: true, nullable: true }), // is power,skill,equipment active (consider renaming)
-            collapse: new BooleanField({ initial: false }), // TODO: Make collapsing items per use, not part of DB
             csl: new ArrayField(new StringField()), // Combat Skill levels
             checked: new BooleanField({ initial: false }), // DEADLYBLOW
             CARRIED: new BooleanField({ nullable: true }), // Typically for equipment; extending to include VPP
@@ -1729,6 +1728,32 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
         return roundFavorPlayerAwayFromZero(raw);
     }
 
+    /** Sheet coloring for the max box: adjusted above/below its effect-free expectation. */
+    get maxCssClass() {
+        if (this.max > this.expectedMax) return "over-max";
+        if (this.max < this.expectedMax) return "under-max";
+        return "";
+    }
+
+    /**
+     * Sheet coloring for the value box: damage/overheal against max wins; at rest (value === max)
+     * it inherits the max comparison so an adjusted current reads adjusted too.
+     */
+    get valueCssClass() {
+        if (this.value > this.max) return "over-max";
+        if (this.value < this.max) return "under-max";
+        return this.maxCssClass;
+    }
+
+    /**
+     * Tooltip for the value box: the blocking-effects list when present, otherwise the max
+     * CHANGES explanation so an adjusted current explains itself. Input locking stays bound to
+     * valueTitle alone.
+     */
+    get valueTooltip() {
+        return this.valueTitle || this.maxTitle;
+    }
+
     /**
      * Active items granting this primary characteristic as a Power (e.g. a magic ring's +35 STR).
      * Per 5ER p. 139-40 these add to figured characteristics unless bought with the No Figured
@@ -1838,14 +1863,8 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
         const describeEffect = (ae, viaKey, change) => {
             const delta = Number(change?.value);
             const deltaText = Number.isFinite(delta) && delta !== 0 ? delta.signedString() : "";
-
-            let detail = "";
-            if (viaKey) {
-                detail = ` (${escapeHtmlForTooltip(viaKey.toUpperCase())}${deltaText ? ` ${deltaText}` : ""})`;
-            } else if (deltaText) {
-                detail = ` (${deltaText})`;
-            }
-            const parts = [`${escapeHtmlForTooltip(ae.name)}${detail}`];
+            const detail = [viaKey && escapeHtmlForTooltip(viaKey.toUpperCase()), deltaText].filter(Boolean).join(" ");
+            const parts = [`${escapeHtmlForTooltip(ae.name)}${detail ? ` (${detail})` : ""}`];
 
             const originItem = ae.origin ? fromUuidSync(ae.origin) : null;
             if (originItem) {
