@@ -4,10 +4,9 @@ import { getPowerInfo } from "../utility/util.mjs";
 const { Actor } = foundry.documents;
 
 /**
- * Registers tests for item-owned ActiveEffect lifecycle plumbing: the
- * setActiveEffects update branch must write V14 `system.changes` (a bare
- * `changes` key is pruned by schema cleaning on update, silently stranding the
- * effect at its old value).
+ * Registers tests for item-owned ActiveEffect lifecycle plumbing: effect
+ * changes and durations must land in the document schema (`system.changes`,
+ * `duration.units/value`, `start.time`) for updates to take effect.
  *
  * @param {Object} quench - The external Quench module testing framework instance.
  */
@@ -110,8 +109,6 @@ export function registerActiveEffectTests(quench) {
 
                     await _startIfIsAContinuingCharge(item);
 
-                    // The pre-fix payload (duration.seconds/startTime + unscoped flag) was
-                    // silently pruned by V14 schema cleaning, leaving remaining Infinity
                     const started = item.effects.get(ae.id);
                     assert.strictEqual(started._source.duration.units, "seconds", "Duration units written.");
                     assert.strictEqual(parseInt(started._source.duration.value), 12, "1 Turn charge lasts 12 seconds.");

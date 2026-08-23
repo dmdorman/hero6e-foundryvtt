@@ -147,8 +147,8 @@ export function registerCombatWorkflowTests(quench) {
                         // The expected-damage math is raw - defense: a rolled hit
                         // location (Vitals x1.5 STUN, Head x2...) would multiply the
                         // applied damage and fail the assertions non-deterministically.
-                        // The setting is a string enum — the old boolean false coerced
-                        // to "false", which read as hit-locations ENABLED
+                        // The setting is a string enum; any non-choice value (e.g. a
+                        // boolean) reads as hit-locations ENABLED
                         originalHitLocations = await getAndSetGameSetting("hit locations", "noHitLocations");
 
                         quenchScene = await createQuenchScene({ quench: this });

@@ -692,7 +692,7 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
             return ui.notifications.error(`${actor.name} has no token in this scene.  Unable to place AOE template.`);
         }
 
-        // Close all windows except us (V1 registry only holds third-party module apps now)
+        // Close all windows except us; ui.windows can still hold third-party V1 apps
         for (const app of Object.values(ui.windows)) {
             app.close();
         }

@@ -4121,7 +4121,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             .filter((power) => power.type?.includes("maneuver"))
             .map((item) => item.id);
         if (existingManeuverIds.length) {
-            // Close any open Item sheets (AppV2 instances; ui.windows only held V1 apps)
+            // Close any open Item sheets
             for (const app of foundry.applications.instances.values()) {
                 if (existingManeuverIds.includes(app.document?.id)) {
                     await app.close({ force: true });

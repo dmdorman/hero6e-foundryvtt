@@ -8438,7 +8438,7 @@ export async function rollAblativeActivationCheck(item) {
     return succeeded;
 }
 
-// Exported for quench coverage of the V14 duration/start update payload
+// Exported for quench coverage
 export async function _startIfIsAContinuingCharge(item) {
     const charges = item.findModsByXmlid("CHARGES");
     const continuing = item.findModsByXmlid("CONTINUING");

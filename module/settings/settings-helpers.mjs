@@ -728,8 +728,8 @@ function invalidGameSettingValueReason(config, value) {
  * game.settings.set does not validate: it coerces (false → "false" for String
  * settings), and readers comparing against choice strings then take the wrong
  * branch. Throw instead so a bad write fails loudly at the call site. A stored
- * value that is itself invalid (garbage persisted before this guard existed)
- * comes back as the registered default so restoring it stays clean.
+ * value that is itself invalid comes back as the registered default so
+ * restoring it stays clean.
  *
  * @param {string} namespace
  * @param {string} settingKey
