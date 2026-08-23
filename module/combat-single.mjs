@@ -612,7 +612,7 @@ export class HeroSystem6eCombatSingle extends Combat {
             "Combatant",
             combatants.map((c) => ({
                 _id: c.id,
-                [`flags.${game.system.id}.${solo ? "soloTieRoll" : "-=soloTieRoll"}`]: solo ? true : null,
+                [`flags.${game.system.id}.soloTieRoll`]: solo ? true : new foundry.data.operators.ForcedDeletion(),
             })),
         );
 
@@ -2196,7 +2196,8 @@ export class HeroSystem6eCombatSingle extends Combat {
                         record?.declaredPriority ?? naturalPriorityAt(record?.declaredAbs ?? targetAbs),
                     )
                 ) {
-                    update[`flags.${game.system.id}.delayedActions.-=${delayedId}`] = null;
+                    update[`flags.${game.system.id}.delayedActions.${delayedId}`] =
+                        new foundry.data.operators.ForcedDeletion();
                     if (record?.kind === "haymaker") haymakerTeardowns.push(combatant);
                 } else if (record?.landed && (record.resolveAbs ?? -Infinity) >= targetAbs) {
                     // The surviving record's landing stop is at/after the rewind
@@ -2756,7 +2757,7 @@ export class HeroSystem6eCombatSingle extends Combat {
         // Some attacks include a DCV penalty applied as an ActiveEffect flagged
         // nextPhase; it goes away at the start of our Phase
         const removeOnNextPhase = actor.effects.filter(
-            (o) => o.flags[game.system.id]?.nextPhase && o.duration.startTime < game.time.worldTime,
+            (o) => o.flags[game.system.id]?.nextPhase && (o.start?.time ?? 0) < game.time.worldTime,
         );
         for (const ae of removeOnNextPhase) {
             await ae.delete();
@@ -3330,7 +3331,10 @@ export class HeroSystem6eCombatSingle extends Combat {
                     // replays) falls back to the old pass-through resolution.
                     if (record.landed) {
                         if (currentAbs > record.resolveAbs) {
-                            await combatant.update({ [`flags.${game.system.id}.delayedActions.-=${id}`]: null });
+                            await combatant.update({
+                                [`flags.${game.system.id}.delayedActions.${id}`]:
+                                    new foundry.data.operators.ForcedDeletion(),
+                            });
                         }
                     } else if (currentAbs === record.resolveAbs && atLandingStop) {
                         await this._finishDelayedAction(combatant, id, record, { cancelled: false, keepMarker: true });
@@ -3401,7 +3405,9 @@ export class HeroSystem6eCombatSingle extends Combat {
             // Cancelling after the landing stop fired: the roll card is already
             // out — void it so the cancelled attack can't still be rolled
             if (cancelled && record.landed) await this._voidDelayedRollCards(id);
-            await combatant.update({ [`flags.${game.system.id}.delayedActions.-=${id}`]: null });
+            await combatant.update({
+                [`flags.${game.system.id}.delayedActions.${id}`]: new foundry.data.operators.ForcedDeletion(),
+            });
         }
 
         // A cancelled Haymaker (or a legacy declare-now record) ends the maneuver
@@ -4010,10 +4016,10 @@ export class HeroSystem6eCombatSingle extends Combat {
         await effect.update({
             [`flags.${game.system.id}.hold`]: {
                 mode: "generic",
-                "-=segmentAbs": null,
-                "-=dex": null,
-                "-=fraction": null,
-                "-=anchor": null,
+                segmentAbs: new foundry.data.operators.ForcedDeletion(),
+                dex: new foundry.data.operators.ForcedDeletion(),
+                fraction: new foundry.data.operators.ForcedDeletion(),
+                anchor: new foundry.data.operators.ForcedDeletion(),
                 demotedFrom: { segmentAbs: hold.segmentAbs, dex: hold.dex },
             },
         });

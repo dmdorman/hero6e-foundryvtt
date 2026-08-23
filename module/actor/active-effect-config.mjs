@@ -75,12 +75,11 @@ export class HeroSystemActiveEffectConfig extends ActiveEffectConfig {
 
         const durationSection = html.find("section[data-tab='duration']")?.[0];
         if (durationSection) {
-            const remaining =
-                context.source.duration.startTime + context.source.duration.seconds - game.time.worldTime ||
-                "Does not fade";
-            const startTimeDisplay = new Date(context.source.duration.startTime * 1000)
-                .toUTCString()
-                .replace(" GMT", "");
+            const startTime = this.document.start?.time;
+            const remainingSeconds = this.document.duration?.remaining;
+            const remaining = Number.isFinite(remainingSeconds) ? remainingSeconds : "Does not fade";
+            const startTimeDisplay =
+                typeof startTime === "number" ? new Date(startTime * 1000).toUTCString().replace(" GMT", "") : "";
 
             durationSection.append(
                 $(`
@@ -94,7 +93,7 @@ export class HeroSystemActiveEffectConfig extends ActiveEffectConfig {
                     <div class="form-group">
                         <label>HERO.startTime</label>
                         <div class="form-fields">
-                            <input type="text" value="${context.source.duration.startTime}" disabled/>
+                            <input type="text" value="${startTime ?? ""}" disabled/>
                         </div>
                     </div>
                     <div class="form-group">

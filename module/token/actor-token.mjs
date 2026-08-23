@@ -181,7 +181,7 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
             ae.changes.find(
                 (c) =>
                     c.key === `system.characteristics.${action.toLowerCase()}.max` &&
-                    c.mode === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD, // FIXME: We can have AEs like STR0 that are not appropriate to consider
+                    c.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD, // FIXME: We can have AEs like STR0 that are not appropriate to consider
             ),
         );
         const possibleMovements = [];

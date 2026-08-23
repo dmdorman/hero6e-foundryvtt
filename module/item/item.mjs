@@ -633,7 +633,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
                     if (activeEffect.update) {
                         // Need to be careful because changes is an array
-                        await activeEffect.update({ name: activeEffect.name, changes }, options);
+                        await activeEffect.update({ name: activeEffect.name, "system.changes": changes }, options);
                     } else {
                         await this.createEmbeddedDocuments("ActiveEffect", [activeEffect], options);
                     }
@@ -5128,23 +5128,6 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         }
     }
 
-    async addActiveEffect(activeEffect) {
-        const newEffect = foundry.utils.deepClone(activeEffect);
-        newEffect.duration.duration ??= newEffect.duration.seconds;
-        newEffect.duration.startTime ??= game.time.worldTime;
-        newEffect.duration.startRound ??= game.combat.current.round;
-        newEffect.duration.startTurn ??= game.combat.current.turn;
-        newEffect.duration.type ??= "seconds";
-        //newEffect.transfer = false;
-
-        //const ae = await this.createEmbeddedDocuments("ActiveEffect", [newEffect]);
-        //ae.duration = ae.updateDuration();
-
-        //return ae.update({ duration: ae.duration });
-
-        return this.createEmbeddedDocuments("ActiveEffect", [newEffect]);
-    }
-
     // In 5e, explosion is a modifier, in 6e it's an adder to an AOE modifier.
     hasExplosionAdvantage() {
         return !!(
@@ -8470,9 +8453,9 @@ async function _startIfIsAContinuingCharge(item) {
 
             console.log(
                 await ae.update({
-                    "duration.seconds": seconds,
-                    "duration.startTime": game.time.worldTime,
-                    "flags.startTime": game.time.worldTime,
+                    "duration.units": "seconds",
+                    "duration.value": seconds,
+                    "start.time": game.time.worldTime,
                 }),
             );
         } else {
