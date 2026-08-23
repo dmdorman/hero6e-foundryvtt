@@ -7,7 +7,6 @@ import { getOffHandDefenseDcv } from "../actor/actor-utils.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 
 import { ItemAttackFormApplicationV2 } from "../applications/item/item-attack-application-v2.mjs";
-import { HeroCompatibility } from "../utility/compatibility.mjs";
 
 import { ItemAttackClubWeaponApplicationV2 } from "../applications/item/item-attack-application-club-weapon.mjs";
 
@@ -3944,10 +3943,17 @@ export async function _onApplyEntangleToSpecificToken(item, token, originalRoll)
         }`;
         body = Math.max(body, prevBody) + 1;
     }
-    let activeEffect = {
+    const changes = foundry.utils.deepClone(HeroSystem6eActorActiveEffects.statusEffectsObj.entangledEffect.changes);
+    changes.push({
+        key: "body",
+        value: body,
+        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
+        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
+    });
+    const activeEffect = {
         id: "entangled",
         img: HeroSystem6eActorActiveEffects.statusEffectsObj.entangledEffect.img,
-        changes: foundry.utils.deepClone(HeroSystem6eActorActiveEffects.statusEffectsObj.entangledEffect.changes),
+        system: { changes },
         name: `${item.system.XMLID} ${body} BODY ${entangleDefense.string}`,
         description: item.system.description,
         showIcon: 2, // always
@@ -3963,25 +3969,15 @@ export async function _onApplyEntangleToSpecificToken(item, token, originalRoll)
         origin: item.effectiveAttackItem.uuid, // PH: FIXME: effective items don't have uuids.
     };
 
-    const changeBody = activeEffect.changes?.find((o) => o.key === "body");
-    if (changeBody) {
-        changeBody.value === body;
-    } else {
-        const changes = [{ key: "body", value: body, mode: 5 }];
-        activeEffect = foundry.utils.mergeObject(activeEffect, {
-            [HeroCompatibility.isV14 ? `system.changes` : `changes`]: changes,
-        });
-    }
-
     if (prevEntangle) {
-        prevEntangle.update({
+        await prevEntangle.update({
             name: activeEffect.name,
             flags: activeEffect.flags,
-            "system.changes": activeEffect.system?.changes,
+            "system.changes": changes,
             origin: activeEffect.origin,
         });
     } else {
-        token.actor.addActiveEffect(activeEffect);
+        await token.actor.addActiveEffect(activeEffect);
     }
 
     const cardData = {

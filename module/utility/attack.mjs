@@ -99,7 +99,7 @@ export class Attack {
         }
         const activeEffect = {
             name,
-            icon,
+            img: icon,
             changes,
             origin: item.uuid,
             duration: {

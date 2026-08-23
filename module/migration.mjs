@@ -135,10 +135,10 @@ export async function migrateWorld() {
             .map((scene) => [...scene.tokens.filter((t) => !t.actor && t.delta?.items?.invalidDocumentIds.size > 0)])
             .flat(),
     ];
-    if (tokensWithInvalidItems) {
+    if (tokensWithInvalidItems.length > 0) {
         const migrationProgressBar = new HeroProgressBar(
-            `Deleting invlaid items from unlinked tokens`,
-            tokensWithInvalidItems + 1,
+            `Deleting invalid items from unlinked tokens`,
+            tokensWithInvalidItems.length + 1,
         );
         for (const token of tokensWithInvalidItems) {
             console.debug(`Deleting ${token.delta.items.invalidDocumentIds.size} invalid items from ${token.name}`);
@@ -1110,20 +1110,28 @@ async function flagScopes(actor) {
     try {
         if (!actor) return false;
 
-        const actorUpdates = [];
-        for (const prop of Object.keys(actor.flags).filter((f) => f !== game.system.id)) {
-            actorUpdates[`flags.-=${prop}`] = null;
+        // Leave flags owned by core, the world, or an installed module alone; only
+        // unscoped keys move into the system scope.
+        const validScopes = new Set(["core", "world", game.system.id, ...game.modules.keys()]);
+
+        const actorUpdates = {};
+        for (const prop of Object.keys(actor.flags).filter((f) => !validScopes.has(f))) {
+            actorUpdates[`flags.${prop}`] = new foundry.data.operators.ForcedDeletion();
             actorUpdates[`flags.${game.system.id}.${prop}`] = actor.flags[prop];
         }
-        if (actorUpdates.length > 0) {
+        if (Object.keys(actorUpdates).length > 0) {
             await actor.update(actorUpdates);
         }
 
         const itemUpdates = [];
         for (const item of actor.items.filter((i) => Object.keys(i.flags).length > 0)) {
-            for (const prop of Object.keys(item.flags).filter((f) => f !== game.system.id)) {
-                itemUpdates[`flags.-=${prop}`] = null;
-                itemUpdates[`flags.${game.system.id}.${prop}`] = item.flags[prop];
+            const update = { _id: item.id };
+            for (const prop of Object.keys(item.flags).filter((f) => !validScopes.has(f))) {
+                update[`flags.${prop}`] = new foundry.data.operators.ForcedDeletion();
+                update[`flags.${game.system.id}.${prop}`] = item.flags[prop];
+            }
+            if (Object.keys(update).length > 1) {
+                itemUpdates.push(update);
             }
         }
         if (itemUpdates.length > 0) {
@@ -1132,9 +1140,13 @@ async function flagScopes(actor) {
 
         const effectUpdates = [];
         for (const effect of actor.effects.filter((i) => Object.keys(i.flags).length > 0)) {
-            for (const prop of Object.keys(effect.flags).filter((f) => f !== game.system.id)) {
-                effectUpdates[`flags.-=${prop}`] = null;
-                effectUpdates[`flags.${game.system.id}.${prop}`] = effect.flags[prop];
+            const update = { _id: effect.id };
+            for (const prop of Object.keys(effect.flags).filter((f) => !validScopes.has(f))) {
+                update[`flags.${prop}`] = new foundry.data.operators.ForcedDeletion();
+                update[`flags.${game.system.id}.${prop}`] = effect.flags[prop];
+            }
+            if (Object.keys(update).length > 1) {
+                effectUpdates.push(update);
             }
         }
         if (effectUpdates.length > 0) {
@@ -1152,7 +1164,7 @@ async function removeStrengthPlaceholderAndCreateActivePropertyAndRemoveHeroicPr
         if (!actor) return false;
 
         // Remove the isHeroic property as it is now calculated on the fly
-        await actor.update({ "system.-=isHeroic": null });
+        await actor.update({ "system.isHeroic": new foundry.data.operators.ForcedDeletion() });
 
         // Delete strength placeholder as we need many of them so will be creating them on the fly.
         const itemIdsToDelete = actor.items

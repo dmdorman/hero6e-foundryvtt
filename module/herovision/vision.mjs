@@ -99,7 +99,7 @@ export function setPerceptionModes() {
         }
 
         static getDetectionFilter() {
-            DetectionMode._detectionFilter ??= OutlineOverlayFilter.create({
+            DetectionMode._detectionFilter ??= foundry.canvas.rendering.filters.OutlineOverlayFilter.create({
                 wave: true,
                 knockout: false,
             });

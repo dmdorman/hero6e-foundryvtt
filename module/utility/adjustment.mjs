@@ -562,7 +562,7 @@ export async function performAdjustment(
         thisAttackActivePointEffectNotAppliedDueToNotExceedingHealing = thisAttackActivePointsEffect;
         const changeTemp = _createAEChangeBlock(potentialCharacteristic, targetSystem, attackItem);
         const char = changeTemp.key; //.match(/([a-z]+)\.max/)?.[1];
-        changeTemp.mode = CONFIG.HERO.ACTIVE_EFFECT_MODES.CUSTOM;
+        changeTemp.type = CONFIG.HERO.ACTIVE_EFFECT_MODES.CUSTOM;
         changeTemp.priority = CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.CUSTOM;
 
         // Determine Effective Active Points for this attack

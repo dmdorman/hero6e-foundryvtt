@@ -694,61 +694,15 @@ Hooks.on("renderDialogV2", (dialog, html) => {
     if (characteristicOption) characteristicOption.remove();
 });
 
-Hooks.on("renderActorSheet", (dialog, html, data) => {
-    // Show versions
-    html.find("header h4").append(`<span>${game.system.version}</span>`);
-
-    try {
-        if (data?.actor?.system?.versionHeroSystem6eUpload) {
-            html.find("header h4").append(
-                ` <span title='Actor version at time of HDC upload'>(${
-                    data?.actor?.system?.versionHeroSystem6eUpload || ""
-                })</span>`,
-            );
-        } else if (data?.actor?.system?.versionHeroSystem6eCreated) {
-            html.find("header h4").append(
-                ` <span title='Actor version at time of creation'>(${
-                    data?.actor?.system?.versionHeroSystem6eCreated || ""
-                })</span>`,
-            );
-        }
-    } catch (err) {
-        console.log(err);
-    }
-
-    // // Change Type
-    // if (game.user.isGM) {
-    //     const element = document.createElement("a");
-    //     element.classList = "header-button control";
-    //     element.setAttribute(`data-id`, data.actor.uuid);
-    //     element.title = data.actor.type.toUpperCase().replace("2", "");
-    //     element.addEventListener("click", async (event) => {
-    //         event.preventDefault();
-    //         const actor = fromUuidSync(event.target.dataset.id);
-    //         if (!actor) {
-    //             ui.notifications.error(`Actor ${event.target.dataset.id} was not found`);
-    //             return;
-    //         }
-    //         //await actor.changeType();
-    //     });
-
-    //     element.innerHTML = `<i class="fal fa-user-robot"></i>${data.actor?.template?.replace("builtIn.", "").replace(".hdt", "") || "Type"} `;
-
-    //     html.find("header h4").after(element);
-    // }
-});
-
-Hooks.on("getActorDirectoryEntryContext", (_dialog, html) => {
-    const menu = {
-        name: "Change Type",
+Hooks.on("getActorContextOptions", (_directory, menuItems) => {
+    menuItems.push({
+        label: "Change Type",
         icon: '<i class="fas fa-cog"></i>',
-        callback: async function (target) {
-            const dataset = { ...target[0].dataset };
-            const actor = game.actors.get(dataset.entryId);
-            return actor.changeTypeDialog();
+        onClick: (target) => {
+            const actor = game.actors.get(target.dataset.entryId);
+            return actor?.changeTypeDialog();
         },
-    };
-    html.push(menu);
+    });
 });
 
 //Modify TokenHUD (need 3 bars: end, stun, body)

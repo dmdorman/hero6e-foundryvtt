@@ -1873,8 +1873,7 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         // keys would survive a conversion to event/generic), and a delete-then-set
         // pair leaves a window where every client reads a bare generic hold
         await effect.update({
-            [`flags.${game.system.id}.-=hold`]: null,
-            [`flags.${game.system.id}.hold`]: hold,
+            [`flags.${game.system.id}.hold`]: foundry.data.operators.ForcedReplacement.create(hold),
         });
 
         const description = this._holdDescription(hold);

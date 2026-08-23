@@ -402,8 +402,9 @@ export async function expireEffects(actor, expiresOn) {
 
                 // Make sure we don't add duration twice
                 if (ae.updateDuration().remaining <= 0) {
-                    ae.duration.startTime += ae.duration.seconds;
-                    await ae.update({ duration: ae.duration });
+                    await ae.update({
+                        "start.time": (ae.start?.time ?? game.time.worldTime) + (ae.duration.seconds ?? 0),
+                    });
                 }
             } else {
                 console.log(`${ae.name} expired`);

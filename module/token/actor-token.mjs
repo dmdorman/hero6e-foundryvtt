@@ -165,7 +165,7 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
 
         // Track END for movement when in combat and it is the active combatant
         if (game.combat?.combatant?.tokenId === this.id) {
-            const masterCombatant = game.combat.getCombatantByToken(this.combatant.tokenId);
+            const masterCombatant = this.combatant;
             const endStart = masterCombatant.getFlag(game.system.id, "endUsedForMovement") || 0;
             const endCost = this._movementHistoryEndCost;
             const endDelta = endCost - endStart;
@@ -181,7 +181,7 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
             ae.changes.find(
                 (c) =>
                     c.key === `system.characteristics.${action.toLowerCase()}.max` &&
-                    c.mode === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD, // FIXME: We can have AEs like STR0 that are not appropriate to consider
+                    c.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD, // FIXME: We can have AEs like STR0 that are not appropriate to consider
             ),
         );
         const possibleMovements = [];

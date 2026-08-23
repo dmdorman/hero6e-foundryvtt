@@ -1314,7 +1314,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         // Update The Type of the Item
         try {
             // Ensure there is no parent ID
-            await item.update({ "system.-=PARENTID": null }, { render: false });
+            await item.update({ "system.PARENTID": new foundry.data.operators.ForcedDeletion() }, { render: false });
 
             // Convert the item & children to targetType
             await item.convertToType(targetType);
@@ -1365,7 +1365,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                     ui.notifications.info(
                         `<b>${item.name}</b> was removed from parent <b>${item.parentItem?.name}</b>.`,
                     );
-                    await item.update({ "system.-=PARENTID": null });
+                    await item.update({ "system.PARENTID": new foundry.data.operators.ForcedDeletion() });
                 } else if (!item.isContainer && dropTargetItem?.isContainer) {
                     ui.notifications.info(`<b>${item.name}</b> was moved into to parent <b>${dropTargetItem.name}</b>`);
                     await item.update({ "system.PARENTID": dropTargetItem.system.ID });

@@ -146,8 +146,10 @@ export function registerCombatWorkflowTests(quench) {
                         originalScrollingTextPreference = await getAndSetGameSettingCore("scrollingStatusText", false);
                         // The expected-damage math is raw - defense: a rolled hit
                         // location (Vitals x1.5 STUN, Head x2...) would multiply the
-                        // applied damage and fail the assertions non-deterministically
-                        originalHitLocations = await getAndSetGameSetting("hit locations", false);
+                        // applied damage and fail the assertions non-deterministically.
+                        // The setting is a string enum; any non-choice value (e.g. a
+                        // boolean) reads as hit-locations ENABLED
+                        originalHitLocations = await getAndSetGameSetting("hit locations", "noHitLocations");
 
                         quenchScene = await createQuenchScene({ quench: this });
 
@@ -491,6 +493,75 @@ export function registerCombatWorkflowTests(quench) {
                         // 5. Explicit structural window cleanup
                         await appInstance.close();
                         await sheet.close();
+                    });
+
+                    it("ENTANGLE augments an existing entangle", async function () {
+                        const attackItem = attackerActor.items.find((item) => item.system?.XMLID === "ENTANGLE");
+                        assert.ok(attackItem, `Pre-seeded ${attackItem?.name} was successfully located on the actor.`);
+
+                        const entangleAe = () =>
+                            defenderTokenDoc.actor.effects.find((e) => e.statuses.has("entangled"));
+
+                        // First application: standard effect gives a deterministic 4 BODY entangle
+                        await targetToken(defenderTokenDoc, defenderActor);
+                        const first = await launchAttackForm(attackerTokenDoc.actor, attackItem);
+                        await executeChatCardSequence(
+                            first.appInstance,
+                            defenderTokenDoc,
+                            20,
+                            `.apply-damage-amount span`,
+                        );
+                        await first.appInstance.close();
+                        await first.sheet.close();
+
+                        const firstAe = entangleAe();
+                        assert.ok(firstAe, "First application created the entangle effect.");
+                        assert.strictEqual(
+                            parseInt(firstAe.system.changes.find((c) => c.key === "body")?.value),
+                            4,
+                            "First entangle carries a 4 BODY change in system.changes.",
+                        );
+
+                        // Second application augments in place: max(4, 4) + 1 = 5 BODY on the SAME effect
+                        await targetToken(defenderTokenDoc, defenderActor);
+                        const second = await launchAttackForm(attackerTokenDoc.actor, attackItem);
+                        const { finalSummaryDiv } = await executeChatCardSequence(
+                            second.appInstance,
+                            defenderTokenDoc,
+                            20,
+                            `.apply-damage-amount span`,
+                        );
+
+                        const effectElement = finalSummaryDiv
+                            .closest("div.message-content")
+                            .querySelector("div.effects");
+                        assert.ok(
+                            effectElement.textContent.includes("The entangle has 5 BODY 4 rPD/4 rED."),
+                            "Augment chat card reports the combined 5 BODY entangle.",
+                        );
+                        assert.ok(
+                            effectElement.textContent.includes("This entangle augmented a previous 4 body entangle."),
+                            "Augment chat card mentions the previous entangle.",
+                        );
+
+                        const augmentedAe = entangleAe();
+                        assert.strictEqual(
+                            augmentedAe?.id,
+                            firstAe.id,
+                            "Augmenting updates the existing effect instead of stacking a second one.",
+                        );
+                        assert.strictEqual(
+                            parseInt(augmentedAe.system.changes.find((c) => c.key === "body")?.value),
+                            5,
+                            "Augmented entangle's system.changes body value updated to 5.",
+                        );
+                        assert.ok(
+                            augmentedAe.name.includes("5 BODY"),
+                            "Augmented entangle's name reflects the new BODY total.",
+                        );
+
+                        await second.appInstance.close();
+                        await second.sheet.close();
                     });
 
                     it("FLASH", async function () {
