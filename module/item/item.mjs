@@ -582,7 +582,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             }
 
             // Generic MOVEMENT activeEffect
-            if (this.id && this.baseInfo && this.baseInfo.type?.includes("movement")) {
+            if (this.id && this.baseInfo && this.baseInfo?.type?.includes("movement")) {
                 try {
                     let activeEffect =
                         this.effects.find((ae) => ae.system.XMLID === this.system.XMLID) ??
@@ -930,8 +930,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         const heroValidations = [];
 
         if (this.baseInfo) {
-            if (this.baseInfo.heroValidation) {
-                const validationArray = this.baseInfo.heroValidation(this);
+            if (this.baseInfo?.heroValidation) {
+                const validationArray = this.baseInfo?.heroValidation(this);
                 if (Array.isArray(validationArray) && validationArray.length) {
                     heroValidations.push(...validationArray.map((m) => ({ ...m, itemId: this.id })));
                 }
@@ -1236,13 +1236,13 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         await super._preUpdate(changes, options, user);
 
         // preUpdate for ActiveEffects
-        if (this.baseInfo.activeEffect) {
+        if (this.baseInfo?.activeEffect) {
             const currentData = foundry.utils.deepClone(this.toObject());
             const expandedChanges = foundry.utils.expandObject(changes);
             const futureItemData = foundry.utils.mergeObject(currentData, expandedChanges);
             const futureItem = new this.constructor(futureItemData, { parent: this.parent });
 
-            if (this.baseInfo.activeEffect?.(futureItem)) {
+            if (this.baseInfo?.activeEffect?.(futureItem)) {
                 this.setActiveEffects({ futureItem });
             }
         }
@@ -1444,7 +1444,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         }
 
         // Can abort to a defensive power
-        else if (this.baseInfo.type.includes("defense")) {
+        else if (this.baseInfo?.type.includes("defense")) {
             return true;
         }
 
@@ -1466,11 +1466,11 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         // "ae-only"): there is no to-hit and no effect dice, so activating IS
         // the roll. Routing through toggle also lands in activateManeuver,
         // where the out-of-turn Abort offer lives.
-        if (this.baseInfo.behaviors.includes("ae-only")) {
+        if (this.baseInfo?.behaviors.includes("ae-only")) {
             return this.toggle({ token: options.token });
         }
 
-        if (this.baseInfo.behaviors.includes("to-hit")) {
+        if (this.baseInfo?.behaviors.includes("to-hit")) {
             // FIXME: Martial maneuvers all share the MANEUVER XMLID. Need to extract out things from that (and fix the broken things).
             switch (this.system.XMLID) {
                 case "AID":
@@ -1527,7 +1527,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     ui.notifications.warn(`${this.system.XMLID} roll is not fully supported`);
                     return collectActionDataBeforeToHitOptions(this, options);
             }
-        } else if (this.baseInfo.behaviors.includes("dice")) {
+        } else if (this.baseInfo?.behaviors.includes("dice")) {
             switch (this.system.XMLID) {
                 case "LUCK":
                     return rollLuck(this);
@@ -1541,7 +1541,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     ui.notifications.warn(`${this.system.XMLID} effect roll is not fully supported`);
                     return rollEffect(this);
             }
-        } else if (this.baseInfo.behaviors.includes("defense")) {
+        } else if (this.baseInfo?.behaviors.includes("defense")) {
             return this.toggle(event);
         } else {
             const powerInfo = getPowerInfo({
@@ -1599,7 +1599,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         // Powers have one of four Ranges: Self; No Range; Standard
         // Range; and Line of Sight (LOS).
         if (typeof this.baseInfo?.rangeText === "function") {
-            content += ` ${this.baseInfo.rangeText(this)}${getSystemDisplayUnits(this.is5e)}.`;
+            content += ` ${this.baseInfo?.rangeText(this)}${getSystemDisplayUnits(this.is5e)}.`;
         } else if (!["MULTIPOWER", "COMPOUNDPOWER", "LIST"].includes(this.system.XMLID)) {
             const itemRange = this.system.range;
             switch (itemRange) {
@@ -1660,8 +1660,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         }
 
         // Perceivability
-        if (this.baseInfo.perceivability) {
-            content += ` Perceivability: ${this.baseInfo.perceivability}.`;
+        if (this.baseInfo?.perceivability) {
+            content += ` Perceivability: ${this.baseInfo?.perceivability}.`;
         }
 
         // Duration
@@ -2058,7 +2058,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         // Free items don't have a system.ID
         if (
             this.system?.ID === undefined &&
-            (this.type === "maneuver" || this.baseInfo.behaviors?.includes("non-hd"))
+            (this.type === "maneuver" || this.baseInfo?.behaviors?.includes("non-hd"))
         ) {
             return true;
         }
@@ -3370,7 +3370,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 break;
 
             case "ENTANGLE":
-                description = `${system.ALIAS} ${system.LEVELS}d6, ${this.baseInfo.defense(this).string}`;
+                description = `${system.ALIAS} ${system.LEVELS}d6, ${this.baseInfo?.defense(this).string}`;
                 break;
 
             case "ELEMENTAL_CONTROL":
@@ -3719,7 +3719,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             default:
                 {
                     if (this.baseInfo?.descriptionFactory) {
-                        description = this.baseInfo.descriptionFactory(this);
+                        description = this.baseInfo?.descriptionFactory(this);
                         break;
                     }
 
@@ -4440,7 +4440,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         // Many of these properties can converted into get properties on the item and calculated on the fly.
 
         const xmlid = this.system.XMLID;
-        let usesStrength = this.baseInfo.usesStrength;
+        let usesStrength = this.baseInfo?.usesStrength;
 
         if (usesStrength == null) {
             if (!["maneuver", "martialart"].includes(this.type)) {
@@ -5078,7 +5078,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     }
 
     numberOfSimultaneousAdjustmentEffects() {
-        if (this.actor.system.is5e) {
+        if (this.actor?.system.is5e) {
+            // Should this be using actor.is5e?
             // In 5e, the number of simultaneous effects is based on the VARIABLEEFFECT modifier.
             const variableEffect = this.findModsByXmlid("VARIABLEEFFECT"); // From for TRANSFER and everything else
             const variableEffect2 = this.findModsByXmlid("VARIABLEEFFECT2"); // To for TRANSFER
@@ -5181,7 +5182,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             return "-";
         }
         // What are we effectively using for attack?
-        const baseAttackItem = this.baseInfo.baseEffectDicePartsBundle(this, {}).baseAttackItem;
+        const baseAttackItem = this.baseInfo?.baseEffectDicePartsBundle(this, {}).baseAttackItem;
 
         // CONFIG overrides for specific XMLIDs
         if (baseAttackItem.baseInfo?.attackDefenseVs) {
@@ -5344,18 +5345,18 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     get doesKillingDamage() {
         if (this.system.XMLID && this.baseInfo) {
             // PH: FIXME: THis is what we ultamitely want
-            // return this.baseInfo.doesKillingDamage(this);
+            // return this.baseInfo?.doesKillingDamage(this);
 
             // Preferred Methods to determine KILLING
             if (this.system.XMLID.startsWith("__")) {
                 return false;
-            } else if (this.baseInfo.doesKillingDamage != undefined) {
-                return this.baseInfo.doesKillingDamage(this);
-            } else if (this.baseInfo.nonDmgEffect) {
+            } else if (this.baseInfo?.doesKillingDamage != undefined) {
+                return this.baseInfo?.doesKillingDamage(this);
+            } else if (this.baseInfo?.nonDmgEffect) {
                 return false;
             } else if (this.type === "disadvantage") {
                 return false;
-            } else if (this.baseInfo.type.includes("disadvantage")) {
+            } else if (this.baseInfo?.type.includes("disadvantage")) {
                 return false;
             }
         }
@@ -5460,9 +5461,9 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 // TODO: Collaborate with Peter.
                 // Aaron would like to show the HTH attack, but roll as a STRIKE + HTH
                 return false;
-            } else if (this.baseInfo.behaviors.includes("attack")) {
+            } else if (this.baseInfo?.behaviors.includes("attack")) {
                 return true;
-            } else if (this.baseInfo.behaviors.includes("to-hit")) {
+            } else if (this.baseInfo?.behaviors.includes("to-hit")) {
                 return true;
             }
         } catch (e) {
@@ -5704,11 +5705,13 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         // Notice that we are only looking for temporary DRAINS on "this" item.
         // Unfortunately, the "generic" DRIAN is on the actor, not the item.
         // If there are more than one item with the same XMLID then we don't know which item is getting the drain.
-        for (const ae of this.actor.temporaryEffects) {
-            //console.log(ae);
-            for (const change of ae.changes) {
-                if (change.key.match(new RegExp(this.system.XMLID, "i"))) {
-                    _adjustedLevels += parseInt(change.value || 0);
+        if (this.actor) {
+            for (const ae of this.actor.temporaryEffects) {
+                //console.log(ae);
+                for (const change of ae.changes) {
+                    if (change.key.match(new RegExp(this.system.XMLID, "i"))) {
+                        _adjustedLevels += parseInt(change.value || 0);
+                    }
                 }
             }
         }
@@ -5765,7 +5768,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         if (!this.system.XMLID) return 0;
 
         if (this.baseInfo?.basePoints) {
-            return this.baseInfo.basePoints(this);
+            return this.baseInfo?.basePoints(this);
         }
 
         if (this.system.EVERYMAN) return 0;
@@ -5773,7 +5776,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
         // Custom basePoints
         if (this.baseInfo?.cost) {
-            return this.baseInfo.cost(this);
+            return this.baseInfo?.cost(this);
         }
 
         const baseCost = parseFloat(this.system.BASECOST) || 0;
@@ -5807,7 +5810,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         let _cost = 0;
 
         if (this.baseInfo?.addersCost) {
-            _cost = this.baseInfo.addersCost(this);
+            _cost = this.baseInfo?.addersCost(this);
         } else {
             for (const adder of this.adders) {
                 if (this.baseInfo?.categorized && this.system.FAMILIARITY) {
@@ -5958,7 +5961,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     get activePointsWithoutInheritedAdvantages() {
         // PH: FIXME: This has to be removed.
         if (this.baseInfo?.activePoints) {
-            return this.baseInfo.activePoints(this);
+            return this.baseInfo?.activePoints(this);
         }
 
         // Consider only the advantages on this modifier.
@@ -5970,7 +5973,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     get _activePoints() {
         // PH: FIXME: This has to be removed.
         if (this.baseInfo?.activePoints) {
-            return this.baseInfo.activePoints(this);
+            return this.baseInfo?.activePoints(this);
         }
 
         const advantageCosts = 1 + this._advantageCost;
@@ -6070,7 +6073,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     /// Real Cost = Active Cost / (1 + total value of all Limitations)
     get _realCost() {
         if (this.baseInfo?.realCost) {
-            return this.baseInfo.realCost(this);
+            return this.baseInfo?.realCost(this);
         }
 
         let _cost = this._activePoints;
@@ -6124,7 +6127,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
         if (this.elementalControl) {
             if (this.baseInfo?.characterPointCostForElementalControl) {
-                return this.baseInfo.characterPointCostForElementalControl(this);
+                return this.baseInfo?.characterPointCostForElementalControl(this);
             }
             const cp =
                 (Math.max(this.elementalControl.system.BASECOST * 2, this.activePoints) -
@@ -6523,37 +6526,42 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     get isMartialManeuver() {
         if (
             this.type === "martialart" &&
-            !this.baseInfo.type.includes("martial") &&
+            !this.baseInfo?.type.includes("martial") &&
             !this.isList &&
             !this.isSeparator
         ) {
             console.error(`${this.detailedName()} has inconsistent isMartialManeuver information`);
         }
-        return this.baseInfo.type.includes("martial");
+        return this.baseInfo?.type.includes("martial");
     }
 
     /**
      * Is this item a combat maneuver
      */
     get isCombatManeuver() {
-        if (this.type === "maneuver" && !this.baseInfo.type.includes("maneuver") && !this.isList && !this.isSeparator) {
+        if (
+            this.type === "maneuver" &&
+            !this.baseInfo?.type.includes("maneuver") &&
+            !this.isList &&
+            !this.isSeparator
+        ) {
             console.error(`${this.detailedName()} has inconsistent isCombatManeuver information`);
         }
-        return this.baseInfo.type.includes("maneuver");
+        return this.baseInfo?.type.includes("maneuver");
     }
 
     /**
      * Is this item a Skill
      */
     get isSkill() {
-        return this.baseInfo.type.includes("skill") && !this.isSkillEnhancer;
+        return this.baseInfo?.type.includes("skill") && !this.isSkillEnhancer;
     }
 
     /**
      * Is this item a Skill Enhancer
      */
     get isSkillEnhancer() {
-        return this.baseInfo.type.includes("skill") && this.baseInfo.type.includes("enhancer");
+        return this.baseInfo?.type.includes("skill") && this.baseInfo?.type.includes("enhancer");
     }
 
     /**
@@ -6588,28 +6596,28 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
      * Is this item a Perk
      */
     get isPerk() {
-        return this.baseInfo.type.includes("perk") && !this.isPerkEnhancer;
+        return this.baseInfo?.type.includes("perk") && !this.isPerkEnhancer;
     }
 
     /**
      * Is this item a Perk Enhancer
      */
     get isPerkEnhancer() {
-        return this.baseInfo.type.includes("perk") && this.baseInfo.type.includes("enhancer");
+        return this.baseInfo?.type.includes("perk") && this.baseInfo?.type.includes("enhancer");
     }
 
     /**
      * Is this item a Talent
      */
     get isTalent() {
-        return this.baseInfo.type.includes("talent");
+        return this.baseInfo?.type.includes("talent");
     }
 
     /**
      * Is this item a Disadvantage
      */
     get isDisadvantage() {
-        return this.baseInfo.type.includes("disadvantage");
+        return this.baseInfo?.type.includes("disadvantage");
     }
 
     /**
@@ -6623,21 +6631,21 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
      * Is this item a Power Framework
      */
     get isPowerFramework() {
-        return this.baseInfo.type.includes("framework");
+        return this.baseInfo?.type.includes("framework");
     }
 
     /**
      * Is this item a Movement Power
      */
     get isMovement() {
-        return this.baseInfo.type.includes("movement");
+        return this.baseInfo?.type.includes("movement");
     }
 
     /**
      * Is this item a Characteristic Power
      */
     get isCharacteristic() {
-        return this.baseInfo.type.includes("characteristic");
+        return this.baseInfo?.type.includes("characteristic");
     }
 
     /**

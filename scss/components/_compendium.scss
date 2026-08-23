@@ -1,4 +1,29 @@
 .hero-system-compendium {
+    // ==========================================
+    // 0. Layout & Scrolling Fixes (AppV2)
+    // ==========================================
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+
+    .window-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .directory-list,
+    .compendium-directory {
+        flex: 1;
+        overflow: hidden auto;
+    }
+
+    // ==========================================
+    // 1. Folder Header & Subdirectory Styling
+    // ==========================================
+
     // List styling
     .folder-header.hero-header-list {
         background-color: rgb(96 125 139 / 20%);
@@ -59,7 +84,9 @@
         border-left: 3px solid #9c27b0;
     }
 
-    // Edit button styling
+    // ==========================================
+    // 2. Custom Edit Button Styling
+    // ==========================================
     .hero-compound-edit {
         color: var(--color-text-light-heading, #f0f0f0);
         cursor: pointer;
@@ -69,5 +96,23 @@
             color: var(--color-shadow-primary, #ff6400);
             transform: scale(1.1);
         }
+    }
+
+    // ==========================================
+    // 3. Edition Badge SVG Background Styling
+    // ==========================================
+    .hero-edition-5,
+    .hero-edition-6 {
+        background-repeat: no-repeat;
+        background-position: right 4px bottom 2px;
+        background-size: 10px 14px;
+    }
+
+    .hero-edition-5 {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext x='32' y='52' font-family='sans-serif' font-weight='bold' font-size='48' fill='%23ffffff' fill-opacity='0.5' text-anchor='middle'%3E5%3C/text%3E%3C/svg%3E");
+    }
+
+    .hero-edition-6 {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext x='32' y='52' font-family='sans-serif' font-weight='bold' font-size='48' fill='%23ffffff' fill-opacity='0.5' text-anchor='middle'%3E6%3C/text%3E%3C/svg%3E");
     }
 }

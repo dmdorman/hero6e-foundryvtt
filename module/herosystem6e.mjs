@@ -306,14 +306,6 @@ Hooks.once("init", async function () {
     // Hero HDP import
     CONFIG.ui.compendium = HeroSystem6eCompendiumDirectory;
 
-    // Ensure these fields are explicitly requested when Foundry indexes item packs
-    const fieldsToAdd = ["system.PARENTID", "system.XMLID", "system.ID"];
-    for (const field of fieldsToAdd) {
-        if (!CONFIG.Item.compendiumIndexFields.includes(field)) {
-            CONFIG.Item.compendiumIndexFields.push(field);
-        }
-    }
-
     GenericRoller.Initialize();
     HeroSocketHandler.Initialize();
 
@@ -632,11 +624,6 @@ Hooks.on("setup", async () => {
                 permanent: true,
             });
         }
-    }
-
-    console.log("HeroSystem6eCompendium | Setting up module compendiums...");
-    for (const pack of game.packs) {
-        setupCompendiumPack(pack);
     }
 });
 
@@ -1063,26 +1050,24 @@ async function _outOfCombatRecovery(actor, multiplier) {
     }
 }
 
-// Catch any newly created packs dynamically later
-Hooks.on("createCompendium", (pack) => {
-    setupCompendiumPack(pack);
+// 1. Register index fields during init
+Hooks.once("init", () => {
+    CONFIG.Item.compendiumIndexFields.push(...HeroSystem6eCompendium.HERO_COMPENDIUM_INDEX_FIELDS);
 });
 
-/**
- * Configure an individual compendium pack with the custom application class and initialize its index.
- * @param {CompendiumCollection} pack   The compendium pack to configure.
- */
-async function setupCompendiumPack(pack) {
-    if (pack.metadata.type === "Item") {
-        pack.applicationClass = HeroSystem6eCompendium;
-        //console.log(`Assigned HeroSystem6eCompendium and indexing pack: ${pack.collection}`);
-
-        try {
-            if (pack.index) {
-                await pack.getIndex();
-            }
-        } catch (err) {
-            console.error(`HeroSystem6eCompendium | Failed to index pack ${pack.collection}:`, err);
+// 2. Assign applicationClass during setup (BEFORE the UI sidebar constructs pack app bindings)
+Hooks.once("setup", () => {
+    for (const pack of game.packs) {
+        if (pack.metadata.type === "Item" || pack.documentName === "Item") {
+            pack.applicationClass = HeroSystem6eCompendium;
         }
     }
-}
+});
+
+Hooks.once("ready", () => {
+    game.packs.forEach((pack) => {
+        if (pack.metadata.type === "Item") {
+            pack.applicationClass = HeroSystem6eCompendium;
+        }
+    });
+});
