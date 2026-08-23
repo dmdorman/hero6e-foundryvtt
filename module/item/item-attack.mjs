@@ -3970,14 +3970,14 @@ export async function _onApplyEntangleToSpecificToken(item, token, originalRoll)
     };
 
     if (prevEntangle) {
-        prevEntangle.update({
+        await prevEntangle.update({
             name: activeEffect.name,
             flags: activeEffect.flags,
             "system.changes": changes,
             origin: activeEffect.origin,
         });
     } else {
-        token.actor.addActiveEffect(activeEffect);
+        await token.actor.addActiveEffect(activeEffect);
     }
 
     const cardData = {

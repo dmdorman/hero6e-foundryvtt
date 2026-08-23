@@ -1160,6 +1160,48 @@ export function registerCombatTests(quench) {
                     expect(expired, "dodge expired at the start of the actor's next Phase").to.be.true;
                 });
 
+                it("Should remove a nextPhase-flagged effect at the start of the actor's next Phase", async function () {
+                    const gunner = await makeActor("_Quench CV Penalty Gunner", { dex: 30, spd: 2 });
+                    const bystander = await makeActor("_Quench CV Penalty Bystander", { dex: 20, spd: 2 });
+                    const combat = await makeCombat([gunner, bystander]);
+                    await combat.startCombat();
+                    expect(combat.combatant.actorId).to.equal(gunner.id);
+
+                    // Ranged-attack CV penalties are applied as an ActiveEffect flagged
+                    // nextPhase (utility/attack.mjs makeActionActiveEffects); mirror its
+                    // shape so this exercises the same cleanup path
+                    await gunner.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "_Quench -2 DCV",
+                            img: "icons/svg/downgrade.svg",
+                            changes: [
+                                {
+                                    key: "system.characteristics.dcv.max",
+                                    value: -2,
+                                    type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                                    priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
+                                },
+                            ],
+                            duration: { seconds: 12 },
+                            flags: { [game.system.id]: { nextPhase: true, actionEffect: true } },
+                        },
+                    ]);
+                    const hasPenaltyAe = () =>
+                        gunner.effects.some((ae) => ae.flags?.[game.system.id]?.nextPhase === true);
+                    expect(hasPenaltyAe(), "penalty effect active after the attack").to.be.true;
+
+                    // Another combatant's Phase starting must not remove it
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(bystander.id);
+                    expect(hasPenaltyAe(), "penalty persists through other combatants' Phases").to.be.true;
+
+                    // The gunner's own next Phase begins: _onPhaseStart sweeps it
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(gunner.id);
+                    const removed = await waitUntil(() => !hasPenaltyAe());
+                    expect(removed, "penalty removed at the start of the actor's next Phase").to.be.true;
+                });
+
                 it("Should mark knocked out combatants defeated via the tracker toggle", async function () {
                     const sleeper = await makeActor("_Quench KO Sleeper", { dex: 10, spd: 2 });
 
@@ -2005,6 +2047,10 @@ export function registerCombatTests(quench) {
                     const hold = combatant.heldAction;
                     expect(hold?.mode, "banked Phase persists as a generic hold").to.equal("generic");
                     expect(hold?.demotedFrom?.dex, "demotion records the lost slot").to.equal(5);
+                    // The stale position keys must actually be deleted (ForcedDeletion
+                    // writes), or the generic hold would still read as positional
+                    expect(hold?.segmentAbs, "stale segmentAbs removed by the demotion").to.equal(undefined);
+                    expect(hold?.dex, "stale dex slot removed by the demotion").to.equal(undefined);
                     await combatant.heldActionEffect?.delete();
                 });
 
