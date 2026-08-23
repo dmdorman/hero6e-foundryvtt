@@ -702,19 +702,76 @@ function handleOverrideCanAct(event) {
 }
 
 /**
+ * Why a value is invalid for a registered setting, or null when it is fine.
+ * choices may live on the config or on a DataField type, as an object of
+ * value/label pairs or an array of values; a function form is dynamic and not
+ * validated here.
+ *
+ * @param {object} config - entry from game.settings.settings
+ * @param {any} value
+ * @returns {string|null}
+ */
+function invalidGameSettingValueReason(config, value) {
+    let choices = config.choices ?? config.type?.choices;
+    if (typeof choices === "function") choices = undefined;
+    const validChoices = Array.isArray(choices) ? choices : choices ? Object.keys(choices) : null;
+    if (validChoices && !validChoices.includes(value)) {
+        return `expected one of: ${validChoices.join(", ")}`;
+    }
+    if (config.type === Boolean && typeof value !== "boolean") {
+        return "expected a boolean";
+    }
+    return null;
+}
+
+/**
+ * game.settings.set does not validate: it coerces (false → "false" for String
+ * settings), and readers comparing against choice strings then take the wrong
+ * branch. Throw instead so a bad write fails loudly at the call site. A stored
+ * value that is itself invalid (garbage persisted before this guard existed)
+ * comes back as the registered default so restoring it stays clean.
+ *
+ * @param {string} namespace
+ * @param {string} settingKey
+ * @param {any} newValue
+ * @returns {any} - the settingKey's value before applying newValue
+ */
+async function getAndSetValidatedGameSetting(namespace, settingKey, newValue) {
+    const config = game.settings.settings.get(`${namespace}.${settingKey}`);
+    if (!config) {
+        throw new Error(`Unknown game setting "${namespace}.${settingKey}"`);
+    }
+
+    const reason = invalidGameSettingValueReason(config, newValue);
+    if (reason) {
+        throw new Error(
+            `Invalid value ${JSON.stringify(newValue)} for game setting "${namespace}.${settingKey}"; ${reason}`,
+        );
+    }
+
+    let presentValue = game.settings.get(namespace, settingKey);
+    if (invalidGameSettingValueReason(config, presentValue)) {
+        console.warn(
+            `Stored value ${JSON.stringify(presentValue)} for game setting "${namespace}.${settingKey}" is invalid; ` +
+                `substituting the registered default for the eventual restore.`,
+        );
+        presentValue = config.default;
+    }
+
+    await game.settings.set(namespace, settingKey, newValue);
+    return presentValue;
+}
+
+/**
  *
  * @param {string} settingKey
  * @param {any} newValue
  * @returns {any} - the settingKey's value before applying newValue
  */
 export async function getAndSetGameSetting(settingKey, newValue) {
-    const presentValue = game.settings.get(game.system.id, settingKey);
-    await game.settings.set(game.system.id, settingKey, newValue);
-    return presentValue;
+    return getAndSetValidatedGameSetting(game.system.id, settingKey, newValue);
 }
 
 export async function getAndSetGameSettingCore(settingKey, newValue) {
-    const presentValue = game.settings.get("core", settingKey);
-    await game.settings.set("core", settingKey, newValue);
-    return presentValue;
+    return getAndSetValidatedGameSetting("core", settingKey, newValue);
 }
