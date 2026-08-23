@@ -692,10 +692,13 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
             return ui.notifications.error(`${actor.name} has no token in this scene.  Unable to place AOE template.`);
         }
 
-        // Close all windows except us
-        for (let id of Object.keys(ui.windows)) {
-            if (id != this.appId) {
-                ui.windows[id].close();
+        // Close all windows except us (V1 registry only holds third-party module apps now)
+        for (const app of Object.values(ui.windows)) {
+            app.close();
+        }
+        for (const app of foundry.applications.instances.values()) {
+            if (app !== this) {
+                app.close();
             }
         }
 
