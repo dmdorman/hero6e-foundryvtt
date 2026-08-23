@@ -1092,9 +1092,9 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
      */
     _prepareDroppedItemData(itemsToProcess, options = {}) {
         const itemsToCreate = [];
-        const idMapping = new Map(); // Maps old source custom system IDs to new generated timestamps
+        const idMapping = new Map();
+        const stackedItemsInfo = [];
 
-        // First pass: Generate new IDs and map them against old system.ID values
         for (const rawItem of itemsToProcess) {
             const itemData = foundry.utils.deepClone(rawItem);
 
@@ -1111,16 +1111,13 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             }
             itemData.system.ID = newId;
 
-            // Ensure deactivated state and clean effects for fresh drops
             if (itemData.system.active) itemData.system.active = false;
-            itemData.effects = [];
+            if (itemData.effects) itemData.effects = [];
 
-            // Apply target type conversion if specified
             if (options.targetType) {
                 itemData.type = options.targetType;
             }
 
-            // Validate ruleset edition compatibility (5e vs 6e)
             const baseInfoCheck = getPowerInfo({
                 xmlid: itemData.system.XMLID,
                 is5e: this.actor.is5e,
@@ -1133,7 +1130,6 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             }
             itemData.system.xmlTag ??= baseInfoCheck.xmlTag;
 
-            // If it originated from a compendium, leverage the static reset helper in memory
             if (options.isCompendiumDrop) {
                 const resetUpdates = HeroSystem6eItem._prepareOriginalResetData(itemData);
                 for (const [key, value] of Object.entries(resetUpdates)) {
@@ -1141,21 +1137,62 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                 }
             }
 
+            // Only equipment is stackable
+            const isEquipment = itemData.type === "equipment";
+            const isTopLevel = !itemData.system.PARENTID;
+
+            if (isEquipment && isTopLevel) {
+                const existingItem = this.actor.items.find((i) => {
+                    if (
+                        i.type !== "equipment" ||
+                        i.system?.XMLID !== itemData.system?.XMLID ||
+                        i.name !== itemData.name ||
+                        i.system?.PARENTID
+                    ) {
+                        return false;
+                    }
+
+                    const existingModifiers = JSON.stringify(i.system.MODIFIER ?? []);
+                    const incomingModifiers = JSON.stringify(itemData.system.MODIFIER ?? []);
+
+                    const existingAdders = JSON.stringify(i.system.ADDER ?? []);
+                    const incomingAdders = JSON.stringify(itemData.system.ADDER ?? []);
+
+                    return existingModifiers === incomingModifiers && existingAdders === incomingAdders;
+                });
+
+                if (existingItem) {
+                    const currentQty = existingItem.system.QUANTITY ?? 1;
+                    const dropQty = itemData.system.QUANTITY ?? 1;
+                    const newQty = currentQty + dropQty;
+
+                    existingItem.update({ "system.QUANTITY": newQty });
+
+                    stackedItemsInfo.push({
+                        name: itemData.name,
+                        oldQty: currentQty,
+                        dropQty: dropQty,
+                        newQty: newQty,
+                    });
+
+                    continue;
+                }
+            }
+
             itemsToCreate.push(itemData);
         }
 
-        // Second pass: Remap PARENTID references using our completed ID mapping table
         for (const itemData of itemsToCreate) {
             if (itemData.system.PARENTID) {
                 if (idMapping.has(itemData.system.PARENTID)) {
                     itemData.system.PARENTID = idMapping.get(itemData.system.PARENTID);
                 } else {
-                    // If the parent wasn't included in the dropped batch, clear or handle accordingly
                     delete itemData.system.PARENTID;
                 }
             }
         }
 
+        itemsToCreate.stackedInfo = stackedItemsInfo;
         return itemsToCreate;
     }
 
@@ -1368,6 +1405,14 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         }
     }
 
+    /**
+     * Main framework entry point for dropping, converting, validating, and logging dropped items.
+     * Centralizes whisper targets, actor lookups, and single-source chat message dispatching.
+     *
+     * @param {Item} item         - The item being dropped.
+     * @param {Object} options    - Configuration options for the drop (e.g., target type, parent ID).
+     * @returns {Promise<void>}
+     */
     async DropItemFramework(item, options) {
         const itemData = item.toObject();
         itemData.system.ID = new Date().getTime();
@@ -1402,18 +1447,55 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             );
         }
 
-        // Process item creation, charges, clips, and quantity merging
-        await this._onDropItemCreate(itemData, item);
+        // --- EQUIPMENT INFO ---
+        if (itemData.type !== "equipment") {
+            const existingItem = this.actor.items.find((i) => {
+                if (i.system?.XMLID !== itemData.system?.XMLID || i.name !== itemData.name || i.system?.PARENTID) {
+                    return false;
+                }
+
+                const existingModifiers = JSON.stringify(i.system.MODIFIER ?? []);
+                const incomingModifiers = JSON.stringify(itemData.system.MODIFIER ?? []);
+
+                const existingAdders = JSON.stringify(i.system.ADDER ?? []);
+                const incomingAdders = JSON.stringify(itemData.system.ADDER ?? []);
+
+                return existingModifiers === incomingModifiers && existingAdders === incomingAdders;
+            });
+            if (existingItem) {
+                ui.notifications.info(
+                    `${itemData.name} was added as a duplicate item. If you want to track QUANTITY, items must be placed on the equipment tab.`,
+                );
+            }
+        }
+
+        if (options.isCompendiumDrop) {
+            const resetUpdates = HeroSystem6eItem._prepareOriginalResetData(itemData);
+            for (const [key, value] of Object.entries(resetUpdates)) {
+                foundry.utils.setProperty(itemData, key, value);
+            }
+        }
+
+        // Process item creation or quantity stacking via helper
+        const dropResult = await this._onDropItemCreate(itemData, item);
+        const stackedInfo = dropResult?.stackedInfo;
 
         const actor = this.actor;
         const token = actor.token;
         const dropName = token?.name || actor.getActiveTokens()?.[0]?.name || actor.name;
-        const dragName =
-            item.actor?.token?.name ||
-            item.actor?.getActiveTokens()?.[0]?.name ||
-            item.actor?.name ||
-            item.compendium?.name ||
-            (item.uuid.startsWith("Item.") ? "ItemSidebar" : null);
+
+        const dragName = (() => {
+            if (item.pack) {
+                const pack = game.packs.get(item.pack);
+                return pack?.metadata?.label ?? item.pack;
+            }
+            return (
+                item.actor?.token?.name ||
+                item.actor?.getActiveTokens()?.[0]?.name ||
+                item.actor?.name ||
+                (item.uuid.startsWith("Item.") ? "ItemSidebar" : "Compendium")
+            );
+        })();
 
         const chatData = {
             author: game.user._id,
@@ -1423,88 +1505,88 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         };
         chatData.whisper = Array.from(new Map(chatData.whisper.map((user) => [user.id, user])).values());
 
-        if (item.type === "equipment" && item.actor) {
+        const targetTab = itemData.type;
+
+        // Construct the single, appropriate chat message based on drop behavior
+        if (stackedInfo) {
+            chatData.content =
+                `<b>${stackedInfo.name}</b> was copied from <b>${dragName}</b>${item.pack ? " compendium" : ""}.<br>` +
+                `Its QUANTITY was increased by <b>${stackedInfo.dropQty}</b> ` +
+                `(from ${stackedInfo.oldQty} to ${stackedInfo.newQty}) ` +
+                `on the <b>${targetTab}</b> tab of <b>${dropName}</b>.`;
+            ChatMessage.create(chatData);
+        } else if (item.type === "equipment" && item.actor) {
             item.delete();
-            chatData.content = `<b>${item.name}</b> was transferred from <b>${dragName}</b> to the <b>${itemData.type}</b> tab of <b>${dropName}</b>.`;
+            chatData.content = `<b>${item.name}</b> was transferred from <b>${dragName}</b> to the <b>${targetTab}</b> tab of <b>${dropName}</b>.`;
+            ChatMessage.create(chatData);
         } else {
-            chatData.content = `<b>${item.name}</b> was copied from <b>${dragName}</b> to the <b>${itemData.type}</b> tab of <b>${dropName}</b>.`;
+            chatData.content = `<b>${item.name}</b> was copied from <b>${dragName}</b>${item.pack ? " compendium" : ""} to the <b>${targetTab}</b> tab of <b>${dropName}</b>.`;
+            ChatMessage.create(chatData);
         }
-        ChatMessage.create(chatData);
 
         for (const child of item.pack ? await item.childItemsFromPack() : item.childItems) {
-            await this.DropItemFramework(child, { PARENTID: itemData.system.ID, type: itemData.type });
+            await this.DropItemFramework(child, {
+                PARENTID: itemData.system.ID,
+                type: itemData.type,
+                isCompendiumDrop: Boolean(item.pack),
+            });
         }
     }
 
     /**
-     * Handle the creation and insertion of dropped items onto the actor sheet.
-     * Manages quantity stacking for identical full-charge/clip items, validates
-     * compatibility, and delegates to the unified item preparation pipeline.
+     * Handles the creation or quantity-stacking of dropped items on the actor.
+     * If an identical equipment item exists, its quantity is increased rather than creating a duplicate.
      *
-     * @param {Object|Object[]} itemData - Raw item data or array of item data being dropped.
-     * @param {Item} [sourceItem]        - The original source item instance (if dragged from an active source).
-     * @returns {Promise<Item[]|undefined>} - Array of newly created or updated embedded Item documents.
+     * @param {Object} itemData - The sanitized and prepared item data object to create.
+     * @returns {Promise<Object>} An object containing the created document(s) and any stacking metadata.
      * @protected
      */
-    async _onDropItemCreate(itemData, sourceItem) {
-        const itemDataArray = itemData instanceof Array ? itemData : [itemData];
+    async _onDropItemCreate(itemData) {
+        // Check if item is stackable equipment
+        const isEquipment = itemData.type === "equipment";
+        const isTopLevel = !itemData.system.PARENTID;
 
-        // Handle stackable equipment merging (e.g., stacking quantities for potions or full-charge items)
-        if (itemDataArray.length === 1 && sourceItem) {
-            const stackItem = itemDataArray[0];
-            if (stackItem.type === "equipment") {
-                stackItem.system.MODIFIER ??= [];
-
-                const chargeMod = stackItem.system.MODIFIER.find((o) => o.XMLID === "CHARGES");
-                const clipMod = stackItem.system.MODIFIER.find((o) => o.XMLID === "CLIP");
-
-                const chargesMax = parseInt(chargeMod?.OPTION_ALIAS) || 0;
-                const clipsMax = parseInt(clipMod?.OPTION_ALIAS) || 0;
-
-                const currentCharges = stackItem.system._charges ?? chargesMax;
-                const currentClips = stackItem.system._clips ?? clipsMax;
-                const isFullCharges = chargesMax === 0 || currentCharges >= chargesMax;
-                const isFullClips = clipsMax === 0 || currentClips >= clipsMax;
-
-                if (isFullCharges && isFullClips) {
-                    const existingItem = this.actor.items.find(
-                        (o) =>
-                            o.type === "equipment" &&
-                            o.system.XMLID === stackItem.system.XMLID &&
-                            o.system.ALIAS === stackItem.system.ALIAS &&
-                            o.system.NAME === stackItem.system.NAME,
-                    );
-
-                    if (existingItem) {
-                        const dropQty = parseInt(stackItem.system.QUANTITY ?? stackItem.system.QTY ?? 1);
-                        const existingQty = parseInt(existingItem.system.QUANTITY ?? existingItem.system.QTY ?? 1);
-                        const newQty = existingQty + dropQty;
-
-                        ui.notifications.warn(
-                            `Increasing quantity of <b>${existingItem.name}</b> to <b>${newQty}</b>.`,
-                        );
-                        await existingItem.update({
-                            "system.QUANTITY": newQty,
-                            "system.QTY": newQty,
-                        });
-                        return [existingItem];
-                    }
+        if (isEquipment && isTopLevel) {
+            const existingItem = this.actor.items.find((i) => {
+                if (
+                    i.type !== "equipment" ||
+                    i.system?.XMLID !== itemData.system?.XMLID ||
+                    i.name !== itemData.name ||
+                    i.system?.PARENTID
+                ) {
+                    return false;
                 }
+
+                const existingModifiers = JSON.stringify(i.system.MODIFIER ?? []);
+                const incomingModifiers = JSON.stringify(itemData.system.MODIFIER ?? []);
+
+                const existingAdders = JSON.stringify(i.system.ADDER ?? []);
+                const incomingAdders = JSON.stringify(itemData.system.ADDER ?? []);
+
+                return existingModifiers === incomingModifiers && existingAdders === incomingAdders;
+            });
+
+            if (existingItem) {
+                const currentQty = existingItem.system.QUANTITY ?? 1;
+                const dropQty = itemData.system.QUANTITY ?? 1;
+                const newQty = currentQty + dropQty;
+
+                await existingItem.update({ "system.QUANTITY": newQty });
+
+                return {
+                    items: [],
+                    stackedInfo: {
+                        name: itemData.name,
+                        oldQty: currentQty,
+                        dropQty: dropQty,
+                        newQty: newQty,
+                    },
+                };
             }
         }
 
-        try {
-            // Process all items through the unified preparation helper
-            const preparedData = this._prepareDroppedItemData(itemDataArray, {
-                isCompendiumDrop: Boolean(sourceItem?.pack),
-            });
-
-            const newItems = await this.actor.createEmbeddedDocuments("Item", preparedData);
-            return newItems;
-        } catch (error) {
-            console.error(error);
-            ui.notifications.error(error.message);
-        }
+        const newItems = await this.actor.createEmbeddedDocuments("Item", [itemData]);
+        return { items: newItems, stackedInfo: null };
     }
 
     async _uploadCharacterSheet(event) {
