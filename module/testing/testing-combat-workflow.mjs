@@ -146,8 +146,10 @@ export function registerCombatWorkflowTests(quench) {
                         originalScrollingTextPreference = await getAndSetGameSettingCore("scrollingStatusText", false);
                         // The expected-damage math is raw - defense: a rolled hit
                         // location (Vitals x1.5 STUN, Head x2...) would multiply the
-                        // applied damage and fail the assertions non-deterministically
-                        originalHitLocations = await getAndSetGameSetting("hit locations", false);
+                        // applied damage and fail the assertions non-deterministically.
+                        // The setting is a string enum — the old boolean false coerced
+                        // to "false", which read as hit-locations ENABLED
+                        originalHitLocations = await getAndSetGameSetting("hit locations", "noHitLocations");
 
                         quenchScene = await createQuenchScene({ quench: this });
 
