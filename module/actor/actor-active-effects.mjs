@@ -510,6 +510,114 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
         );
     }
 
+    // Combat tracker row icons show only combat-relevant effects, most impactful
+    // first. Tier 1 = cannot act, 2 = CV/stances, 3 = STUN/END/REC/BODY,
+    // 4 = other characteristics/senses/misc. A group key collapses alike effects
+    // into a single icon. The effects panel still lists everything.
+    static #TRACKER_RANK_BY_STATUS = (() => {
+        const senses = [
+            "hearingSenseDisabled",
+            "mentalSenseDisabled",
+            "radioSenseDisabled",
+            "smellTasteSenseDisabled",
+            "touchSenseDisabled",
+            "sonarSenseDisabled",
+            "spatialAwarenessSenseDisabled",
+            "dangerSenseDisabled",
+            "detectSenseDisabled",
+        ];
+        const tiers = [
+            [
+                "dead",
+                "unconscious",
+                "knockedOut",
+                "asleep",
+                "paralysis",
+                "stunned",
+                "entangled",
+                "blind",
+                "mindControl",
+                "aborted",
+            ],
+            [
+                "prone",
+                "grab",
+                "dodge",
+                "block",
+                "brace",
+                "haymaker",
+                "strike",
+                "nonCombatMovement",
+                "encumbered",
+                "underwater",
+                "standingInWater",
+                "desolidification",
+                "invisible",
+                "target",
+                "holding",
+            ],
+            ["bleeding", "holdingBreath"],
+            ["fear", "silence", "regeneration", "fly", "tunneling", "club-weapon", ...senses],
+        ];
+        const map = {};
+        tiers.forEach((ids, tierIndex) =>
+            ids.forEach((id, order) => {
+                map[id] = Object.freeze({
+                    tier: tierIndex + 1,
+                    order,
+                    ...(senses.includes(id) ? { group: "senses" } : {}),
+                });
+            }),
+        );
+        return Object.freeze(map);
+    })();
+
+    static #TRACKER_CV_CHARACTERISTICS = new Set(["ocv", "dcv", "omcv", "dmcv"]);
+    static #TRACKER_KEY_CHARACTERISTICS = new Set(["stun", "end", "rec", "body"]);
+
+    /**
+     * Classify an effect for the combat tracker's row icons.
+     * Falls back from known status ids to the characteristics the effect's
+     * changes touch; effects with no combat impact return null and are hidden.
+     * @param {ActiveEffect} effect
+     * @returns {{tier: number, order: number, group?: string}|null}
+     */
+    static combatTrackerClassification(effect) {
+        let best = null;
+        for (const status of effect.statuses ?? []) {
+            const rank = HeroSystem6eActorActiveEffects.#TRACKER_RANK_BY_STATUS[status];
+            if (rank && (!best || rank.tier < best.tier || (rank.tier === best.tier && rank.order < best.order))) {
+                best = rank;
+            }
+        }
+        if (best) return best;
+
+        if (effect.XMLID === "naturalBodyHealing") return null;
+
+        const effectChanges = effect.changes?.length ? effect.changes : (effect.system?.changes ?? []);
+        const characteristics = effectChanges
+            .map((c) => c.key?.match(/^system\.characteristics\.([a-z0-9]+)\./)?.[1])
+            .filter(Boolean);
+        const touchesKeyCharacteristic = characteristics.some((c) =>
+            HeroSystem6eActorActiveEffects.#TRACKER_KEY_CHARACTERISTICS.has(c),
+        );
+
+        const flags = effect.flags?.[game.system.id];
+        if (flags?.type === "adjustment") {
+            const activePoints =
+                parseInt(flags.adjustmentActivePoints) ||
+                effectChanges.reduce((sum, c) => sum + (parseInt(c.value) || 0), 0);
+            return { tier: touchesKeyCharacteristic ? 3 : 4, order: 99, group: activePoints < 0 ? "drain" : "aid" };
+        }
+
+        if (characteristics.some((c) => HeroSystem6eActorActiveEffects.#TRACKER_CV_CHARACTERISTICS.has(c))) {
+            return { tier: 2, order: 99 };
+        }
+        if (touchesKeyCharacteristic) return { tier: 3, order: 99 };
+        if (characteristics.length) return { tier: 4, order: 99 };
+        return null;
+    }
+
     /**
      * Apply an ActiveEffect that uses a MULTIPLY application mode.
      * Changes which MULTIPLY must be numeric to allow for multiplication.

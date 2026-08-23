@@ -1,5 +1,6 @@
 import { HeroSystem6eCombatantSingle } from "./combatant-single.mjs";
 import { HeroSystem6eCombatSingle } from "./combat-single.mjs";
+import { HeroSystem6eActorActiveEffects } from "./actor/actor-active-effects.mjs";
 import { overrideCanAct } from "./settings/settings-helpers.mjs";
 import { activeSingleTrackerCombatFor, isQuenchTestRunning } from "./utility/util.mjs";
 
@@ -153,27 +154,81 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         return super._onClickAction(event, target);
     }
 
+    /** Row width is tight: only the most impactful condition icons fit. */
+    static MAX_ROW_EFFECT_ICONS = 4;
+
     /**
-     * The effects core renders as row icons, in render order — the clicked icon's
-     * DOM index maps back into this list. Mirrors core's _prepareTurnContext filter.
+     * Combat-relevant effects for a row: core's showIcon filter, then the
+     * system's combat classification (most impactful first), then alike effects
+     * collapsed into one entry (all aids, all drains, impaired senses). Both the
+     * render context and the click handler derive from this list, so the icon
+     * DOM index always maps back to the same entry.
      * @param {Actor} actor
-     * @returns {ActiveEffect[]}
+     * @returns {{img: string, name: string, effects: ActiveEffect[]}[]}
      * @private
      */
-    _rowEffectsFor(actor) {
+    _rowEffectEntries(actor) {
         const SHOW_ICON = CONST.ACTIVE_EFFECT_SHOW_ICON;
         const defeatedId = CONFIG.specialStatusEffects?.DEFEATED;
-        const result = [];
+        const classified = [];
         for (const effect of actor?.appliedEffects ?? []) {
             if (defeatedId && effect.statuses.has(defeatedId)) continue;
             if (
-                effect.showIcon === SHOW_ICON.ALWAYS ||
-                (effect.showIcon === SHOW_ICON.CONDITIONAL && effect.isTemporary)
+                effect.showIcon !== SHOW_ICON.ALWAYS &&
+                !(effect.showIcon === SHOW_ICON.CONDITIONAL && effect.isTemporary)
             ) {
-                result.push(effect);
+                continue;
             }
+            const rank = HeroSystem6eActorActiveEffects.combatTrackerClassification(effect);
+            if (!rank) continue;
+            classified.push({ effect, ...rank });
         }
-        return result;
+        classified.sort((a, b) => a.tier - b.tier || a.order - b.order || a.effect.name.localeCompare(b.effect.name));
+
+        // A lone group member keeps its own icon and name; two or more collapse
+        // into the generic group entry at the first member's priority slot
+        const statusEffectsObj = HeroSystem6eActorActiveEffects.statusEffectsObj;
+        const groupDisplay = {
+            senses: { name: "Senses Impaired" },
+            aid: { name: "Aided", img: statusEffectsObj.aidEffect.img },
+            drain: { name: "Drained", img: statusEffectsObj.drainEffect.img },
+        };
+        const entries = [];
+        const byGroup = new Map();
+        for (const { effect, group } of classified) {
+            const existing = group ? byGroup.get(group) : null;
+            if (existing) {
+                existing.effects.push(effect);
+                existing.name = groupDisplay[group].name;
+                existing.img = groupDisplay[group].img ?? existing.effects[0].img;
+                continue;
+            }
+            const entry = { img: effect.img, name: effect.name, effects: [effect] };
+            if (group) byGroup.set(group, entry);
+            entries.push(entry);
+        }
+        return entries;
+    }
+
+    /**
+     * Replaces core's unfiltered effect icons with the classified, grouped list,
+     * capped to the few icons a row can fit. The tooltip still enumerates every
+     * combat-relevant effect, including grouped members and overflow.
+     * @override
+     */
+    async _prepareTurnContext(combat, combatant, index) {
+        const turn = await super._prepareTurnContext(combat, combatant, index);
+        try {
+            const entries = this._rowEffectEntries(combatant.actor);
+            const icons = entries
+                .slice(0, HeroSystem6eCombatTrackerSingle.MAX_ROW_EFFECT_ICONS)
+                .map((e) => ({ img: e.img, name: e.effects.length > 1 ? `${e.name} (×${e.effects.length})` : e.name }));
+            const tooltipEntries = entries.flatMap((e) => e.effects.map((ae) => ({ img: ae.img, name: ae.name })));
+            turn.effects = { icons, tooltip: this._formatEffectsTooltip(tooltipEntries) };
+        } catch (e) {
+            console.warn(`Combat-relevant effect row build failed`, e);
+        }
+        return turn;
     }
 
     /**
@@ -194,10 +249,12 @@ export class HeroSystem6eCombatTrackerSingle extends CombatTracker {
         event.preventDefault();
         event.stopPropagation();
 
-        const icons = this._rowEffectsFor(actor);
+        const entries = this._rowEffectEntries(actor).slice(0, HeroSystem6eCombatTrackerSingle.MAX_ROW_EFFECT_ICONS);
         const index = [...(img.parentElement?.querySelectorAll("img.token-effect") ?? [])].indexOf(img);
-        const effect = icons[index];
+        const entry = entries[index];
+        const effect = entry?.effects.length === 1 ? entry.effects[0] : null;
         // Toggle only simple actor-level conditions (prone, stunned…):
+        // - grouped icons (aids, drains, senses) have no single toggle target
         // - item effects (maneuvers) store their localized NAME in statuses and
         //   belong to their item's toggle, not toggleStatusEffect
         // - multi-status effects would be deleted then partially re-created

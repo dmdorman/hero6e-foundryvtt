@@ -1,4 +1,5 @@
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
+import { HeroSystem6eCombatTrackerSingle } from "../combatTracker-single.mjs";
 import {
     setQuenchTimeout,
     createQuenchScene,
@@ -585,6 +586,121 @@ export function registerStatusEffectTests(quench) {
                         canvas.scene.updateEmbeddedDocuments = originalUpdate;
                         await tokenDocument.delete();
                         await npcTestActor.delete();
+                    }
+                });
+            });
+
+            describe("Combat Tracker Effect Classification", function () {
+                setQuenchTimeout(this);
+                const classify = (effect) => HeroSystem6eActorActiveEffects.combatTrackerClassification(effect);
+
+                it("ranks incapacitation above CV modifiers, key characteristics, and misc", function () {
+                    const tiers = ["knockedOut", "prone", "bleeding", "regeneration"].map(
+                        (status) => classify({ statuses: new Set([status]) }).tier,
+                    );
+                    assert.deepEqual(tiers, [1, 2, 3, 4]);
+                });
+
+                it("orders within a tier by impact (dead before stunned before blind)", function () {
+                    const [dead, stunned, blind] = ["dead", "stunned", "blind"].map((status) =>
+                        classify({ statuses: new Set([status]) }),
+                    );
+                    assert.ok(dead.order < stunned.order, "dead outranks stunned");
+                    assert.ok(stunned.order < blind.order, "stunned outranks blind");
+                });
+
+                it("classifies unknown effects by the characteristics their changes touch", function () {
+                    const withChange = (key) => ({
+                        statuses: new Set(),
+                        changes: [{ key: `system.characteristics.${key}.max`, value: -1 }],
+                    });
+                    assert.equal(classify(withChange("dcv")).tier, 2);
+                    assert.equal(classify(withChange("end")).tier, 3);
+                    assert.equal(classify(withChange("str")).tier, 4);
+                    assert.isNull(classify({ statuses: new Set(), changes: [] }), "no combat impact hides");
+                });
+
+                it("classifies adjustments by sign and target characteristic", function () {
+                    const adjustment = (activePoints, key) => ({
+                        statuses: new Set(),
+                        flags: { [game.system.id]: { type: "adjustment", adjustmentActivePoints: activePoints } },
+                        system: {
+                            changes: [{ key: `system.characteristics.${key}.max`, value: activePoints }],
+                        },
+                    });
+                    const stunDrain = classify(adjustment(-5, "stun"));
+                    assert.equal(stunDrain.tier, 3);
+                    assert.equal(stunDrain.group, "drain");
+                    const strAid = classify(adjustment(5, "str"));
+                    assert.equal(strAid.tier, 4);
+                    assert.equal(strAid.group, "aid");
+                });
+
+                it("hides natural body healing", function () {
+                    assert.isNull(classify({ statuses: new Set(), XMLID: "naturalBodyHealing" }));
+                });
+
+                it("builds priority-sorted, grouped row entries", async function () {
+                    const effectsObj = HeroSystem6eActorActiveEffects.statusEffectsObj;
+                    const trackerActor = await Actor.create({
+                        name: "_Quench_Tracker_Effects",
+                        type: "pc",
+                        img: "icons/svg/mystery-man.svg",
+                    });
+                    try {
+                        await trackerActor.toggleStatusEffect(effectsObj.proneEffect.id, { active: true });
+                        await trackerActor.toggleStatusEffect(effectsObj.entangledEffect.id, { active: true });
+                        await trackerActor.toggleStatusEffect(effectsObj.hearingSenseDisabledEffect.id, {
+                            active: true,
+                        });
+                        await trackerActor.toggleStatusEffect(effectsObj.radioSenseDisabledEffect.id, {
+                            active: true,
+                        });
+                        const adjustment = (name, activePoints, key) => ({
+                            name,
+                            img: "icons/svg/aura.svg",
+                            showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS,
+                            flags: { [game.system.id]: { type: "adjustment", adjustmentActivePoints: activePoints } },
+                            system: {
+                                changes: [
+                                    {
+                                        key: `system.characteristics.${key}.max`,
+                                        value: activePoints,
+                                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
+                                    },
+                                ],
+                            },
+                        });
+                        await trackerActor.createEmbeddedDocuments("ActiveEffect", [
+                            adjustment("DRAIN 5 STUN", -5, "stun"),
+                            adjustment("DRAIN 3 DEX", -3, "dex"),
+                            {
+                                name: "Natural Body Healing",
+                                img: "icons/svg/regen.svg",
+                                showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS,
+                                flags: { [game.system.id]: { XMLID: "naturalBodyHealing" } },
+                            },
+                        ]);
+
+                        const entries = HeroSystem6eCombatTrackerSingle.prototype._rowEffectEntries.call(
+                            null,
+                            trackerActor,
+                        );
+                        assert.deepEqual(
+                            entries.map((e) => e.name),
+                            [
+                                effectsObj.entangledEffect.name,
+                                effectsObj.proneEffect.name,
+                                "Drained",
+                                "Senses Impaired",
+                            ],
+                            "entangled > prone > drains (grouped, at the STUN drain's tier) > senses (grouped)",
+                        );
+                        assert.equal(entries.find((e) => e.name === "Drained").effects.length, 2);
+                        assert.equal(entries.find((e) => e.name === "Senses Impaired").effects.length, 2);
+                    } finally {
+                        await trackerActor.delete();
                     }
                 });
             });
