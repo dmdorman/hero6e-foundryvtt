@@ -75,6 +75,7 @@ HERO.folderColors = {
     // For Compendiums
     Equipment: "#aa00aa",
     Disadvantages: "#aaaa00",
+    Martialarts: "#e67e22",
 
     // Sub categories of POWER (mute the base category's colour with grey - except for characteristics which is based on powers)
     "Powers.Characteristics": "#b14e4e",
