@@ -456,7 +456,7 @@ export class HeroSystem6eCompendium extends foundry.applications.sidebar.apps.Co
 
                 if (!confirmed) return;
 
-                // Find all items belonging directly or recursively to this folder
+                // 1. Find all folders belonging directly or recursively to this parent folder
                 const childFolderIds = new Set([folderId]);
                 for (const f of this.collection.folders.values()) {
                     if (f.folder?.id === folderId || childFolderIds.has(f.folder?.id)) {
@@ -464,20 +464,46 @@ export class HeroSystem6eCompendium extends foundry.applications.sidebar.apps.Co
                     }
                 }
 
-                // Gather document IDs stored inside these folders
-                const itemIdsToDelete = this.collection.index
+                // 2. Gather root document IDs stored directly inside these folders
+                const rootItemIds = this.collection.index
                     .filter((indexEntry) => childFolderIds.has(indexEntry.folder))
                     .map((indexEntry) => indexEntry._id);
 
-                // Delete all contained documents explicitly first
-                if (itemIdsToDelete.length > 0) {
-                    await HeroSystem6eItem.deleteDocuments(itemIdsToDelete, { pack: this.collection.collection });
+                // 3. Helper to recursively collect all nested child/descendant item IDs
+                const allIdsToDelete = new Set(rootItemIds);
+
+                const collectDescendants = async (itemId) => {
+                    // Fetch full document from pack to ensure system data & childItems are populated
+                    const doc = await this.collection.getDocument(itemId);
+                    if (!doc) return;
+
+                    const childItems = doc.system?.childItems || doc.childItems || [];
+                    for (const child of childItems) {
+                        const childId = child.id || child._id;
+                        if (childId && !allIdsToDelete.has(childId)) {
+                            allIdsToDelete.add(childId);
+                            // Recurse deeper into nested Compound Powers / Sub-Lists
+                            await collectDescendants(childId);
+                        }
+                    }
+                };
+
+                // Populate recursive child IDs for all root items
+                for (const rootId of rootItemIds) {
+                    await collectDescendants(rootId);
                 }
 
-                // Delete the folder record itself
+                // 4. Delete all collected items (nested children + parents) in one batch
+                if (allIdsToDelete.size > 0) {
+                    await HeroSystem6eItem.deleteDocuments(Array.from(allIdsToDelete), {
+                        pack: this.collection.collection,
+                    });
+                }
+
+                // 5. Delete the folder record itself
                 await folder.delete();
 
-                // Re-index custom fields and refresh view
+                // 6. Re-index custom fields and refresh view
                 await this.collection.getIndex({
                     fields: HeroSystem6eCompendium.HERO_COMPENDIUM_INDEX_FIELDS,
                     force: true,
