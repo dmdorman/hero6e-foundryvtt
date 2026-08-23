@@ -10,18 +10,23 @@ const abs = (turn, segment) => turn * 12 + segment;
 // so its after() hook tears down only its own documents.
 function makeHarness({ actorDocuments, combatDocuments }) {
     async function makeActor(name, { dex = 10, spd = 2, type = "pc", extra = {} } = {}) {
-        const actor = await Actor.create({
-            name,
-            type,
-            system: {
-                initiativeCharacteristic: "dex",
-                characteristics: {
-                    dex: { value: dex, max: dex },
-                    spd: { value: spd, max: spd },
+        const actor = await Actor.create(
+            {
+                name,
+                type,
+                system: {
+                    initiativeCharacteristic: "dex",
+                    characteristics: {
+                        dex: { value: dex, max: dex },
+                        spd: { value: spd, max: spd },
+                    },
+                    ...extra,
                 },
-                ...extra,
             },
-        });
+            // Pin the edition: under a 5e DefaultEdition world, figured-characteristic
+            // recalculation would rewrite the seeded SPD as 1 + DEX/10 on every prepareData
+            { is5e: extra.is5e ?? false },
+        );
         actor.prepareData();
         actorDocuments.push(actor);
         return actor;
@@ -580,18 +585,21 @@ export function registerCombatTests(quench) {
                             scene = await Scene.create({ name: "_Quench Recovery Arena" });
                         }
 
-                        const npcActor = await Actor.create({
-                            name: "_Quench Recovery NPC",
-                            type: "npc",
-                            system: {
-                                initiativeCharacteristic: "dex",
-                                characteristics: {
-                                    dex: { value: 10, max: 10 },
-                                    spd: { value: 2, max: 2 },
+                        const npcActor = await Actor.create(
+                            {
+                                name: "_Quench Recovery NPC",
+                                type: "npc",
+                                system: {
+                                    initiativeCharacteristic: "dex",
+                                    characteristics: {
+                                        dex: { value: 10, max: 10 },
+                                        spd: { value: 2, max: 2 },
+                                    },
                                 },
+                                prototypeToken: { actorLink: false },
                             },
-                            prototypeToken: { actorLink: false },
-                        });
+                            { is5e: false },
+                        );
                         actorDocuments.push(npcActor);
 
                         [tokenDoc] = await scene.createEmbeddedDocuments("Token", [
