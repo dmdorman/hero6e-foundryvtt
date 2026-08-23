@@ -152,7 +152,7 @@ export function determineMaxAdjustment(item, simplifiedHealing, potentialCharact
 
     const { diceParts } = calculateDicePartsForItem(item, {});
 
-    if (item.actor.is5e) {
+    if (item.actor?.is5e) {
         // INCREASEDMAX, if available.
         const increaseMax = parseInt(item.system.ADDER?.find((adder) => adder.XMLID === "INCREASEDMAX")?.LEVELS || 0);
 
