@@ -14,7 +14,6 @@ import { HeroSystem6eChatMessage } from "./heroChatMessage.mjs";
 import { CreateHeroCompendiums } from "./heroCompendiums.mjs";
 import { HeroSocketHandler } from "./heroSocketHandler.mjs";
 import { HeroTokenRuler } from "./heroTokenRuler.mjs";
-import { HeroPointVisionSource, setPerceptionModes } from "./herovision/vision.mjs";
 import { initializeHeroVisionV14 } from "./herovision/hero-vision-14.mjs";
 
 import { HeroSystem6eItemDirectory } from "./itemDirectory.mjs";
@@ -60,7 +59,6 @@ import { HeroSystemTokenHud } from "./token/heroSystemTokenHud.mjs";
 import "./heroRoller/chat-dice.mjs";
 import { HeroRoll } from "./heroRoller/dice.mjs";
 import "./utility/adjustment.mjs";
-import { HeroCompatibility } from "./utility/compatibility.mjs";
 import { expireEffects } from "./utility/util.mjs";
 
 const { Macro } = foundry.documents;
@@ -118,7 +116,6 @@ Hooks.once("init", async function () {
         : CONST.CHAT_MESSAGE_STYLES.OOC;
 
     // Custom HeroSystem VisionMode
-    setPerceptionModes();
     initializeHeroVisionV14();
 
     // HEROSYS
@@ -191,10 +188,6 @@ Hooks.once("init", async function () {
     CONFIG.MeasuredTemplate.objectClass = HeroSystem6eMeasuredTemplate;
     CONFIG.ActiveEffect.documentClass = HeroSystem6eActorActiveEffects;
     CONFIG.Token.rulerClass = HeroTokenRuler; //V13
-
-    if (!HeroCompatibility.isV14) {
-        CONFIG.Canvas.visionSourceClass = HeroPointVisionSource;
-    }
 
     Object.assign(CONFIG.ActiveEffect.dataModels, {
         // REF: https://foundryvtt.wiki/en/development/api/DataModel
