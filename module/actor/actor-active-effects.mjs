@@ -621,14 +621,17 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
     /**
      * Apply an ActiveEffect that uses a MULTIPLY application mode.
      * Changes which MULTIPLY must be numeric to allow for multiplication.
-     * @param {Actor} actor                   The Actor to whom this effect should be applied
+     * Overrides core to round in the player's favor (e.g. halved DCV). The
+     * instance-method form (_applyMultiply) is deprecated since V14; the static
+     * override is only reached when applyChange is dispatched on this class.
+     * @param {Actor} targetDoc               The Document to which this effect should be applied
      * @param {EffectChangeData} change       The change data being applied
      * @param {*} current                     The current value being modified
      * @param {*} delta                       The parsed value of the change object
      * @param {object} changes                An object which accumulates changes to be applied
-     * @private
+     * @protected
      */
-    _applyMultiply(actor, change, current, delta, changes) {
+    static _applyChangeMultiply(targetDoc, change, current, delta, changes) {
         let update;
         const ct = foundry.utils.getType(current);
         switch (ct) {

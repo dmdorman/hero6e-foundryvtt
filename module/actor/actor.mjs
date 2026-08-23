@@ -28,7 +28,6 @@ import { HeroSystem6eActorActiveEffects } from "./actor-active-effects.mjs";
 const { renderTemplate } = foundry.applications.handlebars;
 const { FilePicker } = foundry.applications.apps;
 const { Actor, Item } = foundry.documents;
-const { ItemSheet } = foundry.appv1.sheets;
 
 /**
  * Extend the base Actor entity by defining a custom roll data structure which is ideal for the Simple system.
@@ -4122,10 +4121,12 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             .filter((power) => power.type?.includes("maneuver"))
             .map((item) => item.id);
         if (existingManeuverIds.length) {
-            // Close any open Item sheets
-            Object.values(ui.windows)
-                .filter((app) => app instanceof ItemSheet && existingManeuverIds.includes(app.document.id))
-                .forEach((app) => app.close({ force: true }));
+            // Close any open Item sheets (AppV2 instances; ui.windows only held V1 apps)
+            for (const app of foundry.applications.instances.values()) {
+                if (existingManeuverIds.includes(app.document?.id)) {
+                    await app.close({ force: true });
+                }
+            }
 
             // Delete all the old items (we will re-create them)
             await this.deleteEmbeddedDocuments("Item", existingManeuverIds, { render: false, renderSheet: false });
@@ -4886,7 +4887,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const overrides = {};
         const replacementData = this.getRollData();
         for (const change of changes) {
-            const result = ActiveEffect.applyChange(this, change, { replacementData });
+            // Dispatch on the system class so static _applyChange* overrides
+            // (player-favoring MULTIPLY rounding) are used instead of core's
+            const result = HeroSystem6eActorActiveEffects.applyChange(this, change, { replacementData });
             if (foundry.utils.isPlainObject(result)) Object.assign(overrides, result);
         }
 

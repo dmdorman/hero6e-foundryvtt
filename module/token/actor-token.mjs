@@ -165,7 +165,7 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
 
         // Track END for movement when in combat and it is the active combatant
         if (game.combat?.combatant?.tokenId === this.id) {
-            const masterCombatant = game.combat.getCombatantByToken(this.combatant.tokenId);
+            const masterCombatant = this.combatant;
             const endStart = masterCombatant.getFlag(game.system.id, "endUsedForMovement") || 0;
             const endCost = this._movementHistoryEndCost;
             const endDelta = endCost - endStart;
