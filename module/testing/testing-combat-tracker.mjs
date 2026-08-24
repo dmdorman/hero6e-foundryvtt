@@ -10,24 +10,38 @@ const abs = (turn, segment) => turn * 12 + segment;
 // so its after() hook tears down only its own documents.
 function makeHarness({ actorDocuments, combatDocuments }) {
     async function makeActor(name, { dex = 10, spd = 2, type = "pc", extra = {} } = {}) {
-        const actor = await Actor.create(
-            {
-                name,
-                type,
-                system: {
-                    initiativeCharacteristic: "dex",
-                    characteristics: {
-                        dex: { value: dex, max: dex },
-                        spd: { value: spd, max: spd },
-                    },
-                    ...extra,
-                },
+        const system = {
+            initiativeCharacteristic: "dex",
+            characteristics: {
+                dex: { value: dex, max: dex },
+                spd: { value: spd, max: spd },
             },
+            ...extra,
+        };
+        // 5e SPD is figured — floor(1 + DEX/10 + LEVELS) recomputed on every
+        // prepareData — so directly seeded values would not survive. Seed the
+        // purchases that make the requested numbers real instead: DEX as levels
+        // over its base 10, SPD as levels over the figured amount (5e characters
+        // routinely buy SPD on top of what DEX gives them).
+        if (extra.is5e === true) {
+            const figuredSpd = Math.floor(1 + Math.max(0, dex) / 10);
+            system.DEX ??= { LEVELS: dex - 10 };
+            system.SPD ??= { LEVELS: spd - figuredSpd };
+        }
+        const actor = await Actor.create(
+            { name, type, system },
             // Pin the edition: under a 5e DefaultEdition world, figured-characteristic
             // recalculation would rewrite the seeded SPD as 1 + DEX/10 on every prepareData
             { is5e: extra.is5e ?? false },
         );
         actor.prepareData();
+        // A drift between the seeded purchase and the figured formula would silently
+        // skew every phase expectation downstream; fail loudly at the source instead
+        if (extra.is5e === true && actor.system.characteristics.spd.max !== spd) {
+            throw new Error(
+                `makeActor(${name}): 5e figured SPD came out ${actor.system.characteristics.spd.max}, wanted ${spd}`,
+            );
+        }
         actorDocuments.push(actor);
         return actor;
     }
@@ -1658,6 +1672,74 @@ export function registerCombatTests(quench) {
                     expect(combat.segment).to.equal(6);
                     expect(combat.combatant.actorId, "DEX 20 acts first on the new SPD chart").to.equal(slow.id);
                 });
+
+                it("Should end a 5e SPD-change lockout at the next Segment both SPDs share", async function () {
+                    // 5e optional SPD-change rule: the character cannot act until the next
+                    // Segment that is a Phase for BOTH SPDs. SPD 2 {6,12} and SPD 3 {4,8,12}
+                    // share only Segment 12 — the 6e rule (both would have had a Phase) would
+                    // already free them after Segment 6, making Segment 8 the observable split.
+                    const slow = await makeActor("_Quench 5e SPD Change", { dex: 20, spd: 2, extra: { is5e: true } });
+                    const pacer = await makeActor("_Quench 5e SPD Pacer", { dex: 10, spd: 12 });
+
+                    const combat = await makeCombat([slow, pacer]);
+                    await combat.startCombat();
+                    expect(combat.segment).to.equal(12);
+                    await combat.nextTurn(); // Pacer in Segment 12
+                    await combat.nextTurn(); // Crosses into Round 2, Segment 1 (Pacer only)
+                    expect(combat.segment).to.equal(1);
+
+                    const slowCombatant = combatantFor(combat, slow);
+                    const seeded = await waitUntil(
+                        () => slowCombatant.getFlag(game.system.id, "knownSpd") !== undefined,
+                    );
+                    expect(seeded, "knownSpd seeded at the first segment boundary").to.be.true;
+
+                    // A 5e sheet edit buys SPD LEVELS on top of the figured base: DEX 20
+                    // figures SPD 3, the actor was seeded at -1 LEVELS for SPD 2, so 0
+                    // LEVELS is SPD 3. The purchase must persist through the figured path.
+                    await slow.update({ "system.SPD.LEVELS": 0 });
+                    expect(
+                        slow._source.system.characteristics.spd.value,
+                        "SPD purchase persisted via the figured path",
+                    ).to.equal(3);
+
+                    await combat.nextTurn(); // Segment 2 boundary detects the change
+                    const deferred = await waitUntil(() => !!slowCombatant.getFlag(game.system.id, "pendingSpd"));
+                    expect(deferred, "voluntary LEVELS purchase deferred via pendingSpd").to.be.true;
+                    expect(slowCombatant.combatSpd, "old SPD still governs while deferred").to.equal(2);
+
+                    await combat.applyPendingSpdNow(slowCombatant.id);
+                    const detected = await waitUntil(() => !!slowCombatant.getFlag(game.system.id, "spdLockout"));
+                    expect(detected, "GM override applies the change with the SPD-change lockout").to.be.true;
+
+                    const lockout = slowCombatant.getFlag(game.system.id, "spdLockout");
+                    expect(
+                        lockout.lockoutEndAbs,
+                        "5e rule: locked until the next shared Phase of SPD 2 and 3",
+                    ).to.equal(abs(2, 12));
+                    expect(slowCombatant.hasPhaseInSegment(4), "locked out of the new SPD Segment 4 Phase").to.be.false;
+                    expect(
+                        slowCombatant.hasPhaseInSegment(8),
+                        "still locked at Segment 8, where the 6e rule would already allow acting",
+                    ).to.be.false;
+                    expect(slowCombatant.hasPhaseInSegment(12), "acts at the first shared Phase").to.be.true;
+
+                    let guard = 0;
+                    while (combat.segment !== 8 && guard++ < 12) {
+                        await combat.nextTurn();
+                    }
+                    expect(combat.segment).to.equal(8);
+                    expect(combat.combatant.actorId, "Segment 8 belongs to the pacer alone").to.equal(pacer.id);
+
+                    guard = 0;
+                    while (combat.segment !== 12 && guard++ < 12) {
+                        await combat.nextTurn();
+                    }
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "DEX 20 acts first once the shared Segment arrives").to.equal(
+                        slow.id,
+                    );
+                });
             });
         },
         { displayName: "HERO SYSTEM 6E: Speed Chart Combat Validation" },
@@ -2160,6 +2242,126 @@ export function registerCombatTests(quench) {
                     await combat.applyPendingSpdNow(combatant.id);
                     expect(combatant.getFlag(game.system.id, "pendingSpd")).to.equal(null);
                     expect(combatant.combatSpd, "new SPD in force after the override").to.equal(6);
+                });
+
+                it("Should not lock out a 5e combatant whose DEX is drained (figured SPD insulation)", async function () {
+                    const insulated = await makeActor("_Quench 5e DEX Drained", {
+                        dex: 20,
+                        spd: 4,
+                        extra: { is5e: true },
+                    });
+                    const pacer = await makeActor("_Quench 5e Insulation Pacer", { dex: 10, spd: 12 });
+                    const combat = await makeCombat([insulated, pacer]);
+                    await combat.startCombat();
+                    const combatant = combatantFor(combat, insulated);
+
+                    await combat.nextTurn();
+                    await combat.nextTurn();
+                    const seeded = await waitUntil(() => combatant.getFlag(game.system.id, "knownSpd") !== undefined);
+                    expect(seeded, "SPD baseline seeded at a boundary").to.be.true;
+
+                    // 5ER p. 105: adjustments to a primary never move figured characteristics —
+                    // the Transfer example drains DEX "but loses no SPD"
+                    await insulated.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "Drain DEX",
+                            flags: { [game.system.id]: { type: "adjustment", adjustmentActivePoints: 30 } },
+                            changes: [
+                                {
+                                    key: "system.characteristics.dex.max",
+                                    value: "-10",
+                                    type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                                },
+                            ],
+                        },
+                    ]);
+                    expect(insulated.system.characteristics.dex.value, "the drain itself landed").to.equal(10);
+                    expect(combatant.combatSpd, "figured SPD is insulated from the DEX drain").to.equal(4);
+
+                    // Cross two boundaries: a bogus cascade would be detected here
+                    await combat.nextTurn();
+                    await combat.nextTurn();
+                    expect(combatant.getFlag(game.system.id, "spdLockout"), "no SPD-change lockout").to.not.be.ok;
+                    expect(combatant.getFlag(game.system.id, "pendingSpd"), "no deferred SPD change").to.not.be.ok;
+                    expect(combatant.combatSpd, "SPD still 4 after the boundaries").to.equal(4);
+                });
+
+                it("Should apply the 5e shared-Phase lockout when SPD itself is drained", async function () {
+                    const drained = await makeActor("_Quench 5e SPD Drained", {
+                        dex: 20,
+                        spd: 3,
+                        extra: { is5e: true },
+                    });
+                    const pacer = await makeActor("_Quench 5e Drain Pacer", { dex: 10, spd: 12 });
+                    const combat = await makeCombat([drained, pacer]);
+                    await combat.startCombat();
+                    const combatant = combatantFor(combat, drained);
+
+                    await combat.nextTurn();
+                    await combat.nextTurn(); // Round 2 Segment 1: baseline seeded
+                    const seeded = await waitUntil(() => combatant.getFlag(game.system.id, "knownSpd") !== undefined);
+                    expect(seeded, "SPD baseline seeded at a boundary").to.be.true;
+
+                    // A DRAIN SPD manifests as an adjustment-flagged effect on the max; the
+                    // sheet (source) value stays put, so detection must read adjustment-driven
+                    await drained.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "Drain SPD",
+                            flags: { [game.system.id]: { type: "adjustment", adjustmentActivePoints: 10 } },
+                            changes: [
+                                {
+                                    key: "system.characteristics.spd.max",
+                                    value: "-1",
+                                    type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                                },
+                            ],
+                        },
+                    ]);
+                    expect(combatant.combatSpd, "drain lowers the effective SPD").to.equal(2);
+                    expect(drained._source.system.characteristics.spd.value, "sheet SPD untouched").to.equal(3);
+
+                    await combat.nextTurn(); // boundary detects the effective-only change
+                    const locked = await waitUntil(() => !!combatant.getFlag(game.system.id, "spdLockout"));
+                    expect(locked, "adjustment-driven change applies the mandatory lockout").to.be.true;
+                    expect(combatant.getFlag(game.system.id, "pendingSpd"), "not deferred as voluntary").to.not.be.ok;
+
+                    // SPD 3 {4,8,12} and SPD 2 {6,12} share only Segment 12
+                    const lockout = combatant.getFlag(game.system.id, "spdLockout");
+                    expect(lockout.lockoutEndAbs, "5e lockout runs to the next shared Phase").to.equal(abs(2, 12));
+                });
+
+                it("Should treat a 5e DEX purchase that raises figured SPD as a voluntary SPD change", async function () {
+                    const grower = await makeActor("_Quench 5e DEX Grower", { dex: 10, spd: 2, extra: { is5e: true } });
+                    const pacer = await makeActor("_Quench 5e Growth Pacer", { dex: 20, spd: 12 });
+                    const combat = await makeCombat([grower, pacer]);
+                    await combat.startCombat();
+                    const combatant = combatantFor(combat, grower);
+
+                    await combat.nextTurn();
+                    await combat.nextTurn();
+                    const seeded = await waitUntil(() => combatant.getFlag(game.system.id, "knownSpd") !== undefined);
+                    expect(seeded, "SPD baseline seeded at a boundary").to.be.true;
+
+                    // Buying DEX up to 20 refigures SPD to 3 through the persistence path:
+                    // sheet and effective SPD move together, so the tracker must classify
+                    // the change as voluntary and defer it to Post-Segment 12
+                    await grower.update({ "system.DEX.LEVELS": 10 });
+                    expect(grower._source.system.characteristics.dex.value, "DEX purchase persisted").to.equal(20);
+                    expect(
+                        grower._source.system.characteristics.spd.value,
+                        "figured SPD cascaded into the source",
+                    ).to.equal(3);
+
+                    await combat.nextTurn();
+                    const deferred = await waitUntil(() => !!combatant.getFlag(game.system.id, "pendingSpd"));
+                    expect(deferred, "cascaded figured change deferred via pendingSpd").to.be.true;
+                    expect(combatant.getFlag(game.system.id, "spdLockout"), "no adjustment lockout for a purchase").to
+                        .not.be.ok;
+                    expect(combatant.combatSpd, "still acts at the old SPD meanwhile").to.equal(2);
+
+                    await combat.applyPendingSpdNow(combatant.id);
+                    expect(combatant.getFlag(game.system.id, "pendingSpd")).to.equal(null);
+                    expect(combatant.combatSpd, "new figured SPD in force after the override").to.equal(3);
                 });
 
                 it("Should schedule a Haymaker landing and resolve it after its segment passes", async function () {
