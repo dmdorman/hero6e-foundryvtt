@@ -93,13 +93,10 @@ function buildManeuverFlags(item, type) {
  * @param {Actor} actor
  */
 export async function expireManeuverNextPhaseEffects(actor) {
-    // V14 migrated duration.startTime to the top-level start.time field; reading
-    // only the V13 shape makes the created-this-instant guard never match there
-    const effectStartTime = (ae) => ae.duration?.startTime ?? ae.start?.time ?? null;
     const maneuverAes = (actor?.temporaryEffects ?? []).filter(
         (ae) =>
             ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect" &&
-            effectStartTime(ae) !== game.time.worldTime,
+            (ae.start?.time ?? null) !== game.time.worldTime,
     );
 
     const expiryPromises = maneuverAes.map((ae) => {
@@ -415,7 +412,7 @@ function buildManeuverActiveEffect(activeEffect, item, spec, traits) {
         });
     }
     activeEffect.duration ??= {};
-    activeEffect.duration.startTime = game.time.worldTime;
+    activeEffect.start = { time: game.time.worldTime };
     // The status ID, not the localized name — the condition system only recognizes registered ids
     activeEffect.statuses = [status.id];
     activeEffect.duration.expiry = "combatEnd"; // V14 kluge until we implement phaseStart.  Combat:_onStartTurn should expire this.
@@ -471,7 +468,7 @@ export async function activateManeuver(item) {
         activeEffect = buildManeuverActiveEffect(activeEffect, item, spec, { dcvTrait, ocvTrait });
     }
 
-    // Handy reference to current V13/V14 AE changes
+    // The effect may be a reused document or a plain template object; read the canonical array
     const _changes = foundry.utils.getProperty(activeEffect, `system.changes`) ?? [];
 
     if (activeEffect.name && _changes.length > 0) {
@@ -497,12 +494,6 @@ export async function activateManeuver(item) {
         if (activeEffect.duration?.value === Infinity) {
             activeEffect.duration.value = null;
         }
-        // V14 moved the start time to the top-level start field; core migrates it
-        // on create but not on the re-activation update of a reused template AE
-        if (activeEffect.duration?.startTime !== undefined) {
-            activeEffect.start = { time: activeEffect.duration.startTime };
-        }
-
         if (activeEffect.update) {
             await activeEffect.update({ ...activeEffect, _id: undefined });
         } else {
