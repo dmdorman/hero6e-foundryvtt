@@ -245,57 +245,6 @@ export class HeroSystem6eToken extends Token {
     }
 
     async _drawEffects() {
-        if (HeroCompatibility.isV14) {
-            return this._drawEffects14();
-        }
-
-        this.effects.renderable = false;
-
-        // Clear Effects Container
-        this.effects.removeChildren().forEach((c) => c.destroy());
-        this.effects.bg = this.effects.addChild(new PIXI.Graphics());
-        this.effects.bg.zIndex = -1;
-        this.effects.overlay = null;
-
-        // Categorize effects
-        let activeEffects = this.actor?.temporaryEffects || [];
-        const overlayEffect = activeEffects.findLast((e) => e.img && e.getFlag("core", "overlay"));
-
-        // If dead or knockedOut of combat only show overlayEffect
-        if (this.actor?.statuses.has("dead") || this.actor?.getKnockedOutOfCombat()) {
-            activeEffects = [overlayEffect];
-        }
-
-        // Draw effects
-        const promises = [];
-        for (const [i, effect] of activeEffects.entries()) {
-            if (!effect?.img) continue;
-
-            // If Knocked out we want to override tint to match token tint (red = defeated)
-            const promise =
-                effect === overlayEffect
-                    ? this._drawOverlay(
-                          effect.img,
-                          (overlayEffect.statuses.has("knockedOut") && this.actor?.getKnockedOutOfCombat()) ||
-                              overlayEffect.statuses.has("dead")
-                              ? "ff5555"
-                              : effect.tint,
-                      )
-                    : this._drawEffect(effect.img, effect.tint);
-            promises.push(
-                promise.then((e) => {
-                    if (e) e.zIndex = i;
-                }),
-            );
-        }
-        await Promise.allSettled(promises);
-
-        this.effects.sortChildren();
-        this.effects.renderable = true;
-        this.renderFlags.set({ refreshEffects: true });
-    }
-
-    async _drawEffects14() {
         this.effects.renderable = false;
 
         // Clear Effects Container
