@@ -613,6 +613,22 @@ export function forceDeleteKeys(keys) {
 }
 
 /**
+ * Update payload that force-replaces each field in forcedFields (skipping the default
+ * recursive merge), with otherFields merged normally.
+ *
+ * @param {object} forcedFields - Map of field name (unprefixed) to replacement value
+ * @param {object} [otherFields={}]
+ * @returns {object}
+ */
+export function forceReplaceFields(forcedFields, otherFields = {}) {
+    const payload = { ...otherFields };
+    for (const [key, value] of Object.entries(forcedFields)) {
+        payload[key] = foundry.data.operators.ForcedReplacement.create(value);
+    }
+    return payload;
+}
+
+/**
  * Given information, find the best guess for the token in the scene which we should use.
  *
  * NOTE: Typically we want the token that is making an attack or receiving the attack so that we can

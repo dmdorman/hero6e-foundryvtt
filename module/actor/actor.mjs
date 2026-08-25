@@ -16,6 +16,7 @@ import { clamp, roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
 import {
     base64ToUtf8,
+    forceReplaceFields,
     getCharacteristicInfoArrayForActor,
     getPowerInfo,
     squelch,
@@ -98,7 +99,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             // Merge in the entire system + force-replace items so nested item system data survives.
             const items = this.items.map((i) => ({ ...i.toObject(), system: i.system }));
-            this.updateSource(HeroCompatibility.forceReplace({ items }));
+            this.updateSource(forceReplaceFields({ items }));
         }
 
         // For debugging purposes
