@@ -1,3 +1,5 @@
+import { forceReplaceFields } from "../utility/util.mjs";
+
 const { Actor, Item } = foundry.documents;
 
 export function registerTypeForceReplaceTests(quench) {
@@ -34,7 +36,7 @@ export function registerTypeForceReplaceTests(quench) {
                         }
                     });
 
-                    // Shared DataModels break _replace. TODO: refactor DataModel
+                    // Shared DataModels break force-replacement. TODO: refactor DataModel
                     // Actor type changes reject the ForcedReplacement operator on V14 with
                     // "The type of a Document may only be changed if the system field is also
                     // updated with a ForcedReplacement operator." even when one is supplied.
@@ -47,14 +49,7 @@ export function registerTypeForceReplaceTests(quench) {
                             const currentSystemData = quenchActor.system?.toObject() || {};
 
                             await quenchActor.update(
-                                {
-                                    type: targetType,
-                                    // 2. Use the valid system data structure
-                                    system: _replace(currentSystemData),
-                                },
-                                {
-                                    forceReplace: true,
-                                },
+                                forceReplaceFields({ system: currentSystemData }, { type: targetType }),
                             );
                             assert.equal(quenchActor.type, targetType);
                         }
@@ -104,19 +99,13 @@ export function registerTypeForceReplaceTests(quench) {
                     }
                 });
 
-                // Shared DataModels break _replace. TODO: refactor DataModel
+                // Shared DataModels break force-replacement. TODO: refactor DataModel
                 it("Native V14 forceReplace", async function () {
                     for (const targetType of itemTypes) {
                         const currentSystemData = quenchItem.system.toObject();
 
                         await quenchItem.update(
-                            {
-                                type: targetType,
-                                system: _replace(currentSystemData),
-                            },
-                            {
-                                forceReplace: true,
-                            },
+                            forceReplaceFields({ system: currentSystemData }, { type: targetType }),
                         );
 
                         assert.equal(quenchItem.type, targetType);

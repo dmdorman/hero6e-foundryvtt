@@ -18,7 +18,6 @@ export default [
                 ...globals.jquery,
                 ...globals.node,
 
-                _replace: "readonly",
                 ActiveEffect: "readonly",
                 canvas: "readonly",
                 ChatMessage: "readonly",
