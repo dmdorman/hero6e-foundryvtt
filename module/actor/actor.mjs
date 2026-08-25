@@ -4758,14 +4758,14 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             foundry.utils.logCompatibilityWarning(message, { since: 14, until: 16, once: true });
         } else if (!(phase in ActiveEffect.CHANGE_PHASES)) {
             const error = new Error(`"${phase}" is not a registered ActiveEffect application phase.`);
-            Hooks$1.onError("Actor#applyActiveEffects", error, { log: "error" });
+            Hooks.onError("Actor#applyActiveEffects", error, { log: "error" });
         }
         if (this._completedActiveEffectPhases.has(phase)) {
             const error = new Error(
                 `ActiveEffect application phase "${phase}" has already completed and cannot be run again` +
                     " in this Actor's data-preparation cycle.",
             );
-            Hooks$1.onError("Actor#applyActiveEffects", error, { log: "error" });
+            Hooks.onError("Actor#applyActiveEffects", error, { log: "error" });
             return;
         }
         this._completedActiveEffectPhases.add(phase);
