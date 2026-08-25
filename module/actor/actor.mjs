@@ -3796,6 +3796,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
      * Rebuild the actor captured in an upload-error report's `actorBase64`.
      * Returns a transient (unsaved) actor for inspection by default; pass { create: true } to persist it to the world.
      *
+     * Debugging tool invoked manually from the console — intentionally has no in-code callers; do not remove as dead code.
+     *
      * @param {string} actorBase64 - The base64 actor state from the error report.
      * @param {object} [options]
      * @param {boolean} [options.create=false] - Persist the rebuilt actor to the world instead of returning a transient one.
