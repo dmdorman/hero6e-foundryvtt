@@ -6,6 +6,23 @@ const { Actor } = foundry.documents;
 // Absolute position on the Turn/Segment clock
 const abs = (turn, segment) => turn * 12 + segment;
 
+// Unlinked-combatant creation payload with actor DEX/SPD overrides
+function combatantCreationPayload(actorId, dex, spd) {
+    return {
+        actorId,
+        tokenId: null,
+        hidden: false,
+        actorData: {
+            system: {
+                characteristics: {
+                    dex: { value: dex, max: dex },
+                    spd: { value: spd, max: spd },
+                },
+            },
+        },
+    };
+}
+
 // Shared actor/combat factories. Each describe passes its own tracking arrays
 // so its after() hook tears down only its own documents.
 function makeHarness({ actorDocuments, combatDocuments }) {
@@ -171,8 +188,6 @@ export function registerCombatTests(quench) {
                 });
 
                 it("Should execute an exhaustive 2-round progression verifying dynamic worldTime clock increments", async function () {
-                    const { HeroCompatibility } = await import("../utility/compatibility.mjs");
-
                     const startTimeStamp = game.time.worldTime;
 
                     const testCombatDocument = await makeCombat([]);
@@ -208,7 +223,7 @@ export function registerCombatTests(quench) {
                             targetSpd = -1;
                         }
 
-                        return HeroCompatibility.getCombatantCreationPayload(actor.id, targetDex, targetSpd);
+                        return combatantCreationPayload(actor.id, targetDex, targetSpd);
                     });
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
@@ -340,8 +355,6 @@ export function registerCombatTests(quench) {
                 });
 
                 it("Should execute a bidirectional sequence verifying nextTurn, nextRound, previousTurn, and previousRound", async function () {
-                    const { HeroCompatibility } = await import("../utility/compatibility.mjs");
-
                     const startTimeStamp = game.time.worldTime;
 
                     const testCombatDocument = await makeCombat([]);
@@ -366,7 +379,7 @@ export function registerCombatTests(quench) {
                             targetSpd = 13;
                         }
 
-                        return HeroCompatibility.getCombatantCreationPayload(actor.id, targetDex, targetSpd);
+                        return combatantCreationPayload(actor.id, targetDex, targetSpd);
                     });
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
@@ -439,8 +452,6 @@ export function registerCombatTests(quench) {
                 });
 
                 it("Should execute backward rollbacks via previousRound and previousTurn to verify unstarted reset thresholds", async function () {
-                    const { HeroCompatibility } = await import("../utility/compatibility.mjs");
-
                     const testCombatDocument = await makeCombat([]);
 
                     // Streamline the collection map for a fast reset execution sweep
@@ -457,7 +468,7 @@ export function registerCombatTests(quench) {
                             targetDex = 8;
                             targetSpd = 4;
                         }
-                        return HeroCompatibility.getCombatantCreationPayload(actor.id, targetDex, targetSpd);
+                        return combatantCreationPayload(actor.id, targetDex, targetSpd);
                     });
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);

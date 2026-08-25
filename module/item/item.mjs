@@ -12,7 +12,6 @@ import {
     determineMaxAdjustment,
 } from "../utility/adjustment.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
-import { HeroCompatibility } from "../utility/compatibility.mjs";
 import {
     buildStrengthItem,
     calculateCpPerDieForItem,
@@ -628,7 +627,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     activeEffect.disabled ??= !this.system.active;
                     activeEffect.system ??= { XMLID: this.system.XMLID };
                     activeEffect = foundry.utils.mergeObject(activeEffect, {
-                        [HeroCompatibility.isV14 ? `system.changes` : `changes`]: changes,
+                        "system.changes": changes,
                     });
 
                     if (activeEffect.update) {
@@ -661,7 +660,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     },
                 ];
                 activeEffect = foundry.utils.mergeObject(activeEffect, {
-                    [HeroCompatibility.isV14 ? `system.changes` : `changes`]: changes,
+                    "system.changes": changes,
                 });
                 activeEffect.disabled ??= !this.system.active;
                 activeEffect = foundry.utils.mergeObject(activeEffect, {
@@ -673,12 +672,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     const updates = {
                         name: activeEffect.name,
                     };
-                    if (HeroCompatibility.isV14) {
-                        updates.system ??= {};
-                        updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
-                    } else {
-                        updates.changes = activeEffect.changes;
-                    }
+                    updates.system ??= {};
+                    updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
                     await activeEffect.update(updates);
                     const deltaMax = this.actor.system.characteristics[this.system.XMLID.toLowerCase()].max - oldMax;
                     const newValue =
@@ -718,7 +713,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         },
                     ];
                     activeEffect = foundry.utils.mergeObject(activeEffect, {
-                        [HeroCompatibility.isV14 ? `system.changes` : `changes`]: changes,
+                        "system.changes": changes,
                     });
 
                     activeEffect.transfer = true;
@@ -731,12 +726,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         const updates = {
                             name: activeEffect.name,
                         };
-                        if (HeroCompatibility.isV14) {
-                            updates.system ??= {};
-                            updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
-                        } else {
-                            updates.changes = activeEffect.changes;
-                        }
+                        updates.system ??= {};
+                        updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
                         await activeEffect.update(updates);
                     } else {
                         await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
@@ -829,7 +820,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     },
                 ];
                 activeEffect = foundry.utils.mergeObject(activeEffect, {
-                    [HeroCompatibility.isV14 ? `system.changes` : `changes`]: changes,
+                    "system.changes": changes,
                 });
                 activeEffect.system ??= { XMLID: this.system.XMLID };
                 activeEffect.disabled ??= true;
@@ -838,12 +829,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     const updates = {
                         name: activeEffect.name,
                     };
-                    if (HeroCompatibility.isV14) {
-                        updates.system ??= {};
-                        updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
-                    } else {
-                        updates.changes = activeEffect.changes;
-                    }
+                    updates.system ??= {};
+                    updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
                     await activeEffect.update(updates);
                 } else {
                     await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
@@ -8511,20 +8498,18 @@ export function cloneToEffectiveAttackItem({
     // Value = Infinity fails SchemaField validation.
     // We can replace Infinity with null and get this to work.
     // Appears to be a FoundryVTT V14 build 362 bug.
-    if (HeroCompatibility.isV14) {
-        const updates = effectiveItem.effects
-            .map((effect) => {
-                if (effect.duration.value === Infinity) {
-                    return { _id: effect.id, "duration.value": null };
-                }
-                return null;
-            })
-            .filter(Boolean);
+    const durationUpdates = effectiveItem.effects
+        .map((effect) => {
+            if (effect.duration.value === Infinity) {
+                return { _id: effect.id, "duration.value": null };
+            }
+            return null;
+        })
+        .filter(Boolean);
 
-        if (updates.length) {
-            // updateSource ensures schemas update without writing to the DB
-            effectiveItem.updateSource({ effects: updates });
-        }
+    if (durationUpdates.length) {
+        // updateSource ensures schemas update without writing to the DB
+        effectiveItem.updateSource({ effects: durationUpdates });
     }
 
     // Sanity check

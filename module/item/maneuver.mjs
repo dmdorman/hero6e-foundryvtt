@@ -1,5 +1,4 @@
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
-import { HeroCompatibility } from "../utility/compatibility.mjs";
 import { activeSingleTrackerCombatFor, isQuenchTestRunning } from "../utility/util.mjs";
 import { roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { calculateVelocityInSystemUnits } from "../utility/units.mjs";
@@ -412,7 +411,7 @@ function buildManeuverActiveEffect(activeEffect, item, spec, traits) {
     activeEffect.flags = buildManeuverNextPhaseFlags(item);
     if (spec.changes) {
         activeEffect = foundry.utils.mergeObject(activeEffect, {
-            [HeroCompatibility.isV14 ? `system.changes` : `changes`]: spec.changes(item, status, traits),
+            "system.changes": spec.changes(item, status, traits),
         });
     }
     activeEffect.duration ??= {};
@@ -473,8 +472,7 @@ export async function activateManeuver(item) {
     }
 
     // Handy reference to current V13/V14 AE changes
-    const _changes =
-        foundry.utils.getProperty(activeEffect, HeroCompatibility.isV14 ? `system.changes` : `changes`) ?? [];
+    const _changes = foundry.utils.getProperty(activeEffect, `system.changes`) ?? [];
 
     if (activeEffect.name && _changes.length > 0) {
         // There is no need to keep track of OCV/DCV changes when not in combat
@@ -496,15 +494,13 @@ export async function activateManeuver(item) {
         // Value = Infinity fails SchemaField validation.
         // We can replace Infinity with null and get this to work.
         // Appears to be a FoundryVTT V14 build 363 bug.
-        if (HeroCompatibility.isV14) {
-            if (activeEffect.duration?.value === Infinity) {
-                activeEffect.duration.value = null;
-            }
-            // V14 moved the start time to the top-level start field; core migrates it
-            // on create but not on the re-activation update of a reused template AE
-            if (activeEffect.duration?.startTime !== undefined) {
-                activeEffect.start = { time: activeEffect.duration.startTime };
-            }
+        if (activeEffect.duration?.value === Infinity) {
+            activeEffect.duration.value = null;
+        }
+        // V14 moved the start time to the top-level start field; core migrates it
+        // on create but not on the re-activation update of a reused template AE
+        if (activeEffect.duration?.startTime !== undefined) {
+            activeEffect.start = { time: activeEffect.duration.startTime };
         }
 
         if (activeEffect.update) {

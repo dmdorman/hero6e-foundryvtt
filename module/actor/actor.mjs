@@ -9,7 +9,6 @@ import { tagObjectForPersistence } from "../migration.mjs";
 import { overrideCanAct } from "../settings/settings-helpers.mjs";
 import { Attack, actionToJSON } from "../utility/attack.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
-import { HeroCompatibility } from "../utility/compatibility.mjs";
 import { characteristicValueToDiceParts } from "../utility/damage.mjs";
 import { HeroProgressBar } from "../utility/progress-bar.mjs";
 import { clamp, roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
@@ -1993,19 +1992,15 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
             });
             activeEffect = foundry.utils.mergeObject(activeEffect, {
-                [HeroCompatibility.isV14 ? `system.changes` : `changes`]: changes,
+                "system.changes": changes,
             });
 
             if (activeEffect.id) {
                 const updates = {
                     name: activeEffect.name,
                 };
-                if (HeroCompatibility.isV14) {
-                    updates.system ??= {};
-                    updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
-                } else {
-                    updates.changes = activeEffect.changes;
-                }
+                updates.system ??= {};
+                updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
                 await activeEffect.update(updates);
             } else {
                 await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
@@ -2153,7 +2148,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 },
             ];
             activeEffect = foundry.utils.mergeObject(activeEffect, {
-                [HeroCompatibility.isV14 ? `system.changes` : `changes`]: changes,
+                "system.changes": changes,
             });
 
             if (prevActiveEffect) {
@@ -3172,28 +3167,18 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
                 if (targetType && this.type.replace("npc", "pc") !== targetType) {
                     if (Object.keys(game.system.documentTypes.Actor).includes(targetType)) {
-                        if (HeroCompatibility.isV14) {
-                            // REF: https://github.com/foundryvtt/foundryvtt/issues/13090
-                            // AARON WAS HERE on 4/4/2026: Update fails, likely a foundry bug.
-                            // Error: The type of a Document may only be changed if the system field
-                            //        is also updated with a ForcedReplacement operator.
-                            // A subsequent upload works, not ready for publish.
-                            await this.update(
-                                {
-                                    type: targetType,
-                                    system: foundry.utils.mergeObject(this.system.toObject(), { _type: targetType }),
-                                },
-                                { recursive: false },
-                            );
-                        } else {
-                            await this.update(
-                                {
-                                    type: targetType,
-                                    system: foundry.utils.mergeObject(this.system.toObject(), { _type: targetType }),
-                                },
-                                { recursive: false },
-                            );
-                        }
+                        // REF: https://github.com/foundryvtt/foundryvtt/issues/13090
+                        // AARON WAS HERE on 4/4/2026: Update fails, likely a foundry bug.
+                        // Error: The type of a Document may only be changed if the system field
+                        //        is also updated with a ForcedReplacement operator.
+                        // A subsequent upload works, not ready for publish.
+                        await this.update(
+                            {
+                                type: targetType,
+                                system: foundry.utils.mergeObject(this.system.toObject(), { _type: targetType }),
+                            },
+                            { recursive: false },
+                        );
                     } else {
                         ui.notifications.error(`${targetType} is not a valid actor type`);
                     }

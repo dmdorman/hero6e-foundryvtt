@@ -8,7 +8,6 @@ import {
     deleteQuenchActor,
 } from "./quench-helper.mjs";
 import { getPowerInfo } from "../utility/util.mjs";
-import { HeroCompatibility } from "../utility/compatibility.mjs";
 import { getAndSetGameSetting, getAndSetGameSettingCore } from "../settings/settings-helpers.mjs";
 
 const { Actor } = foundry.documents;
@@ -477,9 +476,7 @@ export function registerCombatWorkflowTests(quench) {
                         );
 
                         const ae = updatedDefender.appliedEffects?.[0];
-                        if (HeroCompatibility.isV14) {
-                            assert.ok(ae?.showIcon, `${attackItem.name} expected ActiveEffect status to showIcon=true`);
-                        }
+                        assert.ok(ae?.showIcon, `${attackItem.name} expected ActiveEffect status to showIcon=true`);
 
                         // 5. Explicit structural window cleanup
                         await appInstance.close();
@@ -598,9 +595,7 @@ export function registerCombatWorkflowTests(quench) {
                             `${attackItem.name} expected ActiveEffect to have blind img`,
                         );
 
-                        if (HeroCompatibility.isV14) {
-                            assert.ok(ae?.showIcon, `${attackItem.name} expected ActiveEffect to showIcon=true`);
-                        }
+                        assert.ok(ae?.showIcon, `${attackItem.name} expected ActiveEffect to showIcon=true`);
 
                         // 5. Explicit structural window cleanup
                         await appInstance.close();

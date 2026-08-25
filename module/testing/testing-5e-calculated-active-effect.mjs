@@ -1,7 +1,6 @@
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
 import { performAdjustment } from "../utility/adjustment.mjs";
-import { HeroCompatibility } from "../utility/compatibility.mjs";
 
 const { Actor } = foundry.documents;
 
@@ -465,18 +464,10 @@ export function register5eCalculatedActiveEffectAutomationTests(quench) {
                             "Adjustment to DEX should not touch figured SPD (5ER p. 105).",
                         );
 
-                        // Use the version-gated key and change shape: a bare `changes` update silently
-                        // no-ops on V14, where document changes live in system.changes with string types.
+                        // A bare `changes` update silently no-ops on V14: document changes
+                        // live in system.changes with string types.
                         await effect.update({
-                            [HeroCompatibility.isV14 ? "system.changes" : "changes"]: [
-                                HeroCompatibility.isV14
-                                    ? { key: "system.characteristics.dex.max", value: "5", type: "add" }
-                                    : {
-                                          key: "system.characteristics.dex.max",
-                                          value: "5",
-                                          type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
-                                      },
-                            ],
+                            "system.changes": [{ key: "system.characteristics.dex.max", value: "5", type: "add" }],
                             flags: {
                                 [game.system.id]: {
                                     ...effect.flags[game.system.id],
