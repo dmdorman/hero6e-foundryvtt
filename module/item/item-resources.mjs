@@ -1,6 +1,6 @@
 import { HeroRoller, DICE_SO_NICE_CUSTOM_SETS } from "../heroRoller/dice.mjs";
 import { HEROSYS } from "../herosystem6e.mjs";
-import { HeroCompatibility } from "../utility/compatibility.mjs";
+import { clamp } from "../utility/round.mjs";
 import { whisperUserTargetsForActor } from "../utility/util.mjs";
 
 /**
@@ -250,11 +250,7 @@ function calculateRequiredCharges(item, boostableChargesToUse) {
     // Does this item use charges?
     if (maximumCharges > 0) {
         // Maximum of 4
-        const boostableChargesUsed = HeroCompatibility.clamp(
-            boostableChargesToUse,
-            0,
-            Math.min(startingCharges - 1, 4),
-        );
+        const boostableChargesUsed = clamp(boostableChargesToUse, 0, Math.min(startingCharges - 1, 4));
         chargesToUse = 1 + boostableChargesUsed;
     }
 

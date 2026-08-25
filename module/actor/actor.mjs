@@ -12,7 +12,7 @@ import { HeroObjectCacheMixin } from "../utility/cache.mjs";
 import { HeroCompatibility } from "../utility/compatibility.mjs";
 import { characteristicValueToDiceParts } from "../utility/damage.mjs";
 import { HeroProgressBar } from "../utility/progress-bar.mjs";
-import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
+import { clamp, roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
 import {
     base64ToUtf8,
@@ -978,7 +978,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         // Determine the updates to make to the actor data
         let updates;
         if (isBar) {
-            if (isDelta) value = HeroCompatibility.clamp(-99, Number(current.value) + value, current.max); // a negative bar is typically acceptable
+            if (isDelta) value = clamp(-99, Number(current.value) + value, current.max); // a negative bar is typically acceptable
             updates = { [`system.${attribute}.value`]: value };
         } else {
             if (isDelta) value = Number(current) + value;
@@ -1777,7 +1777,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         canvas.interface.createScrollingText(token.center, change.signedString(), {
             anchor: change < 0 ? CONST.TEXT_ANCHOR_POINTS.BOTTOM : CONST.TEXT_ANCHOR_POINTS.TOP,
             direction: change < 0 ? 1 : 2,
-            fontSize: HeroCompatibility.clamp(fontSize, 50, 100),
+            fontSize: clamp(fontSize, 50, 100),
             fill: options?.fill || "0xFFFFFF",
             stroke: options?.stroke || 0x00000000,
             strokeThickness: 4,
