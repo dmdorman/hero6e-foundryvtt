@@ -1224,20 +1224,23 @@ export function registerAdjustmentFadeTests(quench) {
                     }
                 });
 
-                it("HEALING applies and repeat-heals only above previous total", async function () {
-                    const body = () => healActor.system.characteristics.body;
-                    const findHealingEffect = () =>
-                        healActor.effects.find((e) => e.flags[game.system.id]?.XMLID === "HEALING");
-
+                async function makeHealItem() {
                     const healXml = `
                         <POWER XMLID="HEALING" ID="17662${Math.floor(Math.random() * 100000000)}" BASECOST="0.0" LEVELS="1" ALIAS="Healing" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Heal BODY" INPUT="BODY" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
                         <NOTES />
                         </POWER>
                     `;
-                    const healItem = await HeroSystem6eItem.create(
-                        HeroSystem6eItem.itemDataFromXml(healXml, healActor),
-                        { parent: healActor },
-                    );
+                    return HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(healXml, healActor), {
+                        parent: healActor,
+                    });
+                }
+
+                it("HEALING applies and repeat-heals only above previous total", async function () {
+                    const body = () => healActor.system.characteristics.body;
+                    const findHealingEffect = () =>
+                        healActor.effects.find((e) => e.flags[game.system.id]?.XMLID === "HEALING");
+
+                    const healItem = await makeHealItem();
 
                     await healActor.update({ "system.characteristics.body.value": 5 });
 
@@ -1287,15 +1290,7 @@ export function registerAdjustmentFadeTests(quench) {
                     const healEffects = () =>
                         healActor.effects.filter((e) => e.flags[game.system.id]?.XMLID === "HEALING");
 
-                    const healXml = `
-                        <POWER XMLID="HEALING" ID="17663${Math.floor(Math.random() * 100000000)}" BASECOST="0.0" LEVELS="1" ALIAS="Healing" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Heal BODY" INPUT="BODY" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </POWER>
-                    `;
-                    const healItem = await HeroSystem6eItem.create(
-                        HeroSystem6eItem.itemDataFromXml(healXml, healActor),
-                        { parent: healActor },
-                    );
+                    const healItem = await makeHealItem();
 
                     await healActor.update({
                         "system.characteristics.body.value": 5,

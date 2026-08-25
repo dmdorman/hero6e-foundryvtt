@@ -6,23 +6,6 @@ const { Actor } = foundry.documents;
 // Absolute position on the Turn/Segment clock
 const abs = (turn, segment) => turn * 12 + segment;
 
-// Unlinked-combatant creation payload with actor DEX/SPD overrides
-function combatantCreationPayload(actorId, dex, spd) {
-    return {
-        actorId,
-        tokenId: null,
-        hidden: false,
-        actorData: {
-            system: {
-                characteristics: {
-                    dex: { value: dex, max: dex },
-                    spd: { value: spd, max: spd },
-                },
-            },
-        },
-    };
-}
-
 // Shared actor/combat factories. Each describe passes its own tracking arrays
 // so its after() hook tears down only its own documents.
 function makeHarness({ actorDocuments, combatDocuments }) {
@@ -93,7 +76,18 @@ function makeHarness({ actorDocuments, combatDocuments }) {
         return effect;
     }
 
-    return { makeActor, makeCombat, combatantFor, makeHoldEffect };
+    // makeActor seeds bare actors; add the free maneuvers and hand back DODGE
+    async function dodgeItemFor(actor) {
+        if (!actor.items.find((i) => i.system?.XMLID === "DODGE")) {
+            await actor.addHeroSystemManeuvers();
+        }
+        return actor.items.find((i) => i.system?.XMLID === "DODGE");
+    }
+
+    const hasManeuverAe = (actor) =>
+        actor.temporaryEffects.some((ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect");
+
+    return { makeActor, makeCombat, combatantFor, makeHoldEffect, dodgeItemFor, hasManeuverAe };
 }
 
 export function registerCombatTests(quench) {
@@ -113,7 +107,10 @@ export function registerCombatTests(quench) {
                 setQuenchTimeout(this);
                 const actorDocuments = [];
                 const combatDocuments = [];
-                const { makeActor, makeCombat, combatantFor } = makeHarness({ actorDocuments, combatDocuments });
+                const { makeActor, makeCombat, combatantFor, dodgeItemFor, hasManeuverAe } = makeHarness({
+                    actorDocuments,
+                    combatDocuments,
+                });
                 let savedLrAutoElevate;
                 let preexistingMessageIds;
 
@@ -192,39 +189,9 @@ export function registerCombatTests(quench) {
 
                     const testCombatDocument = await makeCombat([]);
 
-                    const combatantData = actorDocuments.map((actor) => {
-                        const isGuard = actor.name.includes("Guard");
-                        const isBehemoth = actor.name.includes("Behemoth");
-                        const isSpeedster = actor.name.includes("Speedster");
-                        const isSluggish = actor.name.includes("Sluggish");
-                        const isOvercapped = actor.name.includes("Overcapped");
-                        const isDrained = actor.name.includes("Drained");
-
-                        let targetDex = 10;
-                        let targetSpd = 2;
-
-                        if (isGuard) {
-                            targetDex = 18;
-                            targetSpd = 3;
-                        } else if (isBehemoth) {
-                            targetDex = 8;
-                            targetSpd = 4;
-                        } else if (isSpeedster) {
-                            targetDex = 25;
-                            targetSpd = 12;
-                        } else if (isSluggish) {
-                            targetDex = 5;
-                            targetSpd = 1;
-                        } else if (isOvercapped) {
-                            targetDex = 12;
-                            targetSpd = 13;
-                        } else if (isDrained) {
-                            targetDex = 10;
-                            targetSpd = -1;
-                        }
-
-                        return combatantCreationPayload(actor.id, targetDex, targetSpd);
-                    });
+                    // Combatant has no per-combatant characteristic override field; DEX/SPD
+                    // come from the actors the before() roster seeded
+                    const combatantData = actorDocuments.map((actor) => ({ actorId: actor.id }));
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
 
@@ -364,23 +331,7 @@ export function registerCombatTests(quench) {
                         (a) => a.name.includes("Guard") || a.name.includes("Behemoth") || a.name.includes("Overcapped"),
                     );
 
-                    const combatantData = bidirectionalRoster.map((actor) => {
-                        let targetDex = 10;
-                        let targetSpd = 2;
-
-                        if (actor.name.includes("Guard")) {
-                            targetDex = 18;
-                            targetSpd = 3;
-                        } else if (actor.name.includes("Behemoth")) {
-                            targetDex = 8;
-                            targetSpd = 4;
-                        } else if (actor.name.includes("Overcapped")) {
-                            targetDex = 12;
-                            targetSpd = 13;
-                        }
-
-                        return combatantCreationPayload(actor.id, targetDex, targetSpd);
-                    });
+                    const combatantData = bidirectionalRoster.map((actor) => ({ actorId: actor.id }));
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
 
@@ -458,18 +409,7 @@ export function registerCombatTests(quench) {
                     const resetRoster = actorDocuments.filter(
                         (a) => a.name.includes("Guard") || a.name.includes("Behemoth"),
                     );
-                    const combatantData = resetRoster.map((actor) => {
-                        let targetDex = 10;
-                        let targetSpd = 2;
-                        if (actor.name.includes("Guard")) {
-                            targetDex = 18;
-                            targetSpd = 3;
-                        } else if (actor.name.includes("Behemoth")) {
-                            targetDex = 8;
-                            targetSpd = 4;
-                        }
-                        return combatantCreationPayload(actor.id, targetDex, targetSpd);
-                    });
+                    const combatantData = resetRoster.map((actor) => ({ actorId: actor.id }));
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
 
@@ -1158,9 +1098,7 @@ export function registerCombatTests(quench) {
                 it("Should expire a Dodge maneuver at the start of the actor's next Phase", async function () {
                     const alpha = await makeActor("_Quench Expiry Alpha", { dex: 30, spd: 2 });
                     const weaver = await makeActor("_Quench Expiry Weaver", { dex: 20, spd: 2 });
-                    if (!weaver.items.find((i) => i.system?.XMLID === "DODGE")) {
-                        await weaver.addHeroSystemManeuvers();
-                    }
+                    const dodgeItem = await dodgeItemFor(weaver);
 
                     const combat = await makeCombat([alpha, weaver]);
                     await combat.startCombat();
@@ -1170,26 +1108,21 @@ export function registerCombatTests(quench) {
                     // Weaver dodges as their Segment 12 Phase action
                     await combat.nextTurn();
                     expect(combat.combatant.actorId).to.equal(weaver.id);
-                    const dodgeItem = weaver.items.find((i) => i.system?.XMLID === "DODGE");
                     await dodgeItem.toggle();
-                    const hasManeuverAe = () =>
-                        weaver.temporaryEffects.some(
-                            (ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect",
-                        );
-                    expect(hasManeuverAe(), "dodge effect active after declaring").to.be.true;
+                    expect(hasManeuverAe(weaver), "dodge effect active after declaring").to.be.true;
 
                     // Someone else's Phase starting must not expire it: the Dodge lasts
                     // until the weaver's own next Phase
                     await combat.nextTurn();
                     expect(combat.segment).to.equal(6);
                     expect(combat.combatant.actorId).to.equal(alpha.id);
-                    expect(hasManeuverAe(), "dodge persists through other combatants' Phases").to.be.true;
+                    expect(hasManeuverAe(weaver), "dodge persists through other combatants' Phases").to.be.true;
 
                     // The weaver's next Phase begins: the boundary maintenance switches
                     // the maneuver back off
                     await combat.nextTurn();
                     expect(combat.combatant.actorId).to.equal(weaver.id);
-                    const expired = await waitUntil(() => !hasManeuverAe() && dodgeItem.isActive !== true);
+                    const expired = await waitUntil(() => !hasManeuverAe(weaver) && dodgeItem.isActive !== true);
                     expect(expired, "dodge expired at the start of the actor's next Phase").to.be.true;
                 });
 
@@ -1240,9 +1173,7 @@ export function registerCombatTests(quench) {
 
                     const alpha = await makeActor("_Quench Reuse Alpha", { dex: 30, spd: 2 });
                     const weaver = await makeActor("_Quench Reuse Weaver", { dex: 20, spd: 2 });
-                    if (!weaver.items.find((i) => i.system?.XMLID === "DODGE")) {
-                        await weaver.addHeroSystemManeuvers();
-                    }
+                    const dodgeItem = await dodgeItemFor(weaver);
 
                     const combat = await makeCombat([alpha, weaver]);
                     await combat.startCombat();
@@ -1251,7 +1182,6 @@ export function registerCombatTests(quench) {
                     // First dodge on the weaver's Segment 12 Phase
                     await combat.nextTurn();
                     expect(combat.combatant.actorId).to.equal(weaver.id);
-                    const dodgeItem = weaver.items.find((i) => i.system?.XMLID === "DODGE");
                     await dodgeItem.toggle();
                     const dodgeEffect = () => dodgeItem.effects.contents[0];
                     expect(dodgeEffect(), "activation created the effect").to.exist;
@@ -1285,9 +1215,7 @@ export function registerCombatTests(quench) {
 
                     const alpha = await makeActor("_Quench Guard Alpha", { dex: 30, spd: 2 });
                     const parrier = await makeActor("_Quench Guard Parrier", { dex: 20, spd: 2 });
-                    if (!parrier.items.find((i) => i.system?.XMLID === "DODGE")) {
-                        await parrier.addHeroSystemManeuvers();
-                    }
+                    const dodgeItem = await dodgeItemFor(parrier);
 
                     const combat = await makeCombat([alpha, parrier]);
                     await combat.startCombat();
@@ -1295,13 +1223,8 @@ export function registerCombatTests(quench) {
 
                     await combat.nextTurn();
                     expect(combat.combatant.actorId).to.equal(parrier.id);
-                    const dodgeItem = parrier.items.find((i) => i.system?.XMLID === "DODGE");
                     await dodgeItem.toggle();
-                    const hasDodgeAe = () =>
-                        parrier.temporaryEffects.some(
-                            (ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect",
-                        );
-                    expect(hasDodgeAe(), "dodge effect active after declaring").to.be.true;
+                    expect(hasManeuverAe(parrier), "dodge effect active after declaring").to.be.true;
 
                     // A loose (non-toggleable) leftover stamped on an earlier Phase
                     const [staleEffect] = await parrier.createEmbeddedDocuments("ActiveEffect", [
@@ -1317,7 +1240,7 @@ export function registerCombatTests(quench) {
                     // Sweep at the same world time the dodge was declared: the
                     // declared-this-instant effect survives, the stale loose one is deleted
                     await expireManeuverNextPhaseEffects(parrier);
-                    expect(hasDodgeAe(), "effect declared at this instant survives the sweep").to.be.true;
+                    expect(hasManeuverAe(parrier), "effect declared at this instant survives the sweep").to.be.true;
                     expect(dodgeItem.isActive, "dodge stays active").to.be.true;
                     expect(parrier.effects.get(staleEffect.id), "stale loose effect deleted").to.not.exist;
 
