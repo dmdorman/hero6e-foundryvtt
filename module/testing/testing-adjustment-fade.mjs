@@ -1272,6 +1272,58 @@ export function registerAdjustmentFadeTests(quench) {
                         "Each lockout effect should record its application's heal roll.",
                     );
                 });
+
+                // Same-instant multi-target healing (the simplified-healing STUN+BODY flow):
+                // each target key gets its own lockout effect recording its own heal. The
+                // effect-reuse lookup (_findExistingMatchingEffect) requires a
+                // flags.activePoints match, but that flag is never written on adjustment
+                // effects, so the lookup never matches and every application creates a fresh
+                // effect. NOTE if reuse is ever fixed: a same-key repeat only enforces the
+                // exceeds-previous rule through the reused effect's recorded change; without
+                // reuse the enforcement rests solely on the max clamp.
+                it("HEALING applies same-instant applications per target key", async function () {
+                    const body = () => healActor.system.characteristics.body;
+                    const stun = () => healActor.system.characteristics.stun;
+                    const healEffects = () =>
+                        healActor.effects.filter((e) => e.flags[game.system.id]?.XMLID === "HEALING");
+
+                    const healXml = `
+                        <POWER XMLID="HEALING" ID="17663${Math.floor(Math.random() * 100000000)}" BASECOST="0.0" LEVELS="1" ALIAS="Healing" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Heal BODY" INPUT="BODY" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                        <NOTES />
+                        </POWER>
+                    `;
+                    const healItem = await HeroSystem6eItem.create(
+                        HeroSystem6eItem.itemDataFromXml(healXml, healActor),
+                        { parent: healActor },
+                    );
+
+                    await healActor.update({
+                        "system.characteristics.body.value": 5,
+                        "system.characteristics.stun.value": stun().max - 5,
+                    });
+                    const stunBefore = stun().value;
+
+                    // 5e BODY costs 2 CP/point: 7 AP heals trunc(7/2) = 3 BODY
+                    await performAdjustment(healItem, "BODY", 7, "", "", false, healActor, null);
+                    healActor.reset();
+                    assert.equal(body().value, 8, "BODY heal restores 3 BODY (5 -> 8).");
+                    assert.equal(healEffects().length, 1, "BODY application creates its lockout effect.");
+
+                    // 5e STUN costs 1 CP/point: 7 AP heals 7 STUN, clamped by max
+                    await performAdjustment(healItem, "STUN", 7, "", "", false, healActor, null);
+                    healActor.reset();
+                    assert.equal(healEffects().length, 2, "STUN application creates a separate lockout effect.");
+                    assert.equal(
+                        stun().value,
+                        Math.min(stun().max, stunBefore + 7),
+                        "STUN healed by the rolled points up to max.",
+                    );
+                    const changeKeys = healEffects()
+                        .map((e) => e.system.changes.map((c) => c.key))
+                        .flat()
+                        .sort();
+                    assert.deepEqual(changeKeys, ["body", "stun"], "Each lockout records only its own target key.");
+                });
             });
         },
         { displayName: "HERO: Adjustment Power Fade Matrix" },
