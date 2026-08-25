@@ -790,9 +790,6 @@ export async function performAdjustment(
 
             change.value = targetValue - previousPointsForThisChangeKey;
 
-            // Make sure changes exist
-            activeEffect.system ??= {};
-            activeEffect.system.changes ??= [];
             activeEffect.system.changes.push(change);
 
             thisAttackActivePointAdjustmentNotAppliedDueToMax =
@@ -817,8 +814,6 @@ export async function performAdjustment(
                 (previousActivePointsForThisXmlid % costPerActivePoint);
             const targetValue = costPerActivePoint ? Math.trunc(finalAp / costPerActivePoint) : 0;
             change.value = targetValue;
-            activeEffect.system ??= {};
-            activeEffect.system.changes ??= [];
             activeEffect.system.changes.push(change);
 
             thisAttackActivePointAdjustmentNotAppliedDueToMax = 0;
@@ -849,13 +844,11 @@ export async function performAdjustment(
     } else if (activeEffect.flags[game.system.id]?.adjustmentActivePoints !== 0) {
         // Were likely adding a second change row
         updateEffectName(activeEffect);
-        const updates = {
+        await activeEffect.update({
             name: activeEffect.name,
             flags: activeEffect.flags,
-        };
-        updates.system ??= {};
-        updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
-        await activeEffect.update(updates);
+            "system.changes": activeEffect.system.changes,
+        });
     } else {
         console.error(`ActiveEffect ${activeEffect.name} not created because adjustmentActivePoints=0`);
     }
@@ -972,7 +965,6 @@ async function recalcEffectBasedOnTotalApForXmlid(activeEffect, isFade) {
             const _targetValue = Math.trunc(_ap / costPerActivePoint) - _value;
 
             if (parseInt(ae.changes[0].value) !== _targetValue) {
-                // ActiveEffect#actor only exists on V14; use the owning actor directly
                 const msg = `${targetActor.name}: ${ae.name} ${ae.changes[0].key} from ${ae.changes[0].value} to ${_targetValue}. sumAP=${_ap} and costPerActivePoint=${costPerActivePoint}.  ${_ap}/${costPerActivePoint} = ${_ap / costPerActivePoint}.  There is already a ${_value} value from other effects.`;
                 if (isFade) {
                     console.warn(msg);

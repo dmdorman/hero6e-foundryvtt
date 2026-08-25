@@ -1996,12 +1996,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             });
 
             if (activeEffect.id) {
-                const updates = {
-                    name: activeEffect.name,
-                };
-                updates.system ??= {};
-                updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
-                await activeEffect.update(updates);
+                await activeEffect.update({ name: activeEffect.name, "system.changes": activeEffect.system.changes });
             } else {
                 await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
             }

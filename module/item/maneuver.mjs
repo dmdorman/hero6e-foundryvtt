@@ -95,8 +95,7 @@ function buildManeuverFlags(item, type) {
 export async function expireManeuverNextPhaseEffects(actor) {
     const maneuverAes = (actor?.temporaryEffects ?? []).filter(
         (ae) =>
-            ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect" &&
-            (ae.start?.time ?? null) !== game.time.worldTime,
+            ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect" && ae.start?.time !== game.time.worldTime,
     );
 
     const expiryPromises = maneuverAes.map((ae) => {
@@ -412,7 +411,7 @@ function buildManeuverActiveEffect(activeEffect, item, spec, traits) {
         });
     }
     activeEffect.duration ??= {};
-    activeEffect.start = { time: game.time.worldTime };
+    activeEffect.start = ActiveEffect.getEffectStart();
     // The status ID, not the localized name — the condition system only recognizes registered ids
     activeEffect.statuses = [status.id];
     activeEffect.duration.expiry = "combatEnd"; // V14 kluge until we implement phaseStart.  Combat:_onStartTurn should expire this.
@@ -469,7 +468,7 @@ export async function activateManeuver(item) {
     }
 
     // The effect may be a reused document or a plain template object; read the canonical array
-    const _changes = foundry.utils.getProperty(activeEffect, `system.changes`) ?? [];
+    const _changes = activeEffect.system?.changes ?? [];
 
     if (activeEffect.name && _changes.length > 0) {
         // There is no need to keep track of OCV/DCV changes when not in combat

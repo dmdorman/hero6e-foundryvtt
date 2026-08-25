@@ -669,12 +669,10 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
                 if (activeEffect.update) {
                     const oldMax = this.actor.system.characteristics[this.system.XMLID.toLowerCase()].max;
-                    const updates = {
+                    await activeEffect.update({
                         name: activeEffect.name,
-                    };
-                    updates.system ??= {};
-                    updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
-                    await activeEffect.update(updates);
+                        "system.changes": activeEffect.system.changes,
+                    });
                     const deltaMax = this.actor.system.characteristics[this.system.XMLID.toLowerCase()].max - oldMax;
                     const newValue =
                         this.actor.system.characteristics[this.system.XMLID.toLowerCase()].value + deltaMax;
@@ -723,12 +721,10 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     };
 
                     if (activeEffect.update) {
-                        const updates = {
+                        await activeEffect.update({
                             name: activeEffect.name,
-                        };
-                        updates.system ??= {};
-                        updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
-                        await activeEffect.update(updates);
+                            "system.changes": activeEffect.system.changes,
+                        });
                     } else {
                         await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
                     }
@@ -826,12 +822,10 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 activeEffect.disabled ??= true;
 
                 if (activeEffect.update) {
-                    const updates = {
+                    await activeEffect.update({
                         name: activeEffect.name,
-                    };
-                    updates.system ??= {};
-                    updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
-                    await activeEffect.update(updates);
+                        "system.changes": activeEffect.system.changes,
+                    });
                 } else {
                     await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
                 }
