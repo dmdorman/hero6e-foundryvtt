@@ -1,5 +1,5 @@
 import { HEROSYS } from "../herosystem6e.mjs";
-import { getPowerInfo, getTokenUuid, hdcTimeOptionIdToSeconds, squelch, tokenEducatedGuess } from "./util.mjs";
+import { getPowerInfo, getTokenUuid, hdcTimeOptionIdToSeconds, tokenEducatedGuess } from "./util.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { calculateDicePartsForItem } from "./damage.mjs";
 
@@ -365,21 +365,6 @@ function _createNewAdjustmentEffect(options) {
     activeEffect.system = { changes: [] };
     activeEffect.start ??= ActiveEffect.getEffectStart();
 
-    // TODO: return a HeroSystem6eActorActiveEffect here instead of patching ActiveEffect.
-    // This may cause issues as we may need to use updateSource for modifying values and toObject in the update.
-    Object.defineProperty(activeEffect, "changes", {
-        get: function () {
-            if (!squelch("v14AdjustmentChangesGetter")) {
-                console.warn("V14: Accessing changes via defineProperty of object.");
-            }
-            return this.system?.changes ?? [];
-        },
-        set: function (value) {
-            console.error("Directly setting changes is not allowed in V14, use system.changes instead.");
-            this.system.changes = value;
-        },
-    });
-
     return activeEffect;
 }
 
@@ -577,16 +562,14 @@ export async function performAdjustment(
         const _adjustmentActivePoints = Math.max(0, thisAttackActivePointsEffect - _previousActivePointsForThisXmlid);
         thisAttackActivePointEffectNotAppliedDueToNotExceedingHealing -= _adjustmentActivePoints;
 
-        // Sanity check for missing changes
-        // Must be an object if changes is missing
-        // Unclear how changes is missing #4211
-        // But fix it show we don't crash
-        if (!activeEffect.changes) {
+        // Sanity check: changes has been observed missing here; recover instead of crashing
+        if (!activeEffect.system?.changes) {
             console.error(`${activeEffect.name} has no changes`, activeEffect);
-            activeEffect.changes = [];
+            activeEffect.system ??= {};
+            activeEffect.system.changes = [];
         }
 
-        const prevChange = activeEffect.changes.find((c) => c.key == changeTemp.key);
+        const prevChange = activeEffect.system.changes.find((c) => c.key == changeTemp.key);
         const prevValue = parseInt(prevChange?.value) || 0;
         const targetHealValue = Math.floor(thisAttackActivePointsEffect / costPerActivePoint);
 
@@ -628,9 +611,6 @@ export async function performAdjustment(
         if (adjustmentDamageThisApplication !== 0) {
             await targetActor.update({ [`system.characteristics.${char}.value`]: newActorValue });
 
-            // Make sure changes exist
-            activeEffect.system ??= {};
-            activeEffect.system.changes ??= [];
             const changes = activeEffect.system.changes;
 
             // Update or create change
@@ -680,7 +660,6 @@ export async function performAdjustment(
         // Fade against a clone of the source changes. On V14 the document's .changes is prepared
         // data — mutating it in place never reaches system.changes, so the faded values would not
         // persist and the effect's max contribution would linger while the value dropped.
-        const changesKey = `system.changes`;
         const fadedChanges = foundry.utils.deepClone(existingEffect.system.changes);
 
         // Rough estimate of changes (recalc is more accurate and perhaps should be included here)
@@ -700,7 +679,7 @@ export async function performAdjustment(
 
         if (activeEffect.flags[game.system.id].adjustmentActivePoints === 0 && !CONFIG.debug.adjustmentFadeKeep) {
             isEffectFinished = true;
-            await existingEffect.update({ [changesKey]: fadedChanges });
+            await existingEffect.update({ "system.changes": fadedChanges });
             await updateCharacteristicValue(activeEffect, { targetSystem, previousChanges });
             await existingEffect.delete();
             const chatCard = _generateAdjustmentChatCard({
@@ -740,7 +719,7 @@ export async function performAdjustment(
             };
             await existingEffect.update({
                 name: nameSurrogate.name,
-                [changesKey]: fadedChanges,
+                "system.changes": fadedChanges,
                 flags: existingEffect.flags,
                 ...startTimeUpdate,
             });
@@ -1004,7 +983,6 @@ async function recalcEffectBasedOnTotalApForXmlid(activeEffect, isFade) {
                 const previousChanges = foundry.utils.deepClone(ae.changes);
                 // Mutate a clone of the source changes (on V14 document.changes is prepared data;
                 // an in-place edit would never reach system.changes and would not persist).
-                const changesKey = `system.changes`;
                 const updatedChanges = foundry.utils.deepClone(ae.system.changes);
                 updatedChanges[0].value = _targetValue;
                 const char = updatedChanges[0].key.match(/([a-z]+)\.max/)?.[1];
@@ -1012,7 +990,7 @@ async function recalcEffectBasedOnTotalApForXmlid(activeEffect, isFade) {
 
                 const nameSurrogate = { changes: updatedChanges, flags: ae.flags, origin: ae.origin };
                 updateEffectName(nameSurrogate);
-                await ae.update({ name: nameSurrogate.name, [changesKey]: updatedChanges });
+                await ae.update({ name: nameSurrogate.name, "system.changes": updatedChanges });
 
                 // Apparently we sometimes need to delay to let all the async's catch up
                 const delay = (ms) => new Promise((res) => setTimeout(res, ms || 100));
