@@ -4344,30 +4344,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         await this.update(changes);
     }
 
-    updateRollable(key) {
-        console.error("Depricated updateRollable");
-        const characteristic = this.system.characteristics[key];
-        const charPowerEntry = getPowerInfo({
-            xmlid: key.toUpperCase(),
-            actor: this,
-            xmlTag: key.toUpperCase(),
-        });
-
-        if (characteristic && charPowerEntry?.behaviors.includes("success")) {
-            const newRoll = Math.round(9 + characteristic.value * 0.2);
-            if (!this.system.is5e && characteristic.value < 0) {
-                characteristic.roll = 9;
-            }
-            if (this.system.characteristics[key].roll !== newRoll) {
-                return {
-                    [`system.characteristics.${key}.roll`]: newRoll,
-                };
-            }
-        }
-
-        return undefined;
-    }
-
     getActorCharacterAndActivePoints() {
         // Calculate realCost & Active Points for bought as characteristics
         let characterPointCost = 0;

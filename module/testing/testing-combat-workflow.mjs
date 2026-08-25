@@ -56,18 +56,9 @@ export function registerCombatWorkflowTests(quench) {
                 assert.ok($btn.length, `Attack trigger element located for item: ${item.name}`);
 
                 const appPromise = new Promise((resolve) => {
-                    let hookV14Id, hookV13Id;
-                    const cleanupAndResolve = (app) => {
-                        if (hookV14Id) Hooks.off("renderItemAttackFormApplicationV2", hookV14Id);
-                        if (hookV13Id) Hooks.off("renderApplication", hookV13Id);
+                    const hookId = Hooks.on("renderItemAttackFormApplicationV2", (app) => {
+                        Hooks.off("renderItemAttackFormApplicationV2", hookId);
                         resolve(app);
-                    };
-
-                    hookV14Id = Hooks.on("renderItemAttackFormApplicationV2", (app) => cleanupAndResolve(app));
-                    hookV13Id = Hooks.on("renderApplication", (app) => {
-                        if (app.constructor.name === "ItemAttackFormApplication" || app.id?.includes("attack")) {
-                            cleanupAndResolve(app);
-                        }
                     });
                 });
 

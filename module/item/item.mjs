@@ -2609,16 +2609,6 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         );
     }
 
-    get attacksWith() {
-        console.error(`Deprecated`);
-        return this.system.attacksWith;
-    }
-
-    get defendsWith() {
-        console.error(`Deprecated`);
-        return this.system.defendsWith;
-    }
-
     get css() {
         // css for actor-sheet-v2 item-row
         const row = [];

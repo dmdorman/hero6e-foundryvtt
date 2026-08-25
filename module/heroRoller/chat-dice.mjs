@@ -81,7 +81,6 @@ function addInlineHeroRollerListeners(html) {
  */
 Hooks.on("renderChatMessageHTML", (_message, html) => addInlineHeroRollerListeners(html));
 Hooks.on("renderJournalEntrySheet", (_sheet, html) => addInlineHeroRollerListeners(html));
-Hooks.on("renderHeroSystemActorSheet", (_sheet, html) => addInlineHeroRollerListeners(html[0])); // V1 application
 Hooks.on("renderHeroSystemActorSheetV2", (_sheet, html) => addInlineHeroRollerListeners(html));
 
 /**
