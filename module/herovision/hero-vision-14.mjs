@@ -472,9 +472,6 @@ export class HeroNonTargetingDetectionModeV14 extends BaseHeroDetectionModeV14 {
  * 4. Initialization: Registers custom detection modes with V14 engine.
  */
 export function initializeHeroVisionV14() {
-    const isV14 = game.release?.generation >= 14;
-    if (!isV14) return;
-
     CONFIG.Canvas.detectionModes["heroTargetingV14"] = new HeroTargetingDetectionModeV14({
         id: "heroTargetingV14",
         label: "HERO: Targeting Senses (v14)",

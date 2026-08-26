@@ -1,17 +1,11 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
-import { HeroCompatibility } from "../utility/compatibility.mjs";
 
-// Compatibility V14
-const _ActiveEffectTypeDataModel = foundry.data?.ActiveEffectTypeDataModel ?? foundry.abstract.TypeDataModel;
-
-export class HeroSystem6eActorActiveEffectsSystemData extends _ActiveEffectTypeDataModel {
+export class HeroSystem6eActorActiveEffectsSystemData extends foundry.data.ActiveEffectTypeDataModel {
     static defineSchema() {
         const fields = foundry.data.fields;
-        // Compatibility V14
-        const _schema = foundry.data?.ActiveEffectTypeDataModel == undefined ? {} : super.defineSchema();
         return {
-            ..._schema,
+            ...super.defineSchema(),
             XMLID: new fields.StringField(),
         };
     }
@@ -715,35 +709,6 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
         if (Object.keys(updates).length > 0) {
             await actor.update(updates);
         }
-    }
-
-    _prepareDuration() {
-        const duration = super._prepareDuration();
-
-        // V14 is fine, so are non-temporary effects
-        if (HeroCompatibility.isV14 || !this.isTemporary) {
-            return duration;
-        }
-
-        // V13 temporary effects: Making a label similar to V14 (_prepareTimeBasedDuration)
-        try {
-            const days = Math.floor(duration.remaining / 86400);
-            const hours = Math.floor((duration.remaining % 86400) / 3600);
-            const minutes = Math.floor((duration.remaining % 3600) / 60);
-            const seconds = duration.remaining % 60;
-            const label = [
-                days ? `${days} day` : null,
-                hours ? `${hours} hour` : null,
-                minutes ? `${minutes} min` : null,
-                seconds ? `${seconds} sec` : null,
-            ]
-                .filter((c) => !!c)
-                .join(", ");
-            duration.label = label;
-        } catch (e) {
-            console.error("Error in _prepareDuration", e);
-        }
-        return duration;
     }
 
     get XMLID() {

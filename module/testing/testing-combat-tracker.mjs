@@ -76,7 +76,18 @@ function makeHarness({ actorDocuments, combatDocuments }) {
         return effect;
     }
 
-    return { makeActor, makeCombat, combatantFor, makeHoldEffect };
+    // makeActor seeds bare actors; add the free maneuvers and hand back DODGE
+    async function dodgeItemFor(actor) {
+        if (!actor.items.find((i) => i.system?.XMLID === "DODGE")) {
+            await actor.addHeroSystemManeuvers();
+        }
+        return actor.items.find((i) => i.system?.XMLID === "DODGE");
+    }
+
+    const hasManeuverAe = (actor) =>
+        actor.temporaryEffects.some((ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect");
+
+    return { makeActor, makeCombat, combatantFor, makeHoldEffect, dodgeItemFor, hasManeuverAe };
 }
 
 export function registerCombatTests(quench) {
@@ -96,7 +107,10 @@ export function registerCombatTests(quench) {
                 setQuenchTimeout(this);
                 const actorDocuments = [];
                 const combatDocuments = [];
-                const { makeActor, makeCombat, combatantFor } = makeHarness({ actorDocuments, combatDocuments });
+                const { makeActor, makeCombat, combatantFor, dodgeItemFor, hasManeuverAe } = makeHarness({
+                    actorDocuments,
+                    combatDocuments,
+                });
                 let savedLrAutoElevate;
                 let preexistingMessageIds;
 
@@ -171,45 +185,13 @@ export function registerCombatTests(quench) {
                 });
 
                 it("Should execute an exhaustive 2-round progression verifying dynamic worldTime clock increments", async function () {
-                    const { HeroCompatibility } = await import("../utility/compatibility.mjs");
-
                     const startTimeStamp = game.time.worldTime;
 
                     const testCombatDocument = await makeCombat([]);
 
-                    const combatantData = actorDocuments.map((actor) => {
-                        const isGuard = actor.name.includes("Guard");
-                        const isBehemoth = actor.name.includes("Behemoth");
-                        const isSpeedster = actor.name.includes("Speedster");
-                        const isSluggish = actor.name.includes("Sluggish");
-                        const isOvercapped = actor.name.includes("Overcapped");
-                        const isDrained = actor.name.includes("Drained");
-
-                        let targetDex = 10;
-                        let targetSpd = 2;
-
-                        if (isGuard) {
-                            targetDex = 18;
-                            targetSpd = 3;
-                        } else if (isBehemoth) {
-                            targetDex = 8;
-                            targetSpd = 4;
-                        } else if (isSpeedster) {
-                            targetDex = 25;
-                            targetSpd = 12;
-                        } else if (isSluggish) {
-                            targetDex = 5;
-                            targetSpd = 1;
-                        } else if (isOvercapped) {
-                            targetDex = 12;
-                            targetSpd = 13;
-                        } else if (isDrained) {
-                            targetDex = 10;
-                            targetSpd = -1;
-                        }
-
-                        return HeroCompatibility.getCombatantCreationPayload(actor.id, targetDex, targetSpd);
-                    });
+                    // Combatant has no per-combatant characteristic override field; DEX/SPD
+                    // come from the actors the before() roster seeded
+                    const combatantData = actorDocuments.map((actor) => ({ actorId: actor.id }));
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
 
@@ -340,8 +322,6 @@ export function registerCombatTests(quench) {
                 });
 
                 it("Should execute a bidirectional sequence verifying nextTurn, nextRound, previousTurn, and previousRound", async function () {
-                    const { HeroCompatibility } = await import("../utility/compatibility.mjs");
-
                     const startTimeStamp = game.time.worldTime;
 
                     const testCombatDocument = await makeCombat([]);
@@ -351,23 +331,7 @@ export function registerCombatTests(quench) {
                         (a) => a.name.includes("Guard") || a.name.includes("Behemoth") || a.name.includes("Overcapped"),
                     );
 
-                    const combatantData = bidirectionalRoster.map((actor) => {
-                        let targetDex = 10;
-                        let targetSpd = 2;
-
-                        if (actor.name.includes("Guard")) {
-                            targetDex = 18;
-                            targetSpd = 3;
-                        } else if (actor.name.includes("Behemoth")) {
-                            targetDex = 8;
-                            targetSpd = 4;
-                        } else if (actor.name.includes("Overcapped")) {
-                            targetDex = 12;
-                            targetSpd = 13;
-                        }
-
-                        return HeroCompatibility.getCombatantCreationPayload(actor.id, targetDex, targetSpd);
-                    });
+                    const combatantData = bidirectionalRoster.map((actor) => ({ actorId: actor.id }));
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
 
@@ -439,26 +403,13 @@ export function registerCombatTests(quench) {
                 });
 
                 it("Should execute backward rollbacks via previousRound and previousTurn to verify unstarted reset thresholds", async function () {
-                    const { HeroCompatibility } = await import("../utility/compatibility.mjs");
-
                     const testCombatDocument = await makeCombat([]);
 
                     // Streamline the collection map for a fast reset execution sweep
                     const resetRoster = actorDocuments.filter(
                         (a) => a.name.includes("Guard") || a.name.includes("Behemoth"),
                     );
-                    const combatantData = resetRoster.map((actor) => {
-                        let targetDex = 10;
-                        let targetSpd = 2;
-                        if (actor.name.includes("Guard")) {
-                            targetDex = 18;
-                            targetSpd = 3;
-                        } else if (actor.name.includes("Behemoth")) {
-                            targetDex = 8;
-                            targetSpd = 4;
-                        }
-                        return HeroCompatibility.getCombatantCreationPayload(actor.id, targetDex, targetSpd);
-                    });
+                    const combatantData = resetRoster.map((actor) => ({ actorId: actor.id }));
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
 
@@ -1147,9 +1098,7 @@ export function registerCombatTests(quench) {
                 it("Should expire a Dodge maneuver at the start of the actor's next Phase", async function () {
                     const alpha = await makeActor("_Quench Expiry Alpha", { dex: 30, spd: 2 });
                     const weaver = await makeActor("_Quench Expiry Weaver", { dex: 20, spd: 2 });
-                    if (!weaver.items.find((i) => i.system?.XMLID === "DODGE")) {
-                        await weaver.addHeroSystemManeuvers();
-                    }
+                    const dodgeItem = await dodgeItemFor(weaver);
 
                     const combat = await makeCombat([alpha, weaver]);
                     await combat.startCombat();
@@ -1159,26 +1108,21 @@ export function registerCombatTests(quench) {
                     // Weaver dodges as their Segment 12 Phase action
                     await combat.nextTurn();
                     expect(combat.combatant.actorId).to.equal(weaver.id);
-                    const dodgeItem = weaver.items.find((i) => i.system?.XMLID === "DODGE");
                     await dodgeItem.toggle();
-                    const hasManeuverAe = () =>
-                        weaver.temporaryEffects.some(
-                            (ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect",
-                        );
-                    expect(hasManeuverAe(), "dodge effect active after declaring").to.be.true;
+                    expect(hasManeuverAe(weaver), "dodge effect active after declaring").to.be.true;
 
                     // Someone else's Phase starting must not expire it: the Dodge lasts
                     // until the weaver's own next Phase
                     await combat.nextTurn();
                     expect(combat.segment).to.equal(6);
                     expect(combat.combatant.actorId).to.equal(alpha.id);
-                    expect(hasManeuverAe(), "dodge persists through other combatants' Phases").to.be.true;
+                    expect(hasManeuverAe(weaver), "dodge persists through other combatants' Phases").to.be.true;
 
                     // The weaver's next Phase begins: the boundary maintenance switches
                     // the maneuver back off
                     await combat.nextTurn();
                     expect(combat.combatant.actorId).to.equal(weaver.id);
-                    const expired = await waitUntil(() => !hasManeuverAe() && dodgeItem.isActive !== true);
+                    const expired = await waitUntil(() => !hasManeuverAe(weaver) && dodgeItem.isActive !== true);
                     expect(expired, "dodge expired at the start of the actor's next Phase").to.be.true;
                 });
 
@@ -1222,6 +1166,95 @@ export function registerCombatTests(quench) {
                     expect(combat.combatant.actorId).to.equal(gunner.id);
                     const removed = await waitUntil(() => !hasPenaltyAe());
                     expect(removed, "penalty removed at the start of the actor's next Phase").to.be.true;
+                });
+
+                it("Should re-stamp the reused maneuver effect's start time on re-activation", async function () {
+                    const { activateManeuver } = await import("../item/maneuver.mjs");
+
+                    const alpha = await makeActor("_Quench Reuse Alpha", { dex: 30, spd: 2 });
+                    const weaver = await makeActor("_Quench Reuse Weaver", { dex: 20, spd: 2 });
+                    const dodgeItem = await dodgeItemFor(weaver);
+
+                    const combat = await makeCombat([alpha, weaver]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+
+                    // First dodge on the weaver's Segment 12 Phase
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(weaver.id);
+                    await dodgeItem.toggle();
+                    const dodgeEffect = () => dodgeItem.effects.contents[0];
+                    expect(dodgeEffect(), "activation created the effect").to.exist;
+                    expect(dodgeEffect().start?.time, "activation stamps start.time with the world time").to.equal(
+                        game.time.worldTime,
+                    );
+                    const effectId = dodgeEffect().id;
+
+                    // Re-declaring while still active (the attack flow calls activateManeuver
+                    // directly) reuses the live effect document via update, which must
+                    // re-stamp start.time — a stale stamp expires the dodge at the wrong
+                    // boundary. Backdate the stamp to make the re-stamp observable.
+                    await dodgeEffect().update({ "start.time": game.time.worldTime - 12 });
+                    await activateManeuver(dodgeItem);
+                    expect(dodgeEffect().id, "re-activation reuses the document").to.equal(effectId);
+                    expect(dodgeItem.effects.size, "no second effect document created").to.equal(1);
+                    expect(dodgeEffect().start?.time, "reused effect re-stamped with the current world time").to.equal(
+                        game.time.worldTime,
+                    );
+
+                    // The re-declared dodge still expires at the weaver's next Phase
+                    await combat.nextTurn();
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(weaver.id);
+                    const expired = await waitUntil(() => dodgeItem.isActive !== true);
+                    expect(expired, "re-declared dodge expired at the actor's next Phase").to.be.true;
+                });
+
+                it("Should expire only maneuver effects not declared at this instant", async function () {
+                    const { expireManeuverNextPhaseEffects } = await import("../item/maneuver.mjs");
+
+                    const alpha = await makeActor("_Quench Guard Alpha", { dex: 30, spd: 2 });
+                    const parrier = await makeActor("_Quench Guard Parrier", { dex: 20, spd: 2 });
+                    const dodgeItem = await dodgeItemFor(parrier);
+
+                    const combat = await makeCombat([alpha, parrier]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(parrier.id);
+                    await dodgeItem.toggle();
+                    expect(hasManeuverAe(parrier), "dodge effect active after declaring").to.be.true;
+
+                    // A loose (non-toggleable) leftover stamped on an earlier Phase
+                    const [staleEffect] = await parrier.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "_Quench Stale Maneuver Effect",
+                            img: "icons/svg/shield.svg",
+                            duration: { units: "seconds", value: 60 },
+                            start: { time: game.time.worldTime - 12 },
+                            flags: { [game.system.id]: { type: "maneuverNextPhaseEffect" } },
+                        },
+                    ]);
+
+                    // Sweep at the same world time the dodge was declared: the
+                    // declared-this-instant effect survives, the stale loose one is deleted
+                    await expireManeuverNextPhaseEffects(parrier);
+                    expect(hasManeuverAe(parrier), "effect declared at this instant survives the sweep").to.be.true;
+                    expect(dodgeItem.isActive, "dodge stays active").to.be.true;
+                    expect(parrier.effects.get(staleEffect.id), "stale loose effect deleted").to.not.exist;
+
+                    // Backdate the dodge and sweep again: the toggleable maneuver is switched
+                    // off through its item so activation state stays in sync, and the item
+                    // toggle tears its effect document down
+                    const dodgeAe = parrier.temporaryEffects.find(
+                        (ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect",
+                    );
+                    await dodgeAe.update({ "start.time": game.time.worldTime - 12 });
+                    await expireManeuverNextPhaseEffects(parrier);
+                    const switched = await waitUntil(() => dodgeItem.isActive !== true);
+                    expect(switched, "backdated dodge toggled off via its item").to.be.true;
+                    expect(dodgeItem.effects.size, "item toggle tore the effect down").to.equal(0);
                 });
 
                 it("Should mark knocked out combatants defeated via the tracker toggle", async function () {

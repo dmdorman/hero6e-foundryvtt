@@ -18,6 +18,23 @@ export function numberToOneDecimalDigit(number) {
     return truncatedNumber10TimesLarger(number) / 10;
 }
 
+/**
+ * Clamp num to [min, max]. Unlike Math.clamp, an inverted range (max < min, e.g. a drained
+ * characteristic max below its floor) collapses to min instead of producing garbage.
+ *
+ * @param {number} num
+ * @param {number} min
+ * @param {number} max
+ * @returns number
+ */
+export function clamp(num, min, max) {
+    if (max < min) {
+        max = min;
+    }
+
+    return Math.min(Math.max(num, min), max);
+}
+
 function truncatedNumber10TimesLarger(number) {
     return Math.trunc(number * 10);
 }
