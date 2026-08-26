@@ -9,13 +9,13 @@ import { tagObjectForPersistence } from "../migration.mjs";
 import { overrideCanAct } from "../settings/settings-helpers.mjs";
 import { Attack, actionToJSON } from "../utility/attack.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
-import { HeroCompatibility } from "../utility/compatibility.mjs";
 import { characteristicValueToDiceParts } from "../utility/damage.mjs";
 import { HeroProgressBar } from "../utility/progress-bar.mjs";
-import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
+import { clamp, roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
 import {
     base64ToUtf8,
+    forceReplaceFields,
     getCharacteristicInfoArrayForActor,
     getPowerInfo,
     squelch,
@@ -98,7 +98,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             // Merge in the entire system + force-replace items so nested item system data survives.
             const items = this.items.map((i) => ({ ...i.toObject(), system: i.system }));
-            this.updateSource(HeroCompatibility.forceReplace({ items }));
+            this.updateSource(forceReplaceFields({ items }));
         }
 
         // For debugging purposes
@@ -978,7 +978,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         // Determine the updates to make to the actor data
         let updates;
         if (isBar) {
-            if (isDelta) value = HeroCompatibility.clamp(-99, Number(current.value) + value, current.max); // a negative bar is typically acceptable
+            if (isDelta) value = clamp(-99, Number(current.value) + value, current.max); // a negative bar is typically acceptable
             updates = { [`system.${attribute}.value`]: value };
         } else {
             if (isDelta) value = Number(current) + value;
@@ -1777,7 +1777,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         canvas.interface.createScrollingText(token.center, change.signedString(), {
             anchor: change < 0 ? CONST.TEXT_ANCHOR_POINTS.BOTTOM : CONST.TEXT_ANCHOR_POINTS.TOP,
             direction: change < 0 ? 1 : 2,
-            fontSize: HeroCompatibility.clamp(fontSize, 50, 100),
+            fontSize: clamp(fontSize, 50, 100),
             fill: options?.fill || "0xFFFFFF",
             stroke: options?.stroke || 0x00000000,
             strokeThickness: 4,
@@ -1992,20 +1992,11 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
             });
             activeEffect = foundry.utils.mergeObject(activeEffect, {
-                [HeroCompatibility.isV14 ? `system.changes` : `changes`]: changes,
+                "system.changes": changes,
             });
 
             if (activeEffect.id) {
-                const updates = {
-                    name: activeEffect.name,
-                };
-                if (HeroCompatibility.isV14) {
-                    updates.system ??= {};
-                    updates.system.changes = activeEffect.system.changes ?? activeEffect.changes;
-                } else {
-                    updates.changes = activeEffect.changes;
-                }
-                await activeEffect.update(updates);
+                await activeEffect.update({ name: activeEffect.name, "system.changes": activeEffect.system.changes });
             } else {
                 await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
             }
@@ -2152,7 +2143,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 },
             ];
             activeEffect = foundry.utils.mergeObject(activeEffect, {
-                [HeroCompatibility.isV14 ? `system.changes` : `changes`]: changes,
+                "system.changes": changes,
             });
 
             if (prevActiveEffect) {
@@ -3171,28 +3162,18 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
                 if (targetType && this.type.replace("npc", "pc") !== targetType) {
                     if (Object.keys(game.system.documentTypes.Actor).includes(targetType)) {
-                        if (HeroCompatibility.isV14) {
-                            // REF: https://github.com/foundryvtt/foundryvtt/issues/13090
-                            // AARON WAS HERE on 4/4/2026: Update fails, likely a foundry bug.
-                            // Error: The type of a Document may only be changed if the system field
-                            //        is also updated with a ForcedReplacement operator.
-                            // A subsequent upload works, not ready for publish.
-                            await this.update(
-                                {
-                                    type: targetType,
-                                    system: foundry.utils.mergeObject(this.system.toObject(), { _type: targetType }),
-                                },
-                                { recursive: false },
-                            );
-                        } else {
-                            await this.update(
-                                {
-                                    type: targetType,
-                                    system: foundry.utils.mergeObject(this.system.toObject(), { _type: targetType }),
-                                },
-                                { recursive: false },
-                            );
-                        }
+                        // REF: https://github.com/foundryvtt/foundryvtt/issues/13090
+                        // AARON WAS HERE on 4/4/2026: Update fails, likely a foundry bug.
+                        // Error: The type of a Document may only be changed if the system field
+                        //        is also updated with a ForcedReplacement operator.
+                        // A subsequent upload works, not ready for publish.
+                        await this.update(
+                            {
+                                type: targetType,
+                                system: foundry.utils.mergeObject(this.system.toObject(), { _type: targetType }),
+                            },
+                            { recursive: false },
+                        );
                     } else {
                         ui.notifications.error(`${targetType} is not a valid actor type`);
                     }
@@ -3796,6 +3777,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
      * Rebuild the actor captured in an upload-error report's `actorBase64`.
      * Returns a transient (unsaved) actor for inspection by default; pass { create: true } to persist it to the world.
      *
+     * Debugging tool invoked manually from the console — intentionally has no in-code callers; do not remove as dead code.
+     *
      * @param {string} actorBase64 - The base64 actor state from the error report.
      * @param {object} [options]
      * @param {boolean} [options.create=false] - Persist the rebuilt actor to the world instead of returning a transient one.
@@ -4342,30 +4325,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         await this.update(changes);
     }
 
-    updateRollable(key) {
-        console.error("Depricated updateRollable");
-        const characteristic = this.system.characteristics[key];
-        const charPowerEntry = getPowerInfo({
-            xmlid: key.toUpperCase(),
-            actor: this,
-            xmlTag: key.toUpperCase(),
-        });
-
-        if (characteristic && charPowerEntry?.behaviors.includes("success")) {
-            const newRoll = Math.round(9 + characteristic.value * 0.2);
-            if (!this.system.is5e && characteristic.value < 0) {
-                characteristic.roll = 9;
-            }
-            if (this.system.characteristics[key].roll !== newRoll) {
-                return {
-                    [`system.characteristics.${key}.roll`]: newRoll,
-                };
-            }
-        }
-
-        return undefined;
-    }
-
     getActorCharacterAndActivePoints() {
         // Calculate realCost & Active Points for bought as characteristics
         let characterPointCost = 0;
@@ -4766,76 +4725,11 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         return stunVal < this.stunThreshold;
     }
 
-    // V13 and V14 have different ways of applying active effects
-    applyActiveEffects(phase) {
-        if (HeroCompatibility.isV14) {
-            return this.applyActiveEffects14(phase);
-        }
-        return this.applyActiveEffects13();
-    }
-
-    // HeroSystem is unique in that we only
-    // apply only one multiplier (whichever one reduces the most).
-    /**
-     * Apply any transformations to the Actor data which are caused by ActiveEffects.
-     */
-    applyActiveEffects13() {
-        const overrides = {};
-        this.statuses.clear();
-
-        // Organize non-disabled effects by their application priority
-        let changes = [];
-        for (const effect of this.allApplicableEffects()) {
-            if (!effect.active) continue;
-            changes.push(
-                ...effect.changes.map((change) => {
-                    const c = foundry.utils.deepClone(change);
-                    c.effect = effect;
-                    c.priority = c.priority ?? c.mode * 10;
-                    return c;
-                }),
-            );
-            for (const statusId of effect.statuses) this.statuses.add(statusId);
-        }
-
-        // Filter out redundant multiplies, keeping lowest value
-        // const mults = changes.filter((c) => c.mode === CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY);
-        // if (mults.length > 1) {
-        //     const uniqueKeys = new Set();
-        //     mults.forEach((obj) => {
-        //         uniqueKeys.add(obj.key);
-        //     });
-
-        //     for (const key of uniqueKeys) {
-        //         const multsUniqueKey = mults.filter((c) => c.key === key);
-        //         if (multsUniqueKey.length > 1) {
-        //             const minValue = Math.min(...multsUniqueKey.map((c) => parseFloat(c.value)));
-        //             const keepMult = multsUniqueKey.find((c) => parseFloat(c.value) === minValue);
-        //             // remove all multsUniqueKey and add back in the keepMult
-        //             changes = changes.filter((c) => c.key !== key || c.mode !== CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY);
-        //             changes.push(keepMult);
-        //         }
-        //     }
-        // }
-        HeroSystem6eActorActiveEffects._removeRedundantHalvingActiveEffects(changes);
-        changes.sort((a, b) => a.priority - b.priority);
-
-        // Apply all changes
-        for (const change of changes) {
-            if (!change.key) continue;
-            const changes = change.effect.apply(this, change);
-            Object.assign(overrides, changes);
-        }
-
-        // Expand the set of final overrides
-        this.overrides = foundry.utils.expandObject(overrides);
-    }
-
     /**
      * Apply any transformations to the Actor data which are caused by ActiveEffects.
      * @param {string} phase The application phase under which changes are to be applied.
      */
-    applyActiveEffects14(phase) {
+    applyActiveEffects(phase) {
         const ActiveEffect = foundry.documents.ActiveEffect.implementation;
         if (typeof phase !== "string") {
             phase = this._completedActiveEffectPhases.has("initial") ? "final" : "initial";
@@ -4845,14 +4739,14 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             foundry.utils.logCompatibilityWarning(message, { since: 14, until: 16, once: true });
         } else if (!(phase in ActiveEffect.CHANGE_PHASES)) {
             const error = new Error(`"${phase}" is not a registered ActiveEffect application phase.`);
-            Hooks$1.onError("Actor#applyActiveEffects", error, { log: "error" });
+            Hooks.onError("Actor#applyActiveEffects", error, { log: "error" });
         }
         if (this._completedActiveEffectPhases.has(phase)) {
             const error = new Error(
                 `ActiveEffect application phase "${phase}" has already completed and cannot be run again` +
                     " in this Actor's data-preparation cycle.",
             );
-            Hooks$1.onError("Actor#applyActiveEffects", error, { log: "error" });
+            Hooks.onError("Actor#applyActiveEffects", error, { log: "error" });
             return;
         }
         this._completedActiveEffectPhases.add(phase);

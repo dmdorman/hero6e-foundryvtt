@@ -1,4 +1,4 @@
-import { HeroCompatibility } from "../utility/compatibility.mjs";
+import { forceReplaceFields } from "../utility/util.mjs";
 
 const { Actor, Item } = foundry.documents;
 
@@ -36,35 +36,24 @@ export function registerTypeForceReplaceTests(quench) {
                         }
                     });
 
-                    // Shared DataModels break _replace. TODO: refactor DataModel
-                    if (HeroCompatibility.isV14) {
-                        // Actor type changes reject the ForcedReplacement operator on V14 with
-                        // "The type of a Document may only be changed if the system field is also
-                        // updated with a ForcedReplacement operator." even when one is supplied.
-                        // Known Foundry issue (https://github.com/foundryvtt/foundryvtt/issues/13090;
-                        // see the note in actor.mjs uploadFromXml). Items work; actors are covered by
-                        // the Custom system _changeType test above until the core bug is fixed.
-                        it.skip("Native V14 forceReplace (Skipped: foundryvtt#13090)", async function () {
-                            for (const targetType of targetTypes) {
-                                // 1. Fetch current system data structure
-                                const currentSystemData = quenchActor.system?.toObject() || {};
+                    // Shared DataModels break force-replacement. TODO: refactor DataModel
+                    // Actor type changes reject the ForcedReplacement operator on V14 with
+                    // "The type of a Document may only be changed if the system field is also
+                    // updated with a ForcedReplacement operator." even when one is supplied.
+                    // Known Foundry issue (https://github.com/foundryvtt/foundryvtt/issues/13090;
+                    // see the note in actor.mjs uploadFromXml). Items work; actors are covered by
+                    // the Custom system _changeType test above until the core bug is fixed.
+                    it.skip("Native V14 forceReplace (Skipped: foundryvtt#13090)", async function () {
+                        for (const targetType of targetTypes) {
+                            // 1. Fetch current system data structure
+                            const currentSystemData = quenchActor.system?.toObject() || {};
 
-                                await quenchActor.update(
-                                    {
-                                        type: targetType,
-                                        // 2. Use the valid system data structure
-                                        system: _replace(currentSystemData),
-                                    },
-                                    {
-                                        forceReplace: true,
-                                    },
-                                );
-                                assert.equal(quenchActor.type, targetType);
-                            }
-                        });
-                    } else {
-                        it.skip("Native V14 forceReplace (Skipped on V13)", () => {});
-                    }
+                            await quenchActor.update(
+                                forceReplaceFields({ system: currentSystemData }, { type: targetType }),
+                            );
+                            assert.equal(quenchActor.type, targetType);
+                        }
+                    });
                 },
                 { displayName: "HERO: Actor Type Tests" },
             );
@@ -110,29 +99,19 @@ export function registerTypeForceReplaceTests(quench) {
                     }
                 });
 
-                // Shared DataModels break _replace. TODO: refactor DataModel
-                if (HeroCompatibility.isV14) {
-                    it("Native V14 forceReplace", async function () {
-                        for (const targetType of itemTypes) {
-                            const currentSystemData = quenchItem.system.toObject();
+                // Shared DataModels break force-replacement. TODO: refactor DataModel
+                it("Native V14 forceReplace", async function () {
+                    for (const targetType of itemTypes) {
+                        const currentSystemData = quenchItem.system.toObject();
 
-                            await quenchItem.update(
-                                {
-                                    type: targetType,
-                                    system: _replace(currentSystemData),
-                                },
-                                {
-                                    forceReplace: true,
-                                },
-                            );
+                        await quenchItem.update(
+                            forceReplaceFields({ system: currentSystemData }, { type: targetType }),
+                        );
 
-                            assert.equal(quenchItem.type, targetType);
-                            assert.equal(quenchItem.system.XMLID, "UNTRAINED");
-                        }
-                    });
-                } else {
-                    it.skip("Native V14 forceReplace (Skipped on V13)", () => {});
-                }
+                        assert.equal(quenchItem.type, targetType);
+                        assert.equal(quenchItem.system.XMLID, "UNTRAINED");
+                    }
+                });
             });
         },
         { displayName: "HERO: Updates with type ForceReplace" },

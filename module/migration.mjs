@@ -1,4 +1,4 @@
-import { HeroCompatibility } from "./utility/compatibility.mjs";
+import { forceReplaceFields } from "./utility/util.mjs";
 import { HeroProgressBar } from "./utility/progress-bar.mjs";
 import { CreateHeroCompendiums } from "./heroCompendiums.mjs";
 import { migrateCombatsToSingleCombatantTracker } from "./combat-single.mjs";
@@ -408,10 +408,7 @@ export async function migrateWorld() {
                 console.log(item);
                 console.warn(`changing ${item.name} type from "${item.type}" to "power"`, item);
                 await item.update(
-                    HeroCompatibility.forceReplace(
-                        { system: item.system },
-                        { type: "power", name: `[INVALID] ${item.name}` },
-                    ),
+                    forceReplaceFields({ system: item.system }, { type: "power", name: `[INVALID] ${item.name}` }),
                 );
             } else {
                 console.error("unexpected item.type", item);
@@ -436,14 +433,14 @@ async function commitActorAndItemMigrateDataChangesByActor(actor) {
         const { _id, system, flags, type } = actor.toObject();
         delete flags[game.system.id][needToPersistToDb];
         //TODO: what about items that we removed (like the STR placeholder?), not working as intended.
-        await actor.update(HeroCompatibility.forceReplace({ system, flags }, { _id, type }));
+        await actor.update(forceReplaceFields({ system, flags }, { _id, type }));
     }
 
     for (const item of actor.items) {
         if (item.flags[game.system.id]?.[needToPersistToDb]) {
             const { _id, system, flags, type } = item.toObject();
             delete flags[game.system.id][needToPersistToDb];
-            itemUpdates.push(HeroCompatibility.forceReplace({ system, flags }, { _id, type }));
+            itemUpdates.push(forceReplaceFields({ system, flags }, { _id, type }));
         }
     }
 
@@ -460,7 +457,7 @@ async function commitItemsCollectionMigrateDataChanges(item) {
     if (item.flags[game.system.id]?.[needToPersistToDb]) {
         const { system, flags, type } = item.toObject();
         delete flags[game.system.id][needToPersistToDb];
-        await item.update(HeroCompatibility.forceReplace({ system, flags }, { type }));
+        await item.update(forceReplaceFields({ system, flags }, { type }));
     }
 }
 

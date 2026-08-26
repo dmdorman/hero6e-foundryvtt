@@ -10,24 +10,38 @@ const abs = (turn, segment) => turn * 12 + segment;
 // so its after() hook tears down only its own documents.
 function makeHarness({ actorDocuments, combatDocuments }) {
     async function makeActor(name, { dex = 10, spd = 2, type = "pc", extra = {} } = {}) {
-        const actor = await Actor.create(
-            {
-                name,
-                type,
-                system: {
-                    initiativeCharacteristic: "dex",
-                    characteristics: {
-                        dex: { value: dex, max: dex },
-                        spd: { value: spd, max: spd },
-                    },
-                    ...extra,
-                },
+        const system = {
+            initiativeCharacteristic: "dex",
+            characteristics: {
+                dex: { value: dex, max: dex },
+                spd: { value: spd, max: spd },
             },
+            ...extra,
+        };
+        // 5e SPD is figured — floor(1 + DEX/10 + LEVELS) recomputed on every
+        // prepareData — so directly seeded values would not survive. Seed the
+        // purchases that make the requested numbers real instead: DEX as levels
+        // over its base 10, SPD as levels over the figured amount (5e characters
+        // routinely buy SPD on top of what DEX gives them).
+        if (extra.is5e === true) {
+            const figuredSpd = Math.floor(1 + Math.max(0, dex) / 10);
+            system.DEX ??= { LEVELS: dex - 10 };
+            system.SPD ??= { LEVELS: spd - figuredSpd };
+        }
+        const actor = await Actor.create(
+            { name, type, system },
             // Pin the edition: under a 5e DefaultEdition world, figured-characteristic
             // recalculation would rewrite the seeded SPD as 1 + DEX/10 on every prepareData
             { is5e: extra.is5e ?? false },
         );
         actor.prepareData();
+        // A drift between the seeded purchase and the figured formula would silently
+        // skew every phase expectation downstream; fail loudly at the source instead
+        if (extra.is5e === true && actor.system.characteristics.spd.max !== spd) {
+            throw new Error(
+                `makeActor(${name}): 5e figured SPD came out ${actor.system.characteristics.spd.max}, wanted ${spd}`,
+            );
+        }
         actorDocuments.push(actor);
         return actor;
     }
@@ -62,7 +76,18 @@ function makeHarness({ actorDocuments, combatDocuments }) {
         return effect;
     }
 
-    return { makeActor, makeCombat, combatantFor, makeHoldEffect };
+    // makeActor seeds bare actors; add the free maneuvers and hand back DODGE
+    async function dodgeItemFor(actor) {
+        if (!actor.items.find((i) => i.system?.XMLID === "DODGE")) {
+            await actor.addHeroSystemManeuvers();
+        }
+        return actor.items.find((i) => i.system?.XMLID === "DODGE");
+    }
+
+    const hasManeuverAe = (actor) =>
+        actor.temporaryEffects.some((ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect");
+
+    return { makeActor, makeCombat, combatantFor, makeHoldEffect, dodgeItemFor, hasManeuverAe };
 }
 
 export function registerCombatTests(quench) {
@@ -82,7 +107,10 @@ export function registerCombatTests(quench) {
                 setQuenchTimeout(this);
                 const actorDocuments = [];
                 const combatDocuments = [];
-                const { makeActor, makeCombat, combatantFor } = makeHarness({ actorDocuments, combatDocuments });
+                const { makeActor, makeCombat, combatantFor, dodgeItemFor, hasManeuverAe } = makeHarness({
+                    actorDocuments,
+                    combatDocuments,
+                });
                 let savedLrAutoElevate;
                 let preexistingMessageIds;
 
@@ -157,45 +185,13 @@ export function registerCombatTests(quench) {
                 });
 
                 it("Should execute an exhaustive 2-round progression verifying dynamic worldTime clock increments", async function () {
-                    const { HeroCompatibility } = await import("../utility/compatibility.mjs");
-
                     const startTimeStamp = game.time.worldTime;
 
                     const testCombatDocument = await makeCombat([]);
 
-                    const combatantData = actorDocuments.map((actor) => {
-                        const isGuard = actor.name.includes("Guard");
-                        const isBehemoth = actor.name.includes("Behemoth");
-                        const isSpeedster = actor.name.includes("Speedster");
-                        const isSluggish = actor.name.includes("Sluggish");
-                        const isOvercapped = actor.name.includes("Overcapped");
-                        const isDrained = actor.name.includes("Drained");
-
-                        let targetDex = 10;
-                        let targetSpd = 2;
-
-                        if (isGuard) {
-                            targetDex = 18;
-                            targetSpd = 3;
-                        } else if (isBehemoth) {
-                            targetDex = 8;
-                            targetSpd = 4;
-                        } else if (isSpeedster) {
-                            targetDex = 25;
-                            targetSpd = 12;
-                        } else if (isSluggish) {
-                            targetDex = 5;
-                            targetSpd = 1;
-                        } else if (isOvercapped) {
-                            targetDex = 12;
-                            targetSpd = 13;
-                        } else if (isDrained) {
-                            targetDex = 10;
-                            targetSpd = -1;
-                        }
-
-                        return HeroCompatibility.getCombatantCreationPayload(actor.id, targetDex, targetSpd);
-                    });
+                    // Combatant has no per-combatant characteristic override field; DEX/SPD
+                    // come from the actors the before() roster seeded
+                    const combatantData = actorDocuments.map((actor) => ({ actorId: actor.id }));
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
 
@@ -326,8 +322,6 @@ export function registerCombatTests(quench) {
                 });
 
                 it("Should execute a bidirectional sequence verifying nextTurn, nextRound, previousTurn, and previousRound", async function () {
-                    const { HeroCompatibility } = await import("../utility/compatibility.mjs");
-
                     const startTimeStamp = game.time.worldTime;
 
                     const testCombatDocument = await makeCombat([]);
@@ -337,23 +331,7 @@ export function registerCombatTests(quench) {
                         (a) => a.name.includes("Guard") || a.name.includes("Behemoth") || a.name.includes("Overcapped"),
                     );
 
-                    const combatantData = bidirectionalRoster.map((actor) => {
-                        let targetDex = 10;
-                        let targetSpd = 2;
-
-                        if (actor.name.includes("Guard")) {
-                            targetDex = 18;
-                            targetSpd = 3;
-                        } else if (actor.name.includes("Behemoth")) {
-                            targetDex = 8;
-                            targetSpd = 4;
-                        } else if (actor.name.includes("Overcapped")) {
-                            targetDex = 12;
-                            targetSpd = 13;
-                        }
-
-                        return HeroCompatibility.getCombatantCreationPayload(actor.id, targetDex, targetSpd);
-                    });
+                    const combatantData = bidirectionalRoster.map((actor) => ({ actorId: actor.id }));
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
 
@@ -425,26 +403,13 @@ export function registerCombatTests(quench) {
                 });
 
                 it("Should execute backward rollbacks via previousRound and previousTurn to verify unstarted reset thresholds", async function () {
-                    const { HeroCompatibility } = await import("../utility/compatibility.mjs");
-
                     const testCombatDocument = await makeCombat([]);
 
                     // Streamline the collection map for a fast reset execution sweep
                     const resetRoster = actorDocuments.filter(
                         (a) => a.name.includes("Guard") || a.name.includes("Behemoth"),
                     );
-                    const combatantData = resetRoster.map((actor) => {
-                        let targetDex = 10;
-                        let targetSpd = 2;
-                        if (actor.name.includes("Guard")) {
-                            targetDex = 18;
-                            targetSpd = 3;
-                        } else if (actor.name.includes("Behemoth")) {
-                            targetDex = 8;
-                            targetSpd = 4;
-                        }
-                        return HeroCompatibility.getCombatantCreationPayload(actor.id, targetDex, targetSpd);
-                    });
+                    const combatantData = resetRoster.map((actor) => ({ actorId: actor.id }));
 
                     await testCombatDocument.createEmbeddedDocuments("Combatant", combatantData);
 
@@ -1133,9 +1098,7 @@ export function registerCombatTests(quench) {
                 it("Should expire a Dodge maneuver at the start of the actor's next Phase", async function () {
                     const alpha = await makeActor("_Quench Expiry Alpha", { dex: 30, spd: 2 });
                     const weaver = await makeActor("_Quench Expiry Weaver", { dex: 20, spd: 2 });
-                    if (!weaver.items.find((i) => i.system?.XMLID === "DODGE")) {
-                        await weaver.addHeroSystemManeuvers();
-                    }
+                    const dodgeItem = await dodgeItemFor(weaver);
 
                     const combat = await makeCombat([alpha, weaver]);
                     await combat.startCombat();
@@ -1145,26 +1108,21 @@ export function registerCombatTests(quench) {
                     // Weaver dodges as their Segment 12 Phase action
                     await combat.nextTurn();
                     expect(combat.combatant.actorId).to.equal(weaver.id);
-                    const dodgeItem = weaver.items.find((i) => i.system?.XMLID === "DODGE");
                     await dodgeItem.toggle();
-                    const hasManeuverAe = () =>
-                        weaver.temporaryEffects.some(
-                            (ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect",
-                        );
-                    expect(hasManeuverAe(), "dodge effect active after declaring").to.be.true;
+                    expect(hasManeuverAe(weaver), "dodge effect active after declaring").to.be.true;
 
                     // Someone else's Phase starting must not expire it: the Dodge lasts
                     // until the weaver's own next Phase
                     await combat.nextTurn();
                     expect(combat.segment).to.equal(6);
                     expect(combat.combatant.actorId).to.equal(alpha.id);
-                    expect(hasManeuverAe(), "dodge persists through other combatants' Phases").to.be.true;
+                    expect(hasManeuverAe(weaver), "dodge persists through other combatants' Phases").to.be.true;
 
                     // The weaver's next Phase begins: the boundary maintenance switches
                     // the maneuver back off
                     await combat.nextTurn();
                     expect(combat.combatant.actorId).to.equal(weaver.id);
-                    const expired = await waitUntil(() => !hasManeuverAe() && dodgeItem.isActive !== true);
+                    const expired = await waitUntil(() => !hasManeuverAe(weaver) && dodgeItem.isActive !== true);
                     expect(expired, "dodge expired at the start of the actor's next Phase").to.be.true;
                 });
 
@@ -1208,6 +1166,95 @@ export function registerCombatTests(quench) {
                     expect(combat.combatant.actorId).to.equal(gunner.id);
                     const removed = await waitUntil(() => !hasPenaltyAe());
                     expect(removed, "penalty removed at the start of the actor's next Phase").to.be.true;
+                });
+
+                it("Should re-stamp the reused maneuver effect's start time on re-activation", async function () {
+                    const { activateManeuver } = await import("../item/maneuver.mjs");
+
+                    const alpha = await makeActor("_Quench Reuse Alpha", { dex: 30, spd: 2 });
+                    const weaver = await makeActor("_Quench Reuse Weaver", { dex: 20, spd: 2 });
+                    const dodgeItem = await dodgeItemFor(weaver);
+
+                    const combat = await makeCombat([alpha, weaver]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+
+                    // First dodge on the weaver's Segment 12 Phase
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(weaver.id);
+                    await dodgeItem.toggle();
+                    const dodgeEffect = () => dodgeItem.effects.contents[0];
+                    expect(dodgeEffect(), "activation created the effect").to.exist;
+                    expect(dodgeEffect().start?.time, "activation stamps start.time with the world time").to.equal(
+                        game.time.worldTime,
+                    );
+                    const effectId = dodgeEffect().id;
+
+                    // Re-declaring while still active (the attack flow calls activateManeuver
+                    // directly) reuses the live effect document via update, which must
+                    // re-stamp start.time — a stale stamp expires the dodge at the wrong
+                    // boundary. Backdate the stamp to make the re-stamp observable.
+                    await dodgeEffect().update({ "start.time": game.time.worldTime - 12 });
+                    await activateManeuver(dodgeItem);
+                    expect(dodgeEffect().id, "re-activation reuses the document").to.equal(effectId);
+                    expect(dodgeItem.effects.size, "no second effect document created").to.equal(1);
+                    expect(dodgeEffect().start?.time, "reused effect re-stamped with the current world time").to.equal(
+                        game.time.worldTime,
+                    );
+
+                    // The re-declared dodge still expires at the weaver's next Phase
+                    await combat.nextTurn();
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(weaver.id);
+                    const expired = await waitUntil(() => dodgeItem.isActive !== true);
+                    expect(expired, "re-declared dodge expired at the actor's next Phase").to.be.true;
+                });
+
+                it("Should expire only maneuver effects not declared at this instant", async function () {
+                    const { expireManeuverNextPhaseEffects } = await import("../item/maneuver.mjs");
+
+                    const alpha = await makeActor("_Quench Guard Alpha", { dex: 30, spd: 2 });
+                    const parrier = await makeActor("_Quench Guard Parrier", { dex: 20, spd: 2 });
+                    const dodgeItem = await dodgeItemFor(parrier);
+
+                    const combat = await makeCombat([alpha, parrier]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+
+                    await combat.nextTurn();
+                    expect(combat.combatant.actorId).to.equal(parrier.id);
+                    await dodgeItem.toggle();
+                    expect(hasManeuverAe(parrier), "dodge effect active after declaring").to.be.true;
+
+                    // A loose (non-toggleable) leftover stamped on an earlier Phase
+                    const [staleEffect] = await parrier.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "_Quench Stale Maneuver Effect",
+                            img: "icons/svg/shield.svg",
+                            duration: { units: "seconds", value: 60 },
+                            start: { time: game.time.worldTime - 12 },
+                            flags: { [game.system.id]: { type: "maneuverNextPhaseEffect" } },
+                        },
+                    ]);
+
+                    // Sweep at the same world time the dodge was declared: the
+                    // declared-this-instant effect survives, the stale loose one is deleted
+                    await expireManeuverNextPhaseEffects(parrier);
+                    expect(hasManeuverAe(parrier), "effect declared at this instant survives the sweep").to.be.true;
+                    expect(dodgeItem.isActive, "dodge stays active").to.be.true;
+                    expect(parrier.effects.get(staleEffect.id), "stale loose effect deleted").to.not.exist;
+
+                    // Backdate the dodge and sweep again: the toggleable maneuver is switched
+                    // off through its item so activation state stays in sync, and the item
+                    // toggle tears its effect document down
+                    const dodgeAe = parrier.temporaryEffects.find(
+                        (ae) => ae.flags?.[game.system.id]?.type === "maneuverNextPhaseEffect",
+                    );
+                    await dodgeAe.update({ "start.time": game.time.worldTime - 12 });
+                    await expireManeuverNextPhaseEffects(parrier);
+                    const switched = await waitUntil(() => dodgeItem.isActive !== true);
+                    expect(switched, "backdated dodge toggled off via its item").to.be.true;
+                    expect(dodgeItem.effects.size, "item toggle tore the effect down").to.equal(0);
                 });
 
                 it("Should mark knocked out combatants defeated via the tracker toggle", async function () {
@@ -1657,6 +1704,74 @@ export function registerCombatTests(quench) {
                     }
                     expect(combat.segment).to.equal(6);
                     expect(combat.combatant.actorId, "DEX 20 acts first on the new SPD chart").to.equal(slow.id);
+                });
+
+                it("Should end a 5e SPD-change lockout at the next Segment both SPDs share", async function () {
+                    // 5e optional SPD-change rule: the character cannot act until the next
+                    // Segment that is a Phase for BOTH SPDs. SPD 2 {6,12} and SPD 3 {4,8,12}
+                    // share only Segment 12 — the 6e rule (both would have had a Phase) would
+                    // already free them after Segment 6, making Segment 8 the observable split.
+                    const slow = await makeActor("_Quench 5e SPD Change", { dex: 20, spd: 2, extra: { is5e: true } });
+                    const pacer = await makeActor("_Quench 5e SPD Pacer", { dex: 10, spd: 12 });
+
+                    const combat = await makeCombat([slow, pacer]);
+                    await combat.startCombat();
+                    expect(combat.segment).to.equal(12);
+                    await combat.nextTurn(); // Pacer in Segment 12
+                    await combat.nextTurn(); // Crosses into Round 2, Segment 1 (Pacer only)
+                    expect(combat.segment).to.equal(1);
+
+                    const slowCombatant = combatantFor(combat, slow);
+                    const seeded = await waitUntil(
+                        () => slowCombatant.getFlag(game.system.id, "knownSpd") !== undefined,
+                    );
+                    expect(seeded, "knownSpd seeded at the first segment boundary").to.be.true;
+
+                    // A 5e sheet edit buys SPD LEVELS on top of the figured base: DEX 20
+                    // figures SPD 3, the actor was seeded at -1 LEVELS for SPD 2, so 0
+                    // LEVELS is SPD 3. The purchase must persist through the figured path.
+                    await slow.update({ "system.SPD.LEVELS": 0 });
+                    expect(
+                        slow._source.system.characteristics.spd.value,
+                        "SPD purchase persisted via the figured path",
+                    ).to.equal(3);
+
+                    await combat.nextTurn(); // Segment 2 boundary detects the change
+                    const deferred = await waitUntil(() => !!slowCombatant.getFlag(game.system.id, "pendingSpd"));
+                    expect(deferred, "voluntary LEVELS purchase deferred via pendingSpd").to.be.true;
+                    expect(slowCombatant.combatSpd, "old SPD still governs while deferred").to.equal(2);
+
+                    await combat.applyPendingSpdNow(slowCombatant.id);
+                    const detected = await waitUntil(() => !!slowCombatant.getFlag(game.system.id, "spdLockout"));
+                    expect(detected, "GM override applies the change with the SPD-change lockout").to.be.true;
+
+                    const lockout = slowCombatant.getFlag(game.system.id, "spdLockout");
+                    expect(
+                        lockout.lockoutEndAbs,
+                        "5e rule: locked until the next shared Phase of SPD 2 and 3",
+                    ).to.equal(abs(2, 12));
+                    expect(slowCombatant.hasPhaseInSegment(4), "locked out of the new SPD Segment 4 Phase").to.be.false;
+                    expect(
+                        slowCombatant.hasPhaseInSegment(8),
+                        "still locked at Segment 8, where the 6e rule would already allow acting",
+                    ).to.be.false;
+                    expect(slowCombatant.hasPhaseInSegment(12), "acts at the first shared Phase").to.be.true;
+
+                    let guard = 0;
+                    while (combat.segment !== 8 && guard++ < 12) {
+                        await combat.nextTurn();
+                    }
+                    expect(combat.segment).to.equal(8);
+                    expect(combat.combatant.actorId, "Segment 8 belongs to the pacer alone").to.equal(pacer.id);
+
+                    guard = 0;
+                    while (combat.segment !== 12 && guard++ < 12) {
+                        await combat.nextTurn();
+                    }
+                    expect(combat.segment).to.equal(12);
+                    expect(combat.combatant.actorId, "DEX 20 acts first once the shared Segment arrives").to.equal(
+                        slow.id,
+                    );
                 });
             });
         },
@@ -2160,6 +2275,126 @@ export function registerCombatTests(quench) {
                     await combat.applyPendingSpdNow(combatant.id);
                     expect(combatant.getFlag(game.system.id, "pendingSpd")).to.equal(null);
                     expect(combatant.combatSpd, "new SPD in force after the override").to.equal(6);
+                });
+
+                it("Should not lock out a 5e combatant whose DEX is drained (figured SPD insulation)", async function () {
+                    const insulated = await makeActor("_Quench 5e DEX Drained", {
+                        dex: 20,
+                        spd: 4,
+                        extra: { is5e: true },
+                    });
+                    const pacer = await makeActor("_Quench 5e Insulation Pacer", { dex: 10, spd: 12 });
+                    const combat = await makeCombat([insulated, pacer]);
+                    await combat.startCombat();
+                    const combatant = combatantFor(combat, insulated);
+
+                    await combat.nextTurn();
+                    await combat.nextTurn();
+                    const seeded = await waitUntil(() => combatant.getFlag(game.system.id, "knownSpd") !== undefined);
+                    expect(seeded, "SPD baseline seeded at a boundary").to.be.true;
+
+                    // 5ER p. 105: adjustments to a primary never move figured characteristics —
+                    // the Transfer example drains DEX "but loses no SPD"
+                    await insulated.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "Drain DEX",
+                            flags: { [game.system.id]: { type: "adjustment", adjustmentActivePoints: 30 } },
+                            changes: [
+                                {
+                                    key: "system.characteristics.dex.max",
+                                    value: "-10",
+                                    type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                                },
+                            ],
+                        },
+                    ]);
+                    expect(insulated.system.characteristics.dex.value, "the drain itself landed").to.equal(10);
+                    expect(combatant.combatSpd, "figured SPD is insulated from the DEX drain").to.equal(4);
+
+                    // Cross two boundaries: a bogus cascade would be detected here
+                    await combat.nextTurn();
+                    await combat.nextTurn();
+                    expect(combatant.getFlag(game.system.id, "spdLockout"), "no SPD-change lockout").to.not.be.ok;
+                    expect(combatant.getFlag(game.system.id, "pendingSpd"), "no deferred SPD change").to.not.be.ok;
+                    expect(combatant.combatSpd, "SPD still 4 after the boundaries").to.equal(4);
+                });
+
+                it("Should apply the 5e shared-Phase lockout when SPD itself is drained", async function () {
+                    const drained = await makeActor("_Quench 5e SPD Drained", {
+                        dex: 20,
+                        spd: 3,
+                        extra: { is5e: true },
+                    });
+                    const pacer = await makeActor("_Quench 5e Drain Pacer", { dex: 10, spd: 12 });
+                    const combat = await makeCombat([drained, pacer]);
+                    await combat.startCombat();
+                    const combatant = combatantFor(combat, drained);
+
+                    await combat.nextTurn();
+                    await combat.nextTurn(); // Round 2 Segment 1: baseline seeded
+                    const seeded = await waitUntil(() => combatant.getFlag(game.system.id, "knownSpd") !== undefined);
+                    expect(seeded, "SPD baseline seeded at a boundary").to.be.true;
+
+                    // A DRAIN SPD manifests as an adjustment-flagged effect on the max; the
+                    // sheet (source) value stays put, so detection must read adjustment-driven
+                    await drained.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "Drain SPD",
+                            flags: { [game.system.id]: { type: "adjustment", adjustmentActivePoints: 10 } },
+                            changes: [
+                                {
+                                    key: "system.characteristics.spd.max",
+                                    value: "-1",
+                                    type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                                },
+                            ],
+                        },
+                    ]);
+                    expect(combatant.combatSpd, "drain lowers the effective SPD").to.equal(2);
+                    expect(drained._source.system.characteristics.spd.value, "sheet SPD untouched").to.equal(3);
+
+                    await combat.nextTurn(); // boundary detects the effective-only change
+                    const locked = await waitUntil(() => !!combatant.getFlag(game.system.id, "spdLockout"));
+                    expect(locked, "adjustment-driven change applies the mandatory lockout").to.be.true;
+                    expect(combatant.getFlag(game.system.id, "pendingSpd"), "not deferred as voluntary").to.not.be.ok;
+
+                    // SPD 3 {4,8,12} and SPD 2 {6,12} share only Segment 12
+                    const lockout = combatant.getFlag(game.system.id, "spdLockout");
+                    expect(lockout.lockoutEndAbs, "5e lockout runs to the next shared Phase").to.equal(abs(2, 12));
+                });
+
+                it("Should treat a 5e DEX purchase that raises figured SPD as a voluntary SPD change", async function () {
+                    const grower = await makeActor("_Quench 5e DEX Grower", { dex: 10, spd: 2, extra: { is5e: true } });
+                    const pacer = await makeActor("_Quench 5e Growth Pacer", { dex: 20, spd: 12 });
+                    const combat = await makeCombat([grower, pacer]);
+                    await combat.startCombat();
+                    const combatant = combatantFor(combat, grower);
+
+                    await combat.nextTurn();
+                    await combat.nextTurn();
+                    const seeded = await waitUntil(() => combatant.getFlag(game.system.id, "knownSpd") !== undefined);
+                    expect(seeded, "SPD baseline seeded at a boundary").to.be.true;
+
+                    // Buying DEX up to 20 refigures SPD to 3 through the persistence path:
+                    // sheet and effective SPD move together, so the tracker must classify
+                    // the change as voluntary and defer it to Post-Segment 12
+                    await grower.update({ "system.DEX.LEVELS": 10 });
+                    expect(grower._source.system.characteristics.dex.value, "DEX purchase persisted").to.equal(20);
+                    expect(
+                        grower._source.system.characteristics.spd.value,
+                        "figured SPD cascaded into the source",
+                    ).to.equal(3);
+
+                    await combat.nextTurn();
+                    const deferred = await waitUntil(() => !!combatant.getFlag(game.system.id, "pendingSpd"));
+                    expect(deferred, "cascaded figured change deferred via pendingSpd").to.be.true;
+                    expect(combatant.getFlag(game.system.id, "spdLockout"), "no adjustment lockout for a purchase").to
+                        .not.be.ok;
+                    expect(combatant.combatSpd, "still acts at the old SPD meanwhile").to.equal(2);
+
+                    await combat.applyPendingSpdNow(combatant.id);
+                    expect(combatant.getFlag(game.system.id, "pendingSpd")).to.equal(null);
+                    expect(combatant.combatSpd, "new figured SPD in force after the override").to.equal(3);
                 });
 
                 it("Should schedule a Haymaker landing and resolve it after its segment passes", async function () {
