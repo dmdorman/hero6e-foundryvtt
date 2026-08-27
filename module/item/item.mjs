@@ -1345,62 +1345,100 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     }
 
     /**
+     * Compute and return the data modifications required to reset an item
+     * back to its default/original state based on its raw system data.
+     *
+     * @param {Item|Object} item - The Item document instance or raw item data object.
+     * @returns {Object}         - An object containing property paths and values to update.
+     */
+    static _prepareOriginalResetData(item) {
+        const updateData = {};
+        const system = item.system ?? item;
+        if (!system) return updateData;
+
+        const chargeItemModifier = system.chargeItemModifier ?? system.MODIFIER?.find((o) => o.XMLID === "CHARGES");
+        const clipModifier = system.CLIP ?? system.MODIFIER?.find((o) => o.XMLID === "CLIP");
+
+        if (chargeItemModifier) {
+            const chargesMax = parseInt(chargeItemModifier.OPTION_ALIAS ?? chargeItemModifier) || 0;
+            const currentCharges = system.numCharges ?? system._charges ?? 0;
+            if (chargesMax > 0 && currentCharges < chargesMax) {
+                updateData["system.numCharges"] = chargesMax;
+                updateData["system._charges"] = chargesMax;
+            }
+
+            const clipsMax = parseInt(clipModifier?.OPTION_ALIAS) || 0;
+            const currentClips = system.clips ?? system._clips ?? 0;
+            if (clipsMax > 0 && currentClips !== clipsMax - 1) {
+                // Resetting to full charges requires the use of 1 clip
+                updateData["system.clips"] = clipsMax - 1;
+                updateData["system._clips"] = clipsMax - 1;
+            }
+
+            if (system.active || item.isActive) {
+                updateData["system.active"] = false;
+            }
+        }
+
+        if (
+            typeof item.isAblativeDefense === "function" &&
+            item.isAblativeDefense &&
+            typeof item.getResetAblativeDefenseData === "function"
+        ) {
+            Object.assign(updateData, item.getResetAblativeDefenseData());
+        }
+
+        if (system.XMLID === "ENDURANCERESERVE" && system.value !== system.LEVELS) {
+            updateData["system.value"] = system.LEVELS;
+        }
+
+        if (typeof item.isCsl === "boolean" && item.isCsl && typeof item.initializeCsl === "function") {
+            const cslChanges = item.initializeCsl(system.LEVELS);
+            Object.assign(updateData, cslChanges);
+        }
+
+        if (!item.isCombatManeuver) {
+            const end = item.end ?? system.end ?? 0;
+            if (
+                (end > 0 && system.XMLID !== "STR") ||
+                (chargeItemModifier && item.parentItem?.system?.XMLID !== "MULTIPOWER")
+            ) {
+                if (
+                    typeof item.isActivatable === "function" &&
+                    item.isActivatable() &&
+                    (system.active || item.isActive)
+                ) {
+                    updateData["system.active"] = false;
+                }
+            }
+        }
+
+        if (item.isCombatManeuver && system.active) {
+            updateData["system.active"] = false;
+        }
+
+        return updateData;
+    }
+
+    /**
      * Reset an item back to its default state.
+     * Acts as an instance wrapper leveraging the static data preparation helper.
      */
     async resetToOriginal() {
-        // Reset charges
+        const updateData = HeroSystem6eItem._prepareOriginalResetData(this);
+        if (Object.keys(updateData).length > 0) {
+            await this.update(updateData);
+        }
+
         const chargeItemModifier = this.system.chargeItemModifier;
-        if (chargeItemModifier) {
-            if (this.system.numCharges < this.system.chargesMax) {
-                await this.system.setChargesAndSave(this.system.chargesMax);
-            }
-
-            if (chargeItemModifier.CLIPS && this.system.clips !== this.system.clipsMax - 1) {
-                // Resetting to full charges requires the use of 1 clip
-                await this.system.setClipsAndSave(this.system.clipsMax - 1);
-            }
-
-            if (this.isActive) {
-                await this.toggle();
+        if (chargeItemModifier && this.isActive) {
+            for (const ae of this.effects) {
+                await ae.update({ disabled: true });
             }
         }
 
         if (this.isAblativeDefense) {
             await this.resetAblativeDefense();
-        }
-
-        if (this.system.XMLID === "ENDURANCERESERVE" && this.system.value !== this.system.LEVELS) {
-            await this.update({
-                ["system.value"]: this.system.LEVELS,
-            });
-        }
-
-        if (this.isCsl) {
-            const cslChanges = this.initializeCsl(this.system.LEVELS);
-            await this.update(cslChanges);
-        }
-
-        // turn off items that use END, Charges, MP, etc
-
-        if (!this.isCombatManeuver) {
-            if (
-                (this.end > 0 && this.system.XMLID !== "STR") ||
-                (this.system.chargeItemModifier && this.parentItem?.system.XMLID !== "MULTIPOWER")
-            ) {
-                if (this.isActivatable()) {
-                    if (this.isActive) {
-                        // Was calling this.toggle(), but was slow and showed extra chatMessages during upload
-                        await this.update({ "system.active": false });
-                        for (const ae of this.effects) {
-                            await ae.update({ disabled: true });
-                        }
-                    }
-                }
-            }
-        }
-
-        if (this.isCombatManeuver && this.system.active) {
-            await this.update({ ["system.active"]: false });
         }
     }
 
@@ -7617,7 +7655,38 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         }
     }
 
-    // The default deleteDialog doesn't prompt for children
+    /**
+     * Recursively gather this item and all nested descendant item IDs.
+     * @returns {string[]} An array of all item IDs in the sub-tree.
+     */
+    _getAllDescendantIds() {
+        let ids = [this.id];
+        for (const child of this.childItems) {
+            // Assuming child items also have a similar .childItems accessor or you can query by PARENTID
+            if (typeof child._getAllDescendantIds === "function") {
+                ids = ids.concat(child._getAllDescendantIds());
+            } else {
+                ids.push(child.id);
+                // Fallback: search actor items where PARENTID matches child's system.ID
+                const subChildren = this.actor.items.filter((i) => i.system?.PARENTID === child.system?.ID);
+                for (const sub of subChildren) {
+                    ids.push(sub.id);
+                }
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Intercepts the standard item deletion process to present a custom confirmation dialog
+     * when an item contains child elements or nested sub-containers. Allows the user to choose
+     * whether to delete only the targeted item or recursively delete the item along with all
+     * of its children and multi-level descendants.
+     *
+     * @param {Object} [options={}]   - Configuration options passed through to DialogV2.confirm or window options.
+     * @param {Object} [operation={}] - Contextual database operation parameters passed along to item deletion.
+     * @returns {Promise<DialogV2|void>} Resolves with the rendered confirmation dialog instance, or executes immediate deletion if no children exist.
+     */
     async deleteDialog(options = {}, operation = {}) {
         if (this.isFreeStuff) {
             ui.notifications.error(`Cannot delete <b>${this.detailedName()}</b> because it is not part of a HDC file.`);
@@ -7628,6 +7697,10 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         if (this.childItems.length === 0) {
             return super.deleteDialog(options, operation);
         }
+
+        // Recursively count all descendants for the warning text
+        const allDescendantIds = this._getAllDescendantIds();
+        const totalChildrenCount = allDescendantIds.length - 1; // Exclude the container itself
 
         // Custom Delete Prompt to delete container + children or keep children
         const positionKeys = ["top", "left", "width", "height", "scale", "zIndex"];
@@ -7644,8 +7717,9 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         }
         const type = game.i18n.localize(this.constructor.metadata.label);
         const content =
-            `Delete ${this.system.XMLID} only, or delete ${this.system.XMLID} and all ${this.childItems.length} children? ` +
+            `Delete ${this.system.XMLID} only, or delete ${this.system.XMLID} and all ${totalChildrenCount} children? ` +
             game.i18n.format("SIDEBAR.DeleteWarning", { type });
+
         return new foundry.applications.api.DialogV2(
             foundry.utils.mergeObject(
                 {
@@ -7662,9 +7736,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                             action: "containerAndChildren",
                             label: `${this.system.XMLID} + children`,
                             callback: () => {
-                                let idsToDelete = this.childItems.map((child) => child.id);
-                                idsToDelete.push(this.id);
-                                this.actor.deleteEmbeddedDocuments("Item", idsToDelete);
+                                this.actor.deleteEmbeddedDocuments("Item", allDescendantIds);
                             },
                         },
                         {
@@ -7675,7 +7747,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     ],
                     window: {
                         icon: "fa-solid fa-trash",
-                        title: `${game.i18n.format("DOCUMENT.Delete", { type })}: ${this.name}`, // FIXME: double localization
+                        title: `${game.i18n.format("DOCUMENT.Delete", { type })}: ${this.name}`,
                     },
                     options: { popOutModuleDisable: true },
                 },

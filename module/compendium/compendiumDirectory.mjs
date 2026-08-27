@@ -18,7 +18,16 @@ export class HeroSystem6eCompendiumDirectory extends CompendiumDirectory {
         super(...args);
     }
 
-    /** @override */
+    /**
+     * Handle creation of a new compendium entry from the sidebar directory.
+     * Overrides core behavior to support both standard compendium creation
+     * and batch-uploading Hero Designer prefab (.hdp) or character (.hdc) files
+     * to automatically generate and populate an Item compendium.
+     *
+     * @param {PointerEvent} event - The originating click event.
+     * @param {HTMLElement} [target] - The target element that triggered the action.
+     * @returns {Promise<void>}
+     */
     async _onCreateEntry(event, target) {
         try {
             event.preventDefault();
@@ -40,18 +49,51 @@ export class HeroSystem6eCompendiumDirectory extends CompendiumDirectory {
             const templatePath = `templates/sidebar/compendium-create.${
                 game.version.split(".")[0] === "12" ? "html" : "hbs"
             }`;
-            let html = await renderTemplate(templatePath, {
+            const htmlString = await renderTemplate(templatePath, {
                 types,
                 folders,
                 folder: folderId,
                 hasFolders: folders.length,
             });
 
-            // Inject Hero Designer Prefab file input field
-            html = html.replace(
-                "Document.</p>",
-                `Document.</p><label>Hero Designer Prefabs</label><input name="upload" class="upload" type="file" accept=".hdp" multiple></input>`,
-            );
+            // Wrap the rendered HTML in a container element
+            const content = document.createElement("div");
+            content.innerHTML = htmlString;
+
+            // Build the Hero Designer file upload form-group cleanly using elements
+            const formGroup = document.createElement("div");
+            formGroup.className = "form-group";
+
+            const label = document.createElement("label");
+            label.innerText = "Hero Designer Prefabs";
+
+            const formFields = document.createElement("div");
+            formFields.className = "form-fields";
+
+            const inputFile = document.createElement("input");
+            inputFile.name = "upload";
+            inputFile.className = "upload";
+            inputFile.type = "file";
+            inputFile.accept = "*.*";
+            inputFile.multiple = true;
+
+            const hint = document.createElement("p");
+            hint.className = "hint";
+            hint.innerText =
+                "Alternatively, select Hero Designer Prefab (.hdp) or character (.hdc) files using '*.*' to automatically generate and populate this compendium (compendium name will be overwritten by the file data, and document type will always be an Item pack).";
+
+            formFields.appendChild(inputFile);
+            formGroup.appendChild(label);
+            formGroup.appendChild(formFields);
+            formGroup.appendChild(hint);
+
+            // Append to the bottom of the inner dialog content container (above the submit footer)
+            const dialogContent = content.querySelector(".dialog-content") || content.querySelector("form");
+            if (dialogContent) {
+                dialogContent.appendChild(formGroup);
+            } else {
+                content.appendChild(formGroup);
+            }
 
             /**
              * Attach file listener when the creation dialog renders
@@ -62,7 +104,7 @@ export class HeroSystem6eCompendiumDirectory extends CompendiumDirectory {
                 inputUpload?.addEventListener("change", async (evt) => {
                     const files = Array.from(evt.target.files);
 
-                    // Process each uploaded HDP file sequentially
+                    // Process each uploaded file sequentially
                     for (const file of files) {
                         try {
                             const contents = await file.text();
@@ -79,9 +121,6 @@ export class HeroSystem6eCompendiumDirectory extends CompendiumDirectory {
                     dialog.close();
                 });
             };
-
-            const content = document.createElement("div");
-            content.innerHTML = html;
 
             const metadata = await DialogV2.prompt({
                 content,
