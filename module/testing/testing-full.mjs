@@ -5313,147 +5313,278 @@ export function registerFullTests(quench) {
                     });
                 });
 
-                // PH: FIXME: Flesh this out
-                describe("single power naked advantage to strength", function () {
-                    const contents = `
-                    <?xml version="1.0" encoding="UTF-16"?>
-                    <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic.hdt">
-                    <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" />
-                    <CHARACTER_INFO CHARACTER_NAME="Test 5e Naked Advantage" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
-                        <BACKGROUND />
-                        <PERSONALITY />
-                        <QUOTE />
-                        <TACTICS />
-                        <CAMPAIGN_USE />
-                        <APPEARANCE />
-                        <NOTES1 />
-                        <NOTES2 />
-                        <NOTES3 />
-                        <NOTES4 />
-                        <NOTES5 />
-                    </CHARACTER_INFO>
-                    <CHARACTERISTICS>
-                        <STR XMLID="STR" ID="1737933315911" BASECOST="0.0" LEVELS="50" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </STR>
-                        <DEX XMLID="DEX" ID="1737933316803" BASECOST="0.0" LEVELS="0" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </DEX>
-                        <CON XMLID="CON" ID="1737933315968" BASECOST="0.0" LEVELS="0" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </CON>
-                        <BODY XMLID="BODY" ID="1737933316450" BASECOST="0.0" LEVELS="0" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </BODY>
-                        <INT XMLID="INT" ID="1737933316731" BASECOST="0.0" LEVELS="0" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </INT>
-                        <EGO XMLID="EGO" ID="1737933316206" BASECOST="0.0" LEVELS="0" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </EGO>
-                        <PRE XMLID="PRE" ID="1737933316625" BASECOST="0.0" LEVELS="0" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </PRE>
-                        <COM XMLID="COM" ID="1737933316626" BASECOST="0.0" LEVELS="0" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </COM>
-                        <PD XMLID="PD" ID="1737933316022" BASECOST="0.0" LEVELS="0" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </PD>
-                        <ED XMLID="ED" ID="1737933316274" BASECOST="0.0" LEVELS="0" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </ED>
-                        <SPD XMLID="SPD" ID="1737933316110" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </SPD>
-                        <REC XMLID="REC" ID="1737933316779" BASECOST="0.0" LEVELS="0" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </REC>
-                        <END XMLID="END" ID="1737933316027" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </END>
-                        <STUN XMLID="STUN" ID="1737933316565" BASECOST="0.0" LEVELS="0" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </STUN>
-                        <RUNNING XMLID="RUNNING" ID="1737933316842" BASECOST="0.0" LEVELS="0" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </RUNNING>
-                        <SWIMMING XMLID="SWIMMING" ID="1737933315899" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </SWIMMING>
-                        <LEAPING XMLID="LEAPING" ID="1737933316048" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                        <NOTES />
-                        </LEAPING>
-                    </CHARACTERISTICS>
-                    <SKILLS />
-                    <PERKS />
-                    <TALENTS />
-                    <MARTIALARTS />
-                    <POWERS>
-                        <POWER XMLID="NAKEDMODIFIER" ID="1737933377782" BASECOST="0.0" LEVELS="60" ALIAS="Naked Advantage" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="AoE STR" INPUT="STR" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            <MODIFIER XMLID="AOE" ID="1737933632024" BASECOST="1.0" LEVELS="0" ALIAS="Area Of Effect" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="RADIUS" OPTIONID="RADIUS" OPTION_ALIAS="Radius" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                describe("naked advantage", function () {
+                    // PH: FIXME: Flesh this out
+                    describe("single power naked advantage to strength", function () {
+                        const contents = `
+                            <?xml version="1.0" encoding="UTF-16"?>
+                            <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic.hdt">
+                            <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" />
+                            <CHARACTER_INFO CHARACTER_NAME="Test 5e Naked Advantage" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
+                                <BACKGROUND />
+                                <PERSONALITY />
+                                <QUOTE />
+                                <TACTICS />
+                                <CAMPAIGN_USE />
+                                <APPEARANCE />
+                                <NOTES1 />
+                                <NOTES2 />
+                                <NOTES3 />
+                                <NOTES4 />
+                                <NOTES5 />
+                            </CHARACTER_INFO>
+                            <CHARACTERISTICS>
+                                <STR XMLID="STR" ID="1737933315911" BASECOST="0.0" LEVELS="50" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
                                 <NOTES />
-                            </MODIFIER>
-                        </POWER>
-                    </POWERS>
-                    <DISADVANTAGES />
-                    <EQUIPMENT />
-                    <RULES name="Default" path="foo.hdr" BASEPOINTS="200" DISADPOINTS="150" APPEREND="10" STRAPPEREND="10" NCMSELECTED="No" NCMUSERCHANGEABLE="Yes" ATTACKAPMAXVALUE="90" ATTACKAPMAXRESPONSE="0" DEFENSEAPMAXVALUE="90" DEFENSEAPMAXRESPONSE="0" DISADCATEGORYMAXVALUE="75" DISADCATEGORYMAXRESPONSE="0" AVAILDISADPOINTSRESPONSE="0" AVAILTOTALPOINTSRESPONSE="0" CHARACTERISTICMAXVALUE="1000" CHARACTERISTICMAXRESPONSE="0" MANEUVERMAXVALUE="1000" MANEUVERMAXRESPONSE="0" SKILLMAXVALUE="1000" SKILLMAXRESPONSE="0" PERKMAXVALUE="1000" PERKMAXRESPONSE="0" TALENTMAXVALUE="1000" TALENTMAXRESPONSE="0" POWERMAXVALUE="1000" POWERMAXRESPONSE="0" EQUIPMENTCOSTVALUE="1000" EQUIPMENTCOSTRESPONSE="0" EQUIPMENTCOSTUNITS="$" EQUIPMENTCOSTCONVERSION="1.0" EQUIPMENTCOSTDECIMALPLACES="0" EQUIPMENTUNITSPREFIX="Yes" STANDARDEFFECTALLOWED="Yes" USEEXPANDEDGROWTHCHART="No" DEFAULTSTANDARDEFFECT="No" MULTIPLIERALLOWED="No" LANGUAGESIMILARITIESUSED="No" LITERACYFREE="No" NATIVELITERACYFREE="Yes" EQUIPMENTALLOWED="Yes" PENALIZENOLEVEL1="No" ONLYSELLONEFIGURED="Yes" USEINCREASEDDAMAGEDIFFERENTIATION="No" AUTOMATICALLYAPPLYNOFIGURED="Yes" LINKACROSSFRAMEWORK="2" SPECIALTYPEINFRAMEWORK="1" NONENDUSINGABILITYINEC="1" USESKILLMAXIMA="No" USESKILLMULTIPLIERS="No" LANGUAGESASINTSKILL="No" SKILLMAXIMALIMIT="13" SKILLROLLBASE="9" SKILLROLLDENOMINATOR="5.0" CHARROLLBASE="9" CHARROLLDENOMINATOR="5.0" USENOTES1="No" USENOTES2="No" USENOTES3="No" USENOTES4="No" USENOTES5="No" NOTES1LABEL="Notes 1" NOTES2LABEL="Notes 2" NOTES3LABEL="Notes 3" NOTES4LABEL="Notes 4" NOTES5LABEL="Notes 5" />
-                    </CHARACTER>
-                `;
+                                </STR>
+                                <DEX XMLID="DEX" ID="1737933316803" BASECOST="0.0" LEVELS="0" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </DEX>
+                                <CON XMLID="CON" ID="1737933315968" BASECOST="0.0" LEVELS="0" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </CON>
+                                <BODY XMLID="BODY" ID="1737933316450" BASECOST="0.0" LEVELS="0" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </BODY>
+                                <INT XMLID="INT" ID="1737933316731" BASECOST="0.0" LEVELS="0" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </INT>
+                                <EGO XMLID="EGO" ID="1737933316206" BASECOST="0.0" LEVELS="0" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </EGO>
+                                <PRE XMLID="PRE" ID="1737933316625" BASECOST="0.0" LEVELS="0" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </PRE>
+                                <COM XMLID="COM" ID="1737933316626" BASECOST="0.0" LEVELS="0" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </COM>
+                                <PD XMLID="PD" ID="1737933316022" BASECOST="0.0" LEVELS="0" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </PD>
+                                <ED XMLID="ED" ID="1737933316274" BASECOST="0.0" LEVELS="0" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </ED>
+                                <SPD XMLID="SPD" ID="1737933316110" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </SPD>
+                                <REC XMLID="REC" ID="1737933316779" BASECOST="0.0" LEVELS="0" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </REC>
+                                <END XMLID="END" ID="1737933316027" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </END>
+                                <STUN XMLID="STUN" ID="1737933316565" BASECOST="0.0" LEVELS="0" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </STUN>
+                                <RUNNING XMLID="RUNNING" ID="1737933316842" BASECOST="0.0" LEVELS="0" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </RUNNING>
+                                <SWIMMING XMLID="SWIMMING" ID="1737933315899" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </SWIMMING>
+                                <LEAPING XMLID="LEAPING" ID="1737933316048" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </LEAPING>
+                            </CHARACTERISTICS>
+                            <SKILLS />
+                            <PERKS />
+                            <TALENTS />
+                            <MARTIALARTS />
+                            <POWERS>
+                                <POWER XMLID="NAKEDMODIFIER" ID="1737933377782" BASECOST="0.0" LEVELS="60" ALIAS="Naked Advantage" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="AoE STR" INPUT="STR" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                                    <NOTES />
+                                    <MODIFIER XMLID="AOE" ID="1737933632024" BASECOST="1.0" LEVELS="0" ALIAS="Area Of Effect" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="RADIUS" OPTIONID="RADIUS" OPTION_ALIAS="Radius" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                        <NOTES />
+                                    </MODIFIER>
+                                </POWER>
+                            </POWERS>
+                            <DISADVANTAGES />
+                            <EQUIPMENT />
+                            <RULES name="Default" path="foo.hdr" BASEPOINTS="200" DISADPOINTS="150" APPEREND="10" STRAPPEREND="10" NCMSELECTED="No" NCMUSERCHANGEABLE="Yes" ATTACKAPMAXVALUE="90" ATTACKAPMAXRESPONSE="0" DEFENSEAPMAXVALUE="90" DEFENSEAPMAXRESPONSE="0" DISADCATEGORYMAXVALUE="75" DISADCATEGORYMAXRESPONSE="0" AVAILDISADPOINTSRESPONSE="0" AVAILTOTALPOINTSRESPONSE="0" CHARACTERISTICMAXVALUE="1000" CHARACTERISTICMAXRESPONSE="0" MANEUVERMAXVALUE="1000" MANEUVERMAXRESPONSE="0" SKILLMAXVALUE="1000" SKILLMAXRESPONSE="0" PERKMAXVALUE="1000" PERKMAXRESPONSE="0" TALENTMAXVALUE="1000" TALENTMAXRESPONSE="0" POWERMAXVALUE="1000" POWERMAXRESPONSE="0" EQUIPMENTCOSTVALUE="1000" EQUIPMENTCOSTRESPONSE="0" EQUIPMENTCOSTUNITS="$" EQUIPMENTCOSTCONVERSION="1.0" EQUIPMENTCOSTDECIMALPLACES="0" EQUIPMENTUNITSPREFIX="Yes" STANDARDEFFECTALLOWED="Yes" USEEXPANDEDGROWTHCHART="No" DEFAULTSTANDARDEFFECT="No" MULTIPLIERALLOWED="No" LANGUAGESIMILARITIESUSED="No" LITERACYFREE="No" NATIVELITERACYFREE="Yes" EQUIPMENTALLOWED="Yes" PENALIZENOLEVEL1="No" ONLYSELLONEFIGURED="Yes" USEINCREASEDDAMAGEDIFFERENTIATION="No" AUTOMATICALLYAPPLYNOFIGURED="Yes" LINKACROSSFRAMEWORK="2" SPECIALTYPEINFRAMEWORK="1" NONENDUSINGABILITYINEC="1" USESKILLMAXIMA="No" USESKILLMULTIPLIERS="No" LANGUAGESASINTSKILL="No" SKILLMAXIMALIMIT="13" SKILLROLLBASE="9" SKILLROLLDENOMINATOR="5.0" CHARROLLBASE="9" CHARROLLDENOMINATOR="5.0" USENOTES1="No" USENOTES2="No" USENOTES3="No" USENOTES4="No" USENOTES5="No" NOTES1LABEL="Notes 1" NOTES2LABEL="Notes 2" NOTES3LABEL="Notes 3" NOTES4LABEL="Notes 4" NOTES5LABEL="Notes 5" />
+                            </CHARACTER>
+                        `;
 
-                    let actor;
+                        let actor;
 
-                    let strikeManeuver;
-                    let nakedStrAoE;
-                    // let nakedStrAp;
+                        let strikeManeuver;
+                        let nakedStrAoE;
+                        // let nakedStrAp;
 
-                    before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
+                        before(async function () {
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
-                        strikeManeuver = actor.items.find((item) => item.system.XMLID === "STRIKE");
+                            strikeManeuver = actor.items.find((item) => item.system.XMLID === "STRIKE");
 
-                        nakedStrAoE = actor.items.find(
-                            (item) => item.system.XMLID === "NAKEDMODIFIER" && item.name === "AoE STR",
-                        );
-                        // nakedStrAp = actor.items.find(
-                        //     (item) => item.system.XMLID === "NAKEDMODIFIER" && item.name === "AP STR",
-                        // );
-                    });
-
-                    after(async function () {
-                        await deleteQuenchActor({ quench: this, actor });
-                    });
-
-                    // PH: FIXME: TODO:
-                    describe("Costs are correct for character", function () {
-                        it.skip("should have the correct total cost", function () {});
-                    });
-
-                    describe("Costs are correct for AoE Naked Advantage", function () {
-                        it.skip("should have the correct total cost", function () {});
-                    });
-
-                    describe("Costs are correct for AP Naked Advantage", function () {
-                        it.skip("should have the correct total cost", function () {});
-                    });
-
-                    describe("Maneuvers with AoE Naked Advantage", function () {
-                        it("should have the correct base damage for Strike with AoE NA", function () {
-                            // Base: 60 STR -> 12 DC, Naked Advantage for 60 STR -> +12 DC => 24 DC
-                            // Added: Strike 0DC => 0DC
-                            // Combined: 24 DC + 0 DC (no damage doubling rule) => 24 DC -> 12d6 + AoE
-                            assert.equal(
-                                getEffectFormulaFromItem(strikeManeuver, {
-                                    nakedAdvantage: nakedStrAoE,
-                                    effectiveStr: 60,
-                                }),
-                                "12d6",
+                            nakedStrAoE = actor.items.find(
+                                (item) => item.system.XMLID === "NAKEDMODIFIER" && item.name === "AoE STR",
                             );
+                            // nakedStrAp = actor.items.find(
+                            //     (item) => item.system.XMLID === "NAKEDMODIFIER" && item.name === "AP STR",
+                            // );
                         });
 
-                        // PH: FIXME: NA can't be applied to anything of more active points than was bought.
+                        after(async function () {
+                            await deleteQuenchActor({ quench: this, actor });
+                        });
+
+                        // PH: FIXME: TODO:
+                        describe("Costs are correct for character", function () {
+                            it.skip("should have the correct total cost", function () {});
+                        });
+
+                        describe("Costs are correct for AoE Naked Advantage", function () {
+                            it.skip("should have the correct total cost", function () {});
+                        });
+
+                        describe("Costs are correct for AP Naked Advantage", function () {
+                            it.skip("should have the correct total cost", function () {});
+                        });
+
+                        describe("Maneuvers with AoE Naked Advantage", function () {
+                            it("should have the correct base damage for Strike with AoE NA", function () {
+                                // Base: 60 STR -> 12 DC, Naked Advantage for 60 STR -> +12 DC => 24 DC
+                                // Added: Strike 0DC => 0DC
+                                // Combined: 24 DC + 0 DC (no damage doubling rule) => 24 DC -> 12d6 + AoE
+                                assert.equal(
+                                    getEffectFormulaFromItem(strikeManeuver, {
+                                        nakedAdvantage: nakedStrAoE,
+                                        effectiveStr: 60,
+                                    }),
+                                    "12d6",
+                                );
+                            });
+
+                            // PH: FIXME: NA can't be applied to anything of more active points than was bought.
+                        });
+                    });
+
+                    describe("cost with limitations (6e)", function () {
+                        const contents = `
+                            <?xml version="1.0" encoding="UTF-16"?>
+                            <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic6E.hdt">
+                            <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" RULES="Default" />
+                            <CHARACTER_INFO CHARACTER_NAME="test" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.46224760379584" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
+                                <BACKGROUND />
+                                <PERSONALITY />
+                                <QUOTE />
+                                <TACTICS />
+                                <CAMPAIGN_USE />
+                                <APPEARANCE />
+                                <NOTES1 />
+                                <NOTES2 />
+                                <NOTES3 />
+                                <NOTES4 />
+                                <NOTES5 />
+                            </CHARACTER_INFO>
+                            <CHARACTERISTICS>
+                                <STR XMLID="STR" ID="1788192478868" BASECOST="0.0" LEVELS="50" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </STR>
+                                <DEX XMLID="DEX" ID="1788192479057" BASECOST="0.0" LEVELS="0" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </DEX>
+                                <CON XMLID="CON" ID="1788192479050" BASECOST="0.0" LEVELS="0" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </CON>
+                                <INT XMLID="INT" ID="1788192478728" BASECOST="0.0" LEVELS="0" ALIAS="INT" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </INT>
+                                <EGO XMLID="EGO" ID="1788192478865" BASECOST="0.0" LEVELS="0" ALIAS="EGO" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </EGO>
+                                <PRE XMLID="PRE" ID="1788192478278" BASECOST="0.0" LEVELS="0" ALIAS="PRE" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </PRE>
+                                <OCV XMLID="OCV" ID="1788192479172" BASECOST="0.0" LEVELS="0" ALIAS="OCV" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </OCV>
+                                <DCV XMLID="DCV" ID="1788192479134" BASECOST="0.0" LEVELS="0" ALIAS="DCV" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </DCV>
+                                <OMCV XMLID="OMCV" ID="1788192479131" BASECOST="0.0" LEVELS="0" ALIAS="OMCV" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </OMCV>
+                                <DMCV XMLID="DMCV" ID="1788192479147" BASECOST="0.0" LEVELS="0" ALIAS="DMCV" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </DMCV>
+                                <SPD XMLID="SPD" ID="1788192478356" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </SPD>
+                                <PD XMLID="PD" ID="1788192478276" BASECOST="0.0" LEVELS="13" ALIAS="PD" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </PD>
+                                <ED XMLID="ED" ID="1788192478376" BASECOST="0.0" LEVELS="13" ALIAS="ED" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </ED>
+                                <REC XMLID="REC" ID="1788192478735" BASECOST="0.0" LEVELS="0" ALIAS="REC" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </REC>
+                                <END XMLID="END" ID="1788192478784" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </END>
+                                <BODY XMLID="BODY" ID="1788192478648" BASECOST="0.0" LEVELS="0" ALIAS="BODY" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </BODY>
+                                <STUN XMLID="STUN" ID="1788192478666" BASECOST="0.0" LEVELS="0" ALIAS="STUN" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </STUN>
+                                <RUNNING XMLID="RUNNING" ID="1788192478283" BASECOST="0.0" LEVELS="0" ALIAS="Running" POSITION="18" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </RUNNING>
+                                <SWIMMING XMLID="SWIMMING" ID="1788192478767" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="19" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </SWIMMING>
+                                <LEAPING XMLID="LEAPING" ID="1788192479195" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="20" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                </LEAPING>
+                            </CHARACTERISTICS>
+                            <SKILLS />
+                            <PERKS />
+                            <TALENTS />
+                            <MARTIALARTS />
+                            <POWERS>
+                                <POWER XMLID="NAKEDMODIFIER" ID="1788192660803" BASECOST="0.0" LEVELS="60" ALIAS="Naked Advantage" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Rapid Punches" INPUT="STR" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                                <NOTES />
+                                <MODIFIER XMLID="REDUCEDEND" ID="1788192710353" BASECOST="0.25" LEVELS="0" ALIAS="Reduced Endurance" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="HALFEND" OPTIONID="HALFEND" OPTION_ALIAS="1/2 END" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                    <NOTES />
+                                </MODIFIER>
+                                <MODIFIER XMLID="LIMITEDPOWER" ID="1788192717645" BASECOST="-1.0" LEVELS="0" ALIAS="Only For Multiple Attacks" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="4" OPTIONID="4" OPTION_ALIAS="Power loses about half of its effectiveness" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="Yes" FORCEALLOW="No">
+                                    <NOTES />
+                                </MODIFIER>
+                                <MODIFIER XMLID="UNIFIEDPOWER" ID="1788192750755" BASECOST="-0.25" LEVELS="0" ALIAS="Unified Power" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="Yes" FORCEALLOW="No">
+                                    <NOTES />
+                                </MODIFIER>
+                                </POWER>
+                            </POWERS>
+                            <DISADVANTAGES />
+                            <EQUIPMENT />
+                            </CHARACTER>
+                        `;
+
+                        let actor;
+
+                        let nakedAdvantage;
+
+                        before(async function () {
+                            actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
+
+                            nakedAdvantage = actor.items.find((item) => item.system.XMLID === "NAKEDMODIFIER");
+                        });
+
+                        after(async function () {
+                            await deleteQuenchActor({ quench: this, actor });
+                        });
+
+                        describe("costs", function () {
+                            it("should have the correct active point cost", function () {
+                                assert.equal(nakedAdvantage.activePoints, 15);
+                            });
+
+                            it("should have the correct real point cost", function () {
+                                // 15 / (1 + 1.25) = 6.66 => 7
+                                assert.equal(nakedAdvantage.realCost, 7);
+                            });
+                        });
                     });
                 });
 

@@ -8211,8 +8211,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                     }
                 }
 
-                // Unclear why we use FLOOR here instead of RoundDownPlayerFavor.  But trying to match HD.
-                _cost = Math.floor(_cost / (1 + _limitationCost));
+                _cost = roundFavorPlayerTowardsZero(_cost / (1 + _limitationCost));
                 return _cost;
             },
             privateAsAdder: true,
