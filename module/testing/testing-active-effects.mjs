@@ -326,6 +326,73 @@ export function registerActiveEffectTests(quench) {
                     );
                 });
             });
+
+            describe("Natural Healing on a disabled effect", function () {
+                let testActor = null;
+
+                before(async () => {
+                    testActor = await Actor.create({
+                        name: "_Quench Natural Healing",
+                        type: "pc",
+                        system: { is5e: false },
+                    });
+                });
+
+                after(async () => {
+                    await testActor?.delete();
+                    testActor = null;
+                });
+
+                const findNaturalBodyHealing = () =>
+                    testActor.effects.find((ae) => ae.flags[game.system.id]?.XMLID === "naturalBodyHealing");
+
+                // Mirrors setNaturalHealing's own rate formula (module/actor/actor.mjs) so the
+                // test can assert an exact refreshed value, not just "it changed".
+                const secondsPerBodyForRec = (recValue) => Math.floor(2.628e6 / Math.max(1, recValue));
+
+                it("refreshes a disabled effect's rate instead of duplicating it, then deletes it on full BODY", async function () {
+                    const bodyMax = testActor.system.characteristics.body.max;
+                    assert.ok(bodyMax > 0, "Actor starts with a positive BODY max.");
+                    const originalRec = testActor.system.characteristics.rec.value;
+
+                    // Damage BODY: setNaturalHealing's create branch runs
+                    await testActor.update({ "system.characteristics.body.value": bodyMax - 1 });
+
+                    let naturalBodyHealing = findNaturalBodyHealing();
+                    assert.ok(naturalBodyHealing, "Natural healing effect created while BODY is below max.");
+
+                    await naturalBodyHealing.update({ disabled: true });
+                    assert.ok(findNaturalBodyHealing().disabled, "Effect is now disabled.");
+
+                    // Retrigger setNaturalHealing with a different REC so a refreshed rate is
+                    // distinguishable from the original; the lookup (unlike core's
+                    // temporaryEffects) must still find the disabled effect.
+                    const newRec = originalRec + 20;
+                    await testActor.update({ "system.characteristics.rec.value": newRec });
+
+                    const afterRetrigger = testActor.effects.filter(
+                        (ae) => ae.flags[game.system.id]?.XMLID === "naturalBodyHealing",
+                    );
+                    assert.strictEqual(afterRetrigger.length, 1, "No duplicate created for a disabled effect.");
+                    assert.ok(
+                        afterRetrigger[0].disabled,
+                        "Effect was updated in place, not recreated (still disabled).",
+                    );
+                    assert.strictEqual(
+                        afterRetrigger[0].duration.seconds,
+                        secondsPerBodyForRec(newRec),
+                        "Healing rate refreshed to reflect the new REC.",
+                    );
+
+                    // Restore BODY to full: the delete branch must fire even though the effect is disabled
+                    await testActor.update({ "system.characteristics.body.value": bodyMax });
+
+                    assert.notOk(
+                        findNaturalBodyHealing(),
+                        "Disabled natural healing effect deleted once BODY returns to full.",
+                    );
+                });
+            });
         },
         { displayName: "HERO: Item ActiveEffect Sync" },
     );
