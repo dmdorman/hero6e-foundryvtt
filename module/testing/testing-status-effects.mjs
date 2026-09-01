@@ -14,7 +14,7 @@ export function registerStatusEffectTests(quench) {
     quench.registerBatch(
         `${game.system.id}.testing.statusEffects`,
         (context) => {
-            const { describe, it, before, beforeEach, after, assert } = context;
+            const { describe, it, before, beforeEach, after, afterEach, assert } = context;
 
             // Awaitable promise helper that resolves exactly when a specific Foundry hook settles
             const waitForHook = (hookName) =>
@@ -734,6 +734,105 @@ export function registerStatusEffectTests(quench) {
                     } finally {
                         await trackerActor.delete();
                     }
+                });
+            });
+
+            // The native engine and the manual 5e/full-heal recompute share the halving rule and
+            // MULTIPLY rounding; they must agree on every change mix.
+            describe("Active Effect Change Application", function () {
+                setQuenchTimeout(this);
+                let quenchActor = null;
+                let naturalDcvMax = 0;
+
+                const dcvChange = (value, type) => ({
+                    key: "system.characteristics.dcv.max",
+                    value,
+                    type,
+                    priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY[type.toUpperCase()],
+                });
+
+                // An ADD first, so the multipliers work on a number big enough for stacking,
+                // deduping and "first halving only" to give three different answers.
+                const applyDcvChanges = (changes) =>
+                    quenchActor.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "_Quench_DCV_Changes",
+                            system: {
+                                changes: [dcvChange(9, CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD), ...changes],
+                            },
+                        },
+                    ]);
+
+                before(async function () {
+                    quenchActor = await Actor.create({
+                        name: "_Quench_AE_Application",
+                        type: "pc",
+                        img: "icons/svg/mystery-man.svg",
+                        system: { is5e: false },
+                    });
+                    naturalDcvMax = quenchActor.system.characteristics.dcv.max;
+                    assert.ok(naturalDcvMax > 0, "Actor starts with a positive DCV max.");
+                });
+
+                afterEach(async function () {
+                    await quenchActor?.deleteEmbeddedDocuments(
+                        "ActiveEffect",
+                        quenchActor.effects.map((effect) => effect.id),
+                    );
+                });
+
+                after(async function () {
+                    await quenchActor?.delete();
+                    quenchActor = null;
+                });
+
+                it("The most severe halving supersedes a milder one", async function () {
+                    await applyDcvChanges([
+                        dcvChange(0.5, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                        dcvChange(0.25, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                    ]);
+
+                    assert.strictEqual(
+                        quenchActor.system.characteristics.dcv.max,
+                        roundFavorPlayerAwayFromZero((naturalDcvMax + 9) * 0.25),
+                        "Only the x1/4 applied: it neither stacked with nor lost to the x1/2.",
+                    );
+                });
+
+                it("A multiplier of one or more stacks with a halving", async function () {
+                    await applyDcvChanges([
+                        dcvChange(2, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                        dcvChange(0.5, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                    ]);
+
+                    assert.strictEqual(
+                        quenchActor.system.characteristics.dcv.max,
+                        roundFavorPlayerAwayFromZero(roundFavorPlayerAwayFromZero((naturalDcvMax + 9) * 2) * 0.5),
+                        "The x2 survived the halving dedup and the x1/2 applied once.",
+                    );
+                });
+
+                it("The manual engine recomputes the same max Foundry applied", async function () {
+                    await applyDcvChanges([
+                        dcvChange(2, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                        dcvChange(0.5, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                        dcvChange(0.25, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                    ]);
+
+                    // The seam the 5e recompute and fullHealth apply changes through, fed the same
+                    // pre-effect number Foundry's native application started from.
+                    const recomputedMax = quenchActor._applyDirectActiveEffectChangesToDerivedMax("dcv", naturalDcvMax);
+
+                    assert.strictEqual(
+                        recomputedMax,
+                        roundFavorPlayerAwayFromZero(roundFavorPlayerAwayFromZero((naturalDcvMax + 9) * 2) * 0.25),
+                        "ADD, then x2, then the most severe halving only.",
+                    );
+                    assert.strictEqual(
+                        quenchActor.system.characteristics.dcv.max,
+                        recomputedMax,
+                        "Natively applied max and hand-recomputed max agree.",
+                    );
                 });
             });
         },
