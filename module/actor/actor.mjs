@@ -4729,6 +4729,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
     /**
      * Apply any transformations to the Actor data which are caused by ActiveEffects.
+     * Copy of core `Actor#applyActiveEffects`; the sole intended divergence is the
+     * `HeroSystem6eActorActiveEffects._removeRedundantHalvingActiveEffects(changes)` call below.
+     * Re-diff against core on every Foundry upgrade.
      * @param {string} phase The application phase under which changes are to be applied.
      */
     applyActiveEffects(phase) {
@@ -4783,9 +4786,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const overrides = {};
         const replacementData = this.getRollData();
         for (const change of changes) {
-            // Dispatch on the system class so static _applyChange* overrides
-            // (player-favoring MULTIPLY rounding) are used instead of core's
-            const result = HeroSystem6eActorActiveEffects.applyChange(this, change, { replacementData });
+            const result = ActiveEffect.applyChange(this, change, { replacementData });
             if (foundry.utils.isPlainObject(result)) Object.assign(overrides, result);
         }
 
