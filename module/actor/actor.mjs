@@ -571,7 +571,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
      * Applies collected active-effect change entries on top of a starting value, mirroring Foundry's
      * own AE application (change types, priority order) plus the Hero-specific rules Foundry can't
      * express: player-favorable rounding on MULTIPLY and non-stacking halved conditions, both
-     * shared with the native path so a recompute cannot disagree with it.
+     * shared with the native path. Callers passing a filtered subset can diverge from the native
+     * result when the most severe halving for a key lives in the excluded slice.
      * @param {number} startValue - The value before effects.
      * @param {Array} entries - Entries from _collectActiveEffectMaxChanges (pre-filtered by caller).
      * @returns {number}
