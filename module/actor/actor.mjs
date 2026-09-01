@@ -4890,9 +4890,15 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
     }
 
     async setNaturalHealing(changed) {
-        const naturalBodyHealing = this.temporaryEffects.find(
-            (o) => o.flags[game.system.id]?.XMLID === "naturalBodyHealing",
-        );
+        // Core temporaryEffects drops disabled/suppressed effects; an inactive healing effect
+        // must still be found so its rate refreshes and a return to full BODY deletes it.
+        let naturalBodyHealing;
+        for (const effect of this.allApplicableEffects()) {
+            if (effect.isTemporary && effect.flags[game.system.id]?.XMLID === "naturalBodyHealing") {
+                naturalBodyHealing = effect;
+                break;
+            }
+        }
 
         // During _preUpdate this.system still holds the pre-update values; prefer the pending ones.
         const pendingCharacteristics = changed?.system?.characteristics ?? {};
