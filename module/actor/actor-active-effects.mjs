@@ -689,9 +689,10 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
         // back in line. Fade handles its own value bookkeeping and zeroes its changes before the final
         // delete, so this clamp is a no-op there. Only the initiating client writes.
         if (userId === game.user.id) {
-            // Core never awaits _onDelete, so sequence the follow-up writes ourselves rather
-            // than letting two independent chains interleave on the same documents.
+            // Core never awaits _onDelete, so sequence the follow-up writes ourselves.
+            // A clamp failure must not skip the maneuver sync.
             this._clampCharacteristicValuesAfterAdjustmentRemoval()
+                .catch((e) => console.error(`Adjustment clamp after effect delete failed`, e))
                 .then(() => {
                     // A maneuver phase effect removed outside its item's toggle (effects
                     // panel, scripts) must not leave the item flagged active
