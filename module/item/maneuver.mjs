@@ -543,7 +543,8 @@ export async function doManeuverEffects(item, action, targetToken) {
             if (hasGrabTrait) {
                 await defenderActor.createEmbeddedDocuments("ActiveEffect", [
                     {
-                        ...HeroSystem6eActorActiveEffects.statusEffectsObj.grabEffect,
+                        // deepClone: freeze on statusEffectsObj is shallow and document construction takes ownership of system/changes
+                        ...foundry.utils.deepClone(HeroSystem6eActorActiveEffects.statusEffectsObj.grabEffect),
                         name: `Grabbed by ${attackerActor.name}`,
                         flags: {
                             [game.system.id]: {
@@ -571,7 +572,7 @@ export async function doManeuverEffects(item, action, targetToken) {
     if (hasGrabTrait && validTargets.length > 0) {
         await attackerActor.createEmbeddedDocuments("ActiveEffect", [
             {
-                ...HeroSystem6eActorActiveEffects.statusEffectsObj.grabEffect,
+                ...foundry.utils.deepClone(HeroSystem6eActorActiveEffects.statusEffectsObj.grabEffect),
                 name: `Grabbing ${validTargets.map((t) => t.name).join(" + ")}`,
                 flags: {
                     [game.system.id]: {

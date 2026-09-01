@@ -4497,7 +4497,8 @@ async function _onApplySenseAffectingToSpecificToken(
     for (const senseGroup of senseGroups) {
         if (senseGroup.bodyDamage > 0) {
             const newActiveEffect = {
-                ...senseGroup.statusEffect,
+                // deepClone: the status templates are shared and shallow-frozen; document construction takes ownership
+                ...foundry.utils.deepClone(senseGroup.statusEffect),
                 name: `${senseAffectingItem.effectiveAttackItem.system.XMLID.replace("MANEUVER", senseAffectingItem.system.ALIAS)} ${senseGroup.XMLID}`,
                 duration: {
                     seconds: senseGroup.bodyDamage,
