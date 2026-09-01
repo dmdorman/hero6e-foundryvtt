@@ -86,7 +86,11 @@ function multipowerFrameworkSchema() {
 }
 
 class HeroNumberField extends foundry.data.fields.NumberField {
-    _applyChangeMultiply(value, delta) {
+    /** @override */
+    _applyChangeMultiply(value, delta, model, change) {
+        // Core's NumberField multiplies unconditionally; guard against a non-numeric current
+        // value (e.g. null) so we don't silently coerce it into a bogus numeric override.
+        if (typeof value !== "number") return value;
         return roundFavorPlayerAwayFromZero(value * delta);
     }
 }
