@@ -21,18 +21,9 @@ const CHANGE_TYPE_BY_LEGACY_MODE = Object.freeze({
     5: "override",
 });
 
-// Core defaults a change's priority from its type in ActiveEffect#prepareBaseData, so changes read
-// off a prepared document already carry one. Synthetic change data must be defaulted identically or
-// the manual engine orders its changes differently than the native one.
-const DEFAULT_PRIORITY_BY_CHANGE_TYPE = Object.freeze({
-    custom: 0,
-    multiply: 10,
-    add: 20,
-    subtract: 20,
-    downgrade: 30,
-    upgrade: 40,
-    override: 50,
-});
+// Core's change types (CONST.ACTIVE_EFFECT_CHANGE_TYPES). Anything else — a `custom.N` handler, a
+// typo on a hand-authored change — is not something either engine knows how to apply.
+const CHANGE_TYPES = Object.freeze(["custom", "multiply", "add", "subtract", "downgrade", "upgrade", "override"]);
 
 /**
  * An effect's change entries, whatever shape the effect is in.
@@ -64,11 +55,15 @@ export function activeEffectChangeType(change) {
     if (typeof raw === "number") return CHANGE_TYPE_BY_LEGACY_MODE[raw] ?? null;
 
     const lowerCase = String(raw ?? "").toLowerCase();
-    return lowerCase in DEFAULT_PRIORITY_BY_CHANGE_TYPE ? lowerCase : null;
+    return CHANGE_TYPES.includes(lowerCase) ? lowerCase : null;
 }
 
 /**
  * A change's sort priority, defaulted the way core defaults it.
+ *
+ * Changes read off a prepared document already carry one (ActiveEffect#prepareBaseData); synthetic
+ * change data must be defaulted identically or the manual engine orders its changes differently
+ * than the native one.
  * @param {object} change
  * @param {string|null} [changeType] - Precomputed activeEffectChangeType(change).
  * @returns {number}
@@ -76,7 +71,9 @@ export function activeEffectChangeType(change) {
 export function activeEffectChangePriority(change, changeType = activeEffectChangeType(change)) {
     const priority = Number(change?.priority);
     if (Number.isFinite(priority)) return priority;
-    return DEFAULT_PRIORITY_BY_CHANGE_TYPE[changeType] ?? 0;
+
+    const coreDefault = Number(foundry.documents.ActiveEffect.implementation.CHANGE_TYPES?.[changeType]?.priority);
+    return Number.isFinite(coreDefault) ? coreDefault : 0;
 }
 
 /**
