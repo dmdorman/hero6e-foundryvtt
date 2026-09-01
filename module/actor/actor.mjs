@@ -533,6 +533,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         if (lazy.maxChangesByKey) return lazy.maxChangesByKey;
 
         const byKey = new Map();
+        // Ties in priority fall back to the order the effects were collected in, which is how the
+        // native pass (a stable sort over this same walk) breaks them.
+        let collectionIndex = 0;
         for (const effect of this.allApplicableEffects()) {
             if (effect.disabled || effect.isSuppressed) continue;
 
@@ -540,7 +543,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             const fromItem = effect.parent !== this;
             const fromAdjustment = effect.flags?.[game.system.id]?.type === "adjustment";
             const effectChanges = activeEffectChanges(effect);
-            for (const [index, change] of effectChanges.entries()) {
+            for (const change of effectChanges) {
                 const match = change.key?.match(/^system\.characteristics\.([a-z]+)\.max$/);
                 if (!match) continue;
 
@@ -550,7 +553,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 entries.push({
                     change,
                     changeType,
-                    index,
+                    index: collectionIndex++,
                     priority: activeEffectChangePriority(change, changeType),
                     fromStatus,
                     fromItem,
