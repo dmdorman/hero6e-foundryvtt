@@ -53,6 +53,14 @@ export function registerStatusEffectTests(quench) {
                 return null;
             };
 
+            // Snapshot before any test in this batch runs so the final immutability test can catch
+            // a shared status template mutated by a bare `...template` spread (core's _shimChanges
+            // getters are non-enumerable and correctly invisible to JSON.stringify).
+            let statusEffectsObjSnapshot;
+            before(function () {
+                statusEffectsObjSnapshot = JSON.parse(JSON.stringify(HeroSystem6eActorActiveEffects.statusEffectsObj));
+            });
+
             describe("Actor Status Effect State Machine Matrix", function () {
                 setQuenchTimeout(this);
                 let quenchActor = null;
@@ -841,6 +849,30 @@ export function registerStatusEffectTests(quench) {
                         quenchActor.system.characteristics.dcv.max,
                         recomputedMax,
                         "Natively applied max and hand-recomputed max agree.",
+                    );
+                });
+            });
+
+            // Last in the batch on purpose: it must run after every describe above that could
+            // mutate a shared template in place.
+            describe("Status Effect Template Immutability", function () {
+                it("statusEffectsObj templates are unchanged after the rest of this batch has run", function () {
+                    const current = HeroSystem6eActorActiveEffects.statusEffectsObj;
+                    const driftedKeys = [];
+
+                    for (const key of Object.keys(statusEffectsObjSnapshot)) {
+                        const before = JSON.stringify(statusEffectsObjSnapshot[key]);
+                        const after = JSON.stringify(current[key]);
+                        if (before !== after) driftedKeys.push(key);
+                    }
+                    for (const key of Object.keys(current)) {
+                        if (!(key in statusEffectsObjSnapshot)) driftedKeys.push(`${key} (new key)`);
+                    }
+
+                    assert.deepEqual(
+                        driftedKeys,
+                        [],
+                        `Status effect template(s) mutated in place: ${driftedKeys.join(", ") || "none"}`,
                     );
                 });
             });
