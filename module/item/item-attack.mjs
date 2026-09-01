@@ -29,6 +29,7 @@ import {
     calculateStrengthMinimumForItem,
     combatSkillLevelsForAttack,
 } from "../utility/damage.mjs";
+import { activeEffectChanges } from "../utility/active-effects.mjs";
 import { getActorDefensesVsAttack, getConditionalDefenses, getItemDefenseVsAttack } from "../utility/defense.mjs";
 import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMetres } from "../utility/range.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
@@ -3944,7 +3945,9 @@ export async function _onApplyEntangleToSpecificToken(item, token, originalRoll)
         }`;
         body = Math.max(body, prevBody) + 1;
     }
-    const changes = foundry.utils.deepClone(HeroSystem6eActorActiveEffects.statusEffectsObj.entangledEffect.changes);
+    const changes = foundry.utils.deepClone(
+        activeEffectChanges(HeroSystem6eActorActiveEffects.statusEffectsObj.entangledEffect),
+    );
     changes.push({
         key: "body",
         value: body,

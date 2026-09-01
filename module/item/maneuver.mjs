@@ -341,7 +341,7 @@ const nameWithXmlid = (item) => (item.name ? `${item.name} (${item.system.XMLID}
 const statusName = (_item, status) => status.name;
 const traitChanges = (_item, _status, { dcvTrait, ocvTrait }) =>
     [addDcvTraitToChanges(dcvTrait), addOcvTraitToChanges(ocvTrait)].filter(Boolean);
-const statusChanges = (_item, status) => foundry.utils.deepClone(status.changes);
+const statusChanges = (_item, status) => foundry.utils.deepClone(activeEffectChanges(status));
 
 /**
  * Declarative specs for the status effect each maneuver activation turns on.
