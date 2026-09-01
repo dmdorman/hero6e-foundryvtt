@@ -197,6 +197,32 @@ export function registerActiveEffectTests(quench) {
                         "No item on the actor carries the same effect twice.",
                     );
                 });
+
+                it("Should not leave AE sync disabled on the actor after a failed XML upload", async function () {
+                    // Malformed XML returns early inside uploadFromXml's try, exercising the
+                    // finally that clears _uploadSweepActive without the upload throwing.
+                    await testActor.uploadFromXml("this is not valid xml <<<");
+                    assert.notOk(testActor._uploadSweepActive, "Upload marker cleared after a failed upload.");
+
+                    const powerInfo = getPowerInfo({ xmlid: "DENSITYINCREASE", actor: testActor, xmlTag: "POWER" });
+                    const itemData = foundry.utils.mergeObject(
+                        HeroSystem6eItem.itemDataFromXml(powerInfo.xml, testActor),
+                        { system: { LEVELS: 2 } },
+                    );
+                    const [item] = await testActor.createEmbeddedDocuments("Item", [itemData]);
+
+                    await item.setActiveEffects();
+                    assert.strictEqual(item.effects.size, 1, "AE sync still creates an effect after a failed upload.");
+
+                    // DENSITYINCREASE adds 5 STR per level
+                    const strAdd = () => parseInt(effectChangeValue(item.effects.contents[0], "str"));
+                    assert.strictEqual(strAdd(), 10, "New effect carries the initial LEVELS.");
+
+                    await item.update({ "system.LEVELS": 4 });
+
+                    assert.strictEqual(item.effects.size, 1, "LEVELS change updated in place, no duplicate.");
+                    assert.strictEqual(strAdd(), 20, "AE sync still reflects LEVELS updates after a failed upload.");
+                });
             });
 
             describe("Upload ActiveEffect Duplication", function () {
