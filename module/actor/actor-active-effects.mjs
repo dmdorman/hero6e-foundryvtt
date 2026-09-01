@@ -1,4 +1,5 @@
 import { HEROSYS } from "../herosystem6e.mjs";
+import { removeRedundantHalvingChanges } from "../utility/active-effects.mjs";
 import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
 
 export class HeroSystem6eActorActiveEffectsSystemData extends foundry.data.ActiveEffectTypeDataModel {
@@ -808,35 +809,13 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
         return "";
     }
 
+    /**
+     * Hero's non-stacking halving rule; shared with the manual engine that rebuilds 5e derived
+     * maxima so the two can never disagree.
+     * @param {Array<object>} changes - Mutated in place.
+     */
     static _removeRedundantHalvingActiveEffects(changes) {
-        // Filter out redundant multiplies, keeping lowest value
-        const mults = changes.filter((c) => c.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY);
-        if (mults.length > 1) {
-            const uniqueKeys = new Set();
-            mults.forEach((obj) => {
-                uniqueKeys.add(obj.key);
-            });
-
-            for (const key of uniqueKeys) {
-                const multsUniqueKey = mults.filter((c) => c.key === key);
-                if (multsUniqueKey.length > 1) {
-                    const minValue = Math.min(...multsUniqueKey.map((c) => parseFloat(c.value)));
-                    const keepMult = multsUniqueKey.find((c) => parseFloat(c.value) === minValue);
-                    // Remove the redundant MULTIPLY changes in place, leaving keepMult (and any
-                    // non-MULTIPLY changes sharing this key) at their original priority-sorted position.
-                    for (let index = changes.length - 1; index >= 0; index--) {
-                        const change = changes[index];
-                        if (
-                            change !== keepMult &&
-                            change.key === key &&
-                            change.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY
-                        ) {
-                            changes.splice(index, 1);
-                        }
-                    }
-                }
-            }
-        }
+        removeRedundantHalvingChanges(changes);
     }
 
     // static migrateData(source) {

@@ -7,6 +7,13 @@ import { userInteractiveVerifyOptionallyPromptThenSpendResources } from "../item
 import { HeroSystem6eItem, cloneToEffectiveAttackItem } from "../item/item.mjs";
 import { tagObjectForPersistence } from "../migration.mjs";
 import { overrideCanAct } from "../settings/settings-helpers.mjs";
+import {
+    activeEffectChangePriority,
+    activeEffectChangeType,
+    activeEffectChanges,
+    multiplyFavoringPlayer,
+    removeRedundantHalvingChanges,
+} from "../utility/active-effects.mjs";
 import { Attack, actionToJSON } from "../utility/attack.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
 import { characteristicValueToDiceParts } from "../utility/damage.mjs";
@@ -516,8 +523,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
      * Single pass over all applicable effects collecting changes that target a characteristic max,
      * keyed by lowercase characteristic. Hot-path callers (prepareDerivedData, fullHealth) build this
      * once and hand it to the helpers below instead of re-walking actor + item effects per
-     * characteristic. Reads V14 (effect.system.changes,
-     * string change.type) shapes and normalizes to a numeric mode.
+     * characteristic. Change shape, type and priority are normalized through the shared helpers so
+     * these entries order and apply exactly like the natively applied changes they mirror.
      */
     _collectActiveEffectMaxChanges() {
         // Memoized per data-preparation cycle (prepareDerivedData resets _lazy): hot-path callers
@@ -532,23 +539,19 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             const fromStatus = effect.statuses?.size > 0;
             const fromItem = effect.parent !== this;
             const fromAdjustment = effect.flags?.[game.system.id]?.type === "adjustment";
-            const effectChanges = effect.changes?.length ? effect.changes : (effect.system?.changes ?? []);
+            const effectChanges = activeEffectChanges(effect);
             for (const [index, change] of effectChanges.entries()) {
                 const match = change.key?.match(/^system\.characteristics\.([a-z]+)\.max$/);
                 if (!match) continue;
 
-                const rawType = change.type ?? change.type;
-                const mode =
-                    typeof rawType === "number"
-                        ? rawType
-                        : CONFIG.HERO.ACTIVE_EFFECT_MODES[String(rawType ?? "").toUpperCase()];
+                const changeType = activeEffectChangeType(change);
 
                 const entries = byKey.get(match[1]) ?? [];
                 entries.push({
                     change,
-                    mode,
+                    changeType,
                     index,
-                    priority: change.priority ?? (mode ?? 0) * 10,
+                    priority: activeEffectChangePriority(change, changeType),
                     fromStatus,
                     fromItem,
                     fromAdjustment,
@@ -563,8 +566,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
     /**
      * Applies collected active-effect change entries on top of a starting value, mirroring Foundry's
-     * own AE application (modes, priority order) plus the Hero-specific rules Foundry can't express:
-     * player-favorable rounding on MULTIPLY and non-stacking halved conditions.
+     * own AE application (change types, priority order) plus the Hero-specific rules Foundry can't
+     * express: player-favorable rounding on MULTIPLY and non-stacking halved conditions, both
+     * shared with the native path so a recompute cannot disagree with it.
      * @param {number} startValue - The value before effects.
      * @param {Array} entries - Entries from _collectActiveEffectMaxChanges (pre-filtered by caller).
      * @returns {number}
@@ -572,36 +576,35 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
     _applyActiveEffectChangeEntries(startValue, entries) {
         if (entries.length === 0) return startValue;
 
-        const modes = CONFIG.HERO.ACTIVE_EFFECT_MODES;
         const sorted = [...entries].sort((a, b) => a.priority - b.priority || a.index - b.index);
+        removeRedundantHalvingChanges(sorted, {
+            keyOf: (entry) => entry.change.key,
+            typeOf: (entry) => entry.changeType,
+            valueOf: (entry) => entry.change.value,
+        });
 
         let value = startValue;
-        // Halved conditions do not stack: a character who is both Prone and Grabbed is at 1/2 DCV,
-        // not 1/4. Apply the first halving and skip the rest.
-        let halvingApplied = false;
-        for (const { change, mode } of sorted) {
-            if (mode == null) continue;
+        for (const { change, changeType } of sorted) {
             const delta = Number(change.value);
             if (!Number.isFinite(delta)) continue;
 
-            switch (mode) {
-                case modes.ADD:
+            switch (changeType) {
+                case "add":
                     value += delta;
                     break;
-                case modes.MULTIPLY:
-                    if (delta === 0.5) {
-                        if (halvingApplied) break;
-                        halvingApplied = true;
-                    }
-                    value = roundFavorPlayerAwayFromZero(value * delta);
+                case "subtract":
+                    value -= delta;
                     break;
-                case modes.OVERRIDE:
+                case "multiply":
+                    value = multiplyFavoringPlayer(value, delta);
+                    break;
+                case "override":
                     value = delta;
                     break;
-                case modes.UPGRADE:
+                case "upgrade":
                     value = Math.max(value, delta);
                     break;
-                case modes.DOWNGRADE:
+                case "downgrade":
                     value = Math.min(value, delta);
                     break;
             }
