@@ -3361,7 +3361,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             uploadProgressBar.advance(`${this.name}: applyActiveEffects`, 0);
             for (const item of this.items) {
-                await item.setActiveEffects({ render: false });
+                // Authoritative sweep: bypasses the guard that suppresses the concurrent
+                // per-item syncs the upload's own writes would otherwise trigger.
+                await item.setActiveEffects({ render: false, duringUpload: true });
             }
 
             uploadProgressBar.advance(`${this.name}: applySizeEffect`, 0);

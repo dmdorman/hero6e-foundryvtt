@@ -548,6 +548,13 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 return;
             }
 
+            // An HDC upload runs its own sequenced sweep over every item; the item writes it makes
+            // along the way would otherwise re-enter here concurrently and both passes would miss
+            // each other's pending create, leaving duplicate effects behind.
+            if (!options.duringUpload && this.actor.flags?.[game.system.id]?.uploading) {
+                return;
+            }
+
             // Generic activeEffect from CONFIG.MJS (preferred)
             if (this.baseInfo?.activeEffect) {
                 const effectData = this.baseInfo?.activeEffect(_abstractItem);
@@ -1224,7 +1231,9 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             const futureItem = new this.constructor(futureItemData, { parent: this.parent });
 
             if (this.baseInfo?.activeEffect?.(futureItem)) {
-                this.setActiveEffects({ futureItem });
+                // Must complete before the update commits; leaving it unawaited let a second
+                // find-then-create pass start before this one's create landed.
+                await this.setActiveEffects({ futureItem });
             }
         }
 
