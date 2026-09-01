@@ -462,23 +462,32 @@ export function registerStatusEffectTests(quench) {
                     await quenchActor.createEmbeddedDocuments("ActiveEffect", [
                         {
                             name: "_Quench_DCV_Aid",
-                            changes: [
-                                {
-                                    key: "system.characteristics.dcv.max",
-                                    value: "4",
-                                    type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
-                                    priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
-                                },
-                            ],
+                            system: {
+                                changes: [
+                                    {
+                                        key: "system.characteristics.dcv.max",
+                                        value: 4,
+                                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
+                                    },
+                                ],
+                            },
                         },
                     ]);
 
-                    const expectedDcvMax = roundFavorPlayerAwayFromZero((dcvMaxBefore + 4) * 0.5);
-                    assert.strictEqual(
-                        quenchActor.system.characteristics.dcv.max,
-                        expectedDcvMax,
-                        "ADD applied before the single surviving 0.5 MULTIPLY, per priority order.",
-                    );
+                    try {
+                        const expectedDcvMax = roundFavorPlayerAwayFromZero((dcvMaxBefore + 4) * 0.5);
+                        assert.strictEqual(
+                            quenchActor.system.characteristics.dcv.max,
+                            expectedDcvMax,
+                            "ADD applied before the single surviving 0.5 MULTIPLY, per priority order.",
+                        );
+                    } finally {
+                        await quenchActor.deleteEmbeddedDocuments(
+                            "ActiveEffect",
+                            quenchActor.effects.map((effect) => effect.id),
+                        );
+                    }
                 });
 
                 it("Post-Segment-12 recovery does not wake a KO'd character", async function () {
