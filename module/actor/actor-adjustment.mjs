@@ -7,7 +7,7 @@ import {
     determineMaxAdjustment,
 } from "../utility/adjustment.mjs";
 
-function _findExistingMatchingEffect(item, potentialCharacteristic, targetSystem, activePoints) {
+function _findExistingMatchingEffect(item, potentialCharacteristic, targetSystem, activePoints, worldTime) {
     // We will find an existing effect with our item that does not have our potentialCharacteristic.
     // Goal is to reuse a single AE for items that have multiple adjustment targets.
     // const costPerActivePoint = determineCostPerActivePointWithDefenseMultipler(
@@ -20,7 +20,7 @@ function _findExistingMatchingEffect(item, potentialCharacteristic, targetSystem
     return targetSystem.effects.find(
         (effect) =>
             effect.origin === item.uuid && // Make sure the effect.origin is the same item
-            effect.flags[systemId]?.createTime === game.time.worldTime && // Only reuse this effect if created on the same worldTime, otherwise create a new effect to properly handle fades
+            effect.flags[systemId]?.createTime === worldTime && // Only reuse this effect if created on the same worldTime, otherwise create a new effect to properly handle fades
             (effect.flags[systemId]?.XMLID === "HEALING" || !effect.changes.find((c) => c.key === _change.key)) && // Reuse this AE for healing, unless two applications of the same key
             effect.flags[systemId]?.XMLID === item.system.XMLID && // XMLID's should match
             effect.flags[systemId]?.activePoints === activePoints, // AP should match, so fade matches
@@ -91,6 +91,7 @@ function _createNewAdjustmentEffect(options) {
         targetSystem,
         attackerToken,
         action,
+        worldTime,
     } = options;
 
     const systemId = game.system.id;
@@ -131,7 +132,7 @@ function _createNewAdjustmentEffect(options) {
                 key: targetPower?.system?.XMLID || potentialCharacteristic,
                 itemTokenName,
                 attackerTokenUuid: getTokenUuid(_attackerToken),
-                createTime: game.time.worldTime,
+                createTime: worldTime,
                 initialCostPerActivePoint: determineCostPerActivePoint(
                     potentialCharacteristic,
                     targetPower,
@@ -274,7 +275,13 @@ export async function performAdjustment(
 
     existingEffect =
         existingEffect ||
-        _findExistingMatchingEffect(attackItem, potentialCharacteristic, targetSystem, thisAttackActivePointsEffect);
+        _findExistingMatchingEffect(
+            attackItem,
+            potentialCharacteristic,
+            targetSystem,
+            thisAttackActivePointsEffect,
+            worldTime,
+        );
 
     let activeEffect =
         existingEffect ||
@@ -287,6 +294,7 @@ export async function performAdjustment(
             targetSystem,
             attackerToken,
             action,
+            worldTime,
         });
 
     const maximumEffectActivePoints = determineMaxAdjustment(attackItem, simplifiedHealing, potentialCharacteristic);
