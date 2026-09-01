@@ -1,5 +1,6 @@
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
 import { HeroSystem6eCombatTrackerSingle } from "../combatTracker-single.mjs";
+import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
 import {
     setQuenchTimeout,
     createQuenchScene,
@@ -446,6 +447,37 @@ export function registerStatusEffectTests(quench) {
                     assert.ok(
                         changes.some((change) => change.key === "system.characteristics.dcv.max"),
                         "Cascaded prone effect kept its DCV halving change.",
+                    );
+                });
+
+                it("Redundant halving dedup keeps a co-located ADD change intact", async function () {
+                    const dcvMaxBefore = quenchActor.system.characteristics.dcv.max;
+
+                    // Prone and Stunned each carry an independent 0.5 MULTIPLY on the same key,
+                    // exercising the MULTIPLY-only dedup in _removeRedundantHalvingActiveEffects
+                    await quenchActor.toggleStatusEffect(effectsObj.proneEffect.id, { active: true });
+                    await quenchActor.toggleStatusEffect(effectsObj.stunEffect.id, { active: true });
+
+                    // An ADD sharing the halved key must survive the MULTIPLY-only dedup
+                    await quenchActor.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "_Quench_DCV_Aid",
+                            changes: [
+                                {
+                                    key: "system.characteristics.dcv.max",
+                                    value: "4",
+                                    type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                                    priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
+                                },
+                            ],
+                        },
+                    ]);
+
+                    const expectedDcvMax = roundFavorPlayerAwayFromZero((dcvMaxBefore + 4) * 0.5);
+                    assert.strictEqual(
+                        quenchActor.system.characteristics.dcv.max,
+                        expectedDcvMax,
+                        "ADD applied before the single surviving 0.5 MULTIPLY, per priority order.",
                     );
                 });
 
