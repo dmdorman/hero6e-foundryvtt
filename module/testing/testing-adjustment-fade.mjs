@@ -1,7 +1,7 @@
+import { performAdjustment } from "../actor/actor-adjustment.mjs";
 import { expireEffects, getPowerInfo } from "../utility/util.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { _onApplyAdjustmentToSpecificToken } from "../item/item-attack.mjs";
-import { performAdjustment } from "../utility/adjustment.mjs";
 
 const { Actor } = foundry.documents;
 

@@ -1,6 +1,6 @@
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
-import { performAdjustment } from "../utility/adjustment.mjs";
+import { performAdjustment } from "../actor/actor-adjustment.mjs";
 
 const { Actor } = foundry.documents;
 

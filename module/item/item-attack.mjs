@@ -3,6 +3,7 @@ import { activateManeuver, doManeuverEffects, endHaymakerManeuver, maneuverHasBl
 import { HEROSYS } from "../herosystem6e.mjs";
 
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
+import { performAdjustment } from "../actor/actor-adjustment.mjs";
 import { getOffHandDefenseDcv } from "../actor/actor-utils.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 
@@ -21,7 +22,7 @@ import { isActivatedForThisUse } from "./item-requires-roll.mjs";
 import { overrideCanAct } from "../settings/settings-helpers.mjs";
 
 import { DICE_SO_NICE_CUSTOM_SETS, HeroRoller } from "../heroRoller/dice.mjs";
-import { performAdjustment, renderAdjustmentChatCards } from "../utility/adjustment.mjs";
+import { renderAdjustmentChatCards } from "../utility/adjustment.mjs";
 import { Attack, actionFromJSON, actionToJSON } from "../utility/attack.mjs";
 import {
     calculateDicePartsForItem,
