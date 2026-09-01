@@ -1,4 +1,5 @@
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
+import { activeEffectChanges } from "../utility/active-effects.mjs";
 import { activeSingleTrackerCombatFor, isQuenchTestRunning } from "../utility/util.mjs";
 import { roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { calculateVelocityInSystemUnits } from "../utility/units.mjs";
@@ -467,8 +468,8 @@ export async function activateManeuver(item) {
         activeEffect = buildManeuverActiveEffect(activeEffect, item, spec, { dcvTrait, ocvTrait });
     }
 
-    // The effect may be a reused document or a plain template object; read the canonical array
-    const _changes = activeEffect.system?.changes ?? [];
+    // The effect may be a reused document or a plain template object
+    const _changes = activeEffectChanges(activeEffect);
 
     if (activeEffect.name && _changes.length > 0) {
         // There is no need to keep track of OCV/DCV changes when not in combat

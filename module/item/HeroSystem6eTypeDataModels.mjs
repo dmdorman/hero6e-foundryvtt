@@ -1,5 +1,5 @@
 import { HeroSystem6eActor } from "../actor/actor.mjs";
-import { multiplyFavoringPlayer } from "../utility/active-effects.mjs";
+import { activeEffectChanges, multiplyFavoringPlayer } from "../utility/active-effects.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
 import {
     combatSkillLevelsForAttack,
@@ -1860,7 +1860,7 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
      */
     get maxTitle() {
         const ary = [];
-        const effectChangesOf = (ae) => (ae.changes?.length ? ae.changes : (ae.system?.changes ?? []));
+        const effectChangesOf = (ae) => activeEffectChanges(ae);
 
         // One tooltip line per effect: name with the change's signed amount, the same
         // "Attacker: Item" origin string the effect config sheet shows as HERO.Origin, and the

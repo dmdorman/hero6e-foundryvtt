@@ -1,6 +1,7 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { getPowerInfo, getTokenUuid, hdcTimeOptionIdToSeconds, tokenEducatedGuess } from "./util.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
+import { activeEffectChanges } from "./active-effects.mjs";
 import { calculateDicePartsForItem } from "./damage.mjs";
 
 const { renderTemplate } = foundry.applications.handlebars;
@@ -1014,7 +1015,7 @@ async function updateCharacteristicValue(activeEffect, { targetSystem, previousC
     }
 
     if (targetSystem instanceof HeroSystem6eActor) {
-        for (const change of activeEffect.changes ?? activeEffect.system.changes) {
+        for (const change of activeEffectChanges(activeEffect)) {
             const char = change.key.match(/([a-z]+)\.max/)?.[1];
             if (char) {
                 // Read the stored (source) value: derived data caps value to the recomputed max
@@ -1073,7 +1074,7 @@ async function updateCharacteristicValue(activeEffect, { targetSystem, previousC
 function updateEffectName(activeEffect) {
     //const item = fromUuidSync(activeEffect.origin);
     let _array = [];
-    for (const c of activeEffect.changes ?? activeEffect.system.changes) {
+    for (const c of activeEffectChanges(activeEffect)) {
         const _name =
             c.key.match(/([a-z]+)\.max/)?.[1].replace("system", activeEffect.flags[game.system.id]?.key) ||
             c.key.match(/[a-z]+/)?.[0];

@@ -1,5 +1,9 @@
 import { HEROSYS } from "../herosystem6e.mjs";
-import { multiplyFavoringPlayer, removeRedundantHalvingChanges } from "../utility/active-effects.mjs";
+import {
+    activeEffectChanges,
+    multiplyFavoringPlayer,
+    removeRedundantHalvingChanges,
+} from "../utility/active-effects.mjs";
 
 export class HeroSystem6eActorActiveEffectsSystemData extends foundry.data.ActiveEffectTypeDataModel {
     static defineSchema() {
@@ -588,7 +592,7 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
 
         if (effect.XMLID === "naturalBodyHealing") return null;
 
-        const effectChanges = effect.changes?.length ? effect.changes : (effect.system?.changes ?? []);
+        const effectChanges = activeEffectChanges(effect);
         const characteristics = effectChanges
             .map((c) => c.key?.match(/^system\.characteristics\.([a-z0-9]+)\./)?.[1])
             .filter(Boolean);
@@ -679,7 +683,7 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
         if (this.flags?.[game.system.id]?.type !== "adjustment") return;
 
         const updates = {};
-        const effectChanges = this.changes?.length ? this.changes : (this.system?.changes ?? []);
+        const effectChanges = activeEffectChanges(this);
         for (const change of effectChanges) {
             const key = change.key?.match(/^system\.characteristics\.([a-z]+)\.max$/)?.[1];
             if (!key) continue;
