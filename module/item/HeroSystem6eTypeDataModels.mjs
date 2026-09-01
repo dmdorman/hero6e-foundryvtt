@@ -1,4 +1,5 @@
 import { HeroSystem6eActor } from "../actor/actor.mjs";
+import { multiplyFavoringPlayer } from "../utility/active-effects.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
 import {
     combatSkillLevelsForAttack,
@@ -91,7 +92,7 @@ class HeroNumberField extends foundry.data.fields.NumberField {
         // Core's NumberField multiplies unconditionally; guard against a non-numeric current
         // value (e.g. null) so we don't silently coerce it into a bogus numeric override.
         if (typeof value !== "number") return value;
-        return roundFavorPlayerAwayFromZero(value * delta);
+        return multiplyFavoringPlayer(value, delta);
     }
 }
 

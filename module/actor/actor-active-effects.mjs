@@ -1,6 +1,5 @@
 import { HEROSYS } from "../herosystem6e.mjs";
-import { removeRedundantHalvingChanges } from "../utility/active-effects.mjs";
-import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
+import { multiplyFavoringPlayer, removeRedundantHalvingChanges } from "../utility/active-effects.mjs";
 
 export class HeroSystem6eActorActiveEffectsSystemData extends foundry.data.ActiveEffectTypeDataModel {
     static defineSchema() {
@@ -633,10 +632,11 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 update = current && delta;
                 break;
             case "number":
-                update = roundFavorPlayerAwayFromZero(current * delta);
+                update = multiplyFavoringPlayer(current, delta);
                 break;
         }
-        changes[change.key] = update;
+        // Core's guard: writing an undefined update would register a junk override for the key.
+        if (update !== current && update !== undefined) changes[change.key] = update;
     }
 
     _onCreate(data, options, userId) {
