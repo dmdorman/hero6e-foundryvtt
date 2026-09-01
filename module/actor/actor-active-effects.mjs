@@ -822,14 +822,18 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 if (multsUniqueKey.length > 1) {
                     const minValue = Math.min(...multsUniqueKey.map((c) => parseFloat(c.value)));
                     const keepMult = multsUniqueKey.find((c) => parseFloat(c.value) === minValue);
-                    // remove all multsUniqueKey and add back in the keepMult
-                    let index = changes.findIndex((c) => c.key === key);
-                    while (index !== -1) {
-                        changes.splice(index, 1);
-                        index = changes.findIndex((c) => c.key === key);
+                    // Remove the redundant MULTIPLY changes in place, leaving keepMult (and any
+                    // non-MULTIPLY changes sharing this key) at their original priority-sorted position.
+                    for (let index = changes.length - 1; index >= 0; index--) {
+                        const change = changes[index];
+                        if (
+                            change !== keepMult &&
+                            change.key === key &&
+                            change.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY
+                        ) {
+                            changes.splice(index, 1);
+                        }
                     }
-                    //changes = changes.filter((c) => c.key !== key || c.mode !== CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY);
-                    changes.push(keepMult);
                 }
             }
         }
