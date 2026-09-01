@@ -2927,6 +2927,11 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const originalActorJson = this.id ? JSON.stringify(this.toObject()) : null;
         const incomingHdcXml = typeof xml === "string" ? xml : new XMLSerializer().serializeToString(xml);
 
+        // Transient marker (not the persisted uploading flag): the flag deliberately stays set
+        // after a failed upload for the sheet's error display, and keying the per-item
+        // active-effect guard off it would leave that actor's AE sync disabled forever.
+        this._uploadSweepActive = true;
+
         try {
             // Convert xml string to xml document (if necessary)
             if (typeof xml === "string") {
@@ -3778,6 +3783,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 // Needed for when the delete extra items has an error.
                 await this.setFlag(game.system.id, "uploading", true);
             }
+        } finally {
+            this._uploadSweepActive = false;
         }
     }
 

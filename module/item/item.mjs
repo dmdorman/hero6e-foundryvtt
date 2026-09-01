@@ -548,10 +548,9 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 return;
             }
 
-            // An HDC upload runs its own sequenced sweep over every item; the item writes it makes
-            // along the way would otherwise re-enter here concurrently and both passes would miss
-            // each other's pending create, leaving duplicate effects behind.
-            if (!options.duringUpload && this.actor.flags?.[game.system.id]?.uploading) {
+            // An HDC upload runs its own sequenced sweep over every item; re-entering here
+            // concurrently would miss the sweep's pending creates and duplicate effects.
+            if (!options.duringUpload && this.actor._uploadSweepActive) {
                 return;
             }
 
@@ -1231,9 +1230,13 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             const futureItem = new this.constructor(futureItemData, { parent: this.parent });
 
             if (this.baseInfo?.activeEffect?.(futureItem)) {
-                // Must complete before the update commits; leaving it unawaited let a second
-                // find-then-create pass start before this one's create landed.
-                await this.setActiveEffects({ futureItem });
+                // Must complete before the update commits or a concurrent find-then-create pass
+                // can duplicate effects; a failure must not veto the item update itself.
+                try {
+                    await this.setActiveEffects({ futureItem });
+                } catch (e) {
+                    console.error(`setActiveEffects failed during ${this.name} preUpdate`, e);
+                }
             }
         }
 
