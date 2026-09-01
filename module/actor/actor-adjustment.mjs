@@ -15,14 +15,15 @@ function _findExistingMatchingEffect(item, potentialCharacteristic, targetSystem
     //     null,
     //     targetSystem,
     // );
+    const systemId = game.system.id;
     const _change = _createAEChangeBlock(potentialCharacteristic, targetSystem);
     return targetSystem.effects.find(
         (effect) =>
             effect.origin === item.uuid && // Make sure the effect.origin is the same item
-            effect.flags[game.system.id]?.createTime === game.time.worldTime && // Only reuse this effect if created on the same worldTime, otherwise create a new effect to properly handle fades
-            (effect.flags[game.system.id]?.XMLID === "HEALING" || !effect.changes.find((c) => c.key === _change.key)) && // Reuse this AE for healing, unless two applications of the same key
-            effect.flags[game.system.id]?.XMLID === item.system.XMLID && // XMLID's should match
-            effect.flags[game.system.id]?.activePoints === activePoints, // AP should match, so fade matches
+            effect.flags[systemId]?.createTime === game.time.worldTime && // Only reuse this effect if created on the same worldTime, otherwise create a new effect to properly handle fades
+            (effect.flags[systemId]?.XMLID === "HEALING" || !effect.changes.find((c) => c.key === _change.key)) && // Reuse this AE for healing, unless two applications of the same key
+            effect.flags[systemId]?.XMLID === item.system.XMLID && // XMLID's should match
+            effect.flags[systemId]?.activePoints === activePoints, // AP should match, so fade matches
     );
 }
 
@@ -92,6 +93,8 @@ function _createNewAdjustmentEffect(options) {
         action,
     } = options;
 
+    const systemId = game.system.id;
+
     // Create new ActiveEffect
     // TODO: Add a document field
 
@@ -116,7 +119,7 @@ function _createNewAdjustmentEffect(options) {
         },
         // TODO: Move all the flags into system data model
         flags: {
-            [game.system.id]: {
+            [systemId]: {
                 type: "adjustment",
                 version: 3,
                 adjustmentActivePoints: 0,
@@ -169,6 +172,9 @@ export async function performAdjustment(
     // if (thisAttackActivePointsEffect === 0) {
     //     console.warn("Why are we calling this with a 0 adjustment?  Power Defense absorbed it all?");
     // }
+
+    const systemId = game.system.id;
+    const worldTime = game.time.worldTime;
 
     const thisAttackActivePointsEffectRaw = thisAttackActivePointsEffect;
 
@@ -335,12 +341,12 @@ export async function performAdjustment(
 
         // Determine Effective Active Points for this attack
         const _previousActivePointsForThisXmlid = targetActor.temporaryEffects
-            .filter((ae) => ae.flags[game.system.id]?.XMLID === "HEALING")
+            .filter((ae) => ae.flags[systemId]?.XMLID === "HEALING")
             .reduce(
                 (a, c) =>
                     a +
                     (c.changes.find((cc) => cc.key === changeTemp.key)
-                        ? parseInt(c.flags[game.system.id]?.adjustmentActivePoints)
+                        ? parseInt(c.flags[systemId]?.adjustmentActivePoints)
                         : 0),
                 0,
             );
@@ -410,12 +416,12 @@ export async function performAdjustment(
                 changes.push(changeTemp);
             }
 
-            activeEffect.flags[game.system.id] ??= {};
-            activeEffect.flags[game.system.id].adjustmentActivePoints = Math.max(
-                activeEffect.flags[game.system.id].adjustmentActivePoints,
+            activeEffect.flags[systemId] ??= {};
+            activeEffect.flags[systemId].adjustmentActivePoints = Math.max(
+                activeEffect.flags[systemId].adjustmentActivePoints,
                 thisAttackActivePointsEffect,
             );
-            totalEffectActivePointsForXmlid = activeEffect.flags[game.system.id].adjustmentActivePoints;
+            totalEffectActivePointsForXmlid = activeEffect.flags[systemId].adjustmentActivePoints;
         }
     }
 
@@ -426,21 +432,21 @@ export async function performAdjustment(
 
         // Clamp fade (always 5) to not exceed adjustmentActivePoints
         let maximumActivePointsFade;
-        if (existingEffect.flags[game.system.id]?.adjustmentActivePoints >= 0) {
+        if (existingEffect.flags[systemId]?.adjustmentActivePoints >= 0) {
             // AID fade
             maximumActivePointsFade = Math.max(
-                -existingEffect.flags[game.system.id]?.adjustmentActivePoints,
+                -existingEffect.flags[systemId]?.adjustmentActivePoints,
                 thisAttackActivePointsEffect,
             );
         } else {
             // DRAIN fade/recovery
             maximumActivePointsFade = Math.min(
-                -existingEffect.flags[game.system.id]?.adjustmentActivePoints,
+                -existingEffect.flags[systemId]?.adjustmentActivePoints,
                 thisAttackActivePointsEffect,
             );
         }
 
-        existingEffect.flags[game.system.id].adjustmentActivePoints += maximumActivePointsFade;
+        existingEffect.flags[systemId].adjustmentActivePoints += maximumActivePointsFade;
         adjustmentDamageThisApplication = parseInt(existingEffect.changes[0].value);
         adjustmentDamageThisApplicationArray = existingEffect.changes.map((ae) => parseInt(ae.value) || 0);
 
@@ -457,14 +463,14 @@ export async function performAdjustment(
             // The effect grants trunc(AP / cost) points of the characteristic: adjustments move
             // Active Points, and only whole purchased increments take effect — a partial increment
             // stays banked in the AP ledger until enough AP accumulates or fades (5ER p. 107).
-            change.value = Math.trunc(activeEffect.flags[game.system.id].adjustmentActivePoints / costPerActivePoint2);
+            change.value = Math.trunc(activeEffect.flags[systemId].adjustmentActivePoints / costPerActivePoint2);
             // Delta between the pre- and post-fade grant, for the chat card's "faded by N" line.
             adjustmentDamageThisApplicationArray[i] = change.value - adjustmentDamageThisApplicationArray[i];
             i++;
         }
         adjustmentDamageThisApplication = fadedChanges[0].value - adjustmentDamageThisApplication;
 
-        if (activeEffect.flags[game.system.id].adjustmentActivePoints === 0 && !CONFIG.debug.adjustmentFadeKeep) {
+        if (activeEffect.flags[systemId].adjustmentActivePoints === 0 && !CONFIG.debug.adjustmentFadeKeep) {
             isEffectFinished = true;
             await existingEffect.update({ "system.changes": fadedChanges });
             await updateCharacteristicValue(activeEffect, { targetSystem, previousChanges });
@@ -501,8 +507,7 @@ export async function performAdjustment(
             // which rejects the ENTIRE update — including the faded changes — leaving the boosted max
             // stuck at its full value.
             const startTimeUpdate = {
-                "start.time":
-                    (existingEffect.start?.time ?? game.time.worldTime) + (existingEffect.duration.value ?? 0),
+                "start.time": (existingEffect.start?.time ?? worldTime) + (existingEffect.duration.value ?? 0),
             };
             await existingEffect.update({
                 name: nameSurrogate.name,
@@ -552,7 +557,7 @@ export async function performAdjustment(
                 (a, c) =>
                     a +
                     (c.changes.find((cc) => cc.key === change.key)
-                        ? (c.flags[game.system.id]?.adjustmentActivePoints ?? 0)
+                        ? (c.flags[systemId]?.adjustmentActivePoints ?? 0)
                         : 0),
                 0,
             );
@@ -567,12 +572,11 @@ export async function performAdjustment(
                 previousActivePointsForThisXmlid > maximumEffectActivePoints
                     ? 0
                     : Math.min(maximumEffectActivePoints - previousActivePointsForThisXmlid);
-            activeEffect.flags[game.system.id].adjustmentActivePoints = Math.min(
+            activeEffect.flags[systemId].adjustmentActivePoints = Math.min(
                 thisAttackMaxActivePoints,
                 thisAttackActivePointsEffect,
             );
-            const finalAp =
-                previousActivePointsForThisXmlid + activeEffect.flags[game.system.id].adjustmentActivePoints;
+            const finalAp = previousActivePointsForThisXmlid + activeEffect.flags[systemId].adjustmentActivePoints;
             const targetValue = costPerActivePoint ? Math.trunc(finalAp / costPerActivePoint) : 0;
 
             change.value = targetValue - previousPointsForThisChangeKey;
@@ -580,7 +584,7 @@ export async function performAdjustment(
             activeEffect.system.changes.push(change);
 
             thisAttackActivePointAdjustmentNotAppliedDueToMax =
-                thisAttackActivePointsEffect - activeEffect.flags[game.system.id].adjustmentActivePoints;
+                thisAttackActivePointsEffect - activeEffect.flags[systemId].adjustmentActivePoints;
             adjustmentDamageThisApplication = change.value;
         }
 
@@ -588,16 +592,16 @@ export async function performAdjustment(
         else if (thisAttackActivePointsEffect < 0) {
             const change = _createAEChangeBlock(potentialCharacteristic, targetSystem);
             const previousActivePointsForThisXmlid = targetActor.temporaryEffects
-                .filter((ae) => ae.flags[game.system.id]?.type === "adjustment")
+                .filter((ae) => ae.flags[systemId]?.type === "adjustment")
                 .reduce((a, c) => {
                     const _adjustedActivePoints = c.changes.find((cc) => cc?.key === change.key)
-                        ? c.flags[game.system.id].adjustmentActivePoints
+                        ? c.flags[systemId].adjustmentActivePoints
                         : 0;
                     return a + _adjustedActivePoints;
                 }, 0);
-            activeEffect.flags[game.system.id].adjustmentActivePoints = thisAttackActivePointsEffect;
+            activeEffect.flags[systemId].adjustmentActivePoints = thisAttackActivePointsEffect;
             const finalAp =
-                activeEffect.flags[game.system.id].adjustmentActivePoints +
+                activeEffect.flags[systemId].adjustmentActivePoints +
                 (previousActivePointsForThisXmlid % costPerActivePoint);
             const targetValue = costPerActivePoint ? Math.trunc(finalAp / costPerActivePoint) : 0;
             change.value = targetValue;
@@ -610,7 +614,7 @@ export async function performAdjustment(
 
     // Add new activeEffect
 
-    if (!existingEffect && activeEffect.flags[game.system.id]?.adjustmentActivePoints !== 0) {
+    if (!existingEffect && activeEffect.flags[systemId]?.adjustmentActivePoints !== 0) {
         updateEffectName(activeEffect);
         const createdEffects = await targetActor.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
 
@@ -628,7 +632,7 @@ export async function performAdjustment(
 
         updateEffectName(createdEffects[0]);
         await createdEffects[0].update({ name: createdEffects[0].name });
-    } else if (activeEffect.flags[game.system.id]?.adjustmentActivePoints !== 0) {
+    } else if (activeEffect.flags[systemId]?.adjustmentActivePoints !== 0) {
         // Were likely adding a second change row
         updateEffectName(activeEffect);
         await activeEffect.update({
@@ -662,11 +666,11 @@ export async function performAdjustment(
         .filter(
             (ae) =>
                 ae.changes.find((c) => c.key === _key && parseInt(c.value) !== 0) &&
-                ae.flags[game.system.id]?.type === "adjustment" &&
-                ae.flags[game.system.id]?.XMLID !== "HEALING" &&
-                ae.flags[game.system.id]?.key === activeEffect.flags[game.system.id]?.key,
+                ae.flags[systemId]?.type === "adjustment" &&
+                ae.flags[systemId]?.XMLID !== "HEALING" &&
+                ae.flags[systemId]?.key === activeEffect.flags[systemId]?.key,
         )
-        .reduce((accum, curr) => accum + curr.flags[game.system.id]?.adjustmentActivePoints, 0);
+        .reduce((accum, curr) => accum + curr.flags[systemId]?.adjustmentActivePoints, 0);
 
     if (adjustmentDamageThisApplicationArray.length > 1) {
         console.log("need adjustmentCard per change");
@@ -728,8 +732,9 @@ export async function performAdjustment(
 
 /// When one of multiple AE's are faded, the rounding of AP to VALUE may change.
 async function recalcEffectBasedOnTotalApForXmlid(activeEffect, isFade) {
+    const systemId = game.system.id;
     const targetActor = activeEffect.parent;
-    const costPerActivePoint = activeEffect.flags[game.system.id]?.initialCostPerActivePoint; //determineCostPerActivePoint(activeEffect.flags[game.system.id]?.key, null, targetActor);
+    const costPerActivePoint = activeEffect.flags[systemId]?.initialCostPerActivePoint; //determineCostPerActivePoint(activeEffect.flags[systemId]?.key, null, targetActor);
     if (costPerActivePoint == null) {
         console.error(`Failed to determine cost per active point for effect: ${activeEffect.name}`);
         return;
@@ -745,10 +750,10 @@ async function recalcEffectBasedOnTotalApForXmlid(activeEffect, isFade) {
                 (ae) =>
                     !ae.disabled &&
                     ae.changes?.[0]?.key === activeEffect.changes[0].key &&
-                    ae.flags[game.system.id]?.type === "adjustment",
+                    ae.flags[systemId]?.type === "adjustment",
             )
-            .sort((a, b) => (a.flags[game.system.id]?.createTime || 0) - (b.flags[game.system.id]?.createTime || 0))) {
-            _ap += ae.flags[game.system.id]?.adjustmentActivePoints;
+            .sort((a, b) => (a.flags[systemId]?.createTime || 0) - (b.flags[systemId]?.createTime || 0))) {
+            _ap += ae.flags[systemId]?.adjustmentActivePoints;
             const _targetValue = Math.trunc(_ap / costPerActivePoint) - _value;
 
             if (parseInt(ae.changes[0].value) !== _targetValue) {
@@ -858,21 +863,22 @@ async function updateCharacteristicValue(activeEffect, { targetSystem, previousC
 }
 
 function updateEffectName(activeEffect) {
+    const systemId = game.system.id;
     //const item = fromUuidSync(activeEffect.origin);
     let _array = [];
     for (const c of activeEffectChanges(activeEffect)) {
         const _name =
-            c.key.match(/([a-z]+)\.max/)?.[1].replace("system", activeEffect.flags[game.system.id]?.key) ||
+            c.key.match(/([a-z]+)\.max/)?.[1].replace("system", activeEffect.flags[systemId]?.key) ||
             c.key.match(/[a-z]+/)?.[0];
         if (!_name) {
             _array.push({
-                name: activeEffect.flags[game.system.id]?.key.toUpperCase(),
-                value: activeEffect.flags[game.system.id]?.XMLID,
+                name: activeEffect.flags[systemId]?.key.toUpperCase(),
+                value: activeEffect.flags[systemId]?.XMLID,
             });
             break;
         }
         let _value = (parseInt(c.value) || 0).signedString();
-        if (_value === "+0" && activeEffect.flags[game.system.id]?.adjustmentActivePoints < 0) {
+        if (_value === "+0" && activeEffect.flags[systemId]?.adjustmentActivePoints < 0) {
             _value = "-0";
         }
 
@@ -885,7 +891,7 @@ function updateEffectName(activeEffect) {
     }
 
     let xmlidSlug = `${_array.map((o) => `${o.value} ${o.name}`).join(",")}`;
-    if (activeEffect.flags[game.system.id]?.XMLID === "HEALING") {
+    if (activeEffect.flags[systemId]?.XMLID === "HEALING") {
         // The originating item (or its whole actor) may have been deleted (#4526)
         const attackItem = fromUuidSync(activeEffect.origin);
         const simplifiedHealing = attackItem?.system?.INPUT?.match(/simplified/i); //&&
@@ -895,8 +901,8 @@ function updateEffectName(activeEffect) {
     }
 
     activeEffect.name =
-        `${CONFIG.debug.adjustmentFadeKeep && activeEffect.flags?.[game.system.id]?.createTime ? `${activeEffect.flags[game.system.id]?.createTime} ` : ""}` +
-        `${xmlidSlug} (${Math.abs(activeEffect.flags[game.system.id]?.adjustmentActivePoints)} AP) `;
+        `${CONFIG.debug.adjustmentFadeKeep && activeEffect.flags?.[systemId]?.createTime ? `${activeEffect.flags[systemId]?.createTime} ` : ""}` +
+        `${xmlidSlug} (${Math.abs(activeEffect.flags[systemId]?.adjustmentActivePoints)} AP) `;
 }
 
 function _generateAdjustmentChatCard(
