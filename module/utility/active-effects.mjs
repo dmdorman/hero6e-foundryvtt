@@ -96,28 +96,35 @@ export function multiplyFavoringPlayer(current, delta) {
  *
  * Survivors keep their position so the caller's priority ordering is untouched.
  * @param {Array<T>} changes - Mutated in place.
- * @param {object} [accessors] - Readers for callers whose entries wrap the change data.
- * @param {(entry: T) => string} [accessors.keyOf]
- * @param {(entry: T) => string|null} [accessors.typeOf]
- * @param {(entry: T) => *} [accessors.valueOf]
+ * @param {object} [accessors] - Readers for callers whose entries wrap the change data. Spelled
+ *   `changeXOf` because a destructured `valueOf` default would resolve to Object.prototype's.
+ * @param {(entry: T) => string} [accessors.changeKeyOf]
+ * @param {(entry: T) => string|null} [accessors.changeTypeOf]
+ * @param {(entry: T) => *} [accessors.changeValueOf]
  * @template T
  */
 export function removeRedundantHalvingChanges(
     changes,
     {
-        keyOf = (entry) => entry.key,
-        typeOf = (entry) => activeEffectChangeType(entry),
-        valueOf = (entry) => entry.value,
+        changeKeyOf = (entry) => entry.key,
+        changeTypeOf = (entry) => activeEffectChangeType(entry),
+        changeValueOf = (entry) => entry.value,
     } = {},
 ) {
+    const halvingOf = (entry) => {
+        if (changeTypeOf(entry) !== "multiply") return null;
+        const value = parseFloat(changeValueOf(entry));
+        return Number.isFinite(value) && value < 1 ? value : null;
+    };
+
+    const halvingEntries = new Set();
     const halvingsByKey = new Map();
     for (const entry of changes) {
-        if (typeOf(entry) !== "multiply") continue;
+        const value = halvingOf(entry);
+        if (value === null) continue;
 
-        const value = parseFloat(valueOf(entry));
-        if (!Number.isFinite(value) || value >= 1) continue;
-
-        const key = keyOf(entry);
+        halvingEntries.add(entry);
+        const key = changeKeyOf(entry);
         const mostSevere = halvingsByKey.get(key);
         if (!mostSevere || value < mostSevere.value) halvingsByKey.set(key, { entry, value });
     }
@@ -125,11 +132,7 @@ export function removeRedundantHalvingChanges(
 
     for (let index = changes.length - 1; index >= 0; index--) {
         const entry = changes[index];
-        const mostSevere = halvingsByKey.get(keyOf(entry));
-        if (!mostSevere || entry === mostSevere.entry) continue;
-        if (typeOf(entry) !== "multiply") continue;
-
-        const value = parseFloat(valueOf(entry));
-        if (Number.isFinite(value) && value < 1) changes.splice(index, 1);
+        if (!halvingEntries.has(entry)) continue;
+        if (entry !== halvingsByKey.get(changeKeyOf(entry)).entry) changes.splice(index, 1);
     }
 }

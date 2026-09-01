@@ -578,9 +578,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
         const sorted = [...entries].sort((a, b) => a.priority - b.priority || a.index - b.index);
         removeRedundantHalvingChanges(sorted, {
-            keyOf: (entry) => entry.change.key,
-            typeOf: (entry) => entry.changeType,
-            valueOf: (entry) => entry.change.value,
+            changeKeyOf: (entry) => entry.change.key,
+            changeTypeOf: (entry) => entry.changeType,
+            changeValueOf: (entry) => entry.change.value,
         });
 
         let value = startValue;
