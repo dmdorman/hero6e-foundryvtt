@@ -23,7 +23,8 @@ class HeroProgressBarV13 {
                   console: !!CONFIG.debug.HERO?.ui?.progress, // PH: FIXME: Remove the separate console.debug perhaps
               });
 
-        if (++HeroProgressBarV13.#concurrentProgressBarCount > 1) {
+        // Suppressed bars render nothing, so they can't fight over the notification area
+        if (!suppressUi && ++HeroProgressBarV13.#concurrentProgressBarCount > 1) {
             ui.notifications.warn(
                 `${Date.now()} ${this}: progress bars are fighting for control of the scene navigation`,
             );
@@ -91,7 +92,9 @@ class HeroProgressBarV13 {
             this._progressBar?.update({ pct: 1, message: this._suppressUi ? null : message });
             this._tracker?.mark(message);
 
-            --HeroProgressBarV13.#concurrentProgressBarCount;
+            if (!this._suppressUi) {
+                --HeroProgressBarV13.#concurrentProgressBarCount;
+            }
 
             if (CONFIG.debug.HERO?.ui?.progress) {
                 console.debug(`${Date.now()} ${this}: closing`);

@@ -9,7 +9,9 @@ const { FilePicker } = foundry.applications.apps;
 const { Item } = foundry.documents;
 
 export async function uploadActorFromXml(actor, xml, options = {}) {
-    if (actor.token) {
+    // allowTokenActor: managed flows (the GM mass HDC reset) re-import a synthetic token
+    // actor's own stored HDC; interactive uploads still belong on the prototype actor.
+    if (actor.token && !options.allowTokenActor) {
         ui.notifications.error("Upload a linked actor is not supported. Use the prototype actor on the right sidebar.");
         return;
     }
@@ -154,7 +156,7 @@ function createUploadProgressBar(ctx) {
         `${actor.name}: Processing HDC file`,
         fixedStageTicks + ctx.hdcItemEstimate,
         {
-            suppressUi: options.quenchUpload,
+            suppressUi: options.quenchUpload || options.silent,
             tracker: uploadPerformance,
         },
     );
@@ -164,7 +166,7 @@ function createUploadProgressBar(ctx) {
 function announceUploadStart(ctx) {
     const { actor, options } = ctx;
 
-    if (!options.quenchUpload && actor.id) {
+    if (!options.quenchUpload && !options.silent && actor.id) {
         // Fire and forget
         ChatMessage.create({
             style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
@@ -840,7 +842,7 @@ async function finalizeUpload(ctx) {
     }
 
     // Let GM know actor was uploaded (unless it is a quench test or missing ID)
-    if (!options.quenchUpload && actor.id) {
+    if (!options.quenchUpload && !options.silent && actor.id) {
         // Fire and forget
         ChatMessage.create({
             style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
@@ -870,6 +872,14 @@ async function confirmDeleteExtraItems(ctx) {
             !item.baseInfo.behaviors?.includes("non-hd"),
     );
     if (itemsToDelete.length === 0) {
+        return;
+    }
+
+    if (ctx.options.skipExtraItemsPrompt) {
+        console.log(
+            `${actor.name} kept ${itemsToDelete.length} items not in the HDC`,
+            itemsToDelete.map((item) => item.name),
+        );
         return;
     }
 
