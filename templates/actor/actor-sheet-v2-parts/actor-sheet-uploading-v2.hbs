@@ -1,6 +1,15 @@
 {{#if (getScopedFlagValue actor @root/gameSystemId "uploading")}}
     <div class="uploading">
-        {{#if (getScopedFlagValue actor @root/gameSystemId "uploadingError")}}
+        {{#if (getScopedFlagValue actor @root/gameSystemId "uploadingErrorContext" "legacyNoHdc")}}
+            <div class="uploading-error">
+                <span class="uploading-error-title">HDC upload required</span>
+                <pre class="uploading-error-message">{{{getScopedFlagValue actor @root/gameSystemId "uploadingError"}}}</pre>
+                <p class="uploading-error-report">
+                    This actor has no stored HDC data to rebuild from. Use the upload button in the sheet
+                    header to import its .hdc file.
+                </p>
+            </div>
+        {{else if (getScopedFlagValue actor @root/gameSystemId "uploadingError")}}
             <div class="uploading-error">
                 <span class="uploading-error-title">Upload failed, please Report</span>
                 <span class="uploading-error-versions">

@@ -8,7 +8,8 @@
             <b>{{worldActorCount}}</b> world actor(s) and <b>{{unlinkedTokenCount}}</b> unlinked token(s) will be
             processed.
             {{#if legacyCount}}
-                <b>{{legacyCount}}</b> have no stored HDC and will be skipped (listed after the run).
+                <b>{{legacyCount}}</b> have no stored HDC: they will be locked into an error state that requires
+                an HDC upload to clear (listed after the run).
             {{/if}}
         </p>
     </div>
@@ -32,7 +33,7 @@
         {{/if}}
 
         {{#if results.legacy.length}}
-            <p><b>No stored HDC — re-upload the .hdc file manually ({{results.legacy.length}}):</b></p>
+            <p><b>No stored HDC — locked until their .hdc file is uploaded ({{results.legacy.length}}):</b></p>
             <ul>
                 {{#each results.legacy}}
                     <li><b>{{this.name}}</b> ({{this.context}})</li>

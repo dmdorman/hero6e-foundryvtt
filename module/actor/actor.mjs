@@ -1715,6 +1715,12 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             result = false;
         }
 
+        // Stuck in the upload-error state (failed upload, or reset without stored HDC)
+        if (this.flags?.[game.system.id]?.uploading) {
+            badStatus.push("REQUIRES HDC UPLOAD");
+            result = false;
+        }
+
         // Is not actor's turn to act
         // AaronWasHere 3/30/2025: Was unable to full heal Spctral Daemon LordB
         //  which tries to toggle on FLIGHT.  It was not part of the combat tracker.

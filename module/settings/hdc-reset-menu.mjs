@@ -73,6 +73,18 @@ export class HdcResetMenu extends HandlebarsApplicationMixin(ApplicationV2) {
 
                 if (!actor.system._hdcXml) {
                     results.legacy.push({ name: actor.name, context });
+                    // Lock into the sheet's upload-error state until an HDC upload restores it
+                    await actor.update({
+                        [`flags.${game.system.id}.uploading`]: true,
+                        [`flags.${game.system.id}.uploadingError`]:
+                            "No stored HDC data to reset from. Upload this actor's .hdc file to restore it.",
+                        [`flags.${game.system.id}.uploadingErrorContext`]: {
+                            legacyNoHdc: true,
+                            foundry: game.release?.display || game.version,
+                            foundryBuild: game.release?.build ?? null,
+                            system: game.system.version,
+                        },
+                    });
                     continue;
                 }
 
