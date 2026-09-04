@@ -3231,10 +3231,31 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
     }
 
     async addHeroSystemManeuvers() {
+        const existingManeuvers = this.items.filter((power) => power.type?.includes("maneuver"));
+
+        // Maneuver definitions derive purely from CONFIG for a given edition and system
+        // version, so a matching set of same-version items is guaranteed identical:
+        // skip the delete/recreate, which also preserves runtime state (e.g. an active Dodge).
+        const expectedManeuvers = (this.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e).filter((power) =>
+            power.type?.includes("maneuver"),
+        );
+        if (existingManeuvers.length === expectedManeuvers.length) {
+            const expectedNameByXmlid = new Map(expectedManeuvers.map((power) => [power.key, power.name]));
+            const seenXmlids = new Set();
+            const unchanged = existingManeuvers.every((item) => {
+                if (seenXmlids.has(item.system.XMLID)) return false;
+                seenXmlids.add(item.system.XMLID);
+                return (
+                    expectedNameByXmlid.get(item.system.XMLID) === item.name &&
+                    item.system.is5e === this.is5e &&
+                    item.system.versionHeroSystem6eCreated === game.system.version
+                );
+            });
+            if (unchanged) return;
+        }
+
         // Delete all existing maneuvers
-        const existingManeuverIds = this.items
-            .filter((power) => power.type?.includes("maneuver"))
-            .map((item) => item.id);
+        const existingManeuverIds = existingManeuvers.map((item) => item.id);
         if (existingManeuverIds.length) {
             // Close any open Item sheets
             for (const app of foundry.applications.instances.values()) {
@@ -3248,10 +3269,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         }
 
         // Add the maneuvers for this system
-        const powerList = this.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
-        const maneuverItemsData = powerList
-            .filter((power) => power.type?.includes("maneuver"))
-            .map((maneuver) => this.buildManeuverData(maneuver));
+        const maneuverItemsData = expectedManeuvers.map((maneuver) => this.buildManeuverData(maneuver));
 
         // Create based on this being a database object or not
         if (this.id) {
