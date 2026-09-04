@@ -8038,7 +8038,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         if (chargeModifier && chargeModifier.parent.item === this) {
             consumableChanges["system._charges"] = this.system.chargesMax;
             if (chargeModifier.CLIPS) {
-                consumableChanges["system._clips"] = this.system.clipsMax;
+                // _clips counts spare clips: full means one loaded plus clipsMax - 1 in reserve
+                consumableChanges["system._clips"] = this.system.clipsMax - 1;
             }
         }
         if (this.system.XMLID === "ENDURANCERESERVE") {
