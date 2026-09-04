@@ -554,22 +554,22 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         uploadProgressBar.advance(`${actor.name}: Validating powers`);
 
         // Validate everything that's been imported
-        actor.items.forEach(async (item) => {
+        for (const item of actor.items) {
             const power = item.baseInfo;
 
             // Power needs to exist
             if (!power) {
-                await ui.notifications.error(
-                    `${actor.name}/${item.detailedName()} has unknown power XMLID. Please report.`,
-                    { console: true, permanent: true },
-                );
+                ui.notifications.error(`${actor.name}/${item.detailedName()} has unknown power XMLID. Please report.`, {
+                    console: true,
+                    permanent: true,
+                });
             } else if (!power.behaviors) {
-                await ui.notifications.error(
+                ui.notifications.error(
                     `${actor.name}/${item.detailedName()} does not have behaviors defined. Please report.`,
                     { console: true, permanent: true },
                 );
             }
-        });
+        }
 
         uploadProgressBar.advance(`${actor.name}: Processed non characteristics`, 0);
         uploadProgressBar.advance(`${actor.name}: Processed all items`, 0);
