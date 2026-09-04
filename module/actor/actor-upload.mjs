@@ -743,6 +743,16 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
             });
         }
 
+        // Deferred from per-item _onUpdate during the sweep: recompute encumbrance and
+        // refresh token vision once, now that every item is settled
+        if (actor.id) {
+            await actor.applyEncumbrancePenalty();
+        }
+        for (const token of actor.getActiveTokens()) {
+            token.document._prepareDetectionModes();
+            token.renderFlags.set({ refreshVisibility: true });
+        }
+
         // If we have control of this token, reacquire to update movement types
         const myToken = actor.getActiveTokens()?.[0];
         if (canvas.tokens.controlled.find((t) => t.id == myToken?.id)) {

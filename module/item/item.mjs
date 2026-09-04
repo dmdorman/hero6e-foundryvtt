@@ -1347,15 +1347,20 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             return;
         }
 
+        // During an upload these run once at the end instead of per item: the per-item
+        // storm churns the encumbered status icon and canvas visibility, and concurrent
+        // unawaited encumbrance runs are how duplicate encumbered effects appear.
         if (this.actor && (this.type === "equipment" || this.system.XMLID === "PENALTY_SKILL_LEVELS")) {
             // intentionally not using await, mostly because _onUpdate is not async
-            this.actor.applyEncumbrancePenalty();
+            if (!this.actor._uploadSweepActive) {
+                this.actor.applyEncumbrancePenalty();
+            }
         }
 
         // Update detection modes for SENSE items
         // Seems like a bit of a kluge.  There must be a better way.
         if (this.system.active !== undefined) {
-            if (this.actor && this.baseInfo?.type.includes("sense")) {
+            if (this.actor && !this.actor._uploadSweepActive && this.baseInfo?.type.includes("sense")) {
                 for (const token of this.actor.getActiveTokens()) {
                     token.document._prepareDetectionModes();
                     token.renderFlags.set({ refreshVisibility: true });

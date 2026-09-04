@@ -1024,7 +1024,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         }
 
         // Inventory weight and carrying capacity corrections
-        if ("items" in changed || systemData.characteristics?.str) {
+        // (deferred to a single end-of-upload run while the upload sweep is active)
+        if (!this._uploadSweepActive && ("items" in changed || systemData.characteristics?.str)) {
             await this.applyEncumbrancePenalty(changed);
         }
 
