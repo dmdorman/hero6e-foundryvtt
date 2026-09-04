@@ -893,12 +893,16 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         //TODO: range should be dynamic based on PERCEPTION
         //TODO: Add the default priority V14 values, because we will take another pass at this when we implement darkness regions.
 
+        // V14 change entries use `type` (there is no `mode` field): the schema strips
+        // unknown keys and defaults type to "add", which fails against detection modes
+        // the token doesn't already have.
+
         // If this is a TARGETING SENSE, then we can can we sense (see/hear/taste/smell) the map
         if (isTargetingSense) {
             ae.system.changes.push({
                 key: "token.sight.range",
                 value: visionMaximumDistanceInMeters, // Should be Infinity? Or blur when range exceeded?
-                mode: "upgrade", // "upgrade" has a V14 bug, so not using it, but would prefer to
+                type: "upgrade",
             });
         }
 
@@ -906,17 +910,17 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         ae.system.changes.push({
             key: `token.detectionModes.basicSight.range`,
             value: visionMaximumDistanceInMeters,
-            mode: "upgrade",
+            type: "upgrade",
         });
         ae.system.changes.push({
             key: `token.detectionModes.${visionDetectMode}.range`,
             value: visionMaximumDistanceInMeters,
-            mode: "upgrade",
+            type: "upgrade",
         });
         ae.system.changes.push({
             key: `token.detectionModes.${visionDetectMode}.enabled`,
             value: true,
-            mode: "override",
+            type: "override",
         });
 
         ae.system.XMLID = this.system.XMLID;
