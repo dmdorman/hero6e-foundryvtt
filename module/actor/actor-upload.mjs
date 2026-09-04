@@ -442,7 +442,6 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         uploadProgressBar.advance(`${actor.name}: Created Items`, itemsToCreate.length);
 
         uploadProgressBar.advance(`${actor.name}: Processing non characteristics`, 0);
-        const doLastXmlids = ["COMBAT_LEVELS", "MENTAL_COMBAT_LEVELS", "MENTALDEFENSE"];
 
         uploadProgressBar.advance(`${actor.name}: applyActiveEffects`, 0);
         const deferredEffectCreates = [];
@@ -483,13 +482,6 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
 
         uploadProgressBar.advance(`${actor.name}: applySizeEffect`, 0);
         await actor.applySizeEffect();
-
-        uploadProgressBar.advance(`${actor.name}: Processing ${doLastXmlids.length} doLastXmlids`, 0);
-        await Promise.all(
-            actor.items.filter(
-                (item) => doLastXmlids.includes(item.system.XMLID) && !item.baseInfo?.type.includes("characteristic"),
-            ),
-        );
 
         // VPP Slots
         uploadProgressBar.advance(`${actor.name}: VPP Slots auto selection`, 0);
