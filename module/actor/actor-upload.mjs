@@ -9,8 +9,7 @@ const { FilePicker } = foundry.applications.apps;
 const { Item } = foundry.documents;
 
 export async function uploadActorFromXml(actor, xml, options = {}) {
-    // allowTokenActor: managed flows (the GM mass HDC reset) re-import a synthetic token
-    // actor's own stored HDC; interactive uploads still belong on the prototype actor.
+    // allowTokenActor: managed flows only; interactive uploads belong on the prototype actor
     if (actor.token && !options.allowTokenActor) {
         ui.notifications.error("Upload a linked actor is not supported. Use the prototype actor on the right sidebar.");
         return;
@@ -28,9 +27,7 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
     const uploadPerformance = new UploadPerformance("Parse XML");
     actor.lastUploadPerformance = uploadPerformance;
 
-    // Shared state the stages build up: xml/heroJson/root from parsing, changes accumulated
-    // for the core actor writes, item split results, retained pre-upload values.
-    // silent covers both managed flows and quench runs: no chat, no progress UI.
+    // Stage pipeline state; silent (managed flows and quench runs) suppresses chat and progress UI
     const ctx = {
         actor,
         options,
@@ -42,8 +39,7 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
 
     try {
         if (!parseHdcXml(ctx)) {
-            // Managed flows (mass HDC reset) have no UI to notice the parser error and
-            // would otherwise count this as a successful reset
+            // Without this, managed flows (no UI) would count a parse failure as a successful reset
             if (options.silent) {
                 throw new Error("HDC failed to parse");
             }
@@ -876,8 +872,8 @@ async function finalizeUpload(ctx) {
 }
 
 // Item deletion sometimes skips actor-level effect cleanup (FoundryVTT 13 bug?), so drop
-// those effects in the same pass — one batch instead of a turnOff per item, each of which
-// is 1-2 writes that re-run full data prep (51s on a large actor).
+// those effects in the same pass. One batch, not a turnOff per item: each turnOff is
+// a document write that re-runs full data prep.
 async function deleteItemsAndOrphanedEffects(actor, items, operation) {
     const deletedItemUuids = new Set(items.map((item) => item.uuid));
     const orphanEffectIds = actor.effects.filter((ae) => deletedItemUuids.has(ae.origin)).map((ae) => ae.id);

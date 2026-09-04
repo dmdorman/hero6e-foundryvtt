@@ -574,7 +574,7 @@ export function hdcTimeOptionIdToSeconds(durationOptionId) {
     return seconds;
 }
 
-// Millisecond precision below 5s (sub-second uploads read as "836ms", not "1 seconds")
+// Millisecond precision below 5s
 export function formatDuration(totalMs) {
     totalMs = Math.round(totalMs);
     if (totalMs < 1000) {

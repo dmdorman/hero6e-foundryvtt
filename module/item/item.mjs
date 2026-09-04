@@ -1349,9 +1349,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             return;
         }
 
-        // During an upload these run once at the end instead of per item: the per-item
-        // storm churns the encumbered status icon and canvas visibility, and concurrent
-        // unawaited encumbrance runs are how duplicate encumbered effects appear.
+        // During an upload these run once at the end: per-item runs churn the token UI,
+        // and concurrent unawaited encumbrance runs create duplicate encumbered effects.
         if (this.actor && (this.type === "equipment" || this.system.XMLID === "PENALTY_SKILL_LEVELS")) {
             // intentionally not using await, mostly because _onUpdate is not async
             if (!this.actor._uploadSweepActive) {
@@ -8092,11 +8091,9 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             );
         }
 
-        // Deterministic reassignment: parsing the same HDC must yield the same IDs every
-        // time, or re-uploads can't match these items to their stored counterparts and
-        // wrongly flag them for deletion. Increment from the duplicated ID (HDC IDs are
-        // millisecond timestamps, so nearby values are almost always free; the loop
-        // handles the rare collision).
+        // Deterministic: the same HDC must yield the same IDs or re-uploads can't match
+        // repaired items and wrongly flag them for deletion. Increment from the duplicated
+        // ID; the loop handles collisions.
         const newID = itemData.system.ID + 1;
         for (let loop = 0; loop < 99; loop++) {
             if (!duplicateItem) {
