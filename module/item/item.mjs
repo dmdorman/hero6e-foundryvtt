@@ -1450,10 +1450,6 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 await ae.update({ disabled: true });
             }
         }
-
-        if (this.isAblativeDefense) {
-            await this.resetAblativeDefense();
-        }
     }
 
     // Largely used to determine if we can drag to hotbar
@@ -2111,10 +2107,12 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         return this.findModsByXmlid("ABLATIVE").OPTIONID;
     }
 
+    getResetAblativeDefenseData() {
+        return { "system.ablative": 0 };
+    }
+
     async resetAblativeDefense() {
-        return this.update({
-            "system.ablative": 0,
-        });
+        return this.update(this.getResetAblativeDefenseData());
     }
 
     get showClipsReload() {
