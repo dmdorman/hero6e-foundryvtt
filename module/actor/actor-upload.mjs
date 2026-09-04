@@ -337,10 +337,19 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         // Working on a merge to update previously existing items.
         // Add existing item.id (if it exists), which we will use for the pending update.
         // There may be an item that was converted to equipment/power
-        // Also note that system.ID is natively a string from HDC, which we coerce into INT so use == instead of ===
+        // system.ID is natively a string from HDC but coerced to Number in the dataModel,
+        // so both maps key on String; first match wins to mirror items.find.
+        const existingItemsByHdcId = new Map();
+        const existingItemsById = new Map();
+        for (const item of actor.items) {
+            if (!existingItemsByHdcId.has(String(item.system.ID))) {
+                existingItemsByHdcId.set(String(item.system.ID), item);
+            }
+            existingItemsById.set(item.id, item);
+        }
         itemsToCreate = itemsToCreate.map((m) =>
             foundry.utils.mergeObject(m, {
-                _id: actor.items.find((i) => i.system.ID == m.system.ID)?.id,
+                _id: existingItemsByHdcId.get(String(m.system.ID))?.id,
             }),
         );
         const itemsToUpdate = itemsToCreate.filter((o) => o._id);
@@ -361,7 +370,7 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         // The type of a Document can be changed only if the system field
         // is force-replaced (==) or updated with {recursive: false}
         for (const item of itemsToUpdate) {
-            const itemExisting = actor.items.find((o) => o.id === item._id);
+            const itemExisting = existingItemsById.get(item._id);
             if (itemExisting?.type !== item.type) {
                 await ui.notifications.warn(`${item.name} changed from type=${itemExisting.type} to type=${item.type}`);
 
@@ -388,7 +397,7 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         // need to remove the EVERYMAN value as for some reason HDC doesn't
         // specifically include EVERYMAN="No".  Seems like a HD bug.
         for (const item of itemsToUpdate.filter((item) => !item.system.EVERYMAN)) {
-            const itemExisting = actor.items.find((o) => o.id === item._id);
+            const itemExisting = existingItemsById.get(item._id);
             if (itemExisting.system.EVERYMAN) {
                 // HDC didn't reference EVERYMAN
                 // so we will specify it as null (false)
@@ -402,7 +411,7 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         // need to remove it as for some reason HDC doesn't
         // specifically include it.
         for (const item of itemsToUpdate.filter((item) => !item.system.TEXT)) {
-            const itemExisting = actor.items.find((o) => o.id === item._id);
+            const itemExisting = existingItemsById.get(item._id);
             if (itemExisting.system.TEXT) {
                 console.warn(`Adding TEXT to ${item.name}/${item.system.XMLID}`);
                 item.system.TEXT = "";
@@ -413,7 +422,7 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         // need to remove PARENTID as HDC doesn't
         // specifically include it.
         for (const item of itemsToUpdate.filter((item) => !item.system.PARENTID)) {
-            const itemExisting = actor.items.find((o) => o.id === item._id);
+            const itemExisting = existingItemsById.get(item._id);
             if (itemExisting.system.PARENTID) {
                 item.system.PARENTID = null;
             }
@@ -762,10 +771,12 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         // Delete any old items that weren't updated, added or part of freeStuff
         if (actor.id) {
             // Careful: the HDC ID is initially a string, but coerced to Number in dataModel thus ==
+            const updatedIds = new Set(itemsToUpdate.map((o) => o._id));
+            const createdHdcIds = new Set(itemsToCreate.map((p) => String(p.system.ID)));
             const itemsToDelete = actor.items.filter(
                 (item) =>
-                    !itemsToUpdate.find((o) => item.id === o._id) &&
-                    !itemsToCreate.find((p) => item.system.ID == p.system.ID) &&
+                    !updatedIds.has(item.id) &&
+                    !createdHdcIds.has(String(item.system.ID)) &&
                     !item.isCombatManeuver &&
                     !item.baseInfo.behaviors?.includes("non-hd"),
             );
