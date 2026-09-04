@@ -1,5 +1,6 @@
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
 import { HeroSystem6eCombatTrackerSingle } from "../combatTracker-single.mjs";
+import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
 import {
     setQuenchTimeout,
     createQuenchScene,
@@ -13,7 +14,7 @@ export function registerStatusEffectTests(quench) {
     quench.registerBatch(
         `${game.system.id}.testing.statusEffects`,
         (context) => {
-            const { describe, it, before, beforeEach, after, assert } = context;
+            const { describe, it, before, beforeEach, after, afterEach, assert } = context;
 
             // Awaitable promise helper that resolves exactly when a specific Foundry hook settles
             const waitForHook = (hookName) =>
@@ -51,6 +52,14 @@ export function registerStatusEffectTests(quench) {
                 }
                 return null;
             };
+
+            // Snapshot before any test in this batch runs so the final immutability test can catch
+            // a shared status template mutated by a bare `...template` spread (core's _shimChanges
+            // getters are non-enumerable and correctly invisible to JSON.stringify).
+            let statusEffectsObjSnapshot;
+            before(function () {
+                statusEffectsObjSnapshot = JSON.parse(JSON.stringify(HeroSystem6eActorActiveEffects.statusEffectsObj));
+            });
 
             describe("Actor Status Effect State Machine Matrix", function () {
                 setQuenchTimeout(this);
@@ -449,6 +458,46 @@ export function registerStatusEffectTests(quench) {
                     );
                 });
 
+                it("Redundant halving dedup keeps a co-located ADD change intact", async function () {
+                    const dcvMaxBefore = quenchActor.system.characteristics.dcv.max;
+
+                    // Prone and Stunned each carry an independent 0.5 MULTIPLY on the same key,
+                    // exercising the MULTIPLY-only dedup in _removeRedundantHalvingActiveEffects
+                    await quenchActor.toggleStatusEffect(effectsObj.proneEffect.id, { active: true });
+                    await quenchActor.toggleStatusEffect(effectsObj.stunEffect.id, { active: true });
+
+                    // An ADD sharing the halved key must survive the MULTIPLY-only dedup
+                    await quenchActor.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "_Quench_DCV_Aid",
+                            system: {
+                                changes: [
+                                    {
+                                        key: "system.characteristics.dcv.max",
+                                        value: 4,
+                                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
+                                    },
+                                ],
+                            },
+                        },
+                    ]);
+
+                    try {
+                        const expectedDcvMax = roundFavorPlayerAwayFromZero((dcvMaxBefore + 4) * 0.5);
+                        assert.strictEqual(
+                            quenchActor.system.characteristics.dcv.max,
+                            expectedDcvMax,
+                            "ADD applied before the single surviving 0.5 MULTIPLY, per priority order.",
+                        );
+                    } finally {
+                        await quenchActor.deleteEmbeddedDocuments(
+                            "ActiveEffect",
+                            quenchActor.effects.map((effect) => effect.id),
+                        );
+                    }
+                });
+
                 it("Post-Segment-12 recovery does not wake a KO'd character", async function () {
                     await quenchActor.update({ "system.characteristics.stun.value": 20 });
                     await quenchActor.update({ "system.characteristics.stun.value": -5 });
@@ -702,6 +751,129 @@ export function registerStatusEffectTests(quench) {
                     } finally {
                         await trackerActor.delete();
                     }
+                });
+            });
+
+            // The native engine and the manual 5e/full-heal recompute share the halving rule and
+            // MULTIPLY rounding; they must agree on every change mix.
+            describe("Active Effect Change Application", function () {
+                setQuenchTimeout(this);
+                let quenchActor = null;
+                let naturalDcvMax = 0;
+
+                const dcvChange = (value, type) => ({
+                    key: "system.characteristics.dcv.max",
+                    value,
+                    type,
+                    priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY[type.toUpperCase()],
+                });
+
+                // An ADD first, so the multipliers work on a number big enough for stacking,
+                // deduping and "first halving only" to give three different answers.
+                const applyDcvChanges = (changes) =>
+                    quenchActor.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "_Quench_DCV_Changes",
+                            system: {
+                                changes: [dcvChange(9, CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD), ...changes],
+                            },
+                        },
+                    ]);
+
+                before(async function () {
+                    quenchActor = await Actor.create({
+                        name: "_Quench_AE_Application",
+                        type: "pc",
+                        img: "icons/svg/mystery-man.svg",
+                        system: { is5e: false },
+                    });
+                    naturalDcvMax = quenchActor.system.characteristics.dcv.max;
+                    assert.ok(naturalDcvMax > 0, "Actor starts with a positive DCV max.");
+                });
+
+                afterEach(async function () {
+                    await quenchActor?.deleteEmbeddedDocuments(
+                        "ActiveEffect",
+                        quenchActor.effects.map((effect) => effect.id),
+                    );
+                });
+
+                after(async function () {
+                    await quenchActor?.delete();
+                    quenchActor = null;
+                });
+
+                it("The most severe halving supersedes a milder one", async function () {
+                    await applyDcvChanges([
+                        dcvChange(0.5, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                        dcvChange(0.25, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                    ]);
+
+                    assert.strictEqual(
+                        quenchActor.system.characteristics.dcv.max,
+                        roundFavorPlayerAwayFromZero((naturalDcvMax + 9) * 0.25),
+                        "Only the x1/4 applied: it neither stacked with nor lost to the x1/2.",
+                    );
+                });
+
+                it("A multiplier of one or more stacks with a halving", async function () {
+                    await applyDcvChanges([
+                        dcvChange(2, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                        dcvChange(0.5, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                    ]);
+
+                    assert.strictEqual(
+                        quenchActor.system.characteristics.dcv.max,
+                        roundFavorPlayerAwayFromZero(roundFavorPlayerAwayFromZero((naturalDcvMax + 9) * 2) * 0.5),
+                        "The x2 survived the halving dedup and the x1/2 applied once.",
+                    );
+                });
+
+                it("The manual engine recomputes the same max Foundry applied", async function () {
+                    await applyDcvChanges([
+                        dcvChange(2, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                        dcvChange(0.5, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                        dcvChange(0.25, CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY),
+                    ]);
+
+                    // The seam the 5e recompute and fullHealth apply changes through, fed the same
+                    // pre-effect number Foundry's native application started from.
+                    const recomputedMax = quenchActor._applyDirectActiveEffectChangesToDerivedMax("dcv", naturalDcvMax);
+
+                    assert.strictEqual(
+                        recomputedMax,
+                        roundFavorPlayerAwayFromZero(roundFavorPlayerAwayFromZero((naturalDcvMax + 9) * 2) * 0.25),
+                        "ADD, then x2, then the most severe halving only.",
+                    );
+                    assert.strictEqual(
+                        quenchActor.system.characteristics.dcv.max,
+                        recomputedMax,
+                        "Natively applied max and hand-recomputed max agree.",
+                    );
+                });
+            });
+
+            // Last in the batch on purpose: it must run after every describe above that could
+            // mutate a shared template in place.
+            describe("Status Effect Template Immutability", function () {
+                it("statusEffectsObj templates are unchanged after the rest of this batch has run", function () {
+                    const current = HeroSystem6eActorActiveEffects.statusEffectsObj;
+                    const driftedKeys = [];
+
+                    for (const key of Object.keys(statusEffectsObjSnapshot)) {
+                        const before = JSON.stringify(statusEffectsObjSnapshot[key]);
+                        const after = JSON.stringify(current[key]);
+                        if (before !== after) driftedKeys.push(key);
+                    }
+                    for (const key of Object.keys(current)) {
+                        if (!(key in statusEffectsObjSnapshot)) driftedKeys.push(`${key} (new key)`);
+                    }
+
+                    assert.deepEqual(
+                        driftedKeys,
+                        [],
+                        `Status effect template(s) mutated in place: ${driftedKeys.join(", ") || "none"}`,
+                    );
                 });
             });
         },

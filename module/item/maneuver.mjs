@@ -1,4 +1,5 @@
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
+import { activeEffectChanges } from "../utility/active-effects.mjs";
 import { activeSingleTrackerCombatFor, isQuenchTestRunning } from "../utility/util.mjs";
 import { roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { calculateVelocityInSystemUnits } from "../utility/units.mjs";
@@ -340,7 +341,7 @@ const nameWithXmlid = (item) => (item.name ? `${item.name} (${item.system.XMLID}
 const statusName = (_item, status) => status.name;
 const traitChanges = (_item, _status, { dcvTrait, ocvTrait }) =>
     [addDcvTraitToChanges(dcvTrait), addOcvTraitToChanges(ocvTrait)].filter(Boolean);
-const statusChanges = (_item, status) => foundry.utils.deepClone(status.changes);
+const statusChanges = (_item, status) => foundry.utils.deepClone(activeEffectChanges(status));
 
 /**
  * Declarative specs for the status effect each maneuver activation turns on.
@@ -467,8 +468,8 @@ export async function activateManeuver(item) {
         activeEffect = buildManeuverActiveEffect(activeEffect, item, spec, { dcvTrait, ocvTrait });
     }
 
-    // The effect may be a reused document or a plain template object; read the canonical array
-    const _changes = activeEffect.system?.changes ?? [];
+    // The effect may be a reused document or a plain template object
+    const _changes = activeEffectChanges(activeEffect);
 
     if (activeEffect.name && _changes.length > 0) {
         // There is no need to keep track of OCV/DCV changes when not in combat
@@ -542,7 +543,8 @@ export async function doManeuverEffects(item, action, targetToken) {
             if (hasGrabTrait) {
                 await defenderActor.createEmbeddedDocuments("ActiveEffect", [
                     {
-                        ...HeroSystem6eActorActiveEffects.statusEffectsObj.grabEffect,
+                        // deepClone: freeze on statusEffectsObj is shallow and document construction takes ownership of system/changes
+                        ...foundry.utils.deepClone(HeroSystem6eActorActiveEffects.statusEffectsObj.grabEffect),
                         name: `Grabbed by ${attackerActor.name}`,
                         flags: {
                             [game.system.id]: {
@@ -570,7 +572,7 @@ export async function doManeuverEffects(item, action, targetToken) {
     if (hasGrabTrait && validTargets.length > 0) {
         await attackerActor.createEmbeddedDocuments("ActiveEffect", [
             {
-                ...HeroSystem6eActorActiveEffects.statusEffectsObj.grabEffect,
+                ...foundry.utils.deepClone(HeroSystem6eActorActiveEffects.statusEffectsObj.grabEffect),
                 name: `Grabbing ${validTargets.map((t) => t.name).join(" + ")}`,
                 flags: {
                     [game.system.id]: {

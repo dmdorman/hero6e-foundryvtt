@@ -1,4 +1,5 @@
 import { HeroSystem6eActor } from "../actor/actor.mjs";
+import { activeEffectChanges, multiplyFavoringPlayer } from "../utility/active-effects.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
 import {
     combatSkillLevelsForAttack,
@@ -86,8 +87,12 @@ function multipowerFrameworkSchema() {
 }
 
 class HeroNumberField extends foundry.data.fields.NumberField {
+    /** @override */
     _applyChangeMultiply(value, delta) {
-        return roundFavorPlayerAwayFromZero(value * delta);
+        // Core's NumberField multiplies unconditionally; guard against a non-numeric current
+        // value (e.g. null) so we don't silently coerce it into a bogus numeric override.
+        if (typeof value !== "number") return value;
+        return multiplyFavoringPlayer(value, delta);
     }
 }
 
@@ -1855,7 +1860,7 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
      */
     get maxTitle() {
         const ary = [];
-        const effectChangesOf = (ae) => (ae.changes?.length ? ae.changes : (ae.system?.changes ?? []));
+        const effectChangesOf = (ae) => activeEffectChanges(ae);
 
         // One tooltip line per effect: name with the change's signed amount, the same
         // "Attacker: Item" origin string the effect config sheet shows as HERO.Origin, and the

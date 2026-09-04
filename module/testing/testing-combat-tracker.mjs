@@ -1210,6 +1210,32 @@ export function registerCombatTests(quench) {
                     expect(expired, "re-declared dodge expired at the actor's next Phase").to.be.true;
                 });
 
+                it("Haymaker activation carries its DCV penalty through system.changes", async function () {
+                    // Brace/Haymaker route their effect changes through statusChanges (a deepClone
+                    // of the haymakerEffect template), unlike Dodge/Block's traitChanges — exercise
+                    // that path specifically since nothing else in this batch does.
+                    const brawler = await makeActor("_Quench Haymaker Brawler", { dex: 20, spd: 2 });
+                    if (!brawler.items.find((i) => i.system?.XMLID === "HAYMAKER")) {
+                        await brawler.addHeroSystemManeuvers();
+                    }
+                    const haymakerItem = brawler.items.find((i) => i.system?.XMLID === "HAYMAKER");
+
+                    const combat = await makeCombat([brawler]);
+                    await combat.startCombat();
+                    ui.combat.viewed = combat;
+
+                    await haymakerItem.toggle();
+
+                    const haymakerAe = haymakerItem.effects.contents[0];
+                    expect(haymakerAe, "activation created the effect").to.exist;
+                    const dcvChange = (haymakerAe.system?.changes ?? []).find(
+                        (c) => c.key === "system.characteristics.dcv.max",
+                    );
+                    expect(dcvChange, "haymaker effect carries a DCV change in system.changes").to.exist;
+                    expect(dcvChange.value).to.equal(-5);
+                    expect(dcvChange.type).to.equal(CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD);
+                });
+
                 it("Should expire only maneuver effects not declared at this instant", async function () {
                     const { expireManeuverNextPhaseEffects } = await import("../item/maneuver.mjs");
 

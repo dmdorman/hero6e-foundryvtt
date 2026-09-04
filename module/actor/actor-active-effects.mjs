@@ -1,5 +1,9 @@
 import { HEROSYS } from "../herosystem6e.mjs";
-import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
+import {
+    activeEffectChanges,
+    multiplyFavoringPlayer,
+    removeRedundantHalvingChanges,
+} from "../utility/active-effects.mjs";
 
 export class HeroSystem6eActorActiveEffectsSystemData extends foundry.data.ActiveEffectTypeDataModel {
     static defineSchema() {
@@ -53,20 +57,22 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 id: "stunned",
                 //img: "icons/svg/daze.svg",
                 img: `systems/${module}/icons/foundry/daze.svg`,
-                changes: [
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: 0.5,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                    {
-                        key: "system.characteristics.dmcv.max",
-                        value: 0.5,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: 0.5,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                        {
+                            key: "system.characteristics.dmcv.max",
+                            value: 0.5,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                    ],
+                },
             },
             bleedingEffect: {
                 name: game.i18n.localize("EFFECT.StatusBleeding"),
@@ -79,116 +85,128 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 id: "unconscious",
                 img: "icons/svg/unconscious.svg",
                 showIcon: 2, // always
-                changes: [
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: 0,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
-                    },
-                    {
-                        key: "system.characteristics.dmcv.max",
-                        value: 0,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: 0,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
+                        },
+                        {
+                            key: "system.characteristics.dmcv.max",
+                            value: 0,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
+                        },
+                    ],
+                },
             },
             knockedOutEffect: {
                 name: game.i18n.localize("EFFECT.StatusKnockedOut"),
                 id: "knockedOut",
                 //img: "icons/svg/stoned.svg",
                 img: `systems/${module}/icons/foundry/stoned.svg`,
-                changes: [
-                    {
-                        key: "system.characteristics.ocv.max",
-                        value: 0,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
-                    },
-                    {
-                        key: "system.characteristics.omcv.max",
-                        value: 0,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
-                    },
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: 0,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
-                    },
-                    {
-                        key: "system.characteristics.dmcv.max",
-                        value: 0,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.ocv.max",
+                            value: 0,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
+                        },
+                        {
+                            key: "system.characteristics.omcv.max",
+                            value: 0,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
+                        },
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: 0,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
+                        },
+                        {
+                            key: "system.characteristics.dmcv.max",
+                            value: 0,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
+                        },
+                    ],
+                },
             },
             deadEffect: {
                 name: game.i18n.localize("EFFECT.StatusDead"),
                 id: "dead",
                 //img: "icons/svg/skull.svg",
                 img: `systems/${module}/icons/foundry/skull.svg`,
-                changes: [
-                    {
-                        key: "system.characteristics.ocv.max",
-                        value: 0,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
-                    },
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: 0,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.ocv.max",
+                            value: 0,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
+                        },
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: 0,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.OVERRIDE,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.OVERRIDE,
+                        },
+                    ],
+                },
             },
             asleepEffect: {
                 name: game.i18n.localize("EFFECT.StatusAsleep"),
                 id: "asleep",
                 img: "icons/svg/sleep.svg",
                 showIcon: 2, // always
-                // changes: [
-                //     { key: "system.characteristics.ocv.value", value: 0.5, type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY },
-                //     { key: "system.characteristics.dcv.value", value: 0.5, type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY }
-                // ]
+                // system: {
+                //     changes: [
+                //         { key: "system.characteristics.ocv.value", value: 0.5, type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY },
+                //         { key: "system.characteristics.dcv.value", value: 0.5, type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY }
+                //     ]
+                // }
             },
             proneEffect: {
                 id: "prone",
                 name: game.i18n.localize("EFFECT.StatusProne"),
                 img: "icons/svg/falling.svg",
                 showIcon: 2, // always
-                changes: [
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: 0.5,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: 0.5,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                    ],
+                },
             },
             entangledEffect: {
                 id: "entangled",
                 name: game.i18n.localize("EFFECT.StatusEntangled"),
                 img: "icons/svg/net.svg",
                 showIcon: 2, // always
-                changes: [
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: 0,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                    {
-                        key: "system.characteristics.ocv.max",
-                        value: 0.5,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: 0,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                        {
+                            key: "system.characteristics.ocv.max",
+                            value: 0.5,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                    ],
+                },
             },
             paralyzedEffect: {
                 id: "paralysis",
@@ -249,27 +267,31 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 id: "underwater",
                 name: game.i18n.localize("EFFECT.Underwater"),
                 img: `systems/${module}/icons/underwater.svg`,
-                changes: [
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: -2,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: -2,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
+                        },
+                    ],
+                },
             },
             standingInWaterEffect: {
                 id: "standingInWater",
                 name: game.i18n.localize("EFFECT.StandingInWater"),
                 img: `systems/${module}/icons/standingInWater.svg`,
-                changes: [
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: -2,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: -2,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
+                        },
+                    ],
+                },
             },
             holdingBreathEffect: {
                 id: "holdingBreath",
@@ -296,14 +318,16 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 },
                 img: "icons/svg/statue.svg",
                 showIcon: 2, // always
-                changes: [
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: 0.5,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: 0.5,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                    ],
+                },
             },
             clubWeaponEffect: {
                 id: "club-weapon",
@@ -330,28 +354,32 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 name: "Grabbed",
                 img: `systems/${module}/icons/noun-wrestling-1061808.svg`,
                 showIcon: 2, // always
-                changes: [
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: 0.5,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: 0.5,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                    ],
+                },
             },
             haymakerEffect: {
                 id: "haymaker",
                 name: "Haymaker",
                 img: `icons/svg/sword.svg`,
                 showIcon: 2, // always
-                changes: [
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: -5,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: -5,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.ADD,
+                        },
+                    ],
+                },
             },
             strikeEffect: {
                 id: "strike",
@@ -372,20 +400,22 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 name: "NonCombat Movement",
                 img: `systems/${module}/icons/person-running.svg`,
                 showIcon: 2, // always
-                changes: [
-                    {
-                        key: "system.characteristics.ocv.max",
-                        value: 0,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: 0.5,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.ocv.max",
+                            value: 0,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: 0.5,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                    ],
+                },
             },
             tunnelingEffect: {
                 id: "tunneling",
@@ -439,20 +469,22 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 name: game.i18n.localize("EFFECT.StatusSenseSightDisabled"),
                 img: "icons/svg/blind.svg",
                 showIcon: 2, // always
-                changes: [
-                    {
-                        key: "system.characteristics.ocv.max",
-                        value: 0.5,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                    {
-                        key: "system.characteristics.dcv.max",
-                        value: 0.5,
-                        type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
-                        priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
-                    },
-                ],
+                system: {
+                    changes: [
+                        {
+                            key: "system.characteristics.ocv.max",
+                            value: 0.5,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                        {
+                            key: "system.characteristics.dcv.max",
+                            value: 0.5,
+                            type: CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY,
+                            priority: CONFIG.HERO.ACTIVE_EFFECT_PRIORITY.MULTIPLY,
+                        },
+                    ],
+                },
             },
             silencedEffect: {
                 id: "silence",
@@ -588,7 +620,7 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
 
         if (effect.XMLID === "naturalBodyHealing") return null;
 
-        const effectChanges = effect.changes?.length ? effect.changes : (effect.system?.changes ?? []);
+        const effectChanges = activeEffectChanges(effect);
         const characteristics = effectChanges
             .map((c) => c.key?.match(/^system\.characteristics\.([a-z0-9]+)\./)?.[1])
             .filter(Boolean);
@@ -632,10 +664,11 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
                 update = current && delta;
                 break;
             case "number":
-                update = roundFavorPlayerAwayFromZero(current * delta);
+                update = multiplyFavoringPlayer(current, delta);
                 break;
         }
-        changes[change.key] = update;
+        // Core's guard: writing an undefined update would register a junk override for the key.
+        if (update !== current && update !== undefined) changes[change.key] = update;
     }
 
     _onCreate(data, options, userId) {
@@ -656,19 +689,20 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
         // back in line. Fade handles its own value bookkeeping and zeroes its changes before the final
         // delete, so this clamp is a no-op there. Only the initiating client writes.
         if (userId === game.user.id) {
-            this._clampCharacteristicValuesAfterAdjustmentRemoval();
-
-            // A maneuver phase effect removed outside its item's toggle (effects
-            // panel, scripts) must not leave the item flagged active
-            const flags = this.flags?.[game.system.id];
-            if (flags?.type === "maneuverNextPhaseEffect" && flags.toggle) {
-                const item = this.parent;
-                if (item?.documentName === "Item" && item.system?.active) {
-                    item.update({ "system.active": false }).catch((e) =>
-                        console.error(`Maneuver active-state sync failed`, e),
-                    );
-                }
-            }
+            // Core never awaits _onDelete, so sequence the follow-up writes ourselves.
+            // A clamp failure must not skip the maneuver sync.
+            this._clampCharacteristicValuesAfterAdjustmentRemoval()
+                .catch((e) => console.error(`Adjustment clamp after effect delete failed`, e))
+                .then(() => {
+                    // A maneuver phase effect removed outside its item's toggle (effects
+                    // panel, scripts) must not leave the item flagged active
+                    const flags = this.flags?.[game.system.id];
+                    if (flags?.type !== "maneuverNextPhaseEffect" || !flags.toggle) return;
+                    const item = this.parent;
+                    if (item?.documentName !== "Item" || !item.system?.active) return;
+                    return item.update({ "system.active": false });
+                })
+                .catch((e) => console.error(`ActiveEffect delete follow-up failed`, e));
         }
     }
 
@@ -678,7 +712,7 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
         if (this.flags?.[game.system.id]?.type !== "adjustment") return;
 
         const updates = {};
-        const effectChanges = this.changes?.length ? this.changes : (this.system?.changes ?? []);
+        const effectChanges = activeEffectChanges(this);
         for (const change of effectChanges) {
             const key = change.key?.match(/^system\.characteristics\.([a-z]+)\.max$/)?.[1];
             if (!key) continue;
@@ -808,31 +842,13 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
         return "";
     }
 
+    /**
+     * Hero's non-stacking halving rule; shared with the manual engine that rebuilds 5e derived
+     * maxima so the two can never disagree.
+     * @param {Array<object>} changes - Mutated in place.
+     */
     static _removeRedundantHalvingActiveEffects(changes) {
-        // Filter out redundant multiplies, keeping lowest value
-        const mults = changes.filter((c) => c.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY);
-        if (mults.length > 1) {
-            const uniqueKeys = new Set();
-            mults.forEach((obj) => {
-                uniqueKeys.add(obj.key);
-            });
-
-            for (const key of uniqueKeys) {
-                const multsUniqueKey = mults.filter((c) => c.key === key);
-                if (multsUniqueKey.length > 1) {
-                    const minValue = Math.min(...multsUniqueKey.map((c) => parseFloat(c.value)));
-                    const keepMult = multsUniqueKey.find((c) => parseFloat(c.value) === minValue);
-                    // remove all multsUniqueKey and add back in the keepMult
-                    let index = changes.findIndex((c) => c.key === key);
-                    while (index !== -1) {
-                        changes.splice(index, 1);
-                        index = changes.findIndex((c) => c.key === key);
-                    }
-                    //changes = changes.filter((c) => c.key !== key || c.mode !== CONFIG.HERO.ACTIVE_EFFECT_MODES.MULTIPLY);
-                    changes.push(keepMult);
-                }
-            }
-        }
+        removeRedundantHalvingChanges(changes);
     }
 
     // static migrateData(source) {

@@ -1,8 +1,9 @@
 import { HeroSystem6eActor } from "../actor/actor.mjs";
+import { performAdjustment } from "../actor/actor-adjustment.mjs";
 import { HEROSYS } from "../herosystem6e.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
 //import { HeroSystem6eActor } from "../actor/actor.mjs";
-import { performAdjustment, renderAdjustmentChatCards } from "./adjustment.mjs";
+import { renderAdjustmentChatCards } from "./adjustment.mjs";
 
 const { Item } = foundry.documents;
 

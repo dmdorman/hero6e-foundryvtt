@@ -1,8 +1,8 @@
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
 
 import { HeroSystem6eActor } from "../actor/actor.mjs";
+import { performAdjustment } from "../actor/actor-adjustment.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
-import { performAdjustment } from "../utility/adjustment.mjs";
 import { getActorDefensesVsAttack } from "../utility/defense.mjs";
 
 export function registerDefenseTests(quench) {

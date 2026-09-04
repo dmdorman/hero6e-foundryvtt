@@ -7,6 +7,13 @@ import { userInteractiveVerifyOptionallyPromptThenSpendResources } from "../item
 import { HeroSystem6eItem, cloneToEffectiveAttackItem } from "../item/item.mjs";
 import { tagObjectForPersistence } from "../migration.mjs";
 import { overrideCanAct } from "../settings/settings-helpers.mjs";
+import {
+    activeEffectChangePriority,
+    activeEffectChangeType,
+    activeEffectChanges,
+    multiplyFavoringPlayer,
+    removeRedundantHalvingChanges,
+} from "../utility/active-effects.mjs";
 import { Attack, actionToJSON } from "../utility/attack.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
 import { characteristicValueToDiceParts } from "../utility/damage.mjs";
@@ -516,8 +523,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
      * Single pass over all applicable effects collecting changes that target a characteristic max,
      * keyed by lowercase characteristic. Hot-path callers (prepareDerivedData, fullHealth) build this
      * once and hand it to the helpers below instead of re-walking actor + item effects per
-     * characteristic. Reads V14 (effect.system.changes,
-     * string change.type) shapes and normalizes to a numeric mode.
+     * characteristic. Change shape, type and priority are normalized through the shared helpers so
+     * these entries order and apply exactly like the natively applied changes they mirror.
      */
     _collectActiveEffectMaxChanges() {
         // Memoized per data-preparation cycle (prepareDerivedData resets _lazy): hot-path callers
@@ -526,29 +533,28 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         if (lazy.maxChangesByKey) return lazy.maxChangesByKey;
 
         const byKey = new Map();
+        // Ties in priority fall back to the order the effects were collected in, which is how the
+        // native pass (a stable sort over this same walk) breaks them.
+        let collectionIndex = 0;
         for (const effect of this.allApplicableEffects()) {
             if (effect.disabled || effect.isSuppressed) continue;
 
             const fromStatus = effect.statuses?.size > 0;
             const fromItem = effect.parent !== this;
             const fromAdjustment = effect.flags?.[game.system.id]?.type === "adjustment";
-            const effectChanges = effect.changes?.length ? effect.changes : (effect.system?.changes ?? []);
-            for (const [index, change] of effectChanges.entries()) {
+            const effectChanges = activeEffectChanges(effect);
+            for (const change of effectChanges) {
                 const match = change.key?.match(/^system\.characteristics\.([a-z]+)\.max$/);
                 if (!match) continue;
 
-                const rawType = change.type ?? change.type;
-                const mode =
-                    typeof rawType === "number"
-                        ? rawType
-                        : CONFIG.HERO.ACTIVE_EFFECT_MODES[String(rawType ?? "").toUpperCase()];
+                const changeType = activeEffectChangeType(change);
 
                 const entries = byKey.get(match[1]) ?? [];
                 entries.push({
                     change,
-                    mode,
-                    index,
-                    priority: change.priority ?? (mode ?? 0) * 10,
+                    changeType,
+                    index: collectionIndex++,
+                    priority: activeEffectChangePriority(change, changeType),
                     fromStatus,
                     fromItem,
                     fromAdjustment,
@@ -563,8 +569,10 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
     /**
      * Applies collected active-effect change entries on top of a starting value, mirroring Foundry's
-     * own AE application (modes, priority order) plus the Hero-specific rules Foundry can't express:
-     * player-favorable rounding on MULTIPLY and non-stacking halved conditions.
+     * own AE application (change types, priority order) plus the Hero-specific rules Foundry can't
+     * express: player-favorable rounding on MULTIPLY and non-stacking halved conditions, both
+     * shared with the native path. Callers passing a filtered subset can diverge from the native
+     * result when the most severe halving for a key lives in the excluded slice.
      * @param {number} startValue - The value before effects.
      * @param {Array} entries - Entries from _collectActiveEffectMaxChanges (pre-filtered by caller).
      * @returns {number}
@@ -572,36 +580,35 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
     _applyActiveEffectChangeEntries(startValue, entries) {
         if (entries.length === 0) return startValue;
 
-        const modes = CONFIG.HERO.ACTIVE_EFFECT_MODES;
         const sorted = [...entries].sort((a, b) => a.priority - b.priority || a.index - b.index);
+        removeRedundantHalvingChanges(sorted, {
+            changeKeyOf: (entry) => entry.change.key,
+            changeTypeOf: (entry) => entry.changeType,
+            changeValueOf: (entry) => entry.change.value,
+        });
 
         let value = startValue;
-        // Halved conditions do not stack: a character who is both Prone and Grabbed is at 1/2 DCV,
-        // not 1/4. Apply the first halving and skip the rest.
-        let halvingApplied = false;
-        for (const { change, mode } of sorted) {
-            if (mode == null) continue;
+        for (const { change, changeType } of sorted) {
             const delta = Number(change.value);
             if (!Number.isFinite(delta)) continue;
 
-            switch (mode) {
-                case modes.ADD:
+            switch (changeType) {
+                case "add":
                     value += delta;
                     break;
-                case modes.MULTIPLY:
-                    if (delta === 0.5) {
-                        if (halvingApplied) break;
-                        halvingApplied = true;
-                    }
-                    value = roundFavorPlayerAwayFromZero(value * delta);
+                case "subtract":
+                    value -= delta;
                     break;
-                case modes.OVERRIDE:
+                case "multiply":
+                    value = multiplyFavoringPlayer(value, delta);
+                    break;
+                case "override":
                     value = delta;
                     break;
-                case modes.UPGRADE:
+                case "upgrade":
                     value = Math.max(value, delta);
                     break;
-                case modes.DOWNGRADE:
+                case "downgrade":
                     value = Math.min(value, delta);
                     break;
             }
@@ -2921,6 +2928,11 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const originalActorJson = this.id ? JSON.stringify(this.toObject()) : null;
         const incomingHdcXml = typeof xml === "string" ? xml : new XMLSerializer().serializeToString(xml);
 
+        // Transient marker (not the persisted uploading flag): the flag deliberately stays set
+        // after a failed upload for the sheet's error display, and keying the per-item
+        // active-effect guard off it would leave that actor's AE sync disabled forever.
+        this._uploadSweepActive = true;
+
         try {
             // Convert xml string to xml document (if necessary)
             if (typeof xml === "string") {
@@ -3361,7 +3373,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             uploadProgressBar.advance(`${this.name}: applyActiveEffects`, 0);
             for (const item of this.items) {
-                await item.setActiveEffects({ render: false });
+                // Authoritative sweep: bypasses the guard that suppresses the concurrent
+                // per-item syncs the upload's own writes would otherwise trigger.
+                await item.setActiveEffects({ render: false, duringUpload: true });
             }
 
             uploadProgressBar.advance(`${this.name}: applySizeEffect`, 0);
@@ -3770,6 +3784,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 // Needed for when the delete extra items has an error.
                 await this.setFlag(game.system.id, "uploading", true);
             }
+        } finally {
+            this._uploadSweepActive = false;
         }
     }
 
@@ -4727,6 +4743,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
     /**
      * Apply any transformations to the Actor data which are caused by ActiveEffects.
+     * Copy of core `Actor#applyActiveEffects`; the sole intended divergence is the
+     * `HeroSystem6eActorActiveEffects._removeRedundantHalvingActiveEffects(changes)` call below.
+     * Re-diff against core on every Foundry upgrade.
      * @param {string} phase The application phase under which changes are to be applied.
      */
     applyActiveEffects(phase) {
@@ -4781,9 +4800,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const overrides = {};
         const replacementData = this.getRollData();
         for (const change of changes) {
-            // Dispatch on the system class so static _applyChange* overrides
-            // (player-favoring MULTIPLY rounding) are used instead of core's
-            const result = HeroSystem6eActorActiveEffects.applyChange(this, change, { replacementData });
+            const result = ActiveEffect.applyChange(this, change, { replacementData });
             if (foundry.utils.isPlainObject(result)) Object.assign(overrides, result);
         }
 
@@ -4888,9 +4905,15 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
     }
 
     async setNaturalHealing(changed) {
-        const naturalBodyHealing = this.temporaryEffects.find(
-            (o) => o.flags[game.system.id]?.XMLID === "naturalBodyHealing",
-        );
+        // Core temporaryEffects drops disabled/suppressed effects; an inactive healing effect
+        // must still be found so its rate refreshes and a return to full BODY deletes it.
+        let naturalBodyHealing;
+        for (const effect of this.allApplicableEffects()) {
+            if (effect.isTemporary && effect.flags[game.system.id]?.XMLID === "naturalBodyHealing") {
+                naturalBodyHealing = effect;
+                break;
+            }
+        }
 
         // During _preUpdate this.system still holds the pre-update values; prefer the pending ones.
         const pendingCharacteristics = changed?.system?.characteristics ?? {};

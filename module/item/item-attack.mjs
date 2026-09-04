@@ -3,6 +3,7 @@ import { activateManeuver, doManeuverEffects, endHaymakerManeuver, maneuverHasBl
 import { HEROSYS } from "../herosystem6e.mjs";
 
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
+import { performAdjustment } from "../actor/actor-adjustment.mjs";
 import { getOffHandDefenseDcv } from "../actor/actor-utils.mjs";
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 
@@ -21,13 +22,14 @@ import { isActivatedForThisUse } from "./item-requires-roll.mjs";
 import { overrideCanAct } from "../settings/settings-helpers.mjs";
 
 import { DICE_SO_NICE_CUSTOM_SETS, HeroRoller } from "../heroRoller/dice.mjs";
-import { performAdjustment, renderAdjustmentChatCards } from "../utility/adjustment.mjs";
+import { renderAdjustmentChatCards } from "../utility/adjustment.mjs";
 import { Attack, actionFromJSON, actionToJSON } from "../utility/attack.mjs";
 import {
     calculateDicePartsForItem,
     calculateStrengthMinimumForItem,
     combatSkillLevelsForAttack,
 } from "../utility/damage.mjs";
+import { activeEffectChanges } from "../utility/active-effects.mjs";
 import { getActorDefensesVsAttack, getConditionalDefenses, getItemDefenseVsAttack } from "../utility/defense.mjs";
 import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMetres } from "../utility/range.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
@@ -3943,7 +3945,9 @@ export async function _onApplyEntangleToSpecificToken(item, token, originalRoll)
         }`;
         body = Math.max(body, prevBody) + 1;
     }
-    const changes = foundry.utils.deepClone(HeroSystem6eActorActiveEffects.statusEffectsObj.entangledEffect.changes);
+    const changes = foundry.utils.deepClone(
+        activeEffectChanges(HeroSystem6eActorActiveEffects.statusEffectsObj.entangledEffect),
+    );
     changes.push({
         key: "body",
         value: body,
@@ -4493,7 +4497,8 @@ async function _onApplySenseAffectingToSpecificToken(
     for (const senseGroup of senseGroups) {
         if (senseGroup.bodyDamage > 0) {
             const newActiveEffect = {
-                ...senseGroup.statusEffect,
+                // deepClone: the status templates are shared and shallow-frozen; document construction takes ownership
+                ...foundry.utils.deepClone(senseGroup.statusEffect),
                 name: `${senseAffectingItem.effectiveAttackItem.system.XMLID.replace("MANEUVER", senseAffectingItem.system.ALIAS)} ${senseGroup.XMLID}`,
                 duration: {
                     seconds: senseGroup.bodyDamage,

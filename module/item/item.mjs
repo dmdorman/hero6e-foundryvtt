@@ -548,6 +548,12 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 return;
             }
 
+            // An HDC upload runs its own sequenced sweep over every item; re-entering here
+            // concurrently would miss the sweep's pending creates and duplicate effects.
+            if (!options.duringUpload && this.actor._uploadSweepActive) {
+                return;
+            }
+
             // Generic activeEffect from CONFIG.MJS (preferred)
             if (this.baseInfo?.activeEffect) {
                 const effectData = this.baseInfo?.activeEffect(_abstractItem);
@@ -1224,7 +1230,13 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             const futureItem = new this.constructor(futureItemData, { parent: this.parent });
 
             if (this.baseInfo?.activeEffect?.(futureItem)) {
-                this.setActiveEffects({ futureItem });
+                // Must complete before the update commits or a concurrent find-then-create pass
+                // can duplicate effects; a failure must not veto the item update itself.
+                try {
+                    await this.setActiveEffects({ futureItem });
+                } catch (e) {
+                    console.error(`setActiveEffects failed during ${this.name} preUpdate`, e);
+                }
             }
         }
 
@@ -1357,7 +1369,6 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         if (!system) return updateData;
 
         const chargeItemModifier = system.chargeItemModifier ?? system.MODIFIER?.find((o) => o.XMLID === "CHARGES");
-        const clipModifier = system.CLIP ?? system.MODIFIER?.find((o) => o.XMLID === "CLIP");
 
         if (chargeItemModifier) {
             const chargesMax = parseInt(chargeItemModifier.OPTION_ALIAS ?? chargeItemModifier) || 0;
@@ -1367,7 +1378,10 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 updateData["system._charges"] = chargesMax;
             }
 
-            const clipsMax = parseInt(clipModifier?.OPTION_ALIAS) || 0;
+            // Clips are a CLIPS adder on the charges modifier, not a modifier of their own; raw
+            // compendium data has no clipsMax getter, so fall back to the adder's "<n> clips" alias.
+            const clipsMax =
+                system.clipsMax || parseInt(chargeItemModifier.ADDER?.find?.((a) => a.XMLID === "CLIPS")?.ALIAS) || 0;
             const currentClips = system.clips ?? system._clips ?? 0;
             if (clipsMax > 0 && currentClips !== clipsMax - 1) {
                 // Resetting to full charges requires the use of 1 clip
