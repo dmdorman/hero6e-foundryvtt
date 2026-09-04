@@ -546,14 +546,15 @@ async function applyActiveEffectsSweep(ctx) {
             effectUpdates.push({
                 _id: itemId,
                 // Full array replace, so existing effects must be carried along. Pending
-                // data is normalized through the document constructor: it runs the same
-                // migrateData a create would (e.g. legacy changes -> system.changes),
-                // which an update delta would otherwise prune.
+                // data goes through static migrateData (legacy changes -> system.changes,
+                // which an update delta would otherwise prune) — never through document
+                // construction: data prep decorates change entries in place (priority,
+                // phase, an effect self-reference) and toObject would persist that.
                 effects: [
                     ...item.effects.map((ae) => ae.toObject()),
                     ...pendingEffects.map((effectData) =>
                         foundry.utils.mergeObject(
-                            new CONFIG.ActiveEffect.documentClass(effectData, { parent: item }).toObject(),
+                            CONFIG.ActiveEffect.documentClass.migrateData(foundry.utils.deepClone(effectData)),
                             { _id: foundry.utils.randomID() },
                         ),
                     ),
