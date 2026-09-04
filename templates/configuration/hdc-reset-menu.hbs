@@ -21,11 +21,16 @@
 
     {{#if results}}
         <hr />
-        <p><b>{{results.reset}}</b> actor(s) reset from stored HDC.</p>
+        <p>
+            <b>{{results.reset}}</b> actor(s) reset from stored HDC.
+            <button type="button" data-action="copyResults" style="width: auto; float: right;">
+                <i class="fas fa-copy"></i> Copy Results
+            </button>
+        </p>
 
         {{#if results.failed.length}}
             <p><b>Failed ({{results.failed.length}}) — see console for details:</b></p>
-            <ul>
+            <ul style="max-height: 150px; overflow-y: auto;">
                 {{#each results.failed}}
                     <li><b>{{this.name}}</b> ({{this.context}}): {{this.error}}</li>
                 {{/each}}
@@ -34,7 +39,7 @@
 
         {{#if results.legacy.length}}
             <p><b>No stored HDC — locked until their .hdc file is uploaded ({{results.legacy.length}}):</b></p>
-            <ul>
+            <ul style="max-height: 150px; overflow-y: auto;">
                 {{#each results.legacy}}
                     <li><b>{{this.name}}</b> ({{this.context}})</li>
                 {{/each}}

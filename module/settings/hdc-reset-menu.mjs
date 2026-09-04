@@ -30,6 +30,7 @@ export class HdcResetMenu extends HandlebarsApplicationMixin(ApplicationV2) {
         },
         actions: {
             resetAll: HdcResetMenu.#onResetAll,
+            copyResults: HdcResetMenu.#onCopyResults,
         },
     };
 
@@ -116,5 +117,27 @@ export class HdcResetMenu extends HandlebarsApplicationMixin(ApplicationV2) {
         }
 
         console.log("HDC reset results", results);
+    }
+
+    static #onCopyResults() {
+        const results = this.#results;
+        if (!results) return;
+
+        const lines = [`HDC Reset Results — ${new Date().toLocaleString()}`, `Reset: ${results.reset}`];
+        if (results.failed.length > 0) {
+            lines.push(``, `Failed (${results.failed.length}):`);
+            for (const { name, context, error } of results.failed) {
+                lines.push(`- ${name} (${context}): ${error}`);
+            }
+        }
+        if (results.legacy.length > 0) {
+            lines.push(``, `No stored HDC — locked until their .hdc file is uploaded (${results.legacy.length}):`);
+            for (const { name, context } of results.legacy) {
+                lines.push(`- ${name} (${context})`);
+            }
+        }
+
+        game.clipboard.copyPlainText(lines.join("\n"));
+        ui.notifications.info("HDC reset results copied to clipboard.");
     }
 }
