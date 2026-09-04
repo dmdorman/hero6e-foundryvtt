@@ -574,6 +574,18 @@ export function hdcTimeOptionIdToSeconds(durationOptionId) {
     return seconds;
 }
 
+// Millisecond precision below 5s (sub-second uploads read as "836ms", not "1 seconds")
+export function formatDuration(totalMs) {
+    totalMs = Math.round(totalMs);
+    if (totalMs < 1000) {
+        return `${totalMs}ms`;
+    }
+    if (totalMs < 5000) {
+        return `${Math.floor(totalMs / 1000)}s ${totalMs % 1000}ms`;
+    }
+    return `${Math.ceil(totalMs / 1000)} seconds`;
+}
+
 export function toHHMMSS(secs) {
     var sec_num = parseInt(secs, 10);
     var hours = Math.floor(sec_num / 3600);

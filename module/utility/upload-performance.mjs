@@ -27,9 +27,14 @@ export class UploadPerformance {
         this.counts[key] = value;
     }
 
-    // Live clock, not frozen at the last mark; sum marks for a settled total.
+    // Live clock, not frozen at the last mark; use settledTotalMs for a stable total.
     get totalMs() {
         return performance.now() - this.#start;
+    }
+
+    // Sum of closed marks: stable once the final mark lands, unlike totalMs.
+    get settledTotalMs() {
+        return this.marks.reduce((sum, mark) => sum + mark.ms, 0);
     }
 
     slowMarks(thresholdMs = 500) {

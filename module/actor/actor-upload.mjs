@@ -2,7 +2,7 @@ import { HeroItemCharacteristic } from "../item/HeroSystem6eTypeDataModels.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { HeroProgressBar } from "../utility/progress-bar.mjs";
 import { UploadPerformance } from "../utility/upload-performance.mjs";
-import { getPowerInfo, utf8ToBase64, whisperUserTargetsForActor } from "../utility/util.mjs";
+import { formatDuration, getPowerInfo, utf8ToBase64, whisperUserTargetsForActor } from "../utility/util.mjs";
 import { xmlToJsonNode } from "../utility/xml-to-json.mjs";
 
 const { FilePicker } = foundry.applications.apps;
@@ -30,7 +30,15 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
 
     // Shared state the stages build up: xml/heroJson/root from parsing, changes accumulated
     // for the core actor writes, item split results, retained pre-upload values.
-    const ctx = { actor, options, uploadPerformance, xml, changes: {} };
+    // silent covers both managed flows and quench runs: no chat, no progress UI.
+    const ctx = {
+        actor,
+        options,
+        silent: !!(options.silent || options.quenchUpload),
+        uploadPerformance,
+        xml,
+        changes: {},
+    };
 
     try {
         if (!parseHdcXml(ctx)) {
@@ -71,13 +79,14 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
             );
 
             // Diagnostic context for bug reports. base64 encode blobs so they survive copy/paste intact.
-            await actor.setFlag(game.system.id, "uploadingErrorContext", {
-                foundry: game.release?.display || game.version,
-                foundryBuild: game.release?.build ?? null,
-                system: game.system.version,
-                actorBase64: originalActorJson ? utf8ToBase64(originalActorJson) : null,
-                hdcBase64: incomingHdcXml ? utf8ToBase64(incomingHdcXml) : null,
-            });
+            await actor.setFlag(
+                game.system.id,
+                "uploadingErrorContext",
+                buildUploadErrorContext({
+                    actorBase64: originalActorJson ? utf8ToBase64(originalActorJson) : null,
+                    hdcBase64: incomingHdcXml ? utf8ToBase64(incomingHdcXml) : null,
+                }),
+            );
 
             // Make sure we show the error we just posted to DB.
             // Needed for when the delete extra items has an error.
@@ -85,7 +94,31 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         }
     } finally {
         actor._uploadSweepActive = false;
+
+        // Deferred from per-item _onUpdate during the sweep — owed even after a failed
+        // upload, or the actor keeps stale encumbrance and token vision
+        try {
+            if (actor.id) {
+                await actor.applyEncumbrancePenalty();
+            }
+            for (const token of actor.getActiveTokens()) {
+                token.document._prepareDetectionModes();
+                token.renderFlags.set({ refreshVisibility: true });
+            }
+        } catch (e) {
+            console.error("Deferred encumbrance/vision refresh after upload failed", e);
+        }
     }
+}
+
+// Environment block for the uploadingErrorContext flag; the sheet's error report reads these keys back.
+export function buildUploadErrorContext(extra = {}) {
+    return {
+        foundry: game.release?.display || game.version,
+        foundryBuild: game.release?.build ?? null,
+        system: game.system.version,
+        ...extra,
+    };
 }
 
 function parseHdcXml(ctx) {
@@ -144,7 +177,7 @@ function captureRetainedValues(ctx) {
 }
 
 function createUploadProgressBar(ctx) {
-    const { actor, options, root, uploadPerformance } = ctx;
+    const { actor, root, silent, uploadPerformance } = ctx;
 
     // Ticks delivered before close: one per HDC item on update/create (trued up via
     // addToMax once the exact split is known — compound children add items the root
@@ -164,7 +197,7 @@ function createUploadProgressBar(ctx) {
         `${actor.name}: Processing HDC file`,
         fixedStageTicks + ctx.hdcItemEstimate,
         {
-            suppressUi: options.quenchUpload || options.silent,
+            suppressUi: silent,
             tracker: uploadPerformance,
         },
     );
@@ -172,9 +205,9 @@ function createUploadProgressBar(ctx) {
 
 // Let GM know actor is being uploaded (unless it is a quench test; missing ID)
 function announceUploadStart(ctx) {
-    const { actor, options } = ctx;
+    const { actor, silent } = ctx;
 
-    if (!options.quenchUpload && !options.silent && actor.id) {
+    if (!silent && actor.id) {
         // Fire and forget
         ChatMessage.create({
             style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
@@ -187,7 +220,8 @@ function announceUploadStart(ctx) {
 }
 
 function prepareCoreChanges(ctx) {
-    const { actor, options, root, uploadProgressBar, changes, retainValuesOnUpload } = ctx;
+    const { actor, options, root, uploadProgressBar, retainValuesOnUpload } = ctx;
+    const changes = ctx.changes;
 
     // Character name is what's in the sheet or, if missing, what is already in the actor sheet.
     const characterName =
@@ -354,19 +388,7 @@ async function rebuildAndAddFreeStuff(ctx) {
 
     if (options.rebuild) {
         uploadProgressBar.advance(`${actor.name}: Deleting existing items when rebuilding`, 0);
-        // Every item is about to be deleted, so no per-item turnOff: each one is 1-2
-        // document writes and every write re-runs full data prep (51s on a large actor).
-        // One sweep of item-originated actor effects covers the cleanup that item
-        // deletion sometimes misses (FoundryVTT 13 bug?).
-        const itemOriginEffectIds = actor.effects.filter((ae) => ae.origin?.includes(".Item.")).map((ae) => ae.id);
-        if (itemOriginEffectIds.length > 0) {
-            await actor.deleteEmbeddedDocuments("ActiveEffect", itemOriginEffectIds, { render: false });
-        }
-        await actor.deleteEmbeddedDocuments(
-            "Item",
-            actor.items.map((o) => o.id),
-            { render: false },
-        );
+        await deleteItemsAndOrphanedEffects(actor, actor.items.contents, { render: false });
     }
 
     // NOTE: not concurrent with item creation because we create things in here that are
@@ -514,20 +536,15 @@ async function applyActiveEffectsSweep(ctx) {
     uploadProgressBar.advance(`${actor.name}: Processing non characteristics`, 0);
 
     uploadProgressBar.advance(`${actor.name}: applyActiveEffects`, 0);
-    const deferredEffectCreates = [];
+    const deferredEffectCreates = new Map();
     for (const item of actor.items) {
         // Authoritative sweep: bypasses the guard that suppresses the concurrent
         // per-item syncs the upload's own writes would otherwise trigger.
         await item.setActiveEffects({ render: false, duringUpload: true, deferredEffectCreates });
     }
-    if (deferredEffectCreates.length > 0) {
-        const deferredByItem = new Map();
-        for (const { itemId, effectData } of deferredEffectCreates) {
-            if (!deferredByItem.has(itemId)) deferredByItem.set(itemId, []);
-            deferredByItem.get(itemId).push(effectData);
-        }
+    if (deferredEffectCreates.size > 0) {
         const effectUpdates = [];
-        for (const [itemId, pendingEffects] of deferredByItem) {
+        for (const [itemId, pendingEffects] of deferredEffectCreates) {
             const item = actor.items.get(itemId);
             if (!item) continue;
             effectUpdates.push({
@@ -611,21 +628,28 @@ async function restoreRetainedResources(ctx) {
     const { actor, retainValuesOnUpload, uploadProgressBar } = ctx;
 
     uploadProgressBar.advance(`${actor.name}: retainValuesOnUpload charges and ablative`, 0);
+    const resourceUpdates = [];
     for (const resourceData of retainValuesOnUpload.resources) {
-        const item = actor.items.find((i) => i.id === resourceData.id);
-        if (item) {
-            // Notice if charges or clips is lower than before we take the min #3302
-            await item.update({
-                "system._charges": Math.min(item.system.chargesMax, resourceData._charges),
-                "system._clips": Math.min(item.system.clipsMax, resourceData._clips),
-                "system.ablative": Math.max(item.system.ablative, resourceData.ablative),
-            });
-            if (item.system.XMLID === "ENDURANCERESERVE") {
-                await item.update({ "system.value": Math.min(item.system.value, resourceData.value) });
-            }
-        } else {
+        const item = actor.items.get(resourceData.id);
+        if (!item) {
             console.warn(`Unable to locate ${resourceData.name} to consume charges after upload.`);
+            continue;
         }
+
+        // Notice if charges or clips is lower than before we take the min #3302
+        const update = {
+            _id: item.id,
+            "system._charges": Math.min(item.system.chargesMax, resourceData._charges),
+            "system._clips": Math.min(item.system.clipsMax, resourceData._clips),
+            "system.ablative": Math.max(item.system.ablative, resourceData.ablative),
+        };
+        if (item.system.XMLID === "ENDURANCERESERVE") {
+            update["system.value"] = Math.min(item.system.value, resourceData.value);
+        }
+        resourceUpdates.push(update);
+    }
+    if (resourceUpdates.length > 0) {
+        await actor.updateEmbeddedDocuments("Item", resourceUpdates);
     }
 }
 
@@ -657,7 +681,8 @@ function validateItems(ctx) {
 }
 
 async function uploadImage(ctx) {
-    const { actor, options, root, filename, base64, changes, uploadProgressBar } = ctx;
+    const { actor, options, root, filename, base64, uploadProgressBar } = ctx;
+    const changes = ctx.changes;
 
     uploadProgressBar.advance(`${actor.name}: Uploading image`, 0);
 
@@ -810,7 +835,7 @@ async function restoreRetainedDamage(ctx) {
 }
 
 async function finalizeUpload(ctx) {
-    const { actor, options, uploadPerformance, uploadProgressBar } = ctx;
+    const { actor, silent, uploadPerformance, uploadProgressBar } = ctx;
 
     uploadProgressBar.advance(`${actor.name}: Linking Custom Adders`, 0);
     await linkCustomAddersForUpload(actor);
@@ -822,16 +847,6 @@ async function finalizeUpload(ctx) {
             [`flags.${game.system.id}.uploadingError`]: null,
             [`flags.${game.system.id}.uploadingErrorContext`]: null,
         });
-    }
-
-    // Deferred from per-item _onUpdate during the sweep: recompute encumbrance and
-    // refresh token vision once, now that every item is settled
-    if (actor.id) {
-        await actor.applyEncumbrancePenalty();
-    }
-    for (const token of actor.getActiveTokens()) {
-        token.document._prepareDetectionModes();
-        token.renderFlags.set({ refreshVisibility: true });
     }
 
     // If we have control of this token, reacquire to update movement types
@@ -848,32 +863,37 @@ async function finalizeUpload(ctx) {
     }
 
     // Let GM know actor was uploaded (unless it is a quench test or missing ID)
-    if (!options.quenchUpload && !options.silent && actor.id) {
+    if (!silent && actor.id) {
         // Fire and forget
         ChatMessage.create({
             style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
             author: game.user._id,
             speaker: ChatMessage.getSpeaker({ actor }),
             whisper: whisperUserTargetsForActor(actor),
-            content: `Took ${formatUploadDuration(uploadPerformance.totalMs)} for <b>${game.user.name}</b> to upload <b>${actor.name}</b>.`,
+            content: `Took ${formatDuration(uploadPerformance.settledTotalMs)} for <b>${game.user.name}</b> to upload <b>${actor.name}</b>.`,
         });
     }
 }
 
-function formatUploadDuration(totalMs) {
-    totalMs = Math.round(totalMs);
-    if (totalMs < 1000) {
-        return `${totalMs}ms`;
+// Item deletion sometimes skips actor-level effect cleanup (FoundryVTT 13 bug?), so drop
+// those effects in the same pass — one batch instead of a turnOff per item, each of which
+// is 1-2 writes that re-run full data prep (51s on a large actor).
+async function deleteItemsAndOrphanedEffects(actor, items, operation) {
+    const deletedItemUuids = new Set(items.map((item) => item.uuid));
+    const orphanEffectIds = actor.effects.filter((ae) => deletedItemUuids.has(ae.origin)).map((ae) => ae.id);
+    if (orphanEffectIds.length > 0) {
+        await actor.deleteEmbeddedDocuments("ActiveEffect", orphanEffectIds, { render: false });
     }
-    if (totalMs < 5000) {
-        return `${Math.floor(totalMs / 1000)}s ${totalMs % 1000}ms`;
-    }
-    return `${Math.ceil(totalMs / 1000)} seconds`;
+    await actor.deleteEmbeddedDocuments(
+        "Item",
+        items.map((item) => item.id),
+        operation,
+    );
 }
 
 // Delete any old items that weren't updated, added or part of freeStuff
 async function confirmDeleteExtraItems(ctx) {
-    const { actor, itemsToCreate, itemsToUpdate } = ctx;
+    const { actor, itemsToCreate, itemsToUpdate, options } = ctx;
 
     if (!actor.id) {
         return;
@@ -892,7 +912,7 @@ async function confirmDeleteExtraItems(ctx) {
         return;
     }
 
-    if (ctx.options.skipExtraItemsPrompt) {
+    if (options.skipExtraItemsPrompt) {
         console.log(
             `${actor.name} kept ${itemsToDelete.length} items not in the HDC`,
             itemsToDelete.map((item) => item.name),
@@ -915,18 +935,7 @@ async function confirmDeleteExtraItems(ctx) {
 
     if (confirmDeleteExtra) {
         console.log(`Deleting ${itemsToDelete.length} items because they were not present in the HDC file.`);
-        // Delete these items' actor-level effects in one batch rather than a turnOff per
-        // item (each is 1-2 writes and every write re-runs full data prep); covers the
-        // cleanup that item deletion sometimes misses (FoundryVTT 13 bug?).
-        const deletedItemUuids = new Set(itemsToDelete.map((item) => item.uuid));
-        const orphanEffectIds = actor.effects.filter((ae) => deletedItemUuids.has(ae.origin)).map((ae) => ae.id);
-        if (orphanEffectIds.length > 0) {
-            await actor.deleteEmbeddedDocuments("ActiveEffect", orphanEffectIds, { render: false });
-        }
-        await actor.deleteEmbeddedDocuments(
-            "Item",
-            itemsToDelete.map((o) => o.id),
-        );
+        await deleteItemsAndOrphanedEffects(actor, itemsToDelete);
     } else {
         // Fire and forget (no await on this ChatMessage)
         ChatMessage.create({

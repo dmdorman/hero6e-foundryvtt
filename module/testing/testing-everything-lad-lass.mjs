@@ -1,6 +1,6 @@
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
 
-export const EVERYTHING_LAD_5E_HDC = `
+const EVERYTHING_LAD_5E_HDC = `
                     <?xml version="1.0" encoding="UTF-16"?>
                     <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic.hdt">
                       <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" />
@@ -938,7 +938,7 @@ export const EVERYTHING_LAD_5E_HDC = `
                     </CHARACTER>
 `;
 
-export const EVERYTHING_LASS_6E_HDC = `
+const EVERYTHING_LASS_6E_HDC = `
                     <?xml version="1.0" encoding="UTF-16"?>
                       <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic6E.hdt">
                         <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" />
@@ -1902,11 +1902,12 @@ export const EVERYTHING_LASS_6E_HDC = `
 
 function logUploadPerformance(actor, label) {
     const perf = actor.lastUploadPerformance;
-    const stageMs = perf.table();
-    const totalMs = Math.round(stageMs.reduce((sum, mark) => sum + mark.ms, 0));
     console.log(
-        `Upload performance [${label}] total ${totalMs}ms counts=${JSON.stringify(perf.counts)}\n` +
-            stageMs.map((mark) => `${String(mark.ms).padStart(7)}ms  ${mark.label}`).join("\n"),
+        `Upload performance [${label}] total ${Math.round(perf.settledTotalMs)}ms counts=${JSON.stringify(perf.counts)}\n` +
+            perf
+                .table()
+                .map((mark) => `${String(mark.ms).padStart(7)}ms  ${mark.label}`)
+                .join("\n"),
     );
 }
 

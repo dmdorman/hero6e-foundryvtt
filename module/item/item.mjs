@@ -554,11 +554,13 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 return;
             }
 
-            // The upload sweep collects creates and flushes them in one batched write.
-            // Update/delete paths always write directly.
+            // The upload sweep collects creates (Map of itemId -> effectData[]) and
+            // flushes them in one batched write. Update/delete paths always write directly.
             const createEffect = async (effectData, operation) => {
                 if (options.deferredEffectCreates) {
-                    options.deferredEffectCreates.push({ itemId: this.id, effectData });
+                    const pending = options.deferredEffectCreates.get(this.id) ?? [];
+                    pending.push(effectData);
+                    options.deferredEffectCreates.set(this.id, pending);
                     return effectData;
                 }
                 return (await this.createEmbeddedDocuments("ActiveEffect", [effectData], operation))?.[0];
@@ -1452,8 +1454,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
      * Reset an item back to its default state.
      * Acts as an instance wrapper leveraging the static data preparation helper.
      */
-    async resetToOriginal() {
-        const updateData = HeroSystem6eItem._prepareOriginalResetData(this);
+    async resetToOriginal(options = {}) {
+        const updateData = HeroSystem6eItem._prepareOriginalResetData(this, options);
         if (Object.keys(updateData).length > 0) {
             await this.update(updateData);
         }

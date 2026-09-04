@@ -2314,7 +2314,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             }
         } else {
             for (const item of this.items) {
-                await item.resetToOriginal();
+                await item.resetToOriginal({ keepManeuverState: options.keepTemporaryEffects });
             }
         }
         end = Date.now();
