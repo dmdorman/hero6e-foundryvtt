@@ -3388,10 +3388,40 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             const doLastXmlids = ["COMBAT_LEVELS", "MENTAL_COMBAT_LEVELS", "MENTALDEFENSE"];
 
             uploadProgressBar.advance(`${this.name}: applyActiveEffects`, 0);
+            const deferredEffectCreates = [];
             for (const item of this.items) {
                 // Authoritative sweep: bypasses the guard that suppresses the concurrent
                 // per-item syncs the upload's own writes would otherwise trigger.
-                await item.setActiveEffects({ render: false, duringUpload: true });
+                await item.setActiveEffects({ render: false, duringUpload: true, deferredEffectCreates });
+            }
+            if (deferredEffectCreates.length > 0) {
+                const deferredByItem = new Map();
+                for (const { itemId, effectData } of deferredEffectCreates) {
+                    if (!deferredByItem.has(itemId)) deferredByItem.set(itemId, []);
+                    deferredByItem.get(itemId).push(effectData);
+                }
+                const effectUpdates = [];
+                for (const [itemId, pendingEffects] of deferredByItem) {
+                    const item = this.items.get(itemId);
+                    if (!item) continue;
+                    effectUpdates.push({
+                        _id: itemId,
+                        // Full array replace, so existing effects must be carried along. Pending
+                        // data is normalized through the document constructor: it runs the same
+                        // migrateData a create would (e.g. legacy changes -> system.changes),
+                        // which an update delta would otherwise prune.
+                        effects: [
+                            ...item.effects.map((ae) => ae.toObject()),
+                            ...pendingEffects.map((effectData) =>
+                                foundry.utils.mergeObject(
+                                    new CONFIG.ActiveEffect.documentClass(effectData, { parent: item }).toObject(),
+                                    { _id: foundry.utils.randomID() },
+                                ),
+                            ),
+                        ],
+                    });
+                }
+                await this.updateEmbeddedDocuments("Item", effectUpdates, { render: false });
             }
 
             uploadProgressBar.advance(`${this.name}: applySizeEffect`, 0);

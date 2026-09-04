@@ -554,6 +554,16 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 return;
             }
 
+            // The upload sweep collects creates and flushes them in one batched write.
+            // Update/delete paths always write directly.
+            const createEffect = async (effectData, operation) => {
+                if (options.deferredEffectCreates) {
+                    options.deferredEffectCreates.push({ itemId: this.id, effectData });
+                    return effectData;
+                }
+                return (await this.createEmbeddedDocuments("ActiveEffect", [effectData], operation))?.[0];
+            };
+
             // Generic activeEffect from CONFIG.MJS (preferred)
             if (this.baseInfo?.activeEffect) {
                 const effectData = this.baseInfo?.activeEffect(_abstractItem);
@@ -567,9 +577,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         // TODO: Should we check if an update is really needed, potentially improving performance
                         await currentAE.update(effectData);
                     } else {
-                        const ae = await ActiveEffect.implementation.create(effectData, {
-                            parent: this,
-                        });
+                        const ae = await createEffect(effectData);
 
                         if (!ae) {
                             console.error(`Failed to setActiveEffects on ${this.name}`, this);
@@ -640,7 +648,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         // Need to be careful because changes is an array
                         await activeEffect.update({ name: activeEffect.name, "system.changes": changes }, options);
                     } else {
-                        await this.createEmbeddedDocuments("ActiveEffect", [activeEffect], options);
+                        await createEffect(activeEffect, options);
                     }
                 } catch (e) {
                     console.error(e);
@@ -688,7 +696,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         });
                     }
                 } else {
-                    await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+                    await createEffect(activeEffect);
                 }
             }
 
@@ -732,7 +740,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                             "system.changes": activeEffect.system.changes,
                         });
                     } else {
-                        await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+                        await createEffect(activeEffect);
                     }
                 } else {
                     if (activeEffect.delete) {
@@ -833,7 +841,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         "system.changes": activeEffect.system.changes,
                     });
                 } else {
-                    await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+                    await createEffect(activeEffect);
                 }
             }
 
