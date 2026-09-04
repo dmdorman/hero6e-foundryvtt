@@ -1,0 +1,60 @@
+<div class="hdc-reset-menu">
+    {{#if results}}
+        <p>
+            Reset complete: every world actor and unlinked token was re-imported from its stored HDC data.
+            Images, damage, charges, and temporary effects were kept; items not present in the stored HDC
+            were left in place.
+        </p>
+
+        <p>
+            <b>{{results.reset}}</b> actor(s) reset from stored HDC.
+            <button type="button" data-action="copyResults" style="width: auto; float: right;">
+                <i class="fas fa-copy"></i> Copy Results
+            </button>
+        </p>
+
+        {{#if results.failed.length}}
+            <p><b>Failed ({{results.failed.length}}) — see console for details:</b></p>
+            <ul style="max-height: 150px; overflow-y: auto;">
+                {{#each results.failed}}
+                    <li><b>{{this.name}}</b> ({{this.context}}): {{this.error}}</li>
+                {{/each}}
+            </ul>
+        {{/if}}
+
+        {{#if results.legacy.length}}
+            <p><b>No stored HDC — locked until their .hdc file is uploaded ({{results.legacy.length}}):</b></p>
+            <ul style="max-height: 150px; overflow-y: auto;">
+                {{#each results.legacy}}
+                    <li><b>{{this.name}}</b> ({{this.context}})</li>
+                {{/each}}
+            </ul>
+        {{/if}}
+
+        <hr />
+        <button type="button" data-action="resetAll">
+            <i class="fas fa-rotate"></i> Run Again
+        </button>
+    {{else}}
+        <div class="form-group stacked">
+            <p>
+                Re-imports every world actor and unlinked token from its stored HDC data. Existing images,
+                damage, charges, and temporary effects are kept; items not present in the stored HDC are left
+                in place.
+            </p>
+            <p>
+                <b>{{worldActorCount}}</b> world actor(s) and <b>{{unlinkedTokenCount}}</b> unlinked token(s)
+                will be processed.
+                {{#if legacyCount}}
+                    <b>{{legacyCount}}</b> have no stored HDC: they will be locked into an error state that
+                    requires an HDC upload to clear (listed after the run).
+                {{/if}}
+            </p>
+        </div>
+
+        <button type="button" data-action="resetAll" {{#if running}}disabled{{/if}}>
+            <i class="fas fa-rotate"></i>
+            {{#if running}}Resetting...{{else}}Reset All From HDC{{/if}}
+        </button>
+    {{/if}}
+</div>

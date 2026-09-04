@@ -268,8 +268,8 @@ export class HeroSystemItemSheetV2 extends HandlebarsApplicationMixin(ItemSheetV
         if (name === "system.numCharges") {
             return item.system.setChargesAndSave(value);
         }
-        if (name === "system.clips") {
-            return item.system.setClipsAndSave(value);
+        if (name === "system.clipsTotal") {
+            return item.system.setClipsTotalAndSave(value);
         }
 
         // Endurance Reserve REC is the LEVELS of a nested ENDURANCERESERVEREC power

@@ -9,22 +9,22 @@ class HeroProgressBarV13 {
      * @param {number} max
      * @param {number} [startCount]
      */
-    constructor(message, max, { startCount = 0, suppressUi = false } = {}) {
+    constructor(message, max, { startCount = 0, suppressUi = false, tracker = null } = {}) {
         this._message = message;
         this._max = max;
         this._count = startCount;
         this._inProgress = true;
         this._suppressUi = suppressUi;
+        this._tracker = tracker;
         this._progressBar = suppressUi
             ? null
             : ui.notifications.info(message, {
                   progress: !suppressUi,
                   console: !!CONFIG.debug.HERO?.ui?.progress, // PH: FIXME: Remove the separate console.debug perhaps
               });
-        this._performance = [];
-        this._performance.push({ timestamp: Date.now(), message: "constructor", pct: 0 });
 
-        if (++HeroProgressBarV13.#concurrentProgressBarCount > 1) {
+        // Suppressed bars render nothing, so they can't fight over the notification area
+        if (!suppressUi && ++HeroProgressBarV13.#concurrentProgressBarCount > 1) {
             ui.notifications.warn(
                 `${Date.now()} ${this}: progress bars are fighting for control of the scene navigation`,
             );
@@ -41,6 +41,15 @@ class HeroProgressBarV13 {
 
     toString() {
         return `HeroProgressBarV13(${HeroProgressBarV13.#concurrentProgressBarCount}) (label = ${this._message}, count = ${this._count}, max = ${this._max}, inProgress=${this._inProgress})`;
+    }
+
+    /**
+     * Adjust the total after construction, once an estimate can be trued up with exact counts.
+     *
+     * @param {number} delta
+     */
+    addToMax(delta) {
+        this._max = Math.max(this._count, this._max + delta);
     }
 
     /**
@@ -63,8 +72,7 @@ class HeroProgressBarV13 {
         const percentage = this._count / this._max;
 
         this._progressBar?.update({ pct: percentage, message: this._suppressUi ? null : message });
-        this._performance.at(-1).delta = Date.now() - this._performance.at(-1).timestamp;
-        this._performance.push({ timestamp: Date.now(), message: message, pct: percentage });
+        this._tracker?.mark(message);
 
         if (CONFIG.debug.HERO?.ui?.progress) {
             console.debug(`${Date.now()} ${this}: ${percentage * 100}% (${this._count}/${this._max}) ${message}`);
@@ -82,9 +90,11 @@ class HeroProgressBarV13 {
 
             // Set to 100% which will cause Foundry to fade out the progress bar.
             this._progressBar?.update({ pct: 1, message: this._suppressUi ? null : message });
-            this._performance.push({ timestamp: Date.now(), message: "close", pct: 1 });
+            this._tracker?.mark(message);
 
-            --HeroProgressBarV13.#concurrentProgressBarCount;
+            if (!this._suppressUi) {
+                --HeroProgressBarV13.#concurrentProgressBarCount;
+            }
 
             if (CONFIG.debug.HERO?.ui?.progress) {
                 console.debug(`${Date.now()} ${this}: closing`);

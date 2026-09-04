@@ -633,7 +633,9 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                 movements: this.actor.items.filter((item) => item.baseInfo?.type.includes("movement")),
                 martial: this.actor.items.filter((item) => item.type === "martialart" && !item.parentItem),
                 skills: this.actor.items.filter((item) => item.type === "skill" && !item.parentItem),
-                maneuvers: this.actor.items.filter((item) => item.type === "maneuver" && !item.parentItem),
+                maneuvers: this.actor.items
+                    .filter((item) => item.type === "maneuver" && !item.parentItem)
+                    .sort((a, b) => a.name.localeCompare(b.name)),
                 powers: this.actor.items.filter((item) => item.type === "power" && !item.parentItem),
                 equipment: this.actor.items.filter((item) => item.type === "equipment" && !item.parentItem),
                 characteristics: getCharacteristicInfoArrayForActor(this.actor)

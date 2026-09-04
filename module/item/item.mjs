@@ -1,4 +1,3 @@
-import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { ItemVppConfig } from "../applications/apps/item-vpp-config.mjs";
 import { HeroRoller } from "../heroRoller/dice.mjs";
 import { HEROSYS } from "../herosystem6e.mjs";
@@ -28,6 +27,7 @@ import { getItemDefenseVsAttack } from "../utility/defense.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
 import { getRoundedUpDistanceInSystemUnits, getSystemDisplayUnits } from "../utility/units.mjs";
+import { xmlToJsonNode } from "../utility/xml-to-json.mjs";
 import {
     activeSingleTrackerCombatFor,
     getPowerInfo,
@@ -554,6 +554,18 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                 return;
             }
 
+            // The upload sweep collects creates (Map of itemId -> effectData[]) and
+            // flushes them in one batched write. Update/delete paths always write directly.
+            const createEffect = async (effectData, operation) => {
+                if (options.deferredEffectCreates) {
+                    const pending = options.deferredEffectCreates.get(this.id) ?? [];
+                    pending.push(effectData);
+                    options.deferredEffectCreates.set(this.id, pending);
+                    return effectData;
+                }
+                return (await this.createEmbeddedDocuments("ActiveEffect", [effectData], operation))?.[0];
+            };
+
             // Generic activeEffect from CONFIG.MJS (preferred)
             if (this.baseInfo?.activeEffect) {
                 const effectData = this.baseInfo?.activeEffect(_abstractItem);
@@ -567,9 +579,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         // TODO: Should we check if an update is really needed, potentially improving performance
                         await currentAE.update(effectData);
                     } else {
-                        const ae = await ActiveEffect.implementation.create(effectData, {
-                            parent: this,
-                        });
+                        const ae = await createEffect(effectData);
 
                         if (!ae) {
                             console.error(`Failed to setActiveEffects on ${this.name}`, this);
@@ -640,7 +650,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         // Need to be careful because changes is an array
                         await activeEffect.update({ name: activeEffect.name, "system.changes": changes }, options);
                     } else {
-                        await this.createEmbeddedDocuments("ActiveEffect", [activeEffect], options);
+                        await createEffect(activeEffect, options);
                     }
                 } catch (e) {
                     console.error(e);
@@ -688,7 +698,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         });
                     }
                 } else {
-                    await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+                    await createEffect(activeEffect);
                 }
             }
 
@@ -732,7 +742,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                             "system.changes": activeEffect.system.changes,
                         });
                     } else {
-                        await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+                        await createEffect(activeEffect);
                     }
                 } else {
                     if (activeEffect.delete) {
@@ -833,7 +843,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                         "system.changes": activeEffect.system.changes,
                     });
                 } else {
-                    await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+                    await createEffect(activeEffect);
                 }
             }
 
@@ -883,12 +893,16 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         //TODO: range should be dynamic based on PERCEPTION
         //TODO: Add the default priority V14 values, because we will take another pass at this when we implement darkness regions.
 
+        // V14 change entries use `type` (there is no `mode` field): the schema strips
+        // unknown keys and defaults type to "add", which fails against detection modes
+        // the token doesn't already have.
+
         // If this is a TARGETING SENSE, then we can can we sense (see/hear/taste/smell) the map
         if (isTargetingSense) {
             ae.system.changes.push({
                 key: "token.sight.range",
                 value: visionMaximumDistanceInMeters, // Should be Infinity? Or blur when range exceeded?
-                mode: "upgrade", // "upgrade" has a V14 bug, so not using it, but would prefer to
+                type: "upgrade",
             });
         }
 
@@ -896,17 +910,17 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         ae.system.changes.push({
             key: `token.detectionModes.basicSight.range`,
             value: visionMaximumDistanceInMeters,
-            mode: "upgrade",
+            type: "upgrade",
         });
         ae.system.changes.push({
             key: `token.detectionModes.${visionDetectMode}.range`,
             value: visionMaximumDistanceInMeters,
-            mode: "upgrade",
+            type: "upgrade",
         });
         ae.system.changes.push({
             key: `token.detectionModes.${visionDetectMode}.enabled`,
             value: true,
-            mode: "override",
+            type: "override",
         });
 
         ae.system.XMLID = this.system.XMLID;
@@ -1339,15 +1353,19 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             return;
         }
 
+        // During an upload these run once at the end: per-item runs churn the token UI,
+        // and concurrent unawaited encumbrance runs create duplicate encumbered effects.
         if (this.actor && (this.type === "equipment" || this.system.XMLID === "PENALTY_SKILL_LEVELS")) {
             // intentionally not using await, mostly because _onUpdate is not async
-            this.actor.applyEncumbrancePenalty();
+            if (!this.actor._uploadSweepActive) {
+                this.actor.applyEncumbrancePenalty();
+            }
         }
 
         // Update detection modes for SENSE items
         // Seems like a bit of a kluge.  There must be a better way.
         if (this.system.active !== undefined) {
-            if (this.actor && this.baseInfo?.type.includes("sense")) {
+            if (this.actor && !this.actor._uploadSweepActive && this.baseInfo?.type.includes("sense")) {
                 for (const token of this.actor.getActiveTokens()) {
                     token.document._prepareDetectionModes();
                     token.renderFlags.set({ refreshVisibility: true });
@@ -1361,9 +1379,12 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
      * back to its default/original state based on its raw system data.
      *
      * @param {Item|Object} item - The Item document instance or raw item data object.
+     * @param {object} [options]
+     * @param {boolean} [options.keepManeuverState] - Leave combat maneuver activation alone
+     *   (upload re-imports keep an active Dodge; a true full heal still clears it).
      * @returns {Object}         - An object containing property paths and values to update.
      */
-    static _prepareOriginalResetData(item) {
+    static _prepareOriginalResetData(item, options = {}) {
         const updateData = {};
         const system = item.system ?? item;
         if (!system) return updateData;
@@ -1394,11 +1415,9 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             }
         }
 
-        if (
-            typeof item.isAblativeDefense === "function" &&
-            item.isAblativeDefense &&
-            typeof item.getResetAblativeDefenseData === "function"
-        ) {
+        // isAblativeDefense is a getter (never typeof "function"); the method check alone
+        // keeps raw compendium data objects out of this branch
+        if (typeof item.getResetAblativeDefenseData === "function" && item.isAblativeDefense) {
             Object.assign(updateData, item.getResetAblativeDefenseData());
         }
 
@@ -1427,7 +1446,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             }
         }
 
-        if (item.isCombatManeuver && system.active) {
+        if (item.isCombatManeuver && system.active && !options.keepManeuverState) {
             updateData["system.active"] = false;
         }
 
@@ -1438,8 +1457,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
      * Reset an item back to its default state.
      * Acts as an instance wrapper leveraging the static data preparation helper.
      */
-    async resetToOriginal() {
-        const updateData = HeroSystem6eItem._prepareOriginalResetData(this);
+    async resetToOriginal(options = {}) {
+        const updateData = HeroSystem6eItem._prepareOriginalResetData(this, options);
         if (Object.keys(updateData).length > 0) {
             await this.update(updateData);
         }
@@ -1449,10 +1468,6 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             for (const ae of this.effects) {
                 await ae.update({ disabled: true });
             }
-        }
-
-        if (this.isAblativeDefense) {
-            await this.resetAblativeDefense();
         }
     }
 
@@ -2111,10 +2126,12 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         return this.findModsByXmlid("ABLATIVE").OPTIONID;
     }
 
+    getResetAblativeDefenseData() {
+        return { "system.ablative": 0 };
+    }
+
     async resetAblativeDefense() {
-        return this.update({
-            "system.ablative": 0,
-        });
+        return this.update(this.getResetAblativeDefenseData());
     }
 
     get showClipsReload() {
@@ -2140,7 +2157,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         } else if (!chargeModifier.CLIPS) {
             return ui.notifications.warn(`${this.detailedName()} does not use clips. Please report.`);
         } else if (this.system.clips < 1) {
-            return ui.notifications.error(`${this.detailedName()} does not have 1 clip remaining.`);
+            return ui.notifications.error(`${this.detailedName()} has no spare clip to reload with.`);
         }
 
         // Reload the clip to 1 less clip that should be at full charges.
@@ -2152,7 +2169,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             author: game.user._id,
             speaker: ChatMessage.getSpeaker({ token: token, actor: this.actor }),
             style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
-            content: `Change clips on <b>${this.name}</b>. ${(token ?? this.actor).name} drops the clip with ${previousCharges} charges. Reloading with a new clip with ${this.system.numCharges} charges. ${this.system.clips} clip(s) remain.`,
+            content: `Change clips on <b>${this.name}</b>. ${(token ?? this.actor).name} drops the clip with ${previousCharges} charges. Reloading with a new clip with ${this.system.numCharges} charges. ${this.system.clipsTotal} clip${this.system.clipsTotal !== 1 ? "s" : ""} remain.`,
             whisper: whisperUserTargetsForActor(this.actor),
         };
         await ChatMessage.create(chatData);
@@ -2672,7 +2689,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xml, "text/xml");
         const heroJson = {};
-        HeroSystem6eActor._xmlToJsonNode(heroJson, xmlDoc.children);
+        xmlToJsonNode(heroJson, xmlDoc.children);
 
         let itemData = {
             name: "undefined",
@@ -8032,7 +8049,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         if (chargeModifier && chargeModifier.parent.item === this) {
             consumableChanges["system._charges"] = this.system.chargesMax;
             if (chargeModifier.CLIPS) {
-                consumableChanges["system._clips"] = this.system.clipsMax;
+                // _clips counts spare clips: full means one loaded plus clipsMax - 1 in reserve
+                consumableChanges["system._clips"] = this.system.clipsMax - 1;
             }
         }
         if (this.system.XMLID === "ENDURANCERESERVE") {
@@ -8077,11 +8095,10 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             );
         }
 
-        // Generate new ID based on timestamp, which is unlikely to be in the HDC file.
-        // We will increment from this value if needed as date precision is in milliseconds
-        // and it may be possible (typically in COMPOUNDPOWER subitems) to have enough duplicates
-        // in a 1ms time frame.
-        let newID = Date.now();
+        // Deterministic: the same HDC must yield the same IDs or re-uploads can't match
+        // repaired items and wrongly flag them for deletion. Increment from the duplicated
+        // ID; the loop handles collisions.
+        const newID = itemData.system.ID + 1;
         for (let loop = 0; loop < 99; loop++) {
             if (!duplicateItem) {
                 break;

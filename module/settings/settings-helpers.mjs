@@ -1,5 +1,6 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { CreateHeroCompendiums } from "../heroCompendiums.mjs";
+import { HdcResetMenu } from "./hdc-reset-menu.mjs";
 //import { CampaignRulesSettingsConfig } from "./campaign-rules-settings.mjs";
 
 export let overrideCanAct = false;
@@ -237,6 +238,15 @@ export default class SettingsHelpers {
             label: game.i18n.localize("Settings.Automation.Menu.Label"),
             icon: "fas fa-bars",
             type: AutomationMenu,
+            restricted: true,
+        });
+
+        game.settings.registerMenu(module, "HdcResetMenu", {
+            name: game.i18n.localize("Settings.HdcReset.Menu.Name"),
+            label: game.i18n.localize("Settings.HdcReset.Menu.Label"),
+            hint: game.i18n.localize("Settings.HdcReset.Menu.Hint"),
+            icon: "fas fa-rotate",
+            type: HdcResetMenu,
             restricted: true,
         });
 
@@ -598,6 +608,14 @@ export default class SettingsHelpers {
             type: Boolean,
             default: false,
             requiresReload: true,
+        });
+
+        // Set by migration; the first GM to join runs the global HDC reset, then clears it
+        game.settings.register(module, "hdcResetPending", {
+            scope: "world",
+            config: false,
+            type: Boolean,
+            default: false,
         });
 
         // Keep track of last migration version

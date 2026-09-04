@@ -17,7 +17,6 @@ import {
 import { Attack, actionToJSON } from "../utility/attack.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
 import { characteristicValueToDiceParts } from "../utility/damage.mjs";
-import { HeroProgressBar } from "../utility/progress-bar.mjs";
 import { clamp, roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
 import {
@@ -27,14 +26,13 @@ import {
     getPowerInfo,
     squelch,
     tokenEducatedGuess,
-    utf8ToBase64,
     whisperUserTargetsForActor,
 } from "../utility/util.mjs";
 import { HeroSystem6eActorActiveEffects } from "./actor-active-effects.mjs";
+import { uploadActorFromXml } from "./actor-upload.mjs";
 
 const { renderTemplate } = foundry.applications.handlebars;
-const { FilePicker } = foundry.applications.apps;
-const { Actor, Item } = foundry.documents;
+const { Actor } = foundry.documents;
 
 /**
  * Extend the base Actor entity by defining a custom roll data structure which is ideal for the Simple system.
@@ -1026,7 +1024,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         }
 
         // Inventory weight and carrying capacity corrections
-        if ("items" in changed || systemData.characteristics?.str) {
+        // (deferred to a single end-of-upload run while the upload sweep is active)
+        if (!this._uploadSweepActive && ("items" in changed || systemData.characteristics?.str)) {
             await this.applyEncumbrancePenalty(changed);
         }
 
@@ -1716,6 +1715,14 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             result = false;
         }
 
+        // Stuck in the upload-error state (failed upload, or reset without stored HDC).
+        // The persisted flag is true mid-upload too, so exempt the upload's own internal
+        // activations (e.g. the ghost FLIGHT auto-toggle) via the transient sweep marker.
+        if (this.flags?.[game.system.id]?.uploading && !this._uploadSweepActive) {
+            badStatus.push("REQUIRES HDC UPLOAD");
+            result = false;
+        }
+
         // Is not actor's turn to act
         // AaronWasHere 3/30/2025: Was unable to full heal Spctral Daemon LordB
         //  which tries to toggle on FLIGHT.  It was not part of the combat tracker.
@@ -2279,13 +2286,40 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         let end;
 
         // Reset all items
-        for (const item of this.items) {
-            start = Date.now();
-            await item.resetToOriginal();
-            end = Date.now();
-            if (end - start > tDelta) {
-                console.warn(`fullHealth performance concern: ${item.name} resetToOriginal`, end - start);
+        start = Date.now();
+        if (this.id) {
+            const resetUpdates = [];
+            const chargeItemsWithEffects = [];
+            for (const item of this.items) {
+                const updateData = HeroSystem6eItem._prepareOriginalResetData(item, {
+                    keepManeuverState: options.keepTemporaryEffects,
+                });
+                if (Object.keys(updateData).length > 0) {
+                    resetUpdates.push({ _id: item.id, ...updateData });
+                }
+                // Pre-update evaluation is equivalent: items without effects have nothing to
+                // disable, and isActive favors effect.disabled, which reset data never touches.
+                if (item.system.chargeItemModifier && item.isActive && item.effects.size > 0) {
+                    chargeItemsWithEffects.push(item);
+                }
             }
+            if (resetUpdates.length > 0) {
+                await this.updateEmbeddedDocuments("Item", resetUpdates);
+            }
+            for (const item of chargeItemsWithEffects) {
+                await item.updateEmbeddedDocuments(
+                    "ActiveEffect",
+                    item.effects.map((ae) => ({ _id: ae.id, disabled: true })),
+                );
+            }
+        } else {
+            for (const item of this.items) {
+                await item.resetToOriginal({ keepManeuverState: options.keepTemporaryEffects });
+            }
+        }
+        end = Date.now();
+        if (end - start > tDelta) {
+            console.warn("fullHealth performance concern: Reset items", end - start);
         }
 
         // Remove temporary effects
@@ -2911,882 +2945,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
     }
 
     async uploadFromXml(xml, options = {}) {
-        // Is this a linked actor?  If so upload into parent.
-        // if (this.uuid.includes("Scene")) {
-        //     console.warn(`Tried to upload a linked actor, redirecting to parent actor`);
-        //     await game.actors.get(this.id).uploadFromXml(xml, options);
-        //     return;
-        // }
-        if (this.token) {
-            ui.notifications.error(
-                "Upload a linked actor is not supported. Use the prototype actor on the right sidebar.",
-            );
-            return;
-        }
-
-        // Captured before any mutation so an upload failure can report the actor's original state and the incoming HDC.
-        const originalActorJson = this.id ? JSON.stringify(this.toObject()) : null;
-        const incomingHdcXml = typeof xml === "string" ? xml : new XMLSerializer().serializeToString(xml);
-
-        // Transient marker (not the persisted uploading flag): the flag deliberately stays set
-        // after a failed upload for the sheet's error display, and keying the per-item
-        // active-effect guard off it would leave that actor's AE sync disabled forever.
-        this._uploadSweepActive = true;
-
-        try {
-            // Convert xml string to xml document (if necessary)
-            if (typeof xml === "string") {
-                const parser = new DOMParser();
-                xml = parser.parseFromString(xml.trim(), "text/xml");
-            }
-
-            // Check for parser error
-            if (xml.getElementsByTagName("parsererror")?.[0]) {
-                console.error(xml.getElementsByTagName("parsererror")[0].innerText);
-                ui.notifications.error(`Parser Error. Verify file is a valid HDC file`);
-                return;
-            }
-
-            // Keep track of damage & charge uses, which we will apply at end of the upload
-            const retainValuesOnUpload = {
-                body:
-                    parseInt(this.system.characteristics?.body?.max) -
-                    parseInt(this.system.characteristics?.body?.value),
-                stun:
-                    parseInt(this.system.characteristics?.stun?.max) -
-                    parseInt(this.system.characteristics?.stun?.value),
-                end:
-                    parseInt(this.system.characteristics?.end?.max) - parseInt(this.system.characteristics?.end?.value),
-                hap: this.system.hap?.value,
-                heroicIdentity: this.system.heroicIdentity ?? true,
-                resources: this.items
-                    .filter(
-                        (item) =>
-                            (item.system.chargeItemModifier &&
-                                (item.system._charges !== item.system.chargesMax ||
-                                    item.system._clips !== item.system.clipsMax)) ||
-                            item.system.ablative > 0 ||
-                            (item.system.XMLID === "ENDURANCERESERVE" && item.system.LEVELS !== item.system.value),
-                    )
-                    .map((o) => ({
-                        id: o.id,
-                        _charges: o.system._charges,
-                        _clips: o.system._clips,
-                        ablative: o.system.ablative,
-                        value: o.system.value,
-                    })),
-
-                was5e: this.is5e,
-            };
-
-            const uploadPerformance = {
-                startTime: new Date(),
-                _d: new Date(),
-            };
-
-            // Convert XML into JSON
-            const heroJson = {};
-            HeroSystem6eActor._xmlToJsonNode(heroJson, xml.children);
-
-            // Need count of maneuvers for progress bar (might be switching between 5/6e so an estimate)
-            const powerListTentative = this.system.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
-            const freeStuffFilter = (power) =>
-                (!(power.behaviors.includes("adder") || power.behaviors.includes("modifier")) &&
-                    power.type.includes("maneuver")) ||
-                power.key === "PERCEPTION" || // Perception
-                power.key === "__STRENGTHDAMAGE"; // Weapon placeholder (this is a dirty hack to count it so we can filter on it later)
-            const freeStuffCount = powerListTentative.filter(freeStuffFilter).length;
-
-            const root = heroJson.CHARACTER ?? heroJson.PREFAB; // Support loading a HDP as a HDC
-
-            const xmlItemsToProcess =
-                1 + // we process heroJson.CHARACTER.CHARACTERISTICS all at once so just track as 1 item.
-                (root.DISADVANTAGES?.length || 0) +
-                (root.EQUIPMENT?.length || 0) +
-                (root.MARTIALARTS?.length || 0) +
-                (root.PERKS?.length || 0) +
-                (root.POWERS?.length || 0) +
-                (root.SKILLS?.length || 0) +
-                (root.TALENTS?.length || 0) +
-                (this.type === "pc" || this.type === "npc" || this.type === "automaton" ? freeStuffCount : 0) + // Free stuff
-                1 + // Validating adjustment and powers
-                1 + // fullHealth
-                1 + // VPP
-                1 + // Images
-                1 + // Final save
-                1 + // Restore retained damage
-                1 + // Custom adders link/assignment
-                1 + // debugModelProps
-                1; // Not really sure why we need an extra +1
-
-            const uploadProgressBar = new HeroProgressBar(`${this.name}: Processing HDC file`, xmlItemsToProcess, {
-                suppressUi: options.quenchUpload,
-            });
-            uploadPerformance.itemsToCreateEstimate = xmlItemsToProcess - 6;
-
-            // Let GM know actor is being uploaded (unless it is a quench test; missing ID)
-            if (!options.quenchUpload && this.id) {
-                // Fire and forget
-                ChatMessage.create({
-                    style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
-                    author: game.user._id,
-                    speaker: ChatMessage.getSpeaker({ actor: this }),
-                    whisper: whisperUserTargetsForActor(this),
-                    content: `<b>${game.user.name}</b> is uploading <b>${this.name}</b>`,
-                });
-            }
-
-            let changes = {};
-
-            // Character name is what's in the sheet or, if missing, what is already in the actor sheet.
-            const characterName =
-                root.CHARACTER_INFO.CHARACTER_NAME || options?.file?.name?.replace(/\.hdc$/i, "") || this.name;
-            uploadPerformance.removeEffects = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-            this.name = characterName;
-            changes["name"] = characterName;
-            uploadProgressBar.advance(`${characterName}: Name, fileInfo`, 0);
-
-            // Flags (add them into the change set to cut down on update calls)
-            changes[`flags.${game.system.id}.uploading`] = true;
-            changes[`flags.${game.system.id}.file`] = {
-                lastModifiedDate: options?.file?.lastModified,
-                name: options?.file?.name,
-                size: options?.file?.size,
-                type: options?.file?.type,
-                webkitRelativePath: options?.file?.webkitRelativePath,
-                uploadedBy: game.user.name,
-            };
-
-            //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            /// NOW LOAD THE HDC STUFF
-
-            // Need to get the base64 image before we delete IMAGE, deepClone doesn't work as expected.
-            uploadProgressBar.advance(`${this.name}: Preprocess image`, 0);
-            const filename = root.IMAGE?.FileName;
-            const extension = filename?.split(".").pop();
-            const base64 = "data:image/" + extension + ";base64," + xml.getElementsByTagName("IMAGE")?.[0]?.textContent;
-
-            // Keep raw XML data without IMAGE
-            const xmlNoImage = foundry.utils.deepClone(xml);
-            const image = xmlNoImage.getElementsByTagName("IMAGE")[0];
-            image?.parentNode?.removeChild(image);
-            this.system._hdcXml = new XMLSerializer().serializeToString(xmlNoImage);
-            changes["system._hdcXml"] = this.system._hdcXml;
-
-            // Heroic Action Points (always keep the value)
-            changes["system.hap.value"] = retainValuesOnUpload.hap;
-
-            // Heroic Identity
-            changes["system.heroicIdentity"] = retainValuesOnUpload.heroicIdentity;
-
-            // game system version
-            this.system.versionHeroSystem6eUpload = game.system.version;
-            changes["system.versionHeroSystem6eUpload"] = game.system.version;
-
-            // is5e
-            // keep track independently of item.system.is5e as targetType can reload it
-            // Assume true for those super old HDC files
-            uploadProgressBar.advance(`${this.name}: is5e`, 0);
-
-            // let _is5e = true;
-
-            // const template =
-            //     heroJson.CHARACTER?.TEMPLATE?.extends ||
-            //     heroJson.CHARACTER?.TEMPLATE ||
-            //     heroJson.CHARACTER?.BASIC_CONFIGURATION?.TEMPLATE;
-
-            // if (typeof template === "string") {
-            //     if (template.includes("builtIn.") && !template.includes("6E.")) {
-            //         // 5E
-            //         _is5e = this.system.is5e = true;
-            //     } else if (template.includes("builtIn.") && template.includes("6E.")) {
-            //         // 6E
-            //         _is5e = this.system.is5e = false;
-            //     } else {
-            //         console.error(`Unrecognized template ${template}`);
-            //     }
-            // }
-
-            // // Update actor type
-            // const targetType = template
-            //     ?.match(/\.(ai|automaton|base|computer|heroic|normal|superheroic|vehicle|standardsuper)[56.]/i)?.[1]
-            //     .toLowerCase()
-            //     .replace("base", "base2")
-            //     .replace("normal", "pc")
-            //     .replace("superheroic", "pc")
-            //     .replace("heroic", "pc")
-            //     .replace("standardsuper", "pc"); // super old HDC
-
-            if (this.id) {
-                // Delete maneuvers (or any other existing items) that don't
-                // match template prior to possibly changing is5e
-                if (this.is5ePreview(root.TEMPLATE) !== this.system.is5e) {
-                    const itemsToDeleteIs5e = this.items
-                        .filter((i) => i.system.is5e !== this.is5ePreview(root.TEMPLATE))
-                        .map((m) => m.id);
-                    if (itemsToDeleteIs5e.length > 0) {
-                        console.warn(`Deleting ${itemsToDeleteIs5e.length} is5e mismatches`);
-                        await this.deleteEmbeddedDocuments("Item", itemsToDeleteIs5e, {
-                            render: false,
-                        });
-                    }
-                }
-
-                // We can't delay this with the changes array because any items based on this actor needs this value.
-                // Specifically compound power is a problem if we don't set is5e properly for a 5e actor.
-                await this.update(
-                    {
-                        ...changes,
-                        "system.is5e": this.is5ePreview(root.TEMPLATE),
-                        "system.CHARACTER.BASIC_CONFIGURATION": root.BASIC_CONFIGURATION,
-                        "system.CHARACTER.CHARACTER_INFO": root.CHARACTER_INFO,
-                        "system.CHARACTER.TEMPLATE": root.TEMPLATE,
-                        "system.CHARACTER.version": root.version,
-                    },
-                    {
-                        render: true, // Need render to make sure the actor sidebar actor.name gets updated #4010
-                    },
-                );
-                changes = {};
-
-                if (this.is5e !== this.system.is5e) {
-                    if (this.name.startsWith("_Quench")) {
-                        console.error(`${this.name} is5e mismatch`);
-                    }
-
-                    // Finally update is5e
-                    await this.update({ "system.is5e": this.is5e }, { render: false });
-                }
-
-                const targetType = this._templateType
-                    .replace("builtIn.", "")
-                    .replace("6E", "")
-                    .replace(".hdt", "")
-                    .toLowerCase()
-                    .replace("base", "base2")
-                    .replace("normal", "pc")
-                    .replace("superheroic", "pc")
-                    .replace("heroic", "pc")
-                    .replace("standardsuper", "pc") // super old HDC
-                    .replace("main", "pc") // custom template
-                    .replace("competentpc", "pc"); // super old HDC
-
-                if (targetType && this.type.replace("npc", "pc") !== targetType) {
-                    if (Object.keys(game.system.documentTypes.Actor).includes(targetType)) {
-                        // REF: https://github.com/foundryvtt/foundryvtt/issues/13090
-                        // AARON WAS HERE on 4/4/2026: Update fails, likely a foundry bug.
-                        // Error: The type of a Document may only be changed if the system field
-                        //        is also updated with a ForcedReplacement operator.
-                        // A subsequent upload works, not ready for publish.
-                        await this.update(
-                            {
-                                type: targetType,
-                                system: foundry.utils.mergeObject(this.system.toObject(), { _type: targetType }),
-                            },
-                            { recursive: false },
-                        );
-                    } else {
-                        ui.notifications.error(`${targetType} is not a valid actor type`);
-                    }
-                }
-            }
-
-            // CHARACTERISTICS
-            if (root?.CHARACTERISTICS) {
-                const changesNormal = {};
-                const changesFiguredOrCalculated = {};
-                uploadProgressBar.advance(`${this.name}: CHARACTERISTICS`, 0);
-
-                // Legacy (well current)
-                for (const [key, value] of Object.entries(root.CHARACTERISTICS)) {
-                    const _baseInfo = getPowerInfo({ XMLID: key, actor: this, xmlTag: key });
-
-                    this.system[key] = new HeroItemCharacteristic(value, { parent: this });
-
-                    if (_baseInfo?.behaviors.includes("calculated") || _baseInfo?.behaviors.includes("figured")) {
-                        changesFiguredOrCalculated[`system.${key}`] = this.system[key];
-                    } else {
-                        changesNormal[`system.${key}`] = this.system[key];
-                    }
-                }
-                delete root.CHARACTERISTICS;
-
-                if (this.id) {
-                    // Update normal values first
-                    await this.update(changesNormal);
-
-                    // Then any figured or calculated characteristics
-                    await this.update(changesFiguredOrCalculated);
-                }
-            }
-
-            if (options.rebuild) {
-                uploadProgressBar.advance(`${this.name}: Deleting existing items when rebuilding`, 0);
-                try {
-                    const turnOffPromises = [];
-                    for (const item of this.items.filter((item) => item.isActivatable())) {
-                        turnOffPromises.push(item.turnOff({ silent: true }));
-                    }
-                    await Promise.all(turnOffPromises);
-                } catch (error) {
-                    console.error(`Error occurred while turning off existing items: ${error.message}`);
-                }
-                await this.deleteEmbeddedDocuments(
-                    "Item",
-                    this.items.map((o) => o.id),
-                );
-            }
-
-            // NOTE don't put this into the promiseArray because we create things in here that are absolutely required by later items (e.g. strength placeholder).
-            // if (this.type === "pc" || this.type === "npc" || this.type === "automaton") {
-            uploadProgressBar.advance(`${this.name}: addFreeStuff`, 0);
-
-            await this.addFreeStuff();
-
-            uploadProgressBar.advance(`${this.name}: addFreeStuff completed`, 0);
-            //}
-
-            uploadPerformance.progressBarFreeStuff - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
-            // ITEMS
-            uploadProgressBar.advance(`${this.name}: Evaluating items`, 0);
-
-            let itemsToCreate = HeroSystem6eItem.parseItemsFromHeroJsonToItemDataArray(heroJson, this);
-
-            uploadProgressBar.advance(`${this.name}: Evaluated Items`, 0);
-
-            uploadProgressBar.advance(`${this.name}: Updating Items`, 0);
-
-            // Working on a merge to update previously existing items.
-            // Add existing item.id (if it exists), which we will use for the pending update.
-            // There may be an item that was converted to equipment/power
-            // Also note that system.ID is natively a string from HDC, which we coerce into INT so use == instead of ===
-            itemsToCreate = itemsToCreate.map((m) =>
-                foundry.utils.mergeObject(m, {
-                    _id: this.items.find((i) => i.system.ID == m.system.ID)?.id,
-                }),
-            );
-            const itemsToUpdate = itemsToCreate.filter((o) => o._id);
-            itemsToCreate = itemsToCreate.filter((o) => !o._id);
-
-            // Make sure itemsToUpdate have ADDER/MODIFIER/POWER array
-            // Which allows a new HDC to remove ADDER during update, without it will never clear
-            for (const itemToUpdate of itemsToUpdate) {
-                itemToUpdate.system.ADDER ??= [];
-                itemToUpdate.system.MODIFIER ??= [];
-                itemToUpdate.system.POWER ??= [];
-            }
-
-            // If item.type is different then:
-            // The type of a Document can be changed only if the system field
-            // is force-replaced (==) or updated with {recursive: false}
-            for (const item of itemsToUpdate) {
-                const itemExisting = this.items.find((o) => o.id === item._id);
-                if (itemExisting?.type !== item.type) {
-                    await ui.notifications.warn(
-                        `${item.name} changed from type=${itemExisting.type} to type=${item.type}`,
-                    );
-
-                    try {
-                        const systemData =
-                            typeof item.system?.toObject === "function" ? item.system.toObject() : item.system;
-                        await itemExisting.update(
-                            {
-                                type: item.type,
-                                system: foundry.utils.mergeObject(systemData, { _type: item.type }),
-                            },
-                            { recursive: false },
-                        );
-                    } catch (e) {
-                        console.error(e);
-                        ui.notifications.error(
-                            `Failed to change ${item.name} from type=${itemExisting.type} to type=${item.type}`,
-                        );
-                    }
-                }
-            }
-
-            // If a skill was previously marked as EVERYMAN, but now isn't we
-            // need to remove the EVERYMAN value as for some reason HDC doesn't
-            // specifically include EVERYMAN="No".  Seems like a HD bug.
-            for (const item of itemsToUpdate.filter((item) => !item.system.EVERYMAN)) {
-                const itemExisting = this.items.find((o) => o.id === item._id);
-                if (itemExisting.system.EVERYMAN) {
-                    // HDC didn't reference EVERYMAN
-                    // so we will specify it as null (false)
-                    // so the update below will set the expected value
-                    console.warn(`Adding EVERYMAN to ${item.name} skill`);
-                    item.system.EVERYMAN = null;
-                }
-            }
-
-            // If a TEXT was previously defined, but now isn't we
-            // need to remove it as for some reason HDC doesn't
-            // specifically include it.
-            for (const item of itemsToUpdate.filter((item) => !item.system.TEXT)) {
-                const itemExisting = this.items.find((o) => o.id === item._id);
-                if (itemExisting.system.TEXT) {
-                    console.warn(`Adding TEXT to ${item.name}/${item.system.XMLID}`);
-                    item.system.TEXT = "";
-                }
-            }
-
-            // If it was a childItem and now isn't
-            // need to remove PARENTID as HDC doesn't
-            // specifically include it.
-            for (const item of itemsToUpdate.filter((item) => !item.system.PARENTID)) {
-                const itemExisting = this.items.find((o) => o.id === item._id);
-                if (itemExisting.system.PARENTID) {
-                    item.system.PARENTID = null;
-                }
-            }
-
-            // update existing document, overwriting any MODIFIERS, etc
-            await this.updateEmbeddedDocuments("Item", itemsToUpdate);
-
-            uploadProgressBar.advance(`${this.name}: Updated Items`, itemsToUpdate.length);
-
-            uploadProgressBar.advance(`${this.name}: Creating Items`, 0);
-
-            uploadPerformance.itemsToCreateActual = itemsToCreate.length;
-
-            uploadPerformance.preItems = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-            if (this.id) {
-                await this.createEmbeddedDocuments("Item", itemsToCreate, { render: false, renderSheet: false });
-            } else {
-                // Temporary actor: createEmbeddedDocuments would silently create world items.
-                for (const itemData of itemsToCreate) {
-                    const item = new HeroSystem6eItem(itemData, { parent: this });
-                    this.items.set(item.system.ID?.toString() || item.system.XMLID, item);
-                }
-            }
-
-            uploadPerformance.createItems = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-            uploadProgressBar.advance(`${this.name}: Created Items`, itemsToCreate.length);
-
-            uploadProgressBar.advance(`${this.name}: Processing non characteristics`, 0);
-            const doLastXmlids = ["COMBAT_LEVELS", "MENTAL_COMBAT_LEVELS", "MENTALDEFENSE"];
-
-            uploadProgressBar.advance(`${this.name}: applyActiveEffects`, 0);
-            for (const item of this.items) {
-                // Authoritative sweep: bypasses the guard that suppresses the concurrent
-                // per-item syncs the upload's own writes would otherwise trigger.
-                await item.setActiveEffects({ render: false, duringUpload: true });
-            }
-
-            uploadProgressBar.advance(`${this.name}: applySizeEffect`, 0);
-            await this.applySizeEffect();
-
-            uploadProgressBar.advance(`${this.name}: Processing ${doLastXmlids.length} doLastXmlids`, 0);
-            await Promise.all(
-                this.items.filter(
-                    (item) =>
-                        doLastXmlids.includes(item.system.XMLID) && !item.baseInfo?.type.includes("characteristic"),
-                ),
-            );
-
-            // VPP Slots
-            uploadProgressBar.advance(`${this.name}: VPP Slots auto selection`, 0);
-            for (const vppItem of this.items.filter((i) => i.system.XMLID === "VPP")) {
-                // If no vppSlots then pick defaults (currently always defaults)
-                if (!vppItem.childItems.find((i) => i.system.CARRIED)) {
-                    let vppSlottedCost = 0;
-                    const vppChanges = [];
-                    for (const slotItem of vppItem.childItems) {
-                        if (vppSlottedCost + slotItem.realCost <= vppItem.vppPoolPoints) {
-                            vppChanges.push({ _id: slotItem.id, "system.CARRIED": true });
-                            vppSlottedCost += slotItem.realCost;
-                        } else {
-                            vppChanges.push({ _id: slotItem.id, "system.CARRIED": false });
-                        }
-                    }
-                    await this.updateEmbeddedDocuments("Item", vppChanges);
-                }
-            }
-            uploadProgressBar.advance(`${this.name}: VPP iSlots auto selection complete`, 1);
-
-            // Make sure any powers with characteristic properties
-            // reflect in current VALUE.
-            // But we want to keep temporary effects (drains, aids, etc)
-            // so players can upload new HDC files without wiping out mid session AE's.
-            // Similar to retained data, were retaining (by not deleting) the temporary effects.
-            uploadProgressBar.advance(`${this.name}: Full Health`, 0);
-            await this.fullHealth({ keepTemporaryEffects: true });
-
-            // Kluge to ensure characteristic values match max
-            try {
-                if (this.id) {
-                    const changes = {};
-                    for (const [key, value] of Object.entries(this._getFullHealthCharacteristicValues())) {
-                        if (this.system.characteristics[key].value !== value) {
-                            changes[`system.characteristics.${key}.value`] = value;
-                        }
-                    }
-                    if (Object.keys(changes).length > 0) {
-                        await this.update(changes);
-                    }
-                }
-            } catch (e) {
-                console.error(e);
-            }
-            uploadProgressBar.advance(`${this.name}: Full Health complete`, 1);
-
-            // retainValuesOnUpload Charges
-            uploadProgressBar.advance(`${this.name}: retainValuesOnUpload charges and ablative`, 0);
-            for (const resourceData of retainValuesOnUpload.resources) {
-                // Careful: the HDC ID is intially a string, but coerced to Number in dataModel thus ==
-                const item = this.items.find((i) => i.id === resourceData.id);
-                if (item) {
-                    // Notice if charges or clips is lower than before we take the min #3302
-                    await item.update({
-                        "system._charges": Math.min(item.system.chargesMax, resourceData._charges),
-                        "system._clips": Math.min(item.system.clipsMax, resourceData._clips),
-                        "system.ablative": Math.max(item.system.ablative, resourceData.ablative),
-                    });
-                    if (item.system.XMLID === "ENDURANCERESERVE") {
-                        await item.update({ "system.value": Math.min(item.system.value, resourceData.value) });
-                    }
-                } else {
-                    console.warn(
-                        `Unable to locate ${resourceData.NAME}/${resourceData.ALIAS} to consume charges after upload.`,
-                    );
-                }
-            }
-            uploadPerformance.postUpload = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
-            uploadProgressBar.advance(`${this.name}: Validating powers`);
-
-            // Validate everything that's been imported
-            this.items.forEach(async (item) => {
-                const power = item.baseInfo;
-
-                // Power needs to exist
-                if (!power) {
-                    await ui.notifications.error(
-                        `${this.name}/${item.detailedName()} has unknown power XMLID. Please report.`,
-                        { console: true, permanent: true },
-                    );
-                } else if (!power.behaviors) {
-                    await ui.notifications.error(
-                        `${this.name}/${item.detailedName()} does not have behaviors defined. Please report.`,
-                        { console: true, permanent: true },
-                    );
-                }
-            });
-
-            uploadPerformance.validate = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
-            uploadProgressBar.advance(`${this.name}: Processed non characteristics`, 0);
-            uploadProgressBar.advance(`${this.name}: Processed all items`, 0);
-
-            uploadPerformance.invalidTargets = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
-            uploadProgressBar.advance(`${this.name}: Uploading image`, 0);
-
-            // Images
-            if (this.img.startsWith("tokenizer/") && game.modules.get("vtta-tokenizer")?.active) {
-                await ui.notifications.warn(
-                    `Skipping image upload, because this token (${this.name}) appears to be using tokenizer.`,
-                );
-            } else if (root.IMAGE) {
-                //const filename = heroJson.CHARACTER.IMAGE?.FileName;
-                const path = "worlds/" + game.world.id + "/tokens";
-                let relativePathName = path + "/" + filename;
-
-                // Create a directory if it doesn't already exist
-                try {
-                    await FilePicker.createDirectory("user", path);
-                } catch (error) {
-                    console.debug("create directory error", error);
-                }
-
-                // Set the image, uploading if not already in the file system
-                try {
-                    const imageFileExists = (await FilePicker.browse("user", path)).files.includes(
-                        encodeURI(relativePathName),
-                    );
-                    if (!imageFileExists) {
-                        //const extension = filename.split(".").pop();
-                        //const base64 =
-                        //"data:image/" + extension + ";base64," + xml.getElementsByTagName("IMAGE")[0].textContent;
-
-                        await foundry.helpers.media.ImageHelper.uploadBase64(base64, filename, path);
-
-                        // FORGE stuff (because users add things into their own directories)
-                        if (typeof ForgeAPI !== "undefined") {
-                            const forgeUser = (await ForgeAPI.status()).user;
-                            relativePathName = `https://assets.forge-vtt.com/${forgeUser}/${relativePathName}`;
-                        }
-                    }
-
-                    changes["img"] = relativePathName;
-
-                    // Update any tokens images that might exist
-                    for (const token of this.getActiveTokens()) {
-                        await token.document.update({
-                            "texture.src": relativePathName,
-                        });
-                    }
-                } catch (e) {
-                    console.error(e);
-                    ui.notifications.warn(
-                        `${this.name} failed to upload ${filename}. Make sure user has [Use File Browser] and [Upload New Files] permissions. Also make sure the folder isn't in [Privacy Mode] indicated with a purple background within FoundryVTT.`,
-                    );
-                }
-
-                delete root.IMAGE;
-            } else {
-                // No image provided. Make sure we're using the default token.
-                // Note we are overwriting any image that may have been there previously.
-                // If they really want the image to stay, they should put it in the HDC file.
-                // Prompt before overwriting token image #2831
-
-                if (this.img !== CONST.DEFAULT_TOKEN && !options.keepExistingImage) {
-                    new foundry.applications.api.DialogV2({
-                        window: { title: "Choose token image" },
-                        content: `
-                    <p>This HDC file does not include an image.</p>
-                    <p>Do you want to keep the existing token image or clear the image (${CONST.DEFAULT_TOKEN})?</p>`,
-                        buttons: [
-                            {
-                                action: "keepImage",
-                                label: "Keep Existing Image",
-                                default: true,
-                            },
-                            {
-                                action: "defaultImage",
-                                label: "Clear",
-                                callback: async () => {
-                                    await this.update({ ["img"]: CONST.DEFAULT_TOKEN });
-                                    // Update any tokens images that might exist
-                                    for (const token of this.getActiveTokens()) {
-                                        await token.document.update({
-                                            "texture.src": CONST.DEFAULT_TOKEN,
-                                        });
-                                    }
-                                },
-                            },
-                        ],
-                        submit: (result) => {
-                            console.log(`User picked option: ${result}`);
-                        },
-                    }).render({ force: true });
-                }
-            }
-
-            uploadPerformance.image = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
-            uploadProgressBar.advance(`${this.name}: Uploaded image`);
-            uploadProgressBar.advance(`${this.name}: Saving core changes`, 0);
-
-            // Non ITEMS stuff in CHARACTER (with data model this becomes less important)
-            changes = {
-                ...changes,
-                "system.CHARACTER": root,
-                "system.versionHeroSystem6eUpload": game.system.version,
-            };
-
-            if (this.prototypeToken) {
-                changes[`prototypeToken.name`] = this.name;
-                changes[`prototypeToken.img`] = changes.img;
-            }
-
-            // Save all our changes (unless temporary actor/quench)
-            if (this.id) {
-                await this.update(changes);
-            }
-
-            uploadPerformance.nonItems = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
-            // Ghosts fly (or anything with RUNNING=0 and FLIGHT)
-            if (this.system.characteristics?.running?.value === 0 && this.system.characteristics?.running?.base === 0) {
-                for (const flight of this.items.filter((i) => i.system.XMLID === "FLIGHT")) {
-                    await flight.toggle();
-                }
-            }
-
-            uploadPerformance.actorPostUpload = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
-            // Kluge to ensure everything has a SPD.
-            // For example a BASE has an implied SPD of three
-            this.system.characteristics.spd ??= {
-                core: 3,
-            };
-
-            uploadPerformance.postUpload2 = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
-            uploadProgressBar.advance(`${this.name}: Saved core changes`);
-            uploadProgressBar.advance(`${this.name}: Restoring retained damage`, 0);
-
-            // Apply retained damage
-            if (this.id && !options.rebuild) {
-                for (const key of ["body", "stun", "end"]) {
-                    if (!this.hasCharacteristic(key.toUpperCase())) continue;
-                    if (retainValuesOnUpload[key] == undefined) continue;
-                    if (this.system.characteristics[key] == undefined) continue;
-
-                    this.system.characteristics[key].value -= retainValuesOnUpload[key];
-                    await this.update(
-                        {
-                            [`system.characteristics.${key}.value`]: this.system.characteristics[key].value,
-                        },
-                        { render: false },
-                    );
-                }
-            }
-            uploadProgressBar.advance(`${this.name}: Restored retained damage`, 0);
-
-            uploadProgressBar.advance(`${this.name}: Linking Custom Adders`, 0);
-            await this.linkCustomAddersForUpload();
-            uploadProgressBar.advance(`${this.name}: Linked Custom Adders`, 1);
-
-            if (this.id) {
-                await this.setFlag(game.system.id, "uploading", false);
-                await this.setFlag(game.system.id, "uploadingError", null);
-                await this.setFlag(game.system.id, "uploadingErrorContext", null);
-            }
-            uploadPerformance.retainedDamage = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
-            // If we have control of this token, reacquire to update movement types
-            const myToken = this.getActiveTokens()?.[0];
-            if (canvas.tokens.controlled.find((t) => t.id == myToken?.id)) {
-                myToken.release();
-                myToken.control();
-            }
-            uploadPerformance.tokenControl = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
-            uploadProgressBar.close(`Uploaded ${this.name}`);
-
-            // report performance concerns
-            const performanceConcerns = uploadProgressBar._performance
-                .filter((o) => o.delta > 500)
-                .sort((a, b) => b.delta - a.delta);
-            for (const concern of performanceConcerns) {
-                console.warn(`uploadFromXml performance concern: ${concern.message} ${concern.delta}s`, concern);
-            }
-
-            uploadPerformance.totalTime = new Date().getTime() - uploadPerformance.startTime;
-
-            //console.log("Upload Performance", uploadPerformance);
-
-            // Let GM know actor was uploaded (unless it is a quench test or missing ID)
-            if (!options.quenchUpload && this.id) {
-                // Fire and forget
-                ChatMessage.create({
-                    style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
-                    author: game.user._id,
-                    speaker: ChatMessage.getSpeaker({ actor: this }),
-                    whisper: whisperUserTargetsForActor(this),
-                    content: `Took ${Math.ceil(uploadPerformance.totalTime / 1000)} seconds for <b>${game.user.name}</b> to upload <b>${this.name}</b>.`,
-                });
-            }
-
-            // Delete any old items that weren't updated, added or part of freeStuff
-            if (this.id) {
-                // Careful: the HDC ID is initially a string, but coerced to Number in dataModel thus ==
-                const itemsToDelete = this.items.filter(
-                    (item) =>
-                        !itemsToUpdate.find((o) => item.id === o._id) &&
-                        !itemsToCreate.find((p) => item.system.ID == p.system.ID) &&
-                        !item.isCombatManeuver &&
-                        !item.baseInfo.behaviors?.includes("non-hd"),
-                );
-                if (itemsToDelete.length > 0) {
-                    const unorderedList =
-                        `<div style="max-height:200px;overflow-y:scroll"><ul>` +
-                        itemsToDelete
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .map((m) => `<li title='${m.system.description}'>${m.type.toUpperCase()}: ${m.name}</li>`)
-                            .join("") +
-                        `</ul></div>`;
-                    const content = `The following items were not included in the HDC file. Do you want to delete them? ${unorderedList}`;
-                    const confirmDeleteExtraItems = await foundry.applications.api.DialogV2.confirm({
-                        window: { title: `${this.name}: Delete extra items?` },
-                        content: content,
-                    });
-
-                    if (confirmDeleteExtraItems) {
-                        console.log(
-                            `Deleting ${itemsToDelete.length} items because they were not present in the HDC file.`,
-                        );
-                        // Toggle them off first as sometimes deleteing items with AE's don'e run the cleanup code.
-                        // FoundryVTT 13 bug?
-                        const turnOffPromises = [];
-                        for (const item of itemsToDelete) {
-                            turnOffPromises.push(item.turnOff({ silent: true }));
-                        }
-                        await Promise.all(turnOffPromises);
-                        await this.deleteEmbeddedDocuments(
-                            "Item",
-                            itemsToDelete.map((o) => o.id),
-                        );
-                    } else {
-                        // Fire and forget (no await on this ChatMessage)
-                        ChatMessage.create({
-                            style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
-                            author: game.user._id,
-                            speaker: ChatMessage.getSpeaker({ actor: this }),
-                            content: `<b>${this.name}</b> kept a few items that were not in the HDC upload: ${unorderedList}`,
-                            whisper: whisperUserTargetsForActor(this),
-                        });
-                    }
-                }
-            }
-
-            // DataModel check
-            uploadProgressBar.advance(`${this.name}: Processing debugModelProps`, 0);
-            let dataModelErrorCount = 0;
-            for (const item of this.items) {
-                const e = item.system.debugModelProps();
-                if (e) {
-                    if (dataModelErrorCount++ === 0) {
-                        ui.notifications.error(`${this.name}. ${e}<br>Please report`, { permanent: true });
-                    } else {
-                        // the console.error inside debugModelProps will log the rest
-                    }
-                }
-            }
-            uploadProgressBar.advance(`${this.name}: Processed debugModelProps`, 1);
-        } catch (e) {
-            console.error(e);
-            ui.notifications.error(`${this.name} had errors during upload.`);
-            //uploadProgressBar.close(`Upload Failed ${this.name}`);
-            if (this.id) {
-                await this.setFlag(
-                    game.system.id,
-                    "uploadingError",
-                    e.stack.replace(/http(s)?:[/[a-z0-9_.-:()]+\//gi, ""),
-                );
-
-                // Diagnostic context for bug reports. base64 encode blobs so they survive copy/paste intact.
-                await this.setFlag(game.system.id, "uploadingErrorContext", {
-                    foundry: game.release?.display || game.version,
-                    foundryBuild: game.release?.build ?? null,
-                    system: game.system.version,
-                    actorBase64: originalActorJson ? utf8ToBase64(originalActorJson) : null,
-                    hdcBase64: incomingHdcXml ? utf8ToBase64(incomingHdcXml) : null,
-                });
-
-                // Make sure we show the error we just posted to DB.
-                // Needed for when the delete extra items has an error.
-                await this.setFlag(game.system.id, "uploading", true);
-            }
-        } finally {
-            this._uploadSweepActive = false;
-        }
+        return uploadActorFromXml(this, xml, options);
     }
 
     /**
@@ -3828,38 +2987,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             throw new Error(`HDC failed to parse: ${parserError.textContent}`);
         }
         return doc;
-    }
-
-    async linkCustomAddersForUpload() {
-        // CSLs
-        const cslInitializationUpdates = [];
-        for (const csl of this.allCslSkills) {
-            const cslChangesToLink = csl.linkBasedOnCustomAdders(csl.system._source.ADDER, this.cslItems);
-            if (csl._id != null) {
-                cslChangesToLink._id = csl._id;
-                cslInitializationUpdates.push(cslChangesToLink);
-            } else {
-                foundry.utils.mergeObject(csl, cslChangesToLink);
-            }
-        }
-        if (cslInitializationUpdates.length > 0) {
-            await Item.implementation.updateDocuments(cslInitializationUpdates, { parent: this });
-        }
-
-        // PSLs
-        const pslInitializationUpdates = [];
-        for (const psl of this.allPslSkills) {
-            const pslChangesToLink = psl.linkBasedOnCustomAdders(psl.system._source.ADDER, this.pslItems);
-            if (psl._id != null) {
-                pslChangesToLink._id = psl._id;
-                pslInitializationUpdates.push(pslChangesToLink);
-            } else {
-                foundry.utils.mergeObject(psl, pslChangesToLink);
-            }
-        }
-        if (pslInitializationUpdates.length > 0) {
-            await Item.implementation.updateDocuments(pslInitializationUpdates, { parent: this });
-        }
     }
 
     /**
@@ -4115,10 +3242,31 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
     }
 
     async addHeroSystemManeuvers() {
+        const existingManeuvers = this.items.filter((power) => power.type?.includes("maneuver"));
+
+        // Maneuver definitions derive purely from CONFIG for a given edition and system
+        // version, so a matching set of same-version items is guaranteed identical:
+        // skip the delete/recreate, which also preserves runtime state (e.g. an active Dodge).
+        const expectedManeuvers = (this.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e).filter((power) =>
+            power.type?.includes("maneuver"),
+        );
+        if (existingManeuvers.length === expectedManeuvers.length) {
+            const expectedNameByXmlid = new Map(expectedManeuvers.map((power) => [power.key, power.name]));
+            const seenXmlids = new Set();
+            const unchanged = existingManeuvers.every((item) => {
+                if (seenXmlids.has(item.system.XMLID)) return false;
+                seenXmlids.add(item.system.XMLID);
+                return (
+                    expectedNameByXmlid.get(item.system.XMLID) === item.name &&
+                    item.system.is5e === this.is5e &&
+                    item.system.versionHeroSystem6eCreated === game.system.version
+                );
+            });
+            if (unchanged) return;
+        }
+
         // Delete all existing maneuvers
-        const existingManeuverIds = this.items
-            .filter((power) => power.type?.includes("maneuver"))
-            .map((item) => item.id);
+        const existingManeuverIds = existingManeuvers.map((item) => item.id);
         if (existingManeuverIds.length) {
             // Close any open Item sheets
             for (const app of foundry.applications.instances.values()) {
@@ -4132,10 +3280,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         }
 
         // Add the maneuvers for this system
-        const powerList = this.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
-        const maneuverItemsData = powerList
-            .filter((power) => power.type?.includes("maneuver"))
-            .map((maneuver) => this.buildManeuverData(maneuver));
+        const maneuverItemsData = expectedManeuvers.map((maneuver) => this.buildManeuverData(maneuver));
 
         // Create based on this being a database object or not
         if (this.id) {
@@ -4173,157 +3318,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             visionMaximumDistanceInMeters = Math.floor(Math.max(visionMaximumDistanceInMeters, Math.pow(2, pwr)));
         }
         return visionMaximumDistanceInMeters;
-    }
-
-    static _xmlToJsonNode(json, children) {
-        if (children.length === 0) return;
-
-        for (const child of children) {
-            const tagName = child.tagName;
-
-            let jsonChild = {};
-            if (child.childElementCount == 0 && child.attributes.length == 0) {
-                jsonChild = child.textContent;
-            }
-            if (HeroSystem6eItem.ItemXmlTags.includes(child.tagName)) {
-                jsonChild = [];
-            } else {
-                for (const attribute of child.attributes) {
-                    switch (attribute.value) {
-                        case "Yes":
-                        case "YES":
-                            jsonChild[attribute.name] = true;
-                            break;
-                        case "No":
-                        case "NO":
-                            jsonChild[attribute.name] = false;
-                            break;
-                        case "GENERIC_OBJECT":
-                            jsonChild[attribute.name] = child.tagName.toUpperCase(); // e.g. MULTIPOWER
-                            jsonChild["xmlid"] = attribute.value.trim(); // Sept 1 2025: Consider keeping the original XMLID for eventual write
-                            break;
-                        default:
-                            jsonChild[attribute.name] = attribute.value.trim();
-                    }
-                }
-
-                // There can be confusion if the item is a MODIFIER or ADDER (EXPLOSION 5e/6e and others).
-                // So keep track of the tagName, which we use in getPowerInfo to help filter when there are duplicate XMLID keys.
-                if (child.attributes.length > 0) {
-                    try {
-                        jsonChild.xmlTag = tagName;
-                        jsonChild._hdcXml = new XMLSerializer().serializeToString(child); //new XMLSerializer().serializeToString(child.cloneNode());
-                    } catch (e) {
-                        console.error(e);
-                    }
-                }
-            }
-
-            if (child.children.length > 0) {
-                this._xmlToJsonNode(jsonChild, child.children);
-            }
-
-            let isPartOfTemplate = false;
-            let ptr = child;
-            while (ptr) {
-                if (ptr.tagName === "TEMPLATE") {
-                    isPartOfTemplate = true;
-                    break;
-                }
-                ptr = ptr.parentNode;
-            }
-
-            if (!isPartOfTemplate) {
-                // Some super old items use RANGED, but is now called RANGE
-                if (jsonChild.XMLID === "RANGED" && jsonChild.xmlTag === "ADDER") {
-                    jsonChild.XMLID = "RANGE";
-                    jsonChild.errors ??= [];
-                    jsonChild.errors.push("RANGE renamed to RANGED");
-                }
-
-                // Items should have an XMLID
-                // Some super old items are missing XMLID, which we will try to fix
-                // A bit more generic
-                if (
-                    !jsonChild.XMLID &&
-                    ["CHARACTERISTICS", ...HeroSystem6eItem.ItemXmlTags].includes(child.parentNode.tagName)
-                ) {
-                    const powerInfo = getPowerInfo({
-                        xmlid: jsonChild.xmlTag,
-                        xmlTag: jsonChild.xmlTag,
-                        is5e: true,
-                    });
-                    if (powerInfo) {
-                        if (powerInfo.key != jsonChild.xmlTag) {
-                            console.error(`powerInfo.key != xmlTag`, jsonChild);
-                        }
-                        jsonChild.XMLID = powerInfo.key;
-                        jsonChild.errors ??= [];
-                        jsonChild.errors.push("Missing XMLID, using xmlTag reference");
-                    }
-                }
-
-                // Super old HDC missing XMLID for power frameworks & lists (newer has XMLID=GENERIC_OBJECT)
-                if (!jsonChild.XMLID && ["LIST", "VPP", "MULTIPOWER"].includes(jsonChild.xmlTag)) {
-                    jsonChild.XMLID = jsonChild.xmlTag;
-                }
-
-                // Some super old items are missing OPTIONID, which we will try to fix
-                if (jsonChild.OPTION && !jsonChild.OPTIONID) {
-                    const powerInfo = getPowerInfo({ xmlid: jsonChild.XMLID, xmlTag: jsonChild.xmlTag, is5e: true });
-                    jsonChild.OPTIONID = powerInfo?.optionIDFix?.(jsonChild) || jsonChild.OPTION.toUpperCase();
-                    jsonChild.errors ??= [];
-                    jsonChild.errors.push("Missing OPTIONID, using OPTION reference");
-                }
-
-                // Some super old items are missing and ID (like SCIENTIST skill enhancer)
-                if (jsonChild.XMLID && !jsonChild.ID) {
-                    const powerInfo = getPowerInfo({ xmlid: jsonChild.XMLID, xmlTag: jsonChild.xmlTag, is5e: true });
-                    const PARENTID = child.nextElementSibling?.attributes?.PARENTID?.value;
-                    if (PARENTID) {
-                        jsonChild.ID = PARENTID;
-                        jsonChild.errors ??= [];
-                        jsonChild.errors.push("Missing ID, using PARENTID from nextElementSibling");
-                    }
-
-                    if (!jsonChild.BASECOST) {
-                        // We are going to rebase this item as we have no BASECOST or likely any other properties
-                        if (!powerInfo?.xml) {
-                            ui.notifications.error(
-                                `Unable to rebase ${jsonChild?.XMLID} because powerInfo is not available.`,
-                            );
-                            continue;
-                        } else {
-                            try {
-                                jsonChild.errors ??= [];
-                                const parser = new DOMParser();
-                                const rebase = parser.parseFromString(powerInfo.xml.trim(), "text/xml");
-                                for (const attribute of rebase.children[0].attributes) {
-                                    if (!jsonChild[attribute.name]) {
-                                        jsonChild[attribute.name] ??= attribute.value;
-                                        jsonChild.errors.push(`${attribute.name} from config.mjs:xml`);
-                                    }
-                                }
-                            } catch (e) {
-                                console.error(e);
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (
-                HeroSystem6eItem.ItemXmlChildTagsUpload.includes(child.tagName) &&
-                !HeroSystem6eItem.ItemXmlTags.includes(child.parentElement?.tagName)
-            ) {
-                json[tagName] ??= [];
-                json[tagName].push(jsonChild);
-            } else if (Array.isArray(json)) {
-                json.push(jsonChild);
-            } else {
-                json[tagName] = jsonChild;
-            }
-        }
     }
 
     async _resetCharacteristicsFromHdc() {

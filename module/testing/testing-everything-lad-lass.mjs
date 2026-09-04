@@ -1,17 +1,6 @@
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
 
-export function registerEverythingLadLass(quench) {
-    quench.registerBatch(
-        `${game.system.id}.utils.everything`,
-        (context) => {
-            const { assert, before, after, describe, it } = context;
-
-            describe("Everything Lad and Lass Tests", function () {
-                // The default timeout tends to be insufficient with multiple actors being created at the same time.
-                setQuenchTimeout(this);
-
-                describe("Everything Lad (5e)", function () {
-                    const contents = `
+const EVERYTHING_LAD_5E_HDC = `
                     <?xml version="1.0" encoding="UTF-16"?>
                     <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic.hdt">
                       <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" />
@@ -947,25 +936,9 @@ export function registerEverythingLadLass(quench) {
                       <EQUIPMENT />
                       <RULES name="A.H. 525" path="Test-EverythingLad-5e.hdc" BASEPOINTS="200" DISADPOINTS="150" APPEREND="10" STRAPPEREND="10" NCMSELECTED="No" NCMUSERCHANGEABLE="Yes" ATTACKAPMAXVALUE="90" ATTACKAPMAXRESPONSE="0" DEFENSEAPMAXVALUE="90" DEFENSEAPMAXRESPONSE="0" DISADCATEGORYMAXVALUE="75" DISADCATEGORYMAXRESPONSE="0" AVAILDISADPOINTSRESPONSE="0" AVAILTOTALPOINTSRESPONSE="0" CHARACTERISTICMAXVALUE="1000" CHARACTERISTICMAXRESPONSE="0" MANEUVERMAXVALUE="1000" MANEUVERMAXRESPONSE="0" SKILLMAXVALUE="1000" SKILLMAXRESPONSE="0" PERKMAXVALUE="1000" PERKMAXRESPONSE="0" TALENTMAXVALUE="1000" TALENTMAXRESPONSE="0" POWERMAXVALUE="1000" POWERMAXRESPONSE="0" EQUIPMENTCOSTVALUE="1000" EQUIPMENTCOSTRESPONSE="0" EQUIPMENTCOSTUNITS="gp" EQUIPMENTCOSTCONVERSION="1.0" EQUIPMENTCOSTDECIMALPLACES="0" EQUIPMENTUNITSPREFIX="Yes" STANDARDEFFECTALLOWED="Yes" USEEXPANDEDGROWTHCHART="No" DEFAULTSTANDARDEFFECT="No" MULTIPLIERALLOWED="No" LANGUAGESIMILARITIESUSED="No" LITERACYFREE="No" NATIVELITERACYFREE="Yes" EQUIPMENTALLOWED="Yes" PENALIZENOLEVEL1="No" ONLYSELLONEFIGURED="Yes" USEINCREASEDDAMAGEDIFFERENTIATION="No" AUTOMATICALLYAPPLYNOFIGURED="Yes" LINKACROSSFRAMEWORK="2" SPECIALTYPEINFRAMEWORK="1" NONENDUSINGABILITYINEC="1" USESKILLMAXIMA="No" USESKILLMULTIPLIERS="No" LANGUAGESASINTSKILL="No" SKILLMAXIMALIMIT="13" SKILLROLLBASE="9" SKILLROLLDENOMINATOR="5.0" CHARROLLBASE="9" CHARROLLDENOMINATOR="5.0" USENOTES1="No" USENOTES2="No" USENOTES3="No" USENOTES4="No" USENOTES5="No" NOTES1LABEL="Notes 1" NOTES2LABEL="Notes 2" NOTES3LABEL="Notes 3" NOTES4LABEL="Notes 4" NOTES5LABEL="Notes 5" />
                     </CHARACTER>
-                    `;
+`;
 
-                    let actor;
-                    before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
-                    });
-
-                    after(async function () {
-                        await deleteQuenchActor({ quench: this, actor });
-                    });
-
-                    it("ok", async function () {
-                        console.log("ok");
-                        assert.ok(true);
-                    });
-                });
-
-                describe("Everything Lass (6e)", function () {
-                    const contents = `
+const EVERYTHING_LASS_6E_HDC = `
                     <?xml version="1.0" encoding="UTF-16"?>
                       <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic6E.hdt">
                         <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" />
@@ -1925,7 +1898,109 @@ export function registerEverythingLadLass(quench) {
                         <EQUIPMENT />
                         <RULES name="A.H. 525" path="Test-EverythingLass-6e.hdc" BASEPOINTS="200" DISADPOINTS="150" APPEREND="10" STRAPPEREND="10" NCMSELECTED="No" NCMUSERCHANGEABLE="Yes" ATTACKAPMAXVALUE="90" ATTACKAPMAXRESPONSE="0" DEFENSEAPMAXVALUE="90" DEFENSEAPMAXRESPONSE="0" DISADCATEGORYMAXVALUE="75" DISADCATEGORYMAXRESPONSE="0" AVAILDISADPOINTSRESPONSE="0" AVAILTOTALPOINTSRESPONSE="0" CHARACTERISTICMAXVALUE="1000" CHARACTERISTICMAXRESPONSE="0" MANEUVERMAXVALUE="1000" MANEUVERMAXRESPONSE="0" SKILLMAXVALUE="1000" SKILLMAXRESPONSE="0" PERKMAXVALUE="1000" PERKMAXRESPONSE="0" TALENTMAXVALUE="1000" TALENTMAXRESPONSE="0" POWERMAXVALUE="1000" POWERMAXRESPONSE="0" EQUIPMENTCOSTVALUE="1000" EQUIPMENTCOSTRESPONSE="0" EQUIPMENTCOSTUNITS="gp" EQUIPMENTCOSTCONVERSION="1.0" EQUIPMENTCOSTDECIMALPLACES="0" EQUIPMENTUNITSPREFIX="Yes" STANDARDEFFECTALLOWED="Yes" USEEXPANDEDGROWTHCHART="No" DEFAULTSTANDARDEFFECT="No" MULTIPLIERALLOWED="No" LANGUAGESIMILARITIESUSED="No" LITERACYFREE="No" NATIVELITERACYFREE="Yes" EQUIPMENTALLOWED="Yes" PENALIZENOLEVEL1="No" ONLYSELLONEFIGURED="Yes" USEINCREASEDDAMAGEDIFFERENTIATION="No" AUTOMATICALLYAPPLYNOFIGURED="Yes" LINKACROSSFRAMEWORK="2" SPECIALTYPEINFRAMEWORK="1" NONENDUSINGABILITYINEC="1" USESKILLMAXIMA="No" USESKILLMULTIPLIERS="No" LANGUAGESASINTSKILL="No" SKILLMAXIMALIMIT="13" SKILLROLLBASE="9" SKILLROLLDENOMINATOR="5.0" CHARROLLBASE="9" CHARROLLDENOMINATOR="5.0" USENOTES1="No" USENOTES2="No" USENOTES3="No" USENOTES4="No" USENOTES5="No" NOTES1LABEL="Notes 1" NOTES2LABEL="Notes 2" NOTES3LABEL="Notes 3" NOTES4LABEL="Notes 4" NOTES5LABEL="Notes 5" />
                       </CHARACTER>
-                    `;
+`;
+
+function logUploadPerformance(actor, label) {
+    const perf = actor.lastUploadPerformance;
+    console.log(
+        `Upload performance [${label}] total ${Math.round(perf.settledTotalMs)}ms counts=${JSON.stringify(perf.counts)}\n` +
+            perf
+                .table()
+                .map((mark) => `${String(mark.ms).padStart(7)}ms  ${mark.label}`)
+                .join("\n"),
+    );
+}
+
+export function registerEverythingLadLass(quench) {
+    quench.registerBatch(
+        `${game.system.id}.utils.everything`,
+        (context) => {
+            const { assert, before, after, describe, it } = context;
+
+            // Runs last within a character's describe: the re-upload replaces item data,
+            // so earlier assertions must see the fresh-upload state.
+            function addUploadTimingTests(label, contents, getActor) {
+                let freshItemsCreated;
+
+                it("records stage timings for a fresh upload", function () {
+                    const perf = getActor().lastUploadPerformance;
+                    assert.isDefined(perf);
+                    assert.isAbove(perf.marks.length, 10);
+                    assert.isAbove(perf.counts.itemsCreated, 0);
+                    freshItemsCreated = perf.counts.itemsCreated;
+                    logUploadPerformance(getActor(), `${label} fresh`);
+                });
+
+                it("creates active effects for every item the upload sweep covers", function () {
+                    const itemsExpectingEffects = getActor().items.filter(
+                        (item) =>
+                            item.baseInfo?.activeEffect ||
+                            item.baseInfo?.type?.includes("movement") ||
+                            (item.type !== "characteristic" && item.baseInfo?.type?.includes("characteristic")),
+                    );
+                    assert.isAbove(itemsExpectingEffects.length, 0);
+                    for (const item of itemsExpectingEffects) {
+                        assert.isAbove(item.effects.size, 0, `${item.name} has no active effects after upload`);
+                    }
+                });
+
+                it("re-uploads by updating existing items and records stage timings", async function () {
+                    this.timeout(120000);
+                    const actor = getActor();
+
+                    const maneuverIdsBefore = actor.items
+                        .filter((item) => item.type === "maneuver")
+                        .map((item) => item.id)
+                        .sort();
+                    const dodge = actor.items.find((item) => item.system.XMLID === "DODGE");
+                    await dodge.update({ "system.active": true });
+
+                    const renamedContents = contents.replace(/CHARACTER_NAME=".*?"/, `CHARACTER_NAME="${actor.name}"`);
+                    await actor.uploadFromXml(renamedContents, { quenchUpload: true });
+
+                    const perf = actor.lastUploadPerformance;
+                    assert.equal(perf.counts.itemsUpdated, freshItemsCreated);
+                    assert.equal(perf.counts.itemsCreated, 0);
+
+                    // Unchanged definitions: maneuvers are kept (same ids), not recreated,
+                    // and an active maneuver survives the re-upload
+                    const maneuverIdsAfter = actor.items
+                        .filter((item) => item.type === "maneuver")
+                        .map((item) => item.id)
+                        .sort();
+                    assert.deepEqual(maneuverIdsAfter, maneuverIdsBefore);
+                    assert.isTrue(actor.items.get(dodge.id).system.active);
+
+                    logUploadPerformance(actor, `${label} re-upload`);
+                });
+            }
+
+            describe("Everything Lad and Lass Tests", function () {
+                // The default timeout tends to be insufficient with multiple actors being created at the same time.
+                setQuenchTimeout(this);
+
+                describe("Everything Lad (5e)", function () {
+                    const contents = EVERYTHING_LAD_5E_HDC;
+
+                    let actor;
+                    before(async function () {
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                    });
+
+                    after(async function () {
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("ok", async function () {
+                        console.log("ok");
+                        assert.ok(true);
+                    });
+
+                    addUploadTimingTests("Everything Lad (5e)", contents, () => actor);
+                });
+
+                describe("Everything Lass (6e)", function () {
+                    const contents = EVERYTHING_LASS_6E_HDC;
 
                     let actor;
                     before(async function () {
@@ -1943,6 +2018,8 @@ export function registerEverythingLadLass(quench) {
                     it("Absorption", async function () {
                         assert.equal(actor.items.find((o) => o.system.XMLID === "ABSORPTION").system.realCost, 1);
                     });
+
+                    addUploadTimingTests("Everything Lass (6e)", contents, () => actor);
                 });
             });
         },
