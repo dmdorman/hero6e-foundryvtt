@@ -43,6 +43,15 @@ class HeroProgressBarV13 {
     }
 
     /**
+     * Adjust the total after construction, once an estimate can be trued up with exact counts.
+     *
+     * @param {number} delta
+     */
+    addToMax(delta) {
+        this._max = Math.max(this._count, this._max + delta);
+    }
+
+    /**
      * Advance the percentage on the progress bar. Yes, you can do a negative count but not sure you want to.
      *
      * @param {string} message

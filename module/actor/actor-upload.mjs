@@ -79,41 +79,30 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         const heroJson = {};
         xmlToJsonNode(heroJson, xml.children);
 
-        // Need count of maneuvers for progress bar (might be switching between 5/6e so an estimate)
-        const powerListTentative = actor.system.is5e ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
-        const freeStuffFilter = (power) =>
-            (!(power.behaviors.includes("adder") || power.behaviors.includes("modifier")) &&
-                power.type.includes("maneuver")) ||
-            power.key === "PERCEPTION" || // Perception
-            power.key === "__STRENGTHDAMAGE"; // Weapon placeholder (this is a dirty hack to count it so we can filter on it later)
-        const freeStuffCount = powerListTentative.filter(freeStuffFilter).length;
-
         const root = heroJson.CHARACTER ?? heroJson.PREFAB; // Support loading a HDP as a HDC
 
-        const xmlItemsToProcess =
-            1 + // we process heroJson.CHARACTER.CHARACTERISTICS all at once so just track as 1 item.
+        // Ticks delivered before close: one per HDC item on update/create (trued up via
+        // addToMax once the exact split is known — compound children add items the root
+        // arrays don't count), plus the fixed single-tick stage advances below
+        // (VPP, fullHealth, validate, image, core save, custom adders).
+        const fixedStageTicks = 6;
+        const hdcItemEstimate =
             (root.DISADVANTAGES?.length || 0) +
             (root.EQUIPMENT?.length || 0) +
             (root.MARTIALARTS?.length || 0) +
             (root.PERKS?.length || 0) +
             (root.POWERS?.length || 0) +
             (root.SKILLS?.length || 0) +
-            (root.TALENTS?.length || 0) +
-            (actor.type === "pc" || actor.type === "npc" || actor.type === "automaton" ? freeStuffCount : 0) + // Free stuff
-            1 + // Validating adjustment and powers
-            1 + // fullHealth
-            1 + // VPP
-            1 + // Images
-            1 + // Final save
-            1 + // Restore retained damage
-            1 + // Custom adders link/assignment
-            1 + // debugModelProps
-            1; // Not really sure why we need an extra +1
+            (root.TALENTS?.length || 0);
 
-        const uploadProgressBar = new HeroProgressBar(`${actor.name}: Processing HDC file`, xmlItemsToProcess, {
-            suppressUi: options.quenchUpload,
-            tracker: uploadPerformance,
-        });
+        const uploadProgressBar = new HeroProgressBar(
+            `${actor.name}: Processing HDC file`,
+            fixedStageTicks + hdcItemEstimate,
+            {
+                suppressUi: options.quenchUpload,
+                tracker: uploadPerformance,
+            },
+        );
 
         // Let GM know actor is being uploaded (unless it is a quench test; missing ID)
         if (!options.quenchUpload && actor.id) {
@@ -356,6 +345,9 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         );
         const itemsToUpdate = itemsToCreate.filter((o) => o._id);
         itemsToCreate = itemsToCreate.filter((o) => !o._id);
+
+        // True up the estimate now that the exact item tick count is known
+        uploadProgressBar.addToMax(itemsToUpdate.length + itemsToCreate.length - hdcItemEstimate);
 
         // Make sure itemsToUpdate have ADDER/MODIFIER/POWER array
         // Which allows a new HDC to remove ADDER during update, without it will never clear
@@ -838,7 +830,8 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
                 }
             }
         }
-        uploadProgressBar.advance(`${actor.name}: Processed debugModelProps`, 1);
+        // After close: still marks timing, must not add a tick the total never promised
+        uploadProgressBar.advance(`${actor.name}: Processed debugModelProps`, 0);
     } catch (e) {
         console.error(e);
         ui.notifications.error(`${actor.name} had errors during upload.`);
