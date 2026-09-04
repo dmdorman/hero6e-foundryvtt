@@ -2280,13 +2280,38 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         let end;
 
         // Reset all items
-        for (const item of this.items) {
-            start = Date.now();
-            await item.resetToOriginal();
-            end = Date.now();
-            if (end - start > tDelta) {
-                console.warn(`fullHealth performance concern: ${item.name} resetToOriginal`, end - start);
+        start = Date.now();
+        if (this.id) {
+            const resetUpdates = [];
+            const chargeItemsWithEffects = [];
+            for (const item of this.items) {
+                const updateData = HeroSystem6eItem._prepareOriginalResetData(item);
+                if (Object.keys(updateData).length > 0) {
+                    resetUpdates.push({ _id: item.id, ...updateData });
+                }
+                // Pre-update evaluation is equivalent: items without effects have nothing to
+                // disable, and isActive favors effect.disabled, which reset data never touches.
+                if (item.system.chargeItemModifier && item.isActive && item.effects.size > 0) {
+                    chargeItemsWithEffects.push(item);
+                }
             }
+            if (resetUpdates.length > 0) {
+                await this.updateEmbeddedDocuments("Item", resetUpdates);
+            }
+            for (const item of chargeItemsWithEffects) {
+                await item.updateEmbeddedDocuments(
+                    "ActiveEffect",
+                    item.effects.map((ae) => ({ _id: ae.id, disabled: true })),
+                );
+            }
+        } else {
+            for (const item of this.items) {
+                await item.resetToOriginal();
+            }
+        }
+        end = Date.now();
+        if (end - start > tDelta) {
+            console.warn("fullHealth performance concern: Reset items", end - start);
         }
 
         // Remove temporary effects
