@@ -1410,11 +1410,9 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             }
         }
 
-        if (
-            typeof item.isAblativeDefense === "function" &&
-            item.isAblativeDefense &&
-            typeof item.getResetAblativeDefenseData === "function"
-        ) {
+        // isAblativeDefense is a getter (never typeof "function"); the method check alone
+        // keeps raw compendium data objects out of this branch
+        if (typeof item.getResetAblativeDefenseData === "function" && item.isAblativeDefense) {
             Object.assign(updateData, item.getResetAblativeDefenseData());
         }
 

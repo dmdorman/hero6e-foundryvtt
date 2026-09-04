@@ -11295,6 +11295,26 @@ export function registerUploadTests(quench) {
                     });
                 });
 
+                describe("ablative reset from _prepareOriginalResetData", function () {
+                    // The guard must pass for Item documents (isAblativeDefense is a getter)
+                    // and skip raw compendium data objects (no reset method).
+                    it("resets ablative on document-shaped items", function () {
+                        const documentLike = {
+                            system: { ablative: 3 },
+                            isAblativeDefense: true,
+                            getResetAblativeDefenseData: HeroSystem6eItem.prototype.getResetAblativeDefenseData,
+                        };
+                        const updateData = HeroSystem6eItem._prepareOriginalResetData(documentLike);
+                        assert.equal(updateData["system.ablative"], 0);
+                    });
+
+                    it("skips raw data objects without the reset method", function () {
+                        const rawItemData = { system: { ablative: 3 } };
+                        const updateData = HeroSystem6eItem._prepareOriginalResetData(rawItemData);
+                        assert.isFalse(Object.prototype.hasOwnProperty.call(updateData, "system.ablative"));
+                    });
+                });
+
                 describe("guaranteeUniqueItemSystemId", function () {
                     // Re-uploads match items to their stored counterparts by system.ID, so
                     // duplicate-ID repair must produce identical IDs on every parse of the

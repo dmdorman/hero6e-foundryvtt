@@ -1715,8 +1715,10 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             result = false;
         }
 
-        // Stuck in the upload-error state (failed upload, or reset without stored HDC)
-        if (this.flags?.[game.system.id]?.uploading) {
+        // Stuck in the upload-error state (failed upload, or reset without stored HDC).
+        // The persisted flag is true mid-upload too, so exempt the upload's own internal
+        // activations (e.g. the ghost FLIGHT auto-toggle) via the transient sweep marker.
+        if (this.flags?.[game.system.id]?.uploading && !this._uploadSweepActive) {
             badStatus.push("REQUIRES HDC UPLOAD");
             result = false;
         }
