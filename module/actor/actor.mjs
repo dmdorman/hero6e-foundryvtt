@@ -2283,7 +2283,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             const resetUpdates = [];
             const chargeItemsWithEffects = [];
             for (const item of this.items) {
-                const updateData = HeroSystem6eItem._prepareOriginalResetData(item);
+                const updateData = HeroSystem6eItem._prepareOriginalResetData(item, {
+                    keepManeuverState: options.keepTemporaryEffects,
+                });
                 if (Object.keys(updateData).length > 0) {
                     resetUpdates.push({ _id: item.id, ...updateData });
                 }

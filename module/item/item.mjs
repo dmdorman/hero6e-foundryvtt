@@ -1374,9 +1374,12 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
      * back to its default/original state based on its raw system data.
      *
      * @param {Item|Object} item - The Item document instance or raw item data object.
+     * @param {object} [options]
+     * @param {boolean} [options.keepManeuverState] - Leave combat maneuver activation alone
+     *   (upload re-imports keep an active Dodge; a true full heal still clears it).
      * @returns {Object}         - An object containing property paths and values to update.
      */
-    static _prepareOriginalResetData(item) {
+    static _prepareOriginalResetData(item, options = {}) {
         const updateData = {};
         const system = item.system ?? item;
         if (!system) return updateData;
@@ -1440,7 +1443,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             }
         }
 
-        if (item.isCombatManeuver && system.active) {
+        if (item.isCombatManeuver && system.active && !options.keepManeuverState) {
             updateData["system.active"] = false;
         }
 
