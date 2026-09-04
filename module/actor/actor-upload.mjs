@@ -849,9 +849,20 @@ async function finalizeUpload(ctx) {
             author: game.user._id,
             speaker: ChatMessage.getSpeaker({ actor }),
             whisper: whisperUserTargetsForActor(actor),
-            content: `Took ${Math.ceil(uploadPerformance.totalMs / 1000)} seconds for <b>${game.user.name}</b> to upload <b>${actor.name}</b>.`,
+            content: `Took ${formatUploadDuration(uploadPerformance.totalMs)} for <b>${game.user.name}</b> to upload <b>${actor.name}</b>.`,
         });
     }
+}
+
+function formatUploadDuration(totalMs) {
+    totalMs = Math.round(totalMs);
+    if (totalMs < 1000) {
+        return `${totalMs}ms`;
+    }
+    if (totalMs < 5000) {
+        return `${Math.floor(totalMs / 1000)}s ${totalMs % 1000}ms`;
+    }
+    return `${Math.ceil(totalMs / 1000)} seconds`;
 }
 
 // Delete any old items that weren't updated, added or part of freeStuff
