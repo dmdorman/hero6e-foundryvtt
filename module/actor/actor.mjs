@@ -3657,18 +3657,18 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             // Apply retained damage
             if (this.id && !options.rebuild) {
+                const retainedDamageChanges = {};
                 for (const key of ["body", "stun", "end"]) {
                     if (!this.hasCharacteristic(key.toUpperCase())) continue;
                     if (retainValuesOnUpload[key] == undefined) continue;
                     if (this.system.characteristics[key] == undefined) continue;
 
                     this.system.characteristics[key].value -= retainValuesOnUpload[key];
-                    await this.update(
-                        {
-                            [`system.characteristics.${key}.value`]: this.system.characteristics[key].value,
-                        },
-                        { render: false },
-                    );
+                    retainedDamageChanges[`system.characteristics.${key}.value`] =
+                        this.system.characteristics[key].value;
+                }
+                if (Object.keys(retainedDamageChanges).length > 0) {
+                    await this.update(retainedDamageChanges, { render: false });
                 }
             }
             uploadProgressBar.advance(`${this.name}: Restored retained damage`, 0);
@@ -3678,9 +3678,11 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             uploadProgressBar.advance(`${this.name}: Linked Custom Adders`, 1);
 
             if (this.id) {
-                await this.setFlag(game.system.id, "uploading", false);
-                await this.setFlag(game.system.id, "uploadingError", null);
-                await this.setFlag(game.system.id, "uploadingErrorContext", null);
+                await this.update({
+                    [`flags.${game.system.id}.uploading`]: false,
+                    [`flags.${game.system.id}.uploadingError`]: null,
+                    [`flags.${game.system.id}.uploadingErrorContext`]: null,
+                });
             }
 
             // If we have control of this token, reacquire to update movement types
