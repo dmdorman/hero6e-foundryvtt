@@ -1,0 +1,43 @@
+<div class="hdc-reset-menu">
+    <div class="form-group stacked">
+        <p>
+            Re-imports every world actor and unlinked token from its stored HDC data. Existing images, damage,
+            charges, and temporary effects are kept; items not present in the stored HDC are left in place.
+        </p>
+        <p>
+            <b>{{worldActorCount}}</b> world actor(s) and <b>{{unlinkedTokenCount}}</b> unlinked token(s) will be
+            processed.
+            {{#if legacyCount}}
+                <b>{{legacyCount}}</b> have no stored HDC and will be skipped (listed after the run).
+            {{/if}}
+        </p>
+    </div>
+
+    <button type="button" data-action="resetAll" {{#if running}}disabled{{/if}}>
+        <i class="fas fa-rotate"></i>
+        {{#if running}}Resetting...{{else}}Reset All From HDC{{/if}}
+    </button>
+
+    {{#if results}}
+        <hr />
+        <p><b>{{results.reset}}</b> actor(s) reset from stored HDC.</p>
+
+        {{#if results.failed.length}}
+            <p><b>Failed ({{results.failed.length}}) — see console for details:</b></p>
+            <ul>
+                {{#each results.failed}}
+                    <li><b>{{this.name}}</b> ({{this.context}}): {{this.error}}</li>
+                {{/each}}
+            </ul>
+        {{/if}}
+
+        {{#if results.legacy.length}}
+            <p><b>No stored HDC — re-upload the .hdc file manually ({{results.legacy.length}}):</b></p>
+            <ul>
+                {{#each results.legacy}}
+                    <li><b>{{this.name}}</b> ({{this.context}})</li>
+                {{/each}}
+            </ul>
+        {{/if}}
+    {{/if}}
+</div>

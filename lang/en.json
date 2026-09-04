@@ -243,6 +243,13 @@
             "Name": "Combat Movement Only On Actors Phase",
             "Hint": "This prevents players from moving their tokens when it isn't their turn."
         },
+        "HdcReset": {
+            "Menu": {
+                "Hint": "Re-import every world actor and unlinked token from its stored HDC data. Flags failures and legacy actors without stored HDC.",
+                "Label": "Reset Actors",
+                "Name": "Reset Actors From HDC"
+            }
+        },
         "combatTrackerCompact": {
             "Name": "Compact Combat Tracker",
             "Hint": "This client only: shrink non-active combatant rows in the combat tracker (no portrait, tighter spacing). The active combatant keeps the full-size row."

@@ -1,0 +1,108 @@
+import { HeroProgressBar } from "../utility/progress-bar.mjs";
+
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+/**
+ * GM tool: re-import every world actor and unlinked token from its stored HDC.
+ * Failures and legacy actors without stored HDC data are flagged in the dialog.
+ */
+export class HdcResetMenu extends HandlebarsApplicationMixin(ApplicationV2) {
+    static {
+        Hooks.once("init", () => {
+            HdcResetMenu.PARTS = {
+                body: {
+                    template: `systems/${game.system.id}/templates/configuration/hdc-reset-menu.hbs`,
+                },
+            };
+        });
+    }
+
+    static DEFAULT_OPTIONS = {
+        id: "hdc-reset-application",
+        classes: ["herosystem6e"],
+        position: {
+            width: 520,
+            height: "auto",
+        },
+        window: {
+            title: "Reset Actors From HDC",
+            contentClasses: ["standard-form"],
+        },
+        actions: {
+            resetAll: HdcResetMenu.#onResetAll,
+        },
+    };
+
+    #running = false;
+    #results = null;
+
+    static #collectTargets() {
+        const worldActors = game.actors.contents.map((actor) => ({ actor, context: "world" }));
+        const unlinkedTokenActors = game.scenes.contents.flatMap((scene) =>
+            scene.tokens
+                .filter((token) => !token.actorLink && token.actor)
+                .map((token) => ({ actor: token.actor, context: `token on ${scene.name}` })),
+        );
+        return [...worldActors, ...unlinkedTokenActors];
+    }
+
+    async _prepareContext() {
+        const targets = HdcResetMenu.#collectTargets();
+        return {
+            worldActorCount: targets.filter((target) => target.context === "world").length,
+            unlinkedTokenCount: targets.filter((target) => target.context !== "world").length,
+            legacyCount: targets.filter((target) => !target.actor.system._hdcXml).length,
+            running: this.#running,
+            results: this.#results,
+        };
+    }
+
+    static async #onResetAll() {
+        if (this.#running) return;
+        this.#running = true;
+        this.#results = null;
+        this.render();
+
+        const targets = HdcResetMenu.#collectTargets();
+        const results = { reset: 0, failed: [], legacy: [] };
+        const progressBar = new HeroProgressBar("Resetting actors from HDC", Math.max(1, targets.length));
+
+        try {
+            for (const { actor, context } of targets) {
+                progressBar.advance(`Resetting ${actor.name} (${context})`);
+
+                if (!actor.system._hdcXml) {
+                    results.legacy.push({ name: actor.name, context });
+                    continue;
+                }
+
+                try {
+                    await actor.uploadFromXml(actor.system._hdcXml, {
+                        keepExistingImage: true,
+                        silent: true,
+                        allowTokenActor: true,
+                        skipExtraItemsPrompt: true,
+                    });
+
+                    // The upload traps its own errors; the persisted error flag is the outcome
+                    const error = actor.getFlag(game.system.id, "uploadingError");
+                    if (error) {
+                        results.failed.push({ name: actor.name, context, error: error.split("\n")[0] });
+                    } else {
+                        results.reset++;
+                    }
+                } catch (e) {
+                    console.error(e);
+                    results.failed.push({ name: actor.name, context, error: e.message });
+                }
+            }
+        } finally {
+            progressBar.close(`Reset ${results.reset} actors from HDC`);
+            this.#running = false;
+            this.#results = results;
+            this.render();
+        }
+
+        console.log("HDC reset results", results);
+    }
+}
