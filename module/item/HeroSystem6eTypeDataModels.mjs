@@ -1149,6 +1149,11 @@ export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeData
         return itemWithChargeModifier.system._clips;
     }
 
+    // Total usable clips for display: _clips counts spares, so add the loaded clip while it still has charges
+    get clipsTotal() {
+        return this.clips + (this.numCharges > 0 ? 1 : 0);
+    }
+
     get clipsMax() {
         if (!this.item.system.chargeModifier) {
             //console.error(`${this.name} has no CHARGE modifier`, this);
@@ -1210,6 +1215,14 @@ export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeData
         }
 
         return itemWithChargeModifier.update({ "system._clips": value });
+    }
+
+    // Inverse of clipsTotal: the loaded clip is not stored in _clips, so it can't be
+    // removed here — zero it by spending its charges instead
+    async setClipsTotalAndSave(value) {
+        const loaded = this.numCharges > 0 ? 1 : 0;
+        const spares = Math.clamp((parseInt(value) || 0) - loaded, 0, Math.max(0, this.clipsMax - 1));
+        return this.setClipsAndSave(spares);
     }
 }
 

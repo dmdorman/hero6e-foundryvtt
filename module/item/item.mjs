@@ -2146,7 +2146,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         } else if (!chargeModifier.CLIPS) {
             return ui.notifications.warn(`${this.detailedName()} does not use clips. Please report.`);
         } else if (this.system.clips < 1) {
-            return ui.notifications.error(`${this.detailedName()} does not have 1 clip remaining.`);
+            return ui.notifications.error(`${this.detailedName()} has no spare clip to reload with.`);
         }
 
         // Reload the clip to 1 less clip that should be at full charges.
@@ -2158,7 +2158,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             author: game.user._id,
             speaker: ChatMessage.getSpeaker({ token: token, actor: this.actor }),
             style: CONFIG.HERO.CHAT_MESSAGE_DEFAULT_STYLE,
-            content: `Change clips on <b>${this.name}</b>. ${(token ?? this.actor).name} drops the clip with ${previousCharges} charges. Reloading with a new clip with ${this.system.numCharges} charges. ${this.system.clips} clip(s) remain.`,
+            content: `Change clips on <b>${this.name}</b>. ${(token ?? this.actor).name} drops the clip with ${previousCharges} charges. Reloading with a new clip with ${this.system.numCharges} charges. ${this.system.clipsTotal} clip${this.system.clipsTotal !== 1 ? "s" : ""} remain.`,
             whisper: whisperUserTargetsForActor(this.actor),
         };
         await ChatMessage.create(chatData);
