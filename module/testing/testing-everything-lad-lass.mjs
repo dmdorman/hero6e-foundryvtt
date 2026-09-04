@@ -1930,6 +1930,19 @@ export function registerEverythingLadLass(quench) {
                     logUploadPerformance(getActor(), `${label} fresh`);
                 });
 
+                it("creates active effects for every item the upload sweep covers", function () {
+                    const itemsExpectingEffects = getActor().items.filter(
+                        (item) =>
+                            item.baseInfo?.activeEffect ||
+                            item.baseInfo?.type?.includes("movement") ||
+                            (item.type !== "characteristic" && item.baseInfo?.type?.includes("characteristic")),
+                    );
+                    assert.isAbove(itemsExpectingEffects.length, 0);
+                    for (const item of itemsExpectingEffects) {
+                        assert.isAbove(item.effects.size, 0, `${item.name} has no active effects after upload`);
+                    }
+                });
+
                 it("re-uploads by updating existing items and records stage timings", async function () {
                     this.timeout(120000);
                     const actor = getActor();
