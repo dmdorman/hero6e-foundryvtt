@@ -145,11 +145,11 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
         const extension = filename?.split(".").pop();
         const base64 = "data:image/" + extension + ";base64," + xml.getElementsByTagName("IMAGE")?.[0]?.textContent;
 
-        // Keep raw XML data without IMAGE
-        const xmlNoImage = foundry.utils.deepClone(xml);
-        const image = xmlNoImage.getElementsByTagName("IMAGE")[0];
+        // Keep raw XML data without IMAGE. Intentionally mutates the parsed document
+        // (deepClone can't copy an XMLDocument); the base64 image was captured above.
+        const image = xml.getElementsByTagName("IMAGE")[0];
         image?.parentNode?.removeChild(image);
-        actor.system._hdcXml = new XMLSerializer().serializeToString(xmlNoImage);
+        actor.system._hdcXml = new XMLSerializer().serializeToString(xml);
         changes["system._hdcXml"] = actor.system._hdcXml;
 
         // Heroic Action Points (always keep the value)
