@@ -346,18 +346,18 @@ async function rebuildAndAddFreeStuff(ctx) {
 
     if (options.rebuild) {
         uploadProgressBar.advance(`${actor.name}: Deleting existing items when rebuilding`, 0);
-        try {
-            const turnOffPromises = [];
-            for (const item of actor.items.filter((item) => item.isActivatable())) {
-                turnOffPromises.push(item.turnOff({ silent: true }));
-            }
-            await Promise.all(turnOffPromises);
-        } catch (error) {
-            console.error(`Error occurred while turning off existing items: ${error.message}`);
+        // Every item is about to be deleted, so no per-item turnOff: each one is 1-2
+        // document writes and every write re-runs full data prep (51s on a large actor).
+        // One sweep of item-originated actor effects covers the cleanup that item
+        // deletion sometimes misses (FoundryVTT 13 bug?).
+        const itemOriginEffectIds = actor.effects.filter((ae) => ae.origin?.includes(".Item.")).map((ae) => ae.id);
+        if (itemOriginEffectIds.length > 0) {
+            await actor.deleteEmbeddedDocuments("ActiveEffect", itemOriginEffectIds, { render: false });
         }
         await actor.deleteEmbeddedDocuments(
             "Item",
             actor.items.map((o) => o.id),
+            { render: false },
         );
     }
 
@@ -898,13 +898,14 @@ async function confirmDeleteExtraItems(ctx) {
 
     if (confirmDeleteExtra) {
         console.log(`Deleting ${itemsToDelete.length} items because they were not present in the HDC file.`);
-        // Toggle them off first as sometimes deleteing items with AE's don'e run the cleanup code.
-        // FoundryVTT 13 bug?
-        const turnOffPromises = [];
-        for (const item of itemsToDelete) {
-            turnOffPromises.push(item.turnOff({ silent: true }));
+        // Delete these items' actor-level effects in one batch rather than a turnOff per
+        // item (each is 1-2 writes and every write re-runs full data prep); covers the
+        // cleanup that item deletion sometimes misses (FoundryVTT 13 bug?).
+        const deletedItemUuids = new Set(itemsToDelete.map((item) => item.uuid));
+        const orphanEffectIds = actor.effects.filter((ae) => deletedItemUuids.has(ae.origin)).map((ae) => ae.id);
+        if (orphanEffectIds.length > 0) {
+            await actor.deleteEmbeddedDocuments("ActiveEffect", orphanEffectIds, { render: false });
         }
-        await Promise.all(turnOffPromises);
         await actor.deleteEmbeddedDocuments(
             "Item",
             itemsToDelete.map((o) => o.id),
