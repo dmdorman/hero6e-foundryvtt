@@ -1,17 +1,6 @@
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
 
-export function registerEverythingLadLass(quench) {
-    quench.registerBatch(
-        `${game.system.id}.utils.everything`,
-        (context) => {
-            const { assert, before, after, describe, it } = context;
-
-            describe("Everything Lad and Lass Tests", function () {
-                // The default timeout tends to be insufficient with multiple actors being created at the same time.
-                setQuenchTimeout(this);
-
-                describe("Everything Lad (5e)", function () {
-                    const contents = `
+export const EVERYTHING_LAD_5E_HDC = `
                     <?xml version="1.0" encoding="UTF-16"?>
                     <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic.hdt">
                       <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" />
@@ -947,25 +936,9 @@ export function registerEverythingLadLass(quench) {
                       <EQUIPMENT />
                       <RULES name="A.H. 525" path="Test-EverythingLad-5e.hdc" BASEPOINTS="200" DISADPOINTS="150" APPEREND="10" STRAPPEREND="10" NCMSELECTED="No" NCMUSERCHANGEABLE="Yes" ATTACKAPMAXVALUE="90" ATTACKAPMAXRESPONSE="0" DEFENSEAPMAXVALUE="90" DEFENSEAPMAXRESPONSE="0" DISADCATEGORYMAXVALUE="75" DISADCATEGORYMAXRESPONSE="0" AVAILDISADPOINTSRESPONSE="0" AVAILTOTALPOINTSRESPONSE="0" CHARACTERISTICMAXVALUE="1000" CHARACTERISTICMAXRESPONSE="0" MANEUVERMAXVALUE="1000" MANEUVERMAXRESPONSE="0" SKILLMAXVALUE="1000" SKILLMAXRESPONSE="0" PERKMAXVALUE="1000" PERKMAXRESPONSE="0" TALENTMAXVALUE="1000" TALENTMAXRESPONSE="0" POWERMAXVALUE="1000" POWERMAXRESPONSE="0" EQUIPMENTCOSTVALUE="1000" EQUIPMENTCOSTRESPONSE="0" EQUIPMENTCOSTUNITS="gp" EQUIPMENTCOSTCONVERSION="1.0" EQUIPMENTCOSTDECIMALPLACES="0" EQUIPMENTUNITSPREFIX="Yes" STANDARDEFFECTALLOWED="Yes" USEEXPANDEDGROWTHCHART="No" DEFAULTSTANDARDEFFECT="No" MULTIPLIERALLOWED="No" LANGUAGESIMILARITIESUSED="No" LITERACYFREE="No" NATIVELITERACYFREE="Yes" EQUIPMENTALLOWED="Yes" PENALIZENOLEVEL1="No" ONLYSELLONEFIGURED="Yes" USEINCREASEDDAMAGEDIFFERENTIATION="No" AUTOMATICALLYAPPLYNOFIGURED="Yes" LINKACROSSFRAMEWORK="2" SPECIALTYPEINFRAMEWORK="1" NONENDUSINGABILITYINEC="1" USESKILLMAXIMA="No" USESKILLMULTIPLIERS="No" LANGUAGESASINTSKILL="No" SKILLMAXIMALIMIT="13" SKILLROLLBASE="9" SKILLROLLDENOMINATOR="5.0" CHARROLLBASE="9" CHARROLLDENOMINATOR="5.0" USENOTES1="No" USENOTES2="No" USENOTES3="No" USENOTES4="No" USENOTES5="No" NOTES1LABEL="Notes 1" NOTES2LABEL="Notes 2" NOTES3LABEL="Notes 3" NOTES4LABEL="Notes 4" NOTES5LABEL="Notes 5" />
                     </CHARACTER>
-                    `;
+`;
 
-                    let actor;
-                    before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
-                    });
-
-                    after(async function () {
-                        await deleteQuenchActor({ quench: this, actor });
-                    });
-
-                    it("ok", async function () {
-                        console.log("ok");
-                        assert.ok(true);
-                    });
-                });
-
-                describe("Everything Lass (6e)", function () {
-                    const contents = `
+export const EVERYTHING_LASS_6E_HDC = `
                     <?xml version="1.0" encoding="UTF-16"?>
                       <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic6E.hdt">
                         <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" />
@@ -1925,7 +1898,38 @@ export function registerEverythingLadLass(quench) {
                         <EQUIPMENT />
                         <RULES name="A.H. 525" path="Test-EverythingLass-6e.hdc" BASEPOINTS="200" DISADPOINTS="150" APPEREND="10" STRAPPEREND="10" NCMSELECTED="No" NCMUSERCHANGEABLE="Yes" ATTACKAPMAXVALUE="90" ATTACKAPMAXRESPONSE="0" DEFENSEAPMAXVALUE="90" DEFENSEAPMAXRESPONSE="0" DISADCATEGORYMAXVALUE="75" DISADCATEGORYMAXRESPONSE="0" AVAILDISADPOINTSRESPONSE="0" AVAILTOTALPOINTSRESPONSE="0" CHARACTERISTICMAXVALUE="1000" CHARACTERISTICMAXRESPONSE="0" MANEUVERMAXVALUE="1000" MANEUVERMAXRESPONSE="0" SKILLMAXVALUE="1000" SKILLMAXRESPONSE="0" PERKMAXVALUE="1000" PERKMAXRESPONSE="0" TALENTMAXVALUE="1000" TALENTMAXRESPONSE="0" POWERMAXVALUE="1000" POWERMAXRESPONSE="0" EQUIPMENTCOSTVALUE="1000" EQUIPMENTCOSTRESPONSE="0" EQUIPMENTCOSTUNITS="gp" EQUIPMENTCOSTCONVERSION="1.0" EQUIPMENTCOSTDECIMALPLACES="0" EQUIPMENTUNITSPREFIX="Yes" STANDARDEFFECTALLOWED="Yes" USEEXPANDEDGROWTHCHART="No" DEFAULTSTANDARDEFFECT="No" MULTIPLIERALLOWED="No" LANGUAGESIMILARITIESUSED="No" LITERACYFREE="No" NATIVELITERACYFREE="Yes" EQUIPMENTALLOWED="Yes" PENALIZENOLEVEL1="No" ONLYSELLONEFIGURED="Yes" USEINCREASEDDAMAGEDIFFERENTIATION="No" AUTOMATICALLYAPPLYNOFIGURED="Yes" LINKACROSSFRAMEWORK="2" SPECIALTYPEINFRAMEWORK="1" NONENDUSINGABILITYINEC="1" USESKILLMAXIMA="No" USESKILLMULTIPLIERS="No" LANGUAGESASINTSKILL="No" SKILLMAXIMALIMIT="13" SKILLROLLBASE="9" SKILLROLLDENOMINATOR="5.0" CHARROLLBASE="9" CHARROLLDENOMINATOR="5.0" USENOTES1="No" USENOTES2="No" USENOTES3="No" USENOTES4="No" USENOTES5="No" NOTES1LABEL="Notes 1" NOTES2LABEL="Notes 2" NOTES3LABEL="Notes 3" NOTES4LABEL="Notes 4" NOTES5LABEL="Notes 5" />
                       </CHARACTER>
-                    `;
+`;
+
+export function registerEverythingLadLass(quench) {
+    quench.registerBatch(
+        `${game.system.id}.utils.everything`,
+        (context) => {
+            const { assert, before, after, describe, it } = context;
+
+            describe("Everything Lad and Lass Tests", function () {
+                // The default timeout tends to be insufficient with multiple actors being created at the same time.
+                setQuenchTimeout(this);
+
+                describe("Everything Lad (5e)", function () {
+                    const contents = EVERYTHING_LAD_5E_HDC;
+
+                    let actor;
+                    before(async function () {
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                    });
+
+                    after(async function () {
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("ok", async function () {
+                        console.log("ok");
+                        assert.ok(true);
+                    });
+                });
+
+                describe("Everything Lass (6e)", function () {
+                    const contents = EVERYTHING_LASS_6E_HDC;
 
                     let actor;
                     before(async function () {
