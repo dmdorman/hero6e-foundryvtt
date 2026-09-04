@@ -1403,6 +1403,10 @@ export class HeroSystem6eItemManeuver extends HeroSystem6eItemTypeDataModelGette
             _active: new ObjectField(), // action; We don't store anything in the database, but handy to have it initilized
             is5e: new BooleanField({ initial: null, nullable: true }),
             active: new BooleanField({ initial: null, nullable: true }),
+
+            // Minimal schema, so _preCreate's stamp is stripped without this field; the
+            // upload's skip-recreate check compares it against game.system.version
+            versionHeroSystem6eCreated: new StringField(),
         };
     }
 
