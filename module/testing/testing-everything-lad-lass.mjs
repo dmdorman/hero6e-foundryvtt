@@ -1946,12 +1946,30 @@ export function registerEverythingLadLass(quench) {
                 it("re-uploads by updating existing items and records stage timings", async function () {
                     this.timeout(120000);
                     const actor = getActor();
+
+                    const maneuverIdsBefore = actor.items
+                        .filter((item) => item.type === "maneuver")
+                        .map((item) => item.id)
+                        .sort();
+                    const dodge = actor.items.find((item) => item.system.XMLID === "DODGE");
+                    await dodge.update({ "system.active": true });
+
                     const renamedContents = contents.replace(/CHARACTER_NAME=".*?"/, `CHARACTER_NAME="${actor.name}"`);
                     await actor.uploadFromXml(renamedContents, { quenchUpload: true });
 
                     const perf = actor.lastUploadPerformance;
                     assert.equal(perf.counts.itemsUpdated, freshItemsCreated);
                     assert.equal(perf.counts.itemsCreated, 0);
+
+                    // Unchanged definitions: maneuvers are kept (same ids), not recreated,
+                    // and an active maneuver survives the re-upload
+                    const maneuverIdsAfter = actor.items
+                        .filter((item) => item.type === "maneuver")
+                        .map((item) => item.id)
+                        .sort();
+                    assert.deepEqual(maneuverIdsAfter, maneuverIdsBefore);
+                    assert.isTrue(actor.items.get(dodge.id).system.active);
+
                     logUploadPerformance(actor, `${label} re-upload`);
                 });
             }
