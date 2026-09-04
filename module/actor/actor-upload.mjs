@@ -679,7 +679,9 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
 
         if (actor.prototypeToken) {
             changes[`prototypeToken.name`] = actor.name;
-            changes[`prototypeToken.img`] = changes.img;
+            if (changes.img) {
+                changes[`prototypeToken.texture.src`] = changes.img;
+            }
         }
 
         // Save all our changes (unless temporary actor/quench)
