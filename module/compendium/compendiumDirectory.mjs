@@ -1,4 +1,4 @@
-import { HeroSystem6eActor } from "../actor/actor.mjs";
+import { xmlToJsonNode } from "../utility/xml-to-json.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { getPowerInfo } from "../utility/util.mjs";
 import { HeroSystem6eCompendium } from "./compendium.mjs";
@@ -182,7 +182,7 @@ export class HeroSystem6eCompendiumDirectory extends CompendiumDirectory {
 
         // Convert XML representation into JSON tree
         const heroJson = {};
-        HeroSystem6eActor._xmlToJsonNode(heroJson, xml.children);
+        xmlToJsonNode(heroJson, xml.children);
 
         // Standard prefabs use PREFAB, but renamed HDC files may fall back to CHARACTER
         const PREFAB = heroJson.PREFAB ?? heroJson.CHARACTER;

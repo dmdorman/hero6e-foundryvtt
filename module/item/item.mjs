@@ -1,4 +1,3 @@
-import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { ItemVppConfig } from "../applications/apps/item-vpp-config.mjs";
 import { HeroRoller } from "../heroRoller/dice.mjs";
 import { HEROSYS } from "../herosystem6e.mjs";
@@ -28,6 +27,7 @@ import { getItemDefenseVsAttack } from "../utility/defense.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
 import { getRoundedUpDistanceInSystemUnits, getSystemDisplayUnits } from "../utility/units.mjs";
+import { xmlToJsonNode } from "../utility/xml-to-json.mjs";
 import {
     activeSingleTrackerCombatFor,
     getPowerInfo,
@@ -2678,7 +2678,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xml, "text/xml");
         const heroJson = {};
-        HeroSystem6eActor._xmlToJsonNode(heroJson, xmlDoc.children);
+        xmlToJsonNode(heroJson, xmlDoc.children);
 
         let itemData = {
             name: "undefined",
