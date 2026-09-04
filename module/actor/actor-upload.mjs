@@ -33,7 +33,14 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
     const ctx = { actor, options, uploadPerformance, xml, changes: {} };
 
     try {
-        if (!parseHdcXml(ctx)) return;
+        if (!parseHdcXml(ctx)) {
+            // Managed flows (mass HDC reset) have no UI to notice the parser error and
+            // would otherwise count this as a successful reset
+            if (options.silent) {
+                throw new Error("HDC failed to parse");
+            }
+            return;
+        }
         captureRetainedValues(ctx);
         createUploadProgressBar(ctx);
         announceUploadStart(ctx);
@@ -125,6 +132,7 @@ function captureRetainedValues(ctx) {
             )
             .map((o) => ({
                 id: o.id,
+                name: o.name,
                 _charges: o.system._charges,
                 _clips: o.system._clips,
                 ablative: o.system.ablative,
@@ -616,9 +624,7 @@ async function restoreRetainedResources(ctx) {
                 await item.update({ "system.value": Math.min(item.system.value, resourceData.value) });
             }
         } else {
-            console.warn(
-                `Unable to locate ${resourceData.NAME}/${resourceData.ALIAS} to consume charges after upload.`,
-            );
+            console.warn(`Unable to locate ${resourceData.name} to consume charges after upload.`);
         }
     }
 }
