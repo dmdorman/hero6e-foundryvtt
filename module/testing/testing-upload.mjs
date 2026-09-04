@@ -11295,6 +11295,27 @@ export function registerUploadTests(quench) {
                     });
                 });
 
+                describe("guaranteeUniqueItemSystemId", function () {
+                    // Re-uploads match items to their stored counterparts by system.ID, so
+                    // duplicate-ID repair must produce identical IDs on every parse of the
+                    // same HDC or repaired items get wrongly flagged as not in the HDC.
+                    it("reassigns duplicate IDs deterministically", function () {
+                        const parseIds = () => {
+                            const itemsToCreate = [];
+                            for (const id of ["100", "100", "100", "101"]) {
+                                const itemData = { name: `item${itemsToCreate.length}`, system: { ID: id } };
+                                HeroSystem6eItem.guaranteeUniqueItemSystemId(itemData, itemsToCreate);
+                                itemsToCreate.push(itemData);
+                            }
+                            return itemsToCreate.map((item) => item.system.ID);
+                        };
+
+                        const first = parseIds();
+                        assert.deepEqual(parseIds(), first);
+                        assert.equal(new Set(first).size, 4);
+                    });
+                });
+
                 describe("5e calculated & figured characteristics", async function () {
                     describe("baseline", async function () {
                         let actor;

@@ -8092,11 +8092,12 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             );
         }
 
-        // Generate new ID based on timestamp, which is unlikely to be in the HDC file.
-        // We will increment from this value if needed as date precision is in milliseconds
-        // and it may be possible (typically in COMPOUNDPOWER subitems) to have enough duplicates
-        // in a 1ms time frame.
-        let newID = Date.now();
+        // Deterministic reassignment: parsing the same HDC must yield the same IDs every
+        // time, or re-uploads can't match these items to their stored counterparts and
+        // wrongly flag them for deletion. Increment from the duplicated ID (HDC IDs are
+        // millisecond timestamps, so nearby values are almost always free; the loop
+        // handles the rare collision).
+        const newID = itemData.system.ID + 1;
         for (let loop = 0; loop < 99; loop++) {
             if (!duplicateItem) {
                 break;
