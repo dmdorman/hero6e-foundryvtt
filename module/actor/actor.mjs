@@ -20,6 +20,7 @@ import { characteristicValueToDiceParts } from "../utility/damage.mjs";
 import { HeroProgressBar } from "../utility/progress-bar.mjs";
 import { clamp, roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
+import { UploadPerformance } from "../utility/upload-performance.mjs";
 import {
     base64ToUtf8,
     forceReplaceFields,
@@ -2933,6 +2934,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         // active-effect guard off it would leave that actor's AE sync disabled forever.
         this._uploadSweepActive = true;
 
+        const uploadPerformance = new UploadPerformance("Parse XML");
+        this.lastUploadPerformance = uploadPerformance;
+
         try {
             // Convert xml string to xml document (if necessary)
             if (typeof xml === "string") {
@@ -2979,11 +2983,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 was5e: this.is5e,
             };
 
-            const uploadPerformance = {
-                startTime: new Date(),
-                _d: new Date(),
-            };
-
             // Convert XML into JSON
             const heroJson = {};
             HeroSystem6eActor._xmlToJsonNode(heroJson, xml.children);
@@ -3021,8 +3020,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             const uploadProgressBar = new HeroProgressBar(`${this.name}: Processing HDC file`, xmlItemsToProcess, {
                 suppressUi: options.quenchUpload,
+                tracker: uploadPerformance,
             });
-            uploadPerformance.itemsToCreateEstimate = xmlItemsToProcess - 6;
 
             // Let GM know actor is being uploaded (unless it is a quench test; missing ID)
             if (!options.quenchUpload && this.id) {
@@ -3041,8 +3040,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             // Character name is what's in the sheet or, if missing, what is already in the actor sheet.
             const characterName =
                 root.CHARACTER_INFO.CHARACTER_NAME || options?.file?.name?.replace(/\.hdc$/i, "") || this.name;
-            uploadPerformance.removeEffects = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
             this.name = characterName;
             changes["name"] = characterName;
             uploadProgressBar.advance(`${characterName}: Name, fileInfo`, 0);
@@ -3247,9 +3244,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             uploadProgressBar.advance(`${this.name}: addFreeStuff completed`, 0);
             //}
 
-            uploadPerformance.progressBarFreeStuff - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
             // ITEMS
             uploadProgressBar.advance(`${this.name}: Evaluating items`, 0);
 
@@ -3350,10 +3344,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
             uploadProgressBar.advance(`${this.name}: Creating Items`, 0);
 
-            uploadPerformance.itemsToCreateActual = itemsToCreate.length;
+            uploadPerformance.count("itemsUpdated", itemsToUpdate.length);
+            uploadPerformance.count("itemsCreated", itemsToCreate.length);
 
-            uploadPerformance.preItems = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
             if (this.id) {
                 await this.createEmbeddedDocuments("Item", itemsToCreate, { render: false, renderSheet: false });
             } else {
@@ -3364,8 +3357,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 }
             }
 
-            uploadPerformance.createItems = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
             uploadProgressBar.advance(`${this.name}: Created Items`, itemsToCreate.length);
 
             uploadProgressBar.advance(`${this.name}: Processing non characteristics`, 0);
@@ -3456,8 +3447,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                     );
                 }
             }
-            uploadPerformance.postUpload = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
 
             uploadProgressBar.advance(`${this.name}: Validating powers`);
 
@@ -3479,14 +3468,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 }
             });
 
-            uploadPerformance.validate = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
             uploadProgressBar.advance(`${this.name}: Processed non characteristics`, 0);
             uploadProgressBar.advance(`${this.name}: Processed all items`, 0);
-
-            uploadPerformance.invalidTargets = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
 
             uploadProgressBar.advance(`${this.name}: Uploading image`, 0);
 
@@ -3581,9 +3564,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 }
             }
 
-            uploadPerformance.image = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
             uploadProgressBar.advance(`${this.name}: Uploaded image`);
             uploadProgressBar.advance(`${this.name}: Saving core changes`, 0);
 
@@ -3604,9 +3584,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 await this.update(changes);
             }
 
-            uploadPerformance.nonItems = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
             // Ghosts fly (or anything with RUNNING=0 and FLIGHT)
             if (this.system.characteristics?.running?.value === 0 && this.system.characteristics?.running?.base === 0) {
                 for (const flight of this.items.filter((i) => i.system.XMLID === "FLIGHT")) {
@@ -3614,17 +3591,11 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 }
             }
 
-            uploadPerformance.actorPostUpload = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
-
             // Kluge to ensure everything has a SPD.
             // For example a BASE has an implied SPD of three
             this.system.characteristics.spd ??= {
                 core: 3,
             };
-
-            uploadPerformance.postUpload2 = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
 
             uploadProgressBar.advance(`${this.name}: Saved core changes`);
             uploadProgressBar.advance(`${this.name}: Restoring retained damage`, 0);
@@ -3656,8 +3627,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 await this.setFlag(game.system.id, "uploadingError", null);
                 await this.setFlag(game.system.id, "uploadingErrorContext", null);
             }
-            uploadPerformance.retainedDamage = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
 
             // If we have control of this token, reacquire to update movement types
             const myToken = this.getActiveTokens()?.[0];
@@ -3665,22 +3634,12 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                 myToken.release();
                 myToken.control();
             }
-            uploadPerformance.tokenControl = new Date().getTime() - uploadPerformance._d;
-            uploadPerformance._d = new Date().getTime();
 
             uploadProgressBar.close(`Uploaded ${this.name}`);
 
-            // report performance concerns
-            const performanceConcerns = uploadProgressBar._performance
-                .filter((o) => o.delta > 500)
-                .sort((a, b) => b.delta - a.delta);
-            for (const concern of performanceConcerns) {
-                console.warn(`uploadFromXml performance concern: ${concern.message} ${concern.delta}s`, concern);
+            for (const slow of uploadPerformance.slowMarks()) {
+                console.warn(`uploadFromXml slow stage: ${slow.label} ${Math.round(slow.ms)}ms`);
             }
-
-            uploadPerformance.totalTime = new Date().getTime() - uploadPerformance.startTime;
-
-            //console.log("Upload Performance", uploadPerformance);
 
             // Let GM know actor was uploaded (unless it is a quench test or missing ID)
             if (!options.quenchUpload && this.id) {
@@ -3690,7 +3649,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                     author: game.user._id,
                     speaker: ChatMessage.getSpeaker({ actor: this }),
                     whisper: whisperUserTargetsForActor(this),
-                    content: `Took ${Math.ceil(uploadPerformance.totalTime / 1000)} seconds for <b>${game.user.name}</b> to upload <b>${this.name}</b>.`,
+                    content: `Took ${Math.ceil(uploadPerformance.totalMs / 1000)} seconds for <b>${game.user.name}</b> to upload <b>${this.name}</b>.`,
                 });
             }
 
