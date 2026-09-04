@@ -1900,11 +1900,48 @@ export const EVERYTHING_LASS_6E_HDC = `
                       </CHARACTER>
 `;
 
+function logUploadPerformance(actor, label) {
+    const perf = actor.lastUploadPerformance;
+    const stageMs = perf.table();
+    const totalMs = Math.round(stageMs.reduce((sum, mark) => sum + mark.ms, 0));
+    console.log(
+        `Upload performance [${label}] total ${totalMs}ms counts=${JSON.stringify(perf.counts)}\n` +
+            stageMs.map((mark) => `${String(mark.ms).padStart(7)}ms  ${mark.label}`).join("\n"),
+    );
+}
+
 export function registerEverythingLadLass(quench) {
     quench.registerBatch(
         `${game.system.id}.utils.everything`,
         (context) => {
             const { assert, before, after, describe, it } = context;
+
+            // Runs last within a character's describe: the re-upload replaces item data,
+            // so earlier assertions must see the fresh-upload state.
+            function addUploadTimingTests(label, contents, getActor) {
+                let freshItemsCreated;
+
+                it("records stage timings for a fresh upload", function () {
+                    const perf = getActor().lastUploadPerformance;
+                    assert.isDefined(perf);
+                    assert.isAbove(perf.marks.length, 10);
+                    assert.isAbove(perf.counts.itemsCreated, 0);
+                    freshItemsCreated = perf.counts.itemsCreated;
+                    logUploadPerformance(getActor(), `${label} fresh`);
+                });
+
+                it("re-uploads by updating existing items and records stage timings", async function () {
+                    this.timeout(120000);
+                    const actor = getActor();
+                    const renamedContents = contents.replace(/CHARACTER_NAME=".*?"/, `CHARACTER_NAME="${actor.name}"`);
+                    await actor.uploadFromXml(renamedContents, { quenchUpload: true });
+
+                    const perf = actor.lastUploadPerformance;
+                    assert.equal(perf.counts.itemsUpdated, freshItemsCreated);
+                    assert.equal(perf.counts.itemsCreated, 0);
+                    logUploadPerformance(actor, `${label} re-upload`);
+                });
+            }
 
             describe("Everything Lad and Lass Tests", function () {
                 // The default timeout tends to be insufficient with multiple actors being created at the same time.
@@ -1926,6 +1963,8 @@ export function registerEverythingLadLass(quench) {
                         console.log("ok");
                         assert.ok(true);
                     });
+
+                    addUploadTimingTests("Everything Lad (5e)", contents, () => actor);
                 });
 
                 describe("Everything Lass (6e)", function () {
@@ -1947,6 +1986,8 @@ export function registerEverythingLadLass(quench) {
                     it("Absorption", async function () {
                         assert.equal(actor.items.find((o) => o.system.XMLID === "ABSORPTION").system.realCost, 1);
                     });
+
+                    addUploadTimingTests("Everything Lass (6e)", contents, () => actor);
                 });
             });
         },
