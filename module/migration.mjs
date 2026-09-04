@@ -20,7 +20,7 @@ export function tagObjectForPersistence(source) {
  *
  * @returns {HeroSystem6eTokenDocument[]}
  */
-function getActorsFromUnlinkedTokensInGame() {
+export function getActorsFromUnlinkedTokensInGame() {
     return game.scenes.contents
         .map((scene) => [...scene.tokens.filter((token) => token.actor && !token.actorLink).map((t) => t.actor)])
         .flat()
@@ -32,7 +32,7 @@ function getActorsFromUnlinkedTokensInGame() {
  *
  * @returns {HeroSystem6eActor[]}
  */
-function getSideBarActorsInGame() {
+export function getSideBarActorsInGame() {
     return game.actors.contents;
 }
 

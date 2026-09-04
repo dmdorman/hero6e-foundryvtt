@@ -1,6 +1,9 @@
+import { buildUploadErrorContext } from "../actor/actor-upload.mjs";
+import { getActorsFromUnlinkedTokensInGame, getSideBarActorsInGame } from "../migration.mjs";
 import { HeroProgressBar } from "../utility/progress-bar.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+const { Actor } = foundry.documents;
 
 /**
  * GM tool: re-import every world actor and unlinked token from its stored HDC.
@@ -38,21 +41,28 @@ export class HdcResetMenu extends HandlebarsApplicationMixin(ApplicationV2) {
     #results = null;
 
     static #collectTargets() {
-        const worldActors = game.actors.contents.map((actor) => ({ actor, context: "world" }));
-        const unlinkedTokenActors = game.scenes.contents.flatMap((scene) =>
-            scene.tokens
-                .filter((token) => !token.actorLink && token.actor)
-                .map((token) => ({ actor: token.actor, context: `token on ${scene.name}` })),
-        );
-        return [...worldActors, ...unlinkedTokenActors];
+        return [
+            ...getSideBarActorsInGame().map((actor) => ({ actor, context: "world" })),
+            ...getActorsFromUnlinkedTokensInGame().map((actor) => ({
+                actor,
+                context: `token on ${actor.token?.parent?.name}`,
+            })),
+        ];
     }
 
     async _prepareContext() {
-        const targets = HdcResetMenu.#collectTargets();
+        let worldActorCount = 0;
+        let unlinkedTokenCount = 0;
+        let legacyCount = 0;
+        for (const { actor, context } of HdcResetMenu.#collectTargets()) {
+            if (context === "world") worldActorCount++;
+            else unlinkedTokenCount++;
+            if (!actor.system._hdcXml) legacyCount++;
+        }
         return {
-            worldActorCount: targets.filter((target) => target.context === "world").length,
-            unlinkedTokenCount: targets.filter((target) => target.context !== "world").length,
-            legacyCount: targets.filter((target) => !target.actor.system._hdcXml).length,
+            worldActorCount,
+            unlinkedTokenCount,
+            legacyCount,
             running: this.#running,
             results: this.#results,
         };
@@ -66,7 +76,16 @@ export class HdcResetMenu extends HandlebarsApplicationMixin(ApplicationV2) {
 
         const targets = HdcResetMenu.#collectTargets();
         const results = { reset: 0, failed: [], legacy: [] };
+        const legacyWorldUpdates = [];
         const progressBar = new HeroProgressBar("Resetting actors from HDC", Math.max(1, targets.length));
+
+        // Lock into the sheet's upload-error state until an HDC upload restores it
+        const legacyLockChanges = {
+            [`flags.${game.system.id}.uploading`]: true,
+            [`flags.${game.system.id}.uploadingError`]:
+                "No stored HDC data to reset from. Upload this actor's .hdc file to restore it.",
+            [`flags.${game.system.id}.uploadingErrorContext`]: buildUploadErrorContext({ legacyNoHdc: true }),
+        };
 
         try {
             for (const { actor, context } of targets) {
@@ -74,18 +93,11 @@ export class HdcResetMenu extends HandlebarsApplicationMixin(ApplicationV2) {
 
                 if (!actor.system._hdcXml) {
                     results.legacy.push({ name: actor.name, context });
-                    // Lock into the sheet's upload-error state until an HDC upload restores it
-                    await actor.update({
-                        [`flags.${game.system.id}.uploading`]: true,
-                        [`flags.${game.system.id}.uploadingError`]:
-                            "No stored HDC data to reset from. Upload this actor's .hdc file to restore it.",
-                        [`flags.${game.system.id}.uploadingErrorContext`]: {
-                            legacyNoHdc: true,
-                            foundry: game.release?.display || game.version,
-                            foundryBuild: game.release?.build ?? null,
-                            system: game.system.version,
-                        },
-                    });
+                    if (actor.token) {
+                        await actor.update(legacyLockChanges);
+                    } else {
+                        legacyWorldUpdates.push({ _id: actor.id, ...legacyLockChanges });
+                    }
                     continue;
                 }
 
@@ -108,6 +120,10 @@ export class HdcResetMenu extends HandlebarsApplicationMixin(ApplicationV2) {
                     console.error(e);
                     results.failed.push({ name: actor.name, context, error: e.message });
                 }
+            }
+
+            if (legacyWorldUpdates.length > 0) {
+                await Actor.updateDocuments(legacyWorldUpdates);
             }
         } finally {
             progressBar.close(`Reset ${results.reset} actors from HDC`);
