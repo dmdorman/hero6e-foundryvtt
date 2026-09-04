@@ -374,6 +374,16 @@ export async function migrateWorld() {
         async () => await migrateCombatsToSingleCombatantTracker(),
     );
 
+    // 5.0.0 reworked the upload pipeline; every actor should be re-derived from its
+    // stored HDC. Queued here, run by the first GM to join (see the ready hook).
+    await migrateToVersion(
+        "5.0.0",
+        lastMigration,
+        ["run once"],
+        "queue global HDC reset",
+        async () => await game.settings.set(game.system.id, "hdcResetPending", true),
+    );
+
     // Placeholder for notifying GM of items missing XMLID
     // await migrateToVersion(
     //     game.system.version,

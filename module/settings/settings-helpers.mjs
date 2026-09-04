@@ -610,6 +610,14 @@ export default class SettingsHelpers {
             requiresReload: true,
         });
 
+        // Set by migration; the first GM to join runs the global HDC reset, then clears it
+        game.settings.register(module, "hdcResetPending", {
+            scope: "world",
+            config: false,
+            type: Boolean,
+            default: false,
+        });
+
         // Keep track of last migration version
         game.settings.register(module, "lastMigration", {
             name: game.i18n.localize("Settings.AlphaTesting.LastMigration.Name"),

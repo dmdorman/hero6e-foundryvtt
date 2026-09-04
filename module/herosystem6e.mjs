@@ -19,6 +19,7 @@ import { initializeHeroVisionV14 } from "./herovision/hero-vision-14.mjs";
 import { HeroSystem6eItemDirectory } from "./itemDirectory.mjs";
 import HeroSystem6eMeasuredTemplate from "./measuretemplate.mjs";
 import { migrateWorld } from "./migration.mjs";
+import { HdcResetMenu } from "./settings/hdc-reset-menu.mjs";
 
 import { HeroSystemActiveEffectConfig } from "./actor/active-effect-config.mjs";
 import {
@@ -637,6 +638,11 @@ Hooks.once("ready", async function () {
 
         // Update lastMigration
         await game.settings.set(game.system.id, "lastMigration", game.system.version.replace("-alpha", ""));
+    }
+
+    // Global HDC reset queued by migration; only the primary GM runs it
+    if (game.users.activeGM?.isSelf && game.settings.get(game.system.id, "hdcResetPending")) {
+        await HdcResetMenu.autoRun();
     }
 });
 

@@ -68,7 +68,21 @@ export class HdcResetMenu extends HandlebarsApplicationMixin(ApplicationV2) {
         };
     }
 
+    // One-time reset queued by migration (hdcResetPending); the flag survives an
+    // interrupted run so the next GM join retries, and clears only on completion.
+    static async autoRun() {
+        ui.notifications.info("Running the one-time global HDC reset queued by the system update.");
+        const menu = new HdcResetMenu();
+        await menu.render(true);
+        await menu.#runReset();
+        await game.settings.set(game.system.id, "hdcResetPending", false);
+    }
+
     static async #onResetAll() {
+        return this.#runReset();
+    }
+
+    async #runReset() {
         if (this.#running) return;
         this.#running = true;
         this.#results = null;
