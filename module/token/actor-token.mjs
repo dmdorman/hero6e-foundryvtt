@@ -53,10 +53,13 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
             const masterCombatant = this.combatant;
             const endStart = masterCombatant.getFlag(game.system.id, "endUsedForMovement") || 0;
             const endCost = this._movementHistoryEndCost;
-            const endDelta = endCost - endStart;
+            const endValue = this.actor.system.characteristics.end?.value;
+            if (!Number.isFinite(endCost) || !Number.isFinite(endValue)) {
+                return;
+            }
             masterCombatant.setFlag(game.system.id, "endUsedForMovement", endCost);
             this.actor.update({
-                [`system.characteristics.end.value`]: this.actor.system.characteristics.end.value - endDelta,
+                [`system.characteristics.end.value`]: endValue - (endCost - endStart),
             });
         }
     }
@@ -79,7 +82,8 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
                     parseInt(
                         ae.changes.find((c) => c.key === `system.characteristics.${action.toLowerCase()}.max`).value,
                     ) || 0,
-                endPer1mMovement: ae.parent.endPer1mMovement,
+                // Actor-embedded AEs (encumbrance, adjustments) have no owning item; charge as inherent movement
+                endPer1mMovement: Number.isFinite(ae.parent?.endPer1mMovement) ? ae.parent.endPer1mMovement : 0.1,
             });
         }
         const characteristicMax = this.actor.system.characteristics[action.toLowerCase()]?.max;
