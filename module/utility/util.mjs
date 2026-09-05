@@ -355,6 +355,19 @@ export async function expireEffects(actor, expiresOn) {
                 ) {
                     break;
                 }
+            } else if (ae.flags[game.system.id]?.delayedReturnOptionId && ae.flags[game.system.id]?.bodyDamage > 0) {
+                // Sense-affecting effect with Delayed Return Rate: one segment returns per interval
+                const remainingSegments = parseInt(ae.flags[game.system.id].bodyDamage) - 1;
+                const source = ae.flags[game.system.id]?.source ?? "an unknown source";
+                if (remainingSegments <= 0) {
+                    expiredCardHtmls.push(`${ae.name} from ${source} has expired.`);
+                    markForDeletion(ae);
+                    break;
+                }
+                expiredCardHtmls.push(
+                    `${ae.name} from ${source} fades: ${remainingSegments} segment${remainingSegments > 1 ? "s" : ""} remaining.`,
+                );
+                await ae.update({ [`flags.${game.system.id}.bodyDamage`]: remainingSegments });
             } else if (ae.flags[game.system.id]?.XMLID === "naturalBodyHealing") {
                 let bodyValue = parseInt((ae.target || actor).system.characteristics.body.value);
                 let bodyMax = parseInt((ae.target || actor).system.characteristics.body.max);

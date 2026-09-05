@@ -17589,10 +17589,10 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             dcAffecting: fixedValueFunction(false),
             heroValidation: function (modifier, item) {
                 const validations = [];
-                if (!item.baseInfo?.type.includes("adjustment")) {
+                if (!item.baseInfo?.type?.includes("adjustment") && item.system.XMLID !== "FLASH") {
                     validations.push({
                         property: "XMLID",
-                        message: `Delayed Return Rate is only automated for adjustment powers. ${item.system.XMLID} effects will expire on their normal schedule without fading in increments.`,
+                        message: `Delayed Return Rate is only automated for adjustment powers and FLASH. ${item.system.XMLID} effects will expire on their normal schedule without fading in increments.`,
                         severity: HERO.VALIDATION_SEVERITY.WARNING,
                         modifierID: modifier.ID,
                     });

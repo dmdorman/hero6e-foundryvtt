@@ -45,6 +45,7 @@ import {
     activeSingleTrackerCombatFor,
     getPowerInfo,
     getTokenUuid,
+    hdcTimeOptionIdToSeconds,
     tokenEducatedGuess,
     whisperUserTargetsForActor,
 } from "../utility/util.mjs";
@@ -4498,6 +4499,11 @@ async function _onApplySenseAffectingToSpecificToken(
         }
     }
 
+    // Delayed Return Rate: instead of ending after bodyDamage segments, one segment of effect
+    // returns per delay interval (6e V2 p. 129)
+    const delayedReturnRate = senseAffectingItem.effectiveAttackItem.findModsByXmlid("DELAYEDRETURNRATE");
+    const delayIntervalSeconds = delayedReturnRate ? hdcTimeOptionIdToSeconds(delayedReturnRate.OPTIONID) : null;
+
     // Create new ActiveEffects in one DB call
     const newActiveEffects = [];
     for (const senseGroup of senseGroups) {
@@ -4507,7 +4513,7 @@ async function _onApplySenseAffectingToSpecificToken(
                 ...foundry.utils.deepClone(senseGroup.statusEffect),
                 name: `${senseAffectingItem.effectiveAttackItem.system.XMLID.replace("MANEUVER", senseAffectingItem.system.ALIAS)} ${senseGroup.XMLID}`,
                 duration: {
-                    seconds: senseGroup.bodyDamage,
+                    seconds: delayIntervalSeconds > 0 ? delayIntervalSeconds : senseGroup.bodyDamage,
                 },
                 flags: {
                     [game.system.id]: {
@@ -4517,7 +4523,9 @@ async function _onApplySenseAffectingToSpecificToken(
                             actor: senseAffectingItem.actor,
                             action,
                         })?.name,
-                        expiresOn: "segmentEnd",
+                        ...(delayIntervalSeconds > 0
+                            ? { delayedReturnOptionId: delayedReturnRate.OPTIONID, expiresOn: "turnStart" }
+                            : { expiresOn: "segmentEnd" }),
                     },
                 },
             };
