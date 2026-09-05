@@ -287,19 +287,8 @@ function extractSkills(actor, rollAlias, wantBackgroundSkill) {
         ];
     }
 
+    // Matches any non-empty string (the guard above handles empty), splitting on an optional " or "
     const variableSkillsAliasMatch = rollAlias.match(/^([\S\s]+?)((?:\s+or\s+)([\S\s]+))?$/i);
-    if (variableSkillsAliasMatch == null) {
-        console.error(`RSR extractSkills: ${rollAlias} didn't match regex`);
-        return [
-            {
-                name: rollAlias,
-                wantBackgroundSkill: wantBackgroundSkill,
-                activeItems: [],
-                items: [],
-            },
-        ];
-    }
-
     const requiredSkillNames = [variableSkillsAliasMatch[1]];
 
     // Is this a variable roll alias with 2 skills separated by " or ".
@@ -320,7 +309,7 @@ function extractSkills(actor, rollAlias, wantBackgroundSkill) {
 }
 
 function findSkills(actor, skillName) {
-    const skillsToMatchAgainst = actor.items.filter(filterOutNonSkillRollItems);
+    const skillsToMatchAgainst = (actor?.items ?? []).filter(filterOutNonSkillRollItems);
 
     // Case insensitive comparison
     return skillsToMatchAgainst.filter(
@@ -410,12 +399,13 @@ function getRollsForRar(item, rar) {
         // 5e Luck roll?
         else if (rar.OPTIONID === "ONELUCK" || rar.OPTIONID === "TWOLUCK" || rar.OPTIONID === "THREELUCK") {
             const numSuccessesRequired = rar.OPTIONID === "ONELUCK" ? 1 : rar.OPTIONID === "TWOLUCK" ? 2 : 3;
+            const luckItems = (item.actor?.items ?? []).filter((item) => item.system.XMLID === "LUCK");
             return [
                 {
                     type: RSR_ROLL_TYPE.LUCK_ROLL,
                     successesRequired: numSuccessesRequired,
-                    activeItems: item.actor.items.filter((item) => item.system.XMLID === "LUCK" && item.isActive),
-                    items: item.actor.items.filter((item) => item.system.XMLID === "LUCK"),
+                    activeItems: luckItems.filter((item) => item.isActive),
+                    items: luckItems,
                 },
             ];
         }
@@ -521,16 +511,15 @@ function getRollsForRar(item, rar) {
                 };
 
             case RSR_ROLL_CATEGORY.PER: {
+                const perceptionItems = (item.actor?.items ?? []).filter((item) => item.system.XMLID === "PERCEPTION");
                 return {
                     type: RSR_ROLL_TYPE.ITEM_ROLL,
                     requiredSkills: [
                         {
                             name: "PERCEPTION",
                             wantBackgroundSkill: false,
-                            activeItems: item.actor.items.filter(
-                                (item) => item.system.XMLID === "PERCEPTION" && item.isActive,
-                            ),
-                            items: item.actor.items.filter((item) => item.system.XMLID === "PERCEPTION"),
+                            activeItems: perceptionItems.filter((item) => item.isActive),
+                            items: perceptionItems,
                         },
                     ],
                 };
@@ -1009,7 +998,7 @@ function activationAttackRollHeroValidation(modifier, item) {
 function activationCharacteristicRollHeroValidation(activationRoll, modifier, item) {
     const validations = [];
 
-    if (!item.actor.hasCharacteristic(activationRoll.characteristicKey)) {
+    if (item.actor && !item.actor.hasCharacteristic(activationRoll.characteristicKey)) {
         validations.push({
             message: `Actor does not have the characteristic ${activationRoll.characteristicKey} to make the activation roll.`,
             severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
@@ -1020,10 +1009,10 @@ function activationCharacteristicRollHeroValidation(activationRoll, modifier, it
     return validations;
 }
 
-function activationLuckRollHeroValidation(activationRoll, modifier /*, item*/) {
+function activationLuckRollHeroValidation(activationRoll, modifier, item) {
     const validations = [];
 
-    if (activationRoll.items.length === 0) {
+    if (item.actor && activationRoll.items.length === 0) {
         validations.push({
             message: `Actor does not have a luck power to make the activation roll.`,
             severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,
@@ -1044,7 +1033,7 @@ function activationLuckRollHeroValidation(activationRoll, modifier /*, item*/) {
     return validations;
 }
 
-function activationItemRollHeroValidation(activationRoll, modifier /*, item*/) {
+function activationItemRollHeroValidation(activationRoll, modifier, item) {
     const validations = [];
 
     // Do we have items that match?
@@ -1056,6 +1045,10 @@ function activationItemRollHeroValidation(activationRoll, modifier /*, item*/) {
                     severity: CONFIG.HERO.VALIDATION_SEVERITY.WARNING,
                     modifierID: modifier.ID,
                 });
+                return;
+            }
+            // "Does the actor have it" is unanswerable for unowned (compendium/world) items
+            if (!item.actor) {
                 return;
             }
             validations.push({
@@ -1091,12 +1084,6 @@ function activationItemRollHeroValidation(activationRoll, modifier /*, item*/) {
 
 export function requiresRollHeroValidation(modifier, item) {
     const validations = [];
-
-    // Everything below asks "does the actor have X"; unowned (compendium/world) items have no answer
-    if (!item.actor) {
-        return validations;
-    }
-
     const activationRolls = getRollsForRar(item, modifier);
 
     // 5e 2 rolls requires GM permission
