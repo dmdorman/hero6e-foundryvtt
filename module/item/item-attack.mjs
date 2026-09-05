@@ -1,6 +1,7 @@
 import { activateManeuver, doManeuverEffects, endHaymakerManeuver, maneuverHasBlockTrait } from "./maneuver.mjs";
 
 import { HEROSYS } from "../herosystem6e.mjs";
+import { filterIgnoreCompoundAndFrameworkItems } from "../config.mjs";
 
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
 import { performAdjustment } from "../actor/actor-adjustment.mjs";
@@ -4251,11 +4252,14 @@ export async function _onApplyAdjustmentToSpecificToken(
 
     // Where is the adjustment taking from/giving to?
     const { valid, reducesArray, enhancesArray } = adjustmentItem.effectiveAttackItem.splitAdjustmentSourceAndTarget();
-    if (!valid && token.actor.items.filter((o) => o.type === "power").length > 0) {
+    const adjustableItems = token.actor.items.filter(
+        (o) => o.type === "power" && o.baseInfo && filterIgnoreCompoundAndFrameworkItems(o),
+    );
+    if (!valid && adjustableItems.length > 0) {
         // Show a list of powers from target token
         if (game.settings.get(game.system.id, "alphaTesting")) {
             let html = "<table>";
-            for (const item of token.actor.items.filter((o) => o.type === "power")) {
+            for (const item of adjustableItems) {
                 html += `<tr>`;
                 html += `<td><input type="checkbox" id="${item.id}" data-dtype="Boolean" /></td>`;
                 html += `<td style="text-align: left"><b>${item.name}</b>: ${item.system.description}</td>`;
@@ -4282,12 +4286,14 @@ export async function _onApplyAdjustmentToSpecificToken(
                     ],
                 })) || [];
 
-            for (const checkedElement of checked) {
-                const checkedItem = token.actor.items.find((o) => o.id === checkedElement.id);
-                if (reducesArray.length > 0) {
-                    reducesArray.push(checkedItem.id);
-                } else if (enhancesArray.length > 0) {
-                    enhancesArray.push(checkedItem.id);
+            // When !valid the populated array holds the unparseable INPUT tokens; replace them with the
+            // picks. Cancelling clears them too so the invalid-target error below aborts the adjustment.
+            const targetArray =
+                reducesArray.length > 0 ? reducesArray : enhancesArray.length > 0 ? enhancesArray : null;
+            if (targetArray) {
+                targetArray.length = 0;
+                for (const checkedElement of checked) {
+                    targetArray.push(checkedElement.id);
                 }
             }
             if ((reducesArray?.length || 0) + (enhancesArray?.length || 0) === 0) {
