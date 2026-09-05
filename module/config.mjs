@@ -50,7 +50,8 @@ import { hdcTextNumberToNumeric, squelch } from "./utility/util.mjs";
  * @returns boolean
  */
 export function filterIgnoreCompoundAndFrameworkItems(item) {
-    return !(item.baseInfo.type.includes("compound") || item.baseInfo.type.includes("framework"));
+    const type = item.baseInfo?.type;
+    return !!type && !type.includes("compound") && !type.includes("framework");
 }
 
 export const HERO = { heroDice, heroEncounter };
@@ -17587,6 +17588,18 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             type: ["modifier"],
             costPerLevel: fixedValueFunction(0),
             dcAffecting: fixedValueFunction(false),
+            heroValidation: function (modifier, item) {
+                const validations = [];
+                if (!item.isAdjustment && !item.isSenseAffecting) {
+                    validations.push({
+                        property: "XMLID",
+                        message: `Delayed Return Rate is only automated for adjustment and sense-affecting powers. ${item.system.XMLID} effects will expire on their normal schedule without fading in increments.`,
+                        severity: HERO.VALIDATION_SEVERITY.WARNING,
+                        modifierID: modifier.ID,
+                    });
+                }
+                return validations;
+            },
             xml: `<MODIFIER XMLID="DELAYEDRETURNRATE" ID="1737065759130" BASECOST="1.0" LEVELS="0" ALIAS="Delayed Return Rate" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="MINUTE" OPTIONID="MINUTE" OPTION_ALIAS="points return at the rate of 5 per Minute" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No"></MODIFIER>`,
         },
         {},

@@ -1,7 +1,11 @@
 import { HEROSYS } from "../herosystem6e.mjs";
+import { characteristicMaxAddChanges } from "../utility/active-effects.mjs";
+import { convertSystemUnitsToMetres, gridUnitsToMeters } from "../utility/units.mjs";
 
 const { TokenDocument } = foundry.documents;
 const { Token } = foundry.canvas.placeables;
+
+const BASE_END_PER_1M_MOVEMENT = 0.1;
 
 export class HeroSystem6eTokenDocument extends TokenDocument {
     constructor(data, context) {
@@ -53,42 +57,44 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
             const masterCombatant = this.combatant;
             const endStart = masterCombatant.getFlag(game.system.id, "endUsedForMovement") || 0;
             const endCost = this._movementHistoryEndCost;
-            const endDelta = endCost - endStart;
+            const endValue = this.actor.system.characteristics.end?.value;
+            if (!Number.isFinite(endCost) || !Number.isFinite(endValue)) {
+                return;
+            }
             masterCombatant.setFlag(game.system.id, "endUsedForMovement", endCost);
             this.actor.update({
-                [`system.characteristics.end.value`]: this.actor.system.characteristics.end.value - endDelta,
+                [`system.characteristics.end.value`]: endValue - (endCost - endStart),
             });
         }
     }
 
     #movementPossibilities(action) {
-        const movementActiveEffects = this.actor.appliedEffects.filter((ae) =>
-            ae.changes.find(
-                (c) =>
-                    c.key === `system.characteristics.${action.toLowerCase()}.max` &&
-                    c.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD, // FIXME: We can have AEs like STR0 that are not appropriate to consider
-            ),
-        );
+        const is5e = this.actor.is5e;
         const possibleMovements = [];
-        for (const ae of movementActiveEffects) {
+        let aeGrantedDistance = 0;
+        for (const { ae, value } of characteristicMaxAddChanges(this.actor, action)) {
+            const aeDistance = Math.max(0, value);
+            aeGrantedDistance += aeDistance;
             possibleMovements.push({
                 name: ae.name,
                 ae,
                 action: action,
-                distanceUnused:
-                    parseInt(
-                        ae.changes.find((c) => c.key === `system.characteristics.${action.toLowerCase()}.max`).value,
-                    ) || 0,
-                endPer1mMovement: ae.parent.endPer1mMovement,
+                distanceUnused: convertSystemUnitsToMetres(aeDistance, is5e),
+                // Actor-embedded AEs (encumbrance, adjustments) have no owning item; charge as inherent movement
+                endPer1mMovement: Number.isFinite(ae.parent?.endPer1mMovement)
+                    ? ae.parent.endPer1mMovement
+                    : BASE_END_PER_1M_MOVEMENT,
             });
         }
-        const characteristicMax = this.actor.system.characteristics[action.toLowerCase()]?.max;
-        if (characteristicMax) {
+        // characteristicMax already includes the AE ADD contributions counted above
+        const characteristicMax = parseInt(this.actor.system.characteristics[action.toLowerCase()]?.max) || 0;
+        const inherentDistance = Math.max(0, characteristicMax - aeGrantedDistance);
+        if (inherentDistance > 0) {
             possibleMovements.push({
                 name: "inherent",
                 action: action,
-                distanceUnused: parseInt(characteristicMax) || 0,
-                endPer1mMovement: 0.1,
+                distanceUnused: convertSystemUnitsToMetres(inherentDistance, is5e),
+                endPer1mMovement: BASE_END_PER_1M_MOVEMENT,
             });
         }
         // Use least expensive movements first
@@ -98,16 +104,22 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
     get _movementHistoryEndCost() {
         let endCost = 0;
         try {
+            // waypoint.cost is in scene grid units (spaces * grid.distance)
+            const gridToMeters = gridUnitsToMeters({ scene: this.parent, silent: true });
             const movementCapabilities = {};
             for (const waypoint of this.movementHistory) {
-                if (waypoint.cost > 0) {
-                    let cost = waypoint.cost;
-                    movementCapabilities[waypoint.action] ??= this.#movementPossibilities(waypoint.action);
-                    for (const capability of movementCapabilities[waypoint.action]) {
-                        const used = Math.max(0, Math.min(cost, capability.distanceUnused));
-                        cost -= used;
-                        endCost += capability.endPer1mMovement;
-                        capability.distanceUnused -= used;
+                let costInMeters = waypoint.cost * gridToMeters;
+                if (!Number.isFinite(costInMeters) || costInMeters <= 0) {
+                    continue;
+                }
+                movementCapabilities[waypoint.action] ??= this.#movementPossibilities(waypoint.action);
+                for (const capability of movementCapabilities[waypoint.action]) {
+                    const used = Math.max(0, Math.min(costInMeters, capability.distanceUnused));
+                    costInMeters -= used;
+                    endCost += used * capability.endPer1mMovement;
+                    capability.distanceUnused -= used;
+                    if (costInMeters <= 0) {
+                        break;
                     }
                 }
             }

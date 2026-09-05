@@ -108,12 +108,12 @@ export class HeroSystem6eCompendiumDirectory extends CompendiumDirectory {
                     for (const file of files) {
                         try {
                             const contents = await file.text();
-                            const parser = new DOMParser();
-                            const xmlDoc = parser.parseFromString(contents, "text/xml");
-
-                            await HeroSystem6eCompendiumDirectory.uploadFromXml(xmlDoc, folderId);
+                            await HeroSystem6eCompendiumDirectory.uploadFromXml(contents, folderId, {
+                                fileName: file.name,
+                            });
                         } catch (err) {
                             console.error(`Failed to process Hero Designer file: ${file.name}`, err);
+                            ui.notifications.error(`Failed to process Hero Designer file ${file.name}.`);
                         }
                     }
 
@@ -171,13 +171,22 @@ export class HeroSystem6eCompendiumDirectory extends CompendiumDirectory {
      * Parses an XML Document object or string into a Compendium Pack filled with HeroSystem items and folders.
      * @param {XMLDocument|string} xml - XML document or raw string
      * @param {string} [targetFolderId] - ID of parent compendium folder
+     * @param {object} [options]
+     * @param {string} [options.fileName] - Source file name; compendium name fallback when CHARACTER_NAME is blank
      * @returns {Promise<CompendiumCollection|void>}
      */
-    static async uploadFromXml(xml, targetFolderId) {
+    static async uploadFromXml(xml, targetFolderId, options = {}) {
         // Convert string to XML Document if necessary
         if (typeof xml === "string") {
             const parser = new DOMParser();
             xml = parser.parseFromString(xml.trim(), "text/xml");
+        }
+
+        const parserError = xml.getElementsByTagName("parsererror")?.[0];
+        if (parserError) {
+            console.error(parserError.textContent);
+            ui.notifications.error(`Parser error. Verify ${options.fileName ?? "the file"} is a valid HDC/HDP file.`);
+            return;
         }
 
         // Convert XML representation into JSON tree
@@ -186,7 +195,8 @@ export class HeroSystem6eCompendiumDirectory extends CompendiumDirectory {
 
         // Standard prefabs use PREFAB, but renamed HDC files may fall back to CHARACTER
         const PREFAB = heroJson.PREFAB ?? heroJson.CHARACTER;
-        const compendiumName = PREFAB?.CHARACTER_INFO?.CHARACTER_NAME?.trim();
+        const compendiumName =
+            PREFAB?.CHARACTER_INFO?.CHARACTER_NAME?.trim() || options.fileName?.replace(/\.(hdc|hdp)$/i, "").trim();
 
         if (!compendiumName) {
             console.error("HeroSystem6e | Missing CHARACTER_NAME in XML Document:", xml);

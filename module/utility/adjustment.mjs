@@ -1,8 +1,16 @@
 import { HEROSYS } from "../herosystem6e.mjs";
+import { filterIgnoreCompoundAndFrameworkItems } from "../config.mjs";
 import { getPowerInfo } from "./util.mjs";
 import { calculateDicePartsForItem } from "./damage.mjs";
 
 const { renderTemplate } = foundry.applications.handlebars;
+
+/**
+ * Actor items an adjustment power can legally target.
+ */
+export function isAdjustmentTargetItem(item) {
+    return item.type === "power" && filterIgnoreCompoundAndFrameworkItems(item);
+}
 
 /**
  * Return the full list of possible powers and characteristics. No skills, talents, or perks.
@@ -25,6 +33,8 @@ export function adjustmentSourcesPermissive({ actor, is5e, item }) {
             !power.type?.includes("skill") &&
             !power.type?.includes("perk") &&
             !power.type?.includes("talent") &&
+            !power.type?.includes("framework") &&
+            !power.type?.includes("compound") &&
             power?.xmlTag !== "ADDER" &&
             power?.xmlTag !== "DISAD" &&
             power?.xmlTag !== "MODIFIER",
@@ -66,7 +76,7 @@ export function adjustmentSourcesStrict({ actor }) {
     );
 
     // Attack powers
-    for (const item of actor.items.filter((item) => item.type === "power" && item.system.XMLID !== "MULTIPOWER")) {
+    for (const item of actor.items.filter(isAdjustmentTargetItem)) {
         powers.push({ key: item.system.XMLID });
     }
 

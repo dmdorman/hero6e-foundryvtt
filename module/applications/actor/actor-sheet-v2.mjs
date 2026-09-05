@@ -1370,7 +1370,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
                 break;
 
             case "Folder":
-                await this.onDropFolder(await fromUuid(data.uuid), null);
+                await this.onDropFolder(await fromUuid(data.uuid), event);
                 break;
 
             default:
@@ -1379,16 +1379,30 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         }
     }
 
-    async onDropFolder(folder) {
+    // Tabs that name an Item subtype; a drop on any other tab keeps each item's own type
+    static #TAB_ITEM_TYPES = {
+        martial: "martialart",
+        skills: "skill",
+        maneuvers: "maneuver",
+        powers: "power",
+        equipment: "equipment",
+        characteristics: "characteristic",
+        perks: "perk",
+        talents: "talent",
+        disadvantages: "disadvantage",
+        complications: "complication",
+    };
+
+    async onDropFolder(folder, event) {
         console.log("Entering onDropFolder for:", folder.name);
         let itemsToDrop = folder.contents;
         const pack = game.packs.get(folder.pack);
 
-        const target = event.target ?? event.currentTarget;
-        const droppedOnTab = target?.closest?.("[data-tab]")?.dataset?.tab.replace(/(?<!analysi)s$/, "");
-        const targetType = droppedOnTab ?? this.tabGroups.primary.replace(/s$/, "").replace("martial", "martialart");
+        const target = event?.target ?? event?.currentTarget;
+        const droppedOnTab = target?.closest?.("[data-tab]")?.dataset?.tab;
+        const targetType = HeroSystemActorSheetV2.#TAB_ITEM_TYPES[droppedOnTab ?? this.tabGroups.primary];
 
-        if (folder.pack || !itemsToDrop?.[0].id) {
+        if (folder.pack || !itemsToDrop?.[0]?.id) {
             function getFolderIds(f) {
                 let ids = [f.id];
                 const subfolders = pack.folders.filter((sub) => sub.folder?.id === f.id);
@@ -1425,7 +1439,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             const chatData = {
                 author: game.user._id,
                 style: CONST.CHAT_MESSAGE_STYLES.OTHER,
-                content: `These <b>${targetType}</b> items were added to <b>${this.actor.name}</b> from the ${topItems[0].uuid.startsWith("Item.") ? "<b>Item Sidebar</b>" : `<b>${pack.metadata.label ?? pack.metadata.name}</b> compendium`}: <ul>${topItems.map((item) => `<li>${item.name}</li>`).join("")}</ul>`,
+                content: `These <b>${targetType ?? "item"}</b> items were added to <b>${this.actor.name}</b> from the ${topItems[0].uuid.startsWith("Item.") ? "<b>Item Sidebar</b>" : `<b>${pack.metadata.label ?? pack.metadata.name}</b> compendium`}: <ul>${topItems.map((item) => `<li>${item.name}</li>`).join("")}</ul>`,
                 whisper: whisperUserTargetsForActor(this.actor),
                 speaker: ChatMessage.getSpeaker({ actor: this.actor, token: this.token }),
             };
@@ -1524,7 +1538,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             return;
         }
 
-        const targetType = targetTab.replace(/s$/, "").replace("martial", "martialart");
+        const targetType = HeroSystemActorSheetV2.#TAB_ITEM_TYPES[targetTab] ?? item.type;
         if (!item.isValidTypeConversion(targetType, this.actor)) {
             const conversionFailures = item.validationTypeConversionFailures(targetType, this.actor);
             console.error(conversionFailures);
@@ -1576,7 +1590,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         const itemData = item.toObject();
         itemData.system.ID = new Date().getTime();
 
-        const targetType = options.type ?? this.tabGroups.primary.replace(/s$/, "").replace("martial", "martialart");
+        const targetType = options.type ?? HeroSystemActorSheetV2.#TAB_ITEM_TYPES[this.tabGroups.primary] ?? item.type;
         if (item.isValidTypeConversion(targetType, this.actor)) {
             itemData.type = targetType;
         } else {

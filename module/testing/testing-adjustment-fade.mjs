@@ -1198,6 +1198,42 @@ export function registerAdjustmentFadeTests(quench) {
                         "Drain must not fade during the segment pass.",
                     );
                 });
+
+                it("FLASH with Delayed Return Rate fades one segment per interval", async function () {
+                    const [flashEffect] = await drainActor.createEmbeddedDocuments("ActiveEffect", [
+                        {
+                            name: "FLASH SIGHTGROUP",
+                            img: "icons/svg/blind.svg",
+                            duration: { seconds: 60 },
+                            flags: {
+                                [game.system.id]: {
+                                    type: "senseAffectingFade",
+                                    bodyDamage: 3,
+                                    XMLID: "FLASH",
+                                    source: "Quench Test",
+                                    expiresOn: "turnStart",
+                                },
+                            },
+                        },
+                    ]);
+                    const remainingSegments = () =>
+                        drainActor.effects.get(flashEffect.id)?.flags[game.system.id]?.bodyDamage;
+
+                    // Before the interval elapses nothing returns
+                    await game.time.advance(12);
+                    await settle(() => remainingSegments() === 3);
+                    assert.equal(remainingSegments(), 3, "No segments return before the interval elapses.");
+
+                    // One interval elapsed: one segment returns
+                    await game.time.advance(60);
+                    await settle(() => remainingSegments() === 2);
+                    assert.equal(remainingSegments(), 2, "One segment returns per interval.");
+
+                    // Two more intervals: the remaining segments return and the effect ends
+                    await game.time.advance(120);
+                    await settle(() => !drainActor.effects.get(flashEffect.id));
+                    assert.notOk(drainActor.effects.get(flashEffect.id), "Flash ends when all segments return.");
+                });
             });
 
             // Healing lives here with the other production-flow performAdjustment coverage.

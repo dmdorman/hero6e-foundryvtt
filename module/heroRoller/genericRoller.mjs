@@ -70,7 +70,7 @@ export class GenericRoller {
 
         // Attacker’s OCV + 11 - 3d6 = the DCV the attacker can hit
         const heroRoller = new HeroRoller()
-            .addNumber(Math.clamp(parseInt(userSelection.ocv) || 0, -99, 99), "OCV")
+            .addNumber(Math.clamp(parseInt(userSelection.ocv) || 0, -99, 99), "OCV", undefined, { showZero: true })
             .addNumber(11, "Base to hit")
             .addDice(-3)
             .makeSuccessRoll();

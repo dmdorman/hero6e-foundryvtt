@@ -77,6 +77,7 @@ function buildManeuverFlags(item, type) {
     return {
         [game.system.id]: {
             type: type,
+            expiresOn: "turnStart",
             itemUuid: item.uuid,
             toggle: item.isActivatable(),
             dehydratedManeuverItem: dehydrateAttackItem(item),

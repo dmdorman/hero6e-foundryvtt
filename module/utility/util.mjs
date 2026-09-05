@@ -310,6 +310,9 @@ export async function expireEffects(actor, expiresOn) {
             const origin = fromUuidSync(ae.origin);
             const item =
                 origin instanceof HeroSystem6eItem ? origin : ae.parent instanceof HeroSystem6eItem ? ae.parent : null;
+            const source = ae.flags[game.system.id]?.source ?? "an unknown source";
+            // Flag changes to persist together with the start.time re-arm below (one update per interval)
+            let pendingFadeFlags;
 
             // What is this effect related to?
             if (ae.flags[game.system.id]?.type === "adjustment") {
@@ -355,6 +358,21 @@ export async function expireEffects(actor, expiresOn) {
                 ) {
                     break;
                 }
+            } else if (
+                ae.flags[game.system.id]?.type === "senseAffectingFade" &&
+                ae.flags[game.system.id]?.bodyDamage > 0
+            ) {
+                // Sense-affecting effect with Delayed Return Rate: one segment returns per interval
+                const remainingSegments = parseInt(ae.flags[game.system.id].bodyDamage) - 1;
+                if (remainingSegments <= 0) {
+                    expiredCardHtmls.push(`${ae.name} from ${source} has expired.`);
+                    markForDeletion(ae);
+                    break;
+                }
+                expiredCardHtmls.push(
+                    `${ae.name} from ${source} fades: ${remainingSegments} segment${remainingSegments > 1 ? "s" : ""} remaining.`,
+                );
+                pendingFadeFlags = { [`flags.${game.system.id}.bodyDamage`]: remainingSegments };
             } else if (ae.flags[game.system.id]?.XMLID === "naturalBodyHealing") {
                 let bodyValue = parseInt((ae.target || actor).system.characteristics.body.value);
                 let bodyMax = parseInt((ae.target || actor).system.characteristics.body.max);
@@ -383,7 +401,6 @@ export async function expireEffects(actor, expiresOn) {
                 if (ae.parent instanceof HeroSystem6eActor) {
                     // Effects created outside this system may lack our flags; a throw here would
                     // abort combat turn events (skipping PostSegment12) and leave the AE undeletable.
-                    const source = ae.flags[game.system.id]?.source ?? "an unknown source";
                     expiredCardHtmls.push(
                         `${ae.name.replace(/\d+ segments remaining/, "")} from ${source} has expired.`,
                     );
@@ -405,6 +422,7 @@ export async function expireEffects(actor, expiresOn) {
                 if (ae.updateDuration().remaining <= 0) {
                     await ae.update({
                         "start.time": (ae.start?.time ?? game.time.worldTime) + (ae.duration.seconds ?? 0),
+                        ...pendingFadeFlags,
                     });
                 }
             } else {
