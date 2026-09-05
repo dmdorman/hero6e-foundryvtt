@@ -227,13 +227,6 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
                     : 0;
             this.data.boostableChargesToUse ??= 0;
 
-            // Autofire
-            const autofire = this.data.originalItem.effectiveAttackItem.findModsByXmlid("AUTOFIRE");
-            this.data.autofireShotsAvailable = autofire
-                ? this.data.originalItem.effectiveAttackItem.calcMaxAutofireShots(autofire)
-                : 1;
-            this.data.autofireShotsToUse ??= this.data.autofireShotsAvailable;
-
             // MINDSCAN
             if (this.data.originalItem.system.XMLID === "MINDSCAN") {
                 this.data.mindScanChoices = CONFIG.HERO.mindScanChoices;
@@ -446,6 +439,17 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
                 };
                 return naObj;
             }, {});
+
+            // Autofire
+            const attackItem = this.data.originalItem.effectiveAttackItem;
+            const autofire = this.#autofireModForAttack();
+            const shotsAvailable = autofire ? attackItem.calcMaxAutofireShots(autofire) : 1;
+            const availabilityChanged = this.data.autofireShotsAvailable !== shotsAvailable;
+            this.data.autofireShotsAvailable = shotsAvailable;
+            // Toggling a naked advantage changes availability; reset to the new max so the spinner has a sane default
+            this.data.autofireShotsToUse = availabilityChanged
+                ? shotsAvailable
+                : Math.clamp(this.data.autofireShotsToUse ?? shotsAvailable, 1, shotsAvailable);
 
             this.data.effectiveItem = await this.#buildEffectiveObjectFromOriginalAndData();
             this.data.effectiveItemResourceUsage = calculateRequiredResourcesToUse(
@@ -1065,6 +1069,23 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
         } else {
             this.data.effectiveStrPushedRealPoints = 0;
         }
+    }
+
+    /**
+     * The AUTOFIRE modifier in effect for this attack: on the attack item itself,
+     * or granted by a naked advantage the user has selected.
+     */
+    #autofireModForAttack() {
+        const attackItem = this.data.originalItem.effectiveAttackItem;
+        const nativeAutofire = attackItem.findModsByXmlid("AUTOFIRE");
+        if (nativeAutofire) {
+            return nativeAutofire;
+        }
+
+        return Object.values(this.data.nakedAdvantagesItems)
+            .filter((na) => na._canUseForAttack)
+            .map((na) => na.item.findModsByXmlid("AUTOFIRE"))
+            .find(Boolean);
     }
 
     /**
