@@ -1071,6 +1071,12 @@ function activationItemRollHeroValidation(activationRoll, modifier /*, item*/) {
 
 export function requiresRollHeroValidation(modifier, item) {
     const validations = [];
+
+    // Everything below asks "does the actor have X"; unowned (compendium/world) items have no answer
+    if (!item.actor) {
+        return validations;
+    }
+
     const activationRolls = getRollsForRar(item, modifier);
 
     // 5e 2 rolls requires GM permission

@@ -21,6 +21,7 @@ import {
 } from "../heroRoller/dice-testing-helper.mjs";
 
 import { isActivatedForThisUse_TestingOnly } from "../item/item-requires-roll.mjs";
+import { HeroSystem6eItem } from "../item/item.mjs";
 
 import { getAndSetGameSetting } from "../settings/settings-helpers.mjs";
 
@@ -4418,6 +4419,34 @@ export function registerRequiresRollCheckTests(quench) {
                             });
                         });
                     });
+                });
+            });
+
+            describe("unowned world item with a characteristic RSR", function () {
+                setQuenchTimeout(this);
+
+                const contents = `
+                    <POWER XMLID="RUNNING" ID="1757000000001" BASECOST="0.0" LEVELS="6" ALIAS="Running" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Skateboard" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                        <MODIFIER XMLID="REQUIRESASKILLROLL" ID="1757000000002" BASECOST="-0.5" LEVELS="0" ALIAS="Requires A Roll" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="CHAR" OPTIONID="CHAR" OPTION_ALIAS="DEX roll" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="DEX" PRIVATE="No" FORCEALLOW="No"></MODIFIER>
+                    </POWER>
+                `;
+
+                let worldItem;
+
+                before(async function () {
+                    worldItem = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents));
+                });
+
+                after(async function () {
+                    await worldItem?.delete();
+                });
+
+                it("should report a null actor", function () {
+                    expect(worldItem.actor).to.equal(null);
+                });
+
+                it("should compute heroValidation without throwing", function () {
+                    expect(() => worldItem.heroValidation).to.not.throw();
                 });
             });
         },

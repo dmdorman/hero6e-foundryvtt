@@ -2781,8 +2781,9 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     }
 
     get actor() {
-        // Additional support to get the actor of an effectiveItem with V2 code
-        return super.actor ?? fromUuidSync(this.system.originalItemUuid)?.actor;
+        // Additional support to get the actor of an effectiveItem with V2 code.
+        // Trailing null keeps core's contract: unowned items report null, never undefined.
+        return super.actor ?? fromUuidSync(this.system.originalItemUuid)?.actor ?? null;
     }
 
     /**
