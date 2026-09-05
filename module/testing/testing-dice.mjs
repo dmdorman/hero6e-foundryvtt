@@ -176,6 +176,30 @@ export function registerDiceTests(quench) {
                         expect(roller.getFormula()).to.equal("-7 + 3 - 2");
                     });
 
+                    it("should drop zero numeric terms by default", async function () {
+                        const roller = new HeroRoller().addNumber(7).addNumber(0, "OCV");
+                        await roller.roll();
+
+                        expect(roller.getFormula()).to.equal("7");
+                    });
+
+                    it("should keep zero numeric terms with showZero", async function () {
+                        const roller = new HeroRoller().addNumber(7).addNumber(0, "OCV", undefined, { showZero: true });
+                        await roller.roll();
+
+                        expect(roller.getFormula()).to.equal("7 + 0");
+                    });
+
+                    it("should keep a leading zero numeric term with showZero", async function () {
+                        const roller = new HeroRoller()
+                            .addNumber(0, "OCV", undefined, { showZero: true })
+                            .addNumber(-3);
+                        await roller.roll();
+
+                        expect(roller.getFormula()).to.equal("0 - 3");
+                        expect(roller.tags()).to.deep.include({ name: "OCV", value: 0, title: undefined });
+                    });
+
                     it("should handle formulas with whole dice", async function () {
                         const roller = new HeroRoller().addDice(2);
                         await roller.roll();

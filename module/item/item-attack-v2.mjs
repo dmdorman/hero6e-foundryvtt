@@ -129,7 +129,9 @@ export class ItemAttackV2 {
         const attackHeroRoller = new HeroRoller()
             .makeSuccessRoll()
             .addNumber(11, "Base to hit")
-            .addNumber(hitCharacteristic, attackAction.effectiveItem.system.attacksWith);
+            .addNumber(hitCharacteristic, attackAction.effectiveItem.system.attacksWith, undefined, {
+                showZero: true,
+            });
 
         // Range modifiers
         addRangeIntoToHitRoll(distance, attackAction.effectiveItem, attackAction.actor, attackHeroRoller);
@@ -153,7 +155,9 @@ export class ItemAttackV2 {
         return new HeroRoller()
             .makeSuccessRoll()
             .addNumber(11, "Base to hit")
-            .addNumber(hitCharacteristic, attackAction.effectiveItem.system.attacksWith);
+            .addNumber(hitCharacteristic, attackAction.effectiveItem.system.attacksWith, undefined, {
+                showZero: true,
+            });
 
         // TODO - add range modifiers, CSLs, and other modifiers that would apply to the template placement roll, which may be different from the to hit roll depending on the attack.
     }

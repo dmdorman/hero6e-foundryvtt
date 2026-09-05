@@ -612,8 +612,8 @@ export class HeroRoller {
         return this;
     }
 
-    addNumber(value, description, tooltip) {
-        if (!value) {
+    addNumber(value, description, tooltip, options = {}) {
+        if (!value && !(value === 0 && options.showZero)) {
             return this;
         }
 
@@ -622,7 +622,7 @@ export class HeroRoller {
         }
 
         if (this._formulaTerms.length > 0) {
-            this.#addOperatorTerm(value > 0 ? "+" : "-");
+            this.#addOperatorTerm(value >= 0 ? "+" : "-");
         }
 
         // For numeric terms, since they can be negative, we need to compensate for
