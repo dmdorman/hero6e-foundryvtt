@@ -12,9 +12,23 @@ const { TokenHUD } = foundry.applications.hud;
  * @param {String} characteristic
  */
 function generateMovementCanSelectFunction(characteristic) {
+    const changeKey = `system.characteristics.${characteristic}.max`;
     return (token) => {
-        const combatMovementInSystemUnits = token.actor?.system.characteristics[characteristic]?.value || 0;
-        return combatMovementInSystemUnits > 0;
+        const actor = token.actor;
+        const combatMovementInSystemUnits = actor?.system.characteristics[characteristic]?.value || 0;
+        if (combatMovementInSystemUnits > 0) {
+            return true;
+        }
+
+        // Keep modes the actor owns but that actor-embedded effects (adjustments, encumbrance)
+        // pushed to 0 or below; item-parented AEs are the mode's own grant and stay counted.
+        const actorLevelChange = (actor?.appliedEffects ?? [])
+            .filter((ae) => ae.parent === actor)
+            .flatMap((ae) => ae.changes)
+            .filter((c) => c.key === changeKey && c.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD)
+            .reduce((sum, c) => sum + (parseInt(c.value) || 0), 0);
+        const unadjustedMax = (actor?.system.characteristics[characteristic]?.max || 0) - actorLevelChange;
+        return unadjustedMax > 0;
     };
 }
 
@@ -24,14 +38,20 @@ function generateMovementCanSelectFunction(characteristic) {
  */
 function generateMovementMaxCombatDistanceMeters(characteristic) {
     return (token) => {
-        const combatMovementInSystemUnits = token.actor?.system.characteristics[characteristic]?.value || 0;
+        const combatMovementInSystemUnits = Math.max(
+            0,
+            token.actor?.system.characteristics[characteristic]?.value || 0,
+        );
         return convertSystemUnitsToMetres(combatMovementInSystemUnits, token.actor?.is5e);
     };
 }
 
 function generateMovementMaxNonCombatDistanceMeters(characteristic) {
     return (token) => {
-        const combatMovementInSystemUnits = token.actor?.system.characteristics[characteristic]?.value || 0;
+        const combatMovementInSystemUnits = Math.max(
+            0,
+            token.actor?.system.characteristics[characteristic]?.value || 0,
+        );
 
         // Assume double movement for nonCombat (x2 multiplier)
         let extraNonCombatMovement = combatMovementInSystemUnits;
