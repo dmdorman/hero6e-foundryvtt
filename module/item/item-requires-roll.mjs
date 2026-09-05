@@ -275,6 +275,18 @@ async function testOnlyUserSelectsASkill(skillArray, arrayIndex) {
  * @returns {Array<Object>} - Array of skill objects
  */
 function extractSkills(actor, rollAlias, wantBackgroundSkill) {
+    // Hero Designer permits leaving the skill unnamed
+    if (!rollAlias?.trim()) {
+        return [
+            {
+                name: "",
+                wantBackgroundSkill: wantBackgroundSkill,
+                activeItems: [],
+                items: [],
+            },
+        ];
+    }
+
     const variableSkillsAliasMatch = rollAlias.match(/^([\S\s]+?)((?:\s+or\s+)([\S\s]+))?$/i);
     if (variableSkillsAliasMatch == null) {
         console.error(`RSR extractSkills: ${rollAlias} didn't match regex`);
@@ -1038,6 +1050,14 @@ function activationItemRollHeroValidation(activationRoll, modifier /*, item*/) {
     // Do we have items that match?
     activationRoll.requiredSkills.forEach((requiredSkill) => {
         if (requiredSkill.items.length === 0) {
+            if (!requiredSkill.name?.trim()) {
+                validations.push({
+                    message: `The requires a skill roll limitation does not name a skill. Name one in Hero Designer so the roll can be automated.`,
+                    severity: CONFIG.HERO.VALIDATION_SEVERITY.WARNING,
+                    modifierID: modifier.ID,
+                });
+                return;
+            }
             validations.push({
                 message: `Actor does not have the ${requiredSkill.name} skill to make the activation roll.`,
                 severity: CONFIG.HERO.VALIDATION_SEVERITY.ERROR,

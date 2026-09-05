@@ -1,3 +1,5 @@
+import { HeroSystem6eItem } from "../item/item.mjs";
+
 const { Actor } = foundry.documents;
 
 export async function createQuenchActor({ quench, contents, is5e, actorType: type = "pc", name, img }) {
@@ -48,7 +50,7 @@ export async function createQuenchActor({ quench, contents, is5e, actorType: typ
         } // Likely item contents
         else {
             // Add item
-            await actor.items.create(HeroSystem6eItem.itemDataFromXml(contents, actor));
+            await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), { parent: actor });
         }
     }
 

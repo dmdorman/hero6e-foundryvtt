@@ -4422,6 +4422,32 @@ export function registerRequiresRollCheckTests(quench) {
                 });
             });
 
+            describe("RSR skill roll with an unnamed skill", function () {
+                setQuenchTimeout(this);
+
+                const contents = `
+                    <POWER XMLID="RUNNING" ID="1757000000011" BASECOST="0.0" LEVELS="6" ALIAS="Running" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Gecko Gloves" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                        <MODIFIER XMLID="REQUIRESASKILLROLL" ID="1757000000012" BASECOST="-0.5" LEVELS="0" ALIAS="Requires A Roll" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="SKILL1PER5" OPTIONID="SKILL1PER5" OPTION_ALIAS="Skill roll; -1 per 5 Active Points modifier" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No"></MODIFIER>
+                    </POWER>
+                `;
+
+                let actor;
+
+                before(async function () {
+                    actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                });
+
+                after(async function () {
+                    await deleteQuenchActor({ quench: this, actor });
+                });
+
+                it("should warn about the unnamed skill without throwing", function () {
+                    const item = actor.items.find((o) => o.name === "Gecko Gloves");
+                    const validations = item.heroValidation;
+                    expect(validations.some((v) => v.message.match(/does not name a skill/))).to.be.true;
+                });
+            });
+
             describe("unowned world item with a characteristic RSR", function () {
                 setQuenchTimeout(this);
 
