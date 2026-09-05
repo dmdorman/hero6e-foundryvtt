@@ -1,4 +1,5 @@
 import { HEROSYS } from "../herosystem6e.mjs";
+import { convertSystemUnitsToMetres, gridUnitsToMeters } from "../utility/units.mjs";
 
 const { TokenDocument } = foundry.documents;
 const { Token } = foundry.canvas.placeables;
@@ -72,26 +73,36 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
                     c.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD, // FIXME: We can have AEs like STR0 that are not appropriate to consider
             ),
         );
+        const is5e = this.actor.is5e;
         const possibleMovements = [];
+        let aeGrantedDistance = 0;
         for (const ae of movementActiveEffects) {
+            const aeDistance =
+                parseInt(
+                    ae.changes.find(
+                        (c) =>
+                            c.key === `system.characteristics.${action.toLowerCase()}.max` &&
+                            c.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
+                    ).value,
+                ) || 0;
+            aeGrantedDistance += Math.max(0, aeDistance);
             possibleMovements.push({
                 name: ae.name,
                 ae,
                 action: action,
-                distanceUnused:
-                    parseInt(
-                        ae.changes.find((c) => c.key === `system.characteristics.${action.toLowerCase()}.max`).value,
-                    ) || 0,
+                distanceUnused: convertSystemUnitsToMetres(Math.max(0, aeDistance), is5e),
                 // Actor-embedded AEs (encumbrance, adjustments) have no owning item; charge as inherent movement
                 endPer1mMovement: Number.isFinite(ae.parent?.endPer1mMovement) ? ae.parent.endPer1mMovement : 0.1,
             });
         }
-        const characteristicMax = this.actor.system.characteristics[action.toLowerCase()]?.max;
-        if (characteristicMax) {
+        // characteristicMax already includes the AE ADD contributions counted above
+        const characteristicMax = parseInt(this.actor.system.characteristics[action.toLowerCase()]?.max) || 0;
+        const inherentDistance = Math.max(0, characteristicMax - aeGrantedDistance);
+        if (inherentDistance > 0) {
             possibleMovements.push({
                 name: "inherent",
                 action: action,
-                distanceUnused: parseInt(characteristicMax) || 0,
+                distanceUnused: convertSystemUnitsToMetres(inherentDistance, is5e),
                 endPer1mMovement: 0.1,
             });
         }
@@ -102,16 +113,22 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
     get _movementHistoryEndCost() {
         let endCost = 0;
         try {
+            // waypoint.cost is in scene grid units (spaces * grid.distance)
+            const gridToMeters = gridUnitsToMeters({ scene: this.parent, silent: true });
             const movementCapabilities = {};
             for (const waypoint of this.movementHistory) {
-                if (waypoint.cost > 0) {
-                    let cost = waypoint.cost;
-                    movementCapabilities[waypoint.action] ??= this.#movementPossibilities(waypoint.action);
-                    for (const capability of movementCapabilities[waypoint.action]) {
-                        const used = Math.max(0, Math.min(cost, capability.distanceUnused));
-                        cost -= used;
-                        endCost += capability.endPer1mMovement;
-                        capability.distanceUnused -= used;
+                let costInMeters = waypoint.cost * gridToMeters;
+                if (!Number.isFinite(costInMeters) || costInMeters <= 0) {
+                    continue;
+                }
+                movementCapabilities[waypoint.action] ??= this.#movementPossibilities(waypoint.action);
+                for (const capability of movementCapabilities[waypoint.action]) {
+                    const used = Math.max(0, Math.min(costInMeters, capability.distanceUnused));
+                    costInMeters -= used;
+                    endCost += used * capability.endPer1mMovement;
+                    capability.distanceUnused -= used;
+                    if (costInMeters <= 0) {
+                        break;
                     }
                 }
             }
