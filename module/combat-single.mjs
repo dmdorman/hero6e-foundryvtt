@@ -2788,9 +2788,15 @@ export class HeroSystem6eCombatSingle extends Combat {
         }
 
         for (const ae of actor.temporaryEffects) {
+            // Event-expired effects (maneuvers, statuses) have no duration and report Infinity remaining
             const remaining = ae._prepareDuration().remaining;
-            const remainingText = remaining > 0 ? `in ${toHHMMSS(remaining)}` : "0s";
-            tempContent += `<li>${ae.name} fades ${remainingText} ${ae.flags[game.system.id]?.expiresOn ?? ""}</li>`;
+            const remainingText = Number.isFinite(remaining)
+                ? remaining > 0
+                    ? `in ${toHHMMSS(remaining)}`
+                    : "0s"
+                : "";
+            const parts = [ae.name, "fades", remainingText, ae.flags[game.system.id]?.expiresOn ?? ""];
+            tempContent += `<li>${parts.filter(Boolean).join(" ")}</li>`;
         }
         if (tempContent) {
             startContent += `Has the following temporary effects: <ul>${tempContent}</ul>`;
