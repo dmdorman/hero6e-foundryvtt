@@ -6,6 +6,13 @@ import { calculateDicePartsForItem } from "./damage.mjs";
 const { renderTemplate } = foundry.applications.handlebars;
 
 /**
+ * Actor items an adjustment power can legally target.
+ */
+export function isAdjustmentTargetItem(item) {
+    return item.type === "power" && filterIgnoreCompoundAndFrameworkItems(item);
+}
+
+/**
  * Return the full list of possible powers and characteristics. No skills, talents, or perks.
  */
 export function adjustmentSourcesPermissive({ actor, is5e, item }) {
@@ -69,9 +76,7 @@ export function adjustmentSourcesStrict({ actor }) {
     );
 
     // Attack powers
-    for (const item of actor.items.filter(
-        (item) => item.type === "power" && item.baseInfo && filterIgnoreCompoundAndFrameworkItems(item),
-    )) {
+    for (const item of actor.items.filter(isAdjustmentTargetItem)) {
         powers.push({ key: item.system.XMLID });
     }
 

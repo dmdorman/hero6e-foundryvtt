@@ -613,7 +613,7 @@ export class HeroRoller {
     }
 
     addNumber(value, description, tooltip, options = {}) {
-        if (!value && !(value === 0 && options.showZero)) {
+        if (value === 0 ? !options.showZero : !value) {
             return this;
         }
 
@@ -647,6 +647,13 @@ export class HeroRoller {
         );
 
         return this;
+    }
+
+    /** Standard to-hit prologue: base 11 plus the attacking CV, kept visible even at 0 */
+    addToHitBase(hitCharacteristic, attacksWith) {
+        return this.addNumber(11, "Base to hit").addNumber(hitCharacteristic, attacksWith, undefined, {
+            showZero: true,
+        });
     }
 
     addStunMultiplier(levels) {

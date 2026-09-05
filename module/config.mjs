@@ -50,7 +50,8 @@ import { hdcTextNumberToNumeric, squelch } from "./utility/util.mjs";
  * @returns boolean
  */
 export function filterIgnoreCompoundAndFrameworkItems(item) {
-    return !(item.baseInfo.type.includes("compound") || item.baseInfo.type.includes("framework"));
+    const type = item.baseInfo?.type;
+    return !!type && !type.includes("compound") && !type.includes("framework");
 }
 
 export const HERO = { heroDice, heroEncounter };
@@ -17589,10 +17590,10 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             dcAffecting: fixedValueFunction(false),
             heroValidation: function (modifier, item) {
                 const validations = [];
-                if (!item.baseInfo?.type?.includes("adjustment") && item.system.XMLID !== "FLASH") {
+                if (!item.isAdjustment && !item.isSenseAffecting) {
                     validations.push({
                         property: "XMLID",
-                        message: `Delayed Return Rate is only automated for adjustment powers and FLASH. ${item.system.XMLID} effects will expire on their normal schedule without fading in increments.`,
+                        message: `Delayed Return Rate is only automated for adjustment and sense-affecting powers. ${item.system.XMLID} effects will expire on their normal schedule without fading in increments.`,
                         severity: HERO.VALIDATION_SEVERITY.WARNING,
                         modifierID: modifier.ID,
                     });

@@ -77,6 +77,36 @@ export function activeEffectChangePriority(change, changeType = activeEffectChan
 }
 
 /**
+ * Per-effect totals of the ADD changes targeting a characteristic's max — how much of that max
+ * came from active effects, and from which. actorLevelOnly restricts to actor-embedded effects
+ * (adjustments, encumbrance), excluding item-parented grants, without the cost of appliedEffects.
+ * @param {Actor} actor
+ * @param {string} characteristicKey
+ * @param {object} [options]
+ * @param {boolean} [options.actorLevelOnly=false]
+ * @returns {Array<{ae: ActiveEffect, value: number}>}
+ */
+export function characteristicMaxAddChanges(actor, characteristicKey, { actorLevelOnly = false } = {}) {
+    const changeKey = `system.characteristics.${characteristicKey.toLowerCase()}.max`;
+    const effects = actorLevelOnly ? (actor?.effects.filter((ae) => ae.active) ?? []) : (actor?.appliedEffects ?? []);
+    const results = [];
+    for (const ae of effects) {
+        let value = 0;
+        let matched = false;
+        for (const change of activeEffectChanges(ae)) {
+            if (change.key === changeKey && activeEffectChangeType(change) === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD) {
+                value += parseInt(change.value) || 0;
+                matched = true;
+            }
+        }
+        if (matched) {
+            results.push({ ae, value });
+        }
+    }
+    return results;
+}
+
+/**
  * MULTIPLY applied the Hero way: a halved characteristic rounds in the player's favour.
  * @param {number} current
  * @param {number} delta

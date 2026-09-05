@@ -1538,7 +1538,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
             return;
         }
 
-        const targetType = targetTab.replace(/s$/, "").replace("martial", "martialart");
+        const targetType = HeroSystemActorSheetV2.#TAB_ITEM_TYPES[targetTab] ?? item.type;
         if (!item.isValidTypeConversion(targetType, this.actor)) {
             const conversionFailures = item.validationTypeConversionFailures(targetType, this.actor);
             console.error(conversionFailures);
@@ -1590,7 +1590,7 @@ export class HeroSystemActorSheetV2 extends HandlebarsApplicationMixin(ActorShee
         const itemData = item.toObject();
         itemData.system.ID = new Date().getTime();
 
-        const targetType = options.type ?? this.tabGroups.primary.replace(/s$/, "").replace("martial", "martialart");
+        const targetType = options.type ?? HeroSystemActorSheetV2.#TAB_ITEM_TYPES[this.tabGroups.primary] ?? item.type;
         if (item.isValidTypeConversion(targetType, this.actor)) {
             itemData.type = targetType;
         } else {

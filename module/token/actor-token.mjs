@@ -1,8 +1,11 @@
 import { HEROSYS } from "../herosystem6e.mjs";
+import { characteristicMaxAddChanges } from "../utility/active-effects.mjs";
 import { convertSystemUnitsToMetres, gridUnitsToMeters } from "../utility/units.mjs";
 
 const { TokenDocument } = foundry.documents;
 const { Token } = foundry.canvas.placeables;
+
+const BASE_END_PER_1M_MOVEMENT = 0.1;
 
 export class HeroSystem6eTokenDocument extends TokenDocument {
     constructor(data, context) {
@@ -66,33 +69,21 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
     }
 
     #movementPossibilities(action) {
-        const movementActiveEffects = this.actor.appliedEffects.filter((ae) =>
-            ae.changes.find(
-                (c) =>
-                    c.key === `system.characteristics.${action.toLowerCase()}.max` &&
-                    c.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD, // FIXME: We can have AEs like STR0 that are not appropriate to consider
-            ),
-        );
         const is5e = this.actor.is5e;
         const possibleMovements = [];
         let aeGrantedDistance = 0;
-        for (const ae of movementActiveEffects) {
-            const aeDistance =
-                parseInt(
-                    ae.changes.find(
-                        (c) =>
-                            c.key === `system.characteristics.${action.toLowerCase()}.max` &&
-                            c.type === CONFIG.HERO.ACTIVE_EFFECT_MODES.ADD,
-                    ).value,
-                ) || 0;
-            aeGrantedDistance += Math.max(0, aeDistance);
+        for (const { ae, value } of characteristicMaxAddChanges(this.actor, action)) {
+            const aeDistance = Math.max(0, value);
+            aeGrantedDistance += aeDistance;
             possibleMovements.push({
                 name: ae.name,
                 ae,
                 action: action,
-                distanceUnused: convertSystemUnitsToMetres(Math.max(0, aeDistance), is5e),
+                distanceUnused: convertSystemUnitsToMetres(aeDistance, is5e),
                 // Actor-embedded AEs (encumbrance, adjustments) have no owning item; charge as inherent movement
-                endPer1mMovement: Number.isFinite(ae.parent?.endPer1mMovement) ? ae.parent.endPer1mMovement : 0.1,
+                endPer1mMovement: Number.isFinite(ae.parent?.endPer1mMovement)
+                    ? ae.parent.endPer1mMovement
+                    : BASE_END_PER_1M_MOVEMENT,
             });
         }
         // characteristicMax already includes the AE ADD contributions counted above
@@ -103,7 +94,7 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
                 name: "inherent",
                 action: action,
                 distanceUnused: convertSystemUnitsToMetres(inherentDistance, is5e),
-                endPer1mMovement: 0.1,
+                endPer1mMovement: BASE_END_PER_1M_MOVEMENT,
             });
         }
         // Use least expensive movements first

@@ -1,7 +1,6 @@
 import { activateManeuver, doManeuverEffects, endHaymakerManeuver, maneuverHasBlockTrait } from "./maneuver.mjs";
 
 import { HEROSYS } from "../herosystem6e.mjs";
-import { filterIgnoreCompoundAndFrameworkItems } from "../config.mjs";
 
 import { HeroSystem6eActorActiveEffects } from "../actor/actor-active-effects.mjs";
 import { performAdjustment } from "../actor/actor-adjustment.mjs";
@@ -23,7 +22,7 @@ import { isActivatedForThisUse } from "./item-requires-roll.mjs";
 import { overrideCanAct } from "../settings/settings-helpers.mjs";
 
 import { DICE_SO_NICE_CUSTOM_SETS, HeroRoller } from "../heroRoller/dice.mjs";
-import { renderAdjustmentChatCards } from "../utility/adjustment.mjs";
+import { isAdjustmentTargetItem, renderAdjustmentChatCards } from "../utility/adjustment.mjs";
 import { Attack, actionFromJSON, actionToJSON } from "../utility/attack.mjs";
 import {
     calculateDicePartsForItem,
@@ -818,8 +817,7 @@ export async function doAoeActionToHit(action, options) {
 
     const attackHeroRoller = new HeroRoller()
         .makeSuccessRoll()
-        .addNumber(11, "Base to hit")
-        .addNumber(hitCharacteristic, item.system.attacksWith, undefined, { showZero: true })
+        .addToHitBase(hitCharacteristic, item.system.attacksWith)
         .addNumber(parseInt(options.ocvMod) || 0, "OCV modifier")
         .addNumber(parseInt(options.omcvMod) || 0, "OMCV modifier")
         .addNumber(setManeuver?.system.ocv || 0, "Set Maneuver");
@@ -1134,8 +1132,7 @@ async function doSingleTargetActionToHit(action, options) {
 
     const attackHeroRoller = new HeroRoller()
         .makeSuccessRoll()
-        .addNumber(11, "Base to hit")
-        .addNumber(hitCharacteristic, itemData.attacksWith, undefined, { showZero: true })
+        .addToHitBase(hitCharacteristic, itemData.attacksWith)
         .addNumber(parseInt(options.ocvMod) || 0, "OCV modifier")
         .addNumber(parseInt(options.omcvMod) || 0, "OMCV modifier")
         .addNumber(setManeuver?.system.ocv || 0, "Set Maneuver");
@@ -4253,9 +4250,14 @@ export async function _onApplyAdjustmentToSpecificToken(
 
     // Where is the adjustment taking from/giving to?
     const { valid, reducesArray, enhancesArray } = adjustmentItem.effectiveAttackItem.splitAdjustmentSourceAndTarget();
-    const adjustableItems = token.actor.items.filter(
-        (o) => o.type === "power" && o.baseInfo && filterIgnoreCompoundAndFrameworkItems(o),
-    );
+    const adjustableItems = token.actor.items.filter(isAdjustmentTargetItem);
+    const invalidAdjustmentError = () =>
+        ui.notifications.error(
+            `${adjustmentItem.effectiveAttackItem.actor.name} has an invalid adjustment sources/targets provided for ${
+                adjustmentItem.effectiveAttackItem.system.ALIAS || adjustmentItem.effectiveAttackItem.name
+            }. Compute effects manually.`,
+            { permanent: true },
+        );
     if (!valid && adjustableItems.length > 0) {
         // Show a list of powers from target token
         if (game.settings.get(game.system.id, "alphaTesting")) {
@@ -4289,31 +4291,13 @@ export async function _onApplyAdjustmentToSpecificToken(
 
             // When !valid the populated array holds the unparseable INPUT tokens; replace them with the
             // picks. Cancelling clears them too so the invalid-target error below aborts the adjustment.
-            const targetArray =
-                reducesArray.length > 0 ? reducesArray : enhancesArray.length > 0 ? enhancesArray : null;
-            if (targetArray) {
-                targetArray.length = 0;
-                for (const checkedElement of checked) {
-                    targetArray.push(checkedElement.id);
-                }
-            }
-            if ((reducesArray?.length || 0) + (enhancesArray?.length || 0) === 0) {
-                return ui.notifications.error(
-                    `${adjustmentItem.effectiveAttackItem.actor.name} has an invalid adjustment sources/targets provided for ${
-                        adjustmentItem.effectiveAttackItem.system.ALIAS || adjustmentItem.effectiveAttackItem.name
-                    }. Compute effects manually.`,
-                    { permanent: true },
-                );
-            } else {
-                console.log(reducesArray, enhancesArray);
+            const targetArray = [reducesArray, enhancesArray].find((array) => array.length > 0);
+            targetArray?.splice(0, Infinity, ...checked.map((checkedElement) => checkedElement.id));
+            if (reducesArray.length + enhancesArray.length === 0) {
+                return invalidAdjustmentError();
             }
         } else {
-            return ui.notifications.error(
-                `${adjustmentItem.effectiveAttackItem.actor.name} has an invalid adjustment sources/targets provided for ${
-                    adjustmentItem.effectiveAttackItem.system.ALIAS || adjustmentItem.effectiveAttackItem.name
-                }. Compute effects manually.`,
-                { permanent: true },
-            );
+            return invalidAdjustmentError();
         }
     }
 
@@ -4502,7 +4486,8 @@ async function _onApplySenseAffectingToSpecificToken(
     // Delayed Return Rate: instead of ending after bodyDamage segments, one segment of effect
     // returns per delay interval (6e V2 p. 129)
     const delayedReturnRate = senseAffectingItem.effectiveAttackItem.findModsByXmlid("DELAYEDRETURNRATE");
-    const delayIntervalSeconds = delayedReturnRate ? hdcTimeOptionIdToSeconds(delayedReturnRate.OPTIONID) : null;
+    const delayIntervalSeconds = (delayedReturnRate && hdcTimeOptionIdToSeconds(delayedReturnRate.OPTIONID)) || 0;
+    const isDelayedReturn = delayIntervalSeconds > 0;
 
     // Create new ActiveEffects in one DB call
     const newActiveEffects = [];
@@ -4513,7 +4498,7 @@ async function _onApplySenseAffectingToSpecificToken(
                 ...foundry.utils.deepClone(senseGroup.statusEffect),
                 name: `${senseAffectingItem.effectiveAttackItem.system.XMLID.replace("MANEUVER", senseAffectingItem.system.ALIAS)} ${senseGroup.XMLID}`,
                 duration: {
-                    seconds: delayIntervalSeconds > 0 ? delayIntervalSeconds : senseGroup.bodyDamage,
+                    seconds: isDelayedReturn ? delayIntervalSeconds : senseGroup.bodyDamage,
                 },
                 flags: {
                     [game.system.id]: {
@@ -4523,9 +4508,8 @@ async function _onApplySenseAffectingToSpecificToken(
                             actor: senseAffectingItem.actor,
                             action,
                         })?.name,
-                        ...(delayIntervalSeconds > 0
-                            ? { delayedReturnOptionId: delayedReturnRate.OPTIONID, expiresOn: "turnStart" }
-                            : { expiresOn: "segmentEnd" }),
+                        expiresOn: isDelayedReturn ? "turnStart" : "segmentEnd",
+                        ...(isDelayedReturn && { type: "senseAffectingFade" }),
                     },
                 },
             };

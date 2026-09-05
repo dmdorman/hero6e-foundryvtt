@@ -1207,10 +1207,10 @@ export function registerAdjustmentFadeTests(quench) {
                             duration: { seconds: 60 },
                             flags: {
                                 [game.system.id]: {
+                                    type: "senseAffectingFade",
                                     bodyDamage: 3,
                                     XMLID: "FLASH",
                                     source: "Quench Test",
-                                    delayedReturnOptionId: "MINUTE",
                                     expiresOn: "turnStart",
                                 },
                             },

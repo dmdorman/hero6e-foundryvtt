@@ -440,16 +440,15 @@ export class ItemAttackFormApplicationV2 extends HandlebarsApplicationMixin(Appl
                 return naObj;
             }, {});
 
-            // Autofire
-            const attackItem = this.data.originalItem.effectiveAttackItem;
+            // Autofire — toggling a naked advantage changes availability; reset to the new max
             const autofire = this.#autofireModForAttack();
-            const shotsAvailable = autofire ? attackItem.calcMaxAutofireShots(autofire) : 1;
-            const availabilityChanged = this.data.autofireShotsAvailable !== shotsAvailable;
-            this.data.autofireShotsAvailable = shotsAvailable;
-            // Toggling a naked advantage changes availability; reset to the new max so the spinner has a sane default
-            this.data.autofireShotsToUse = availabilityChanged
-                ? shotsAvailable
-                : Math.clamp(this.data.autofireShotsToUse ?? shotsAvailable, 1, shotsAvailable);
+            const shotsAvailable = autofire
+                ? this.data.originalItem.effectiveAttackItem.calcMaxAutofireShots(autofire)
+                : 1;
+            if (this.data.autofireShotsAvailable !== shotsAvailable) {
+                this.data.autofireShotsAvailable = shotsAvailable;
+                this.data.autofireShotsToUse = shotsAvailable;
+            }
 
             this.data.effectiveItem = await this.#buildEffectiveObjectFromOriginalAndData();
             this.data.effectiveItemResourceUsage = calculateRequiredResourcesToUse(
