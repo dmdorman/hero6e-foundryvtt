@@ -6371,8 +6371,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         const reducedEnd =
             this.findModsByXmlid("REDUCEDEND") || (this.parentItem && this.parentItem.findModsByXmlid("REDUCEDEND"));
         if (reducedEnd && reducedEnd.OPTION === "HALFEND") {
-            end = roundFavorPlayerTowardsZero((this.system._activePointsWithoutEndMods || this.activePoints) / 10);
-            end = Math.max(1, roundFavorPlayerTowardsZero(end / 2));
+            // A per-metre rate; the movement total is rounded once when charged
+            end /= 2;
         } else if (reducedEnd && reducedEnd.OPTION === "ZERO") {
             end = 0;
         }

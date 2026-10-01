@@ -6,6 +6,7 @@ import {
     setQuenchTimeout,
     waitForNotificationQueueToClear,
 } from "./quench-helper.mjs";
+import { HeroSystem6eItem } from "../item/item.mjs";
 import { movementEndCost } from "../token/actor-token.mjs";
 
 /**
@@ -102,6 +103,29 @@ export function registerMovementEndTests(quench) {
 
                 describe("endPer1mMovement", function () {
                     let actor;
+                    const flightXmls = [
+                        `
+                                <POWER XMLID="FLIGHT" ID="1759400000001" BASECOST="0.0" LEVELS="20" ALIAS="Flight" POSITION="44" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Full END Flight" QUANTITY="1" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                    <NOTES />
+                                </POWER>
+                        `,
+                        `
+                                <POWER XMLID="FLIGHT" ID="1759400000002" BASECOST="0.0" LEVELS="20" ALIAS="Flight" POSITION="45" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Half END Flight" QUANTITY="1" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                    <NOTES />
+                                    <MODIFIER XMLID="REDUCEDEND" ID="1759400000003" BASECOST="0.25" LEVELS="0" ALIAS="Reduced Endurance" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="HALFEND" OPTIONID="HALFEND" OPTION_ALIAS="1/2 END" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                        <NOTES />
+                                    </MODIFIER>
+                                </POWER>
+                        `,
+                        `
+                                <POWER XMLID="FLIGHT" ID="1759400000004" BASECOST="0.0" LEVELS="20" ALIAS="Flight" POSITION="46" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Zero END Flight" QUANTITY="1" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                                    <NOTES />
+                                    <MODIFIER XMLID="REDUCEDEND" ID="1759400000005" BASECOST="0.5" LEVELS="0" ALIAS="Reduced Endurance" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="ZERO" OPTIONID="ZERO" OPTION_ALIAS="0 END" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                        <NOTES />
+                                    </MODIFIER>
+                                </POWER>
+                        `,
+                    ];
 
                     before(async function () {
                         actor = await createQuenchActor({
@@ -109,6 +133,11 @@ export function registerMovementEndTests(quench) {
                             contents: `<POWER XMLID="FTL" ID="1712026014674" BASECOST="10.0" LEVELS="2" ALIAS="Faster-Than-Light Travel" POSITION="43" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes"></POWER>`,
                             is5e: false,
                         });
+                        for (const flightXml of flightXmls) {
+                            await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(flightXml, actor), {
+                                parent: actor,
+                            });
+                        }
                     });
 
                     after(async function () {
@@ -118,6 +147,21 @@ export function registerMovementEndTests(quench) {
                     it("FTL costs no END per metre", function () {
                         const ftl = actor.items.find((item) => item.system.XMLID === "FTL");
                         assert.equal(ftl.endPer1mMovement, 0);
+                    });
+
+                    it("Flight costs 1 END per 10m", function () {
+                        const flight = actor.items.find((item) => item.name === "Full END Flight");
+                        assert.closeTo(flight.endPer1mMovement, 0.1, 1e-9);
+                    });
+
+                    it("Half END Flight costs 1 END per 20m", function () {
+                        const flight = actor.items.find((item) => item.name === "Half END Flight");
+                        assert.closeTo(flight.endPer1mMovement, 0.05, 1e-9);
+                    });
+
+                    it("0 END Flight costs no END per metre", function () {
+                        const flight = actor.items.find((item) => item.name === "Zero END Flight");
+                        assert.equal(flight.endPer1mMovement, 0);
                     });
                 });
 
