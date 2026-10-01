@@ -106,34 +106,62 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
         try {
             // waypoint.cost is in scene grid units (spaces * grid.distance)
             const gridToMeters = gridUnitsToMeters({ scene: this.parent, silent: true });
-            const movementCapabilities = {};
-            for (const waypoint of this.movementHistory) {
-                let costInMeters = waypoint.cost * gridToMeters;
-                if (!Number.isFinite(costInMeters) || costInMeters <= 0) {
-                    continue;
-                }
-                movementCapabilities[waypoint.action] ??= this.#movementPossibilities(waypoint.action);
-                for (const capability of movementCapabilities[waypoint.action]) {
-                    const used = Math.max(0, Math.min(costInMeters, capability.distanceUnused));
-                    costInMeters -= used;
-                    endCost += used * capability.endPer1mMovement;
-                    capability.distanceUnused -= used;
-                    if (costInMeters <= 0) {
-                        break;
-                    }
-                }
-            }
+            endCost = movementEndCost(this.movementHistory, gridToMeters, (action) =>
+                this.#movementPossibilities(action),
+            );
         } catch (e) {
             console.error(`Unable to calculate END use of movement for ${this.name}`, e);
         }
-
-        // Movement rounds up
-        endCost = Math.ceil(endCost);
 
         console.log(`${this.name} movement cost ${endCost} END.`);
 
         return endCost;
     }
+}
+
+/**
+ * END spent by a movement history. Each action spends its cheapest movement sources first.
+ * @param {Array<{action: string, cost: number}>} movementHistory
+ * @param {number} metresPerCostUnit
+ * @param {function(string): Array<{distanceUnused: number, endPer1mMovement: number}>} movementPossibilities - sources cheapest first, distances in metres
+ * @returns {number} END, rounded up
+ */
+export function movementEndCost(movementHistory, metresPerCostUnit, movementPossibilities) {
+    let endCost = 0;
+    const movementCapabilities = {};
+    for (const waypoint of movementHistory) {
+        let costInMeters = waypoint.cost * metresPerCostUnit;
+        if (!Number.isFinite(costInMeters) || costInMeters <= 0) {
+            continue;
+        }
+        movementCapabilities[waypoint.action] ??= withOverflowRate(movementPossibilities(waypoint.action));
+        const { capabilities, overflowEndPer1mMovement } = movementCapabilities[waypoint.action];
+        for (const capability of capabilities) {
+            const used = Math.max(0, Math.min(costInMeters, capability.distanceUnused));
+            costInMeters -= used;
+            endCost += used * capability.endPer1mMovement;
+            capability.distanceUnused -= used;
+            if (costInMeters <= 0) {
+                break;
+            }
+        }
+        // Distance past every source (noncombat multiples, value raised above max) is still paid for
+        endCost += Math.max(0, costInMeters) * overflowEndPer1mMovement;
+    }
+
+    // Movement rounds up, but float noise (20 x 0.1 = 2.0000000000000004) must not add a point
+    return Math.ceil(Math.round(endCost * 1e6) / 1e6);
+}
+
+// Extra distance is a multiple of the same movement mix, so it costs the mix's average END per metre
+function withOverflowRate(capabilities) {
+    let distance = 0;
+    let end = 0;
+    for (const { distanceUnused, endPer1mMovement } of capabilities) {
+        distance += distanceUnused;
+        end += distanceUnused * endPer1mMovement;
+    }
+    return { capabilities, overflowEndPer1mMovement: distance > 0 ? end / distance : 0 };
 }
 
 export class HeroSystem6eToken extends Token {
