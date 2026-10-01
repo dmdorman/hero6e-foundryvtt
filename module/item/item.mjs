@@ -6355,6 +6355,11 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     }
 
     get endPer1mMovement() {
+        // FTL and Gliding cost no END unless bought with Costs END
+        if (this.baseInfo?.type?.includes("movement") && !this.baseInfo.costEnd && !this.findModsByXmlid("COSTSEND")) {
+            return 0;
+        }
+
         // All begin with all movements costing 1 END per fraction of 10m moved
         let end = 0.1;
 
