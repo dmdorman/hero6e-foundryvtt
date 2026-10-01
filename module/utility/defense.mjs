@@ -260,23 +260,25 @@ export function getActorDefensesVsAttack(targetActor, attackItem, options = {}) 
         ];
     }
 
+    const ignoreDefenseIds = options?.ignoreDefenseIds || [];
+    const isNotIgnored = (item) => !ignoreDefenseIds.includes(item.id) && !ignoreDefenseIds.includes(item.system.XMLID);
+
     // Items that provide defense and are active
     let activeDefenses = targetActor.items.filter(
         (o) =>
             (o.baseInfo?.type?.includes("defense") || o.baseInfo?.behaviors?.includes("defense")) &&
             o.isActive &&
             o.system.XMLID &&
-            !(options?.ignoreDefenseIds || []).includes(o.id) &&
-            !(options?.ignoreDefenseIds || []).includes(o.system.XMLID),
+            isNotIgnored(o),
     );
 
-    const avad = attackItem.findModsByXmlid("AVAD");
-    if (avad) {
-        for (const defenseItem of targetActor.items.filter(
-            (item) => item.isActive && ["LIFESUPPORT"].includes(item.system.XMLID),
-        )) {
-            activeDefenses.push(defenseItem);
-        }
+    // Life Support isn't a defense power but can be the named defense of an AVAD (6e) or NND (5e)
+    if (attackItem.findModsByXmlid("AVAD") || attackItem.findModsByXmlid("NND")) {
+        activeDefenses.push(
+            ...targetActor.items.filter(
+                (item) => item.isActive && item.system.XMLID === "LIFESUPPORT" && isNotIgnored(item),
+            ),
+        );
     }
 
     for (const defenseItem of activeDefenses) {
