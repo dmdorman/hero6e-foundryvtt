@@ -313,6 +313,15 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             this.updateSource(foundry.utils.mergeObject(initializationChanges));
         }
 
+        // An active constant attack is one being maintained, which pays END every Phase; start off.
+        if (
+            this.system.duration === CONFIG.HERO.DURATION_TYPES.CONSTANT &&
+            this.baseInfo?.behaviors.includes("to-hit") &&
+            this.isActivatable()
+        ) {
+            this.updateSource({ "system.active": false });
+        }
+
         // assign a default image
         // TODO: When item type or SFX changes, should probably change img
         if (!data.img || data.img === "icons/svg/item-bag.svg") {
@@ -2624,6 +2633,16 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
 
         // persistent duration
         if (this.system.duration === CONFIG.HERO.DURATION_TYPES.PERSISTENT) {
+            return true;
+        }
+
+        // Constant powers spend END every Phase while on (e.g. Continuous attacks), so they need an off switch.
+        // Skills are excluded because phase-start upkeep never charges them.
+        if (
+            this.system.duration === CONFIG.HERO.DURATION_TYPES.CONSTANT &&
+            !["skill", "maneuver", "martialart"].includes(this.type) &&
+            this.end > 0
+        ) {
             return true;
         }
 
