@@ -2,6 +2,7 @@ import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench
 
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { performAdjustment } from "../actor/actor-adjustment.mjs";
+import { isAllOrNothingAvad } from "../item/item-attack.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { getActorDefensesVsAttack } from "../utility/defense.mjs";
 
@@ -325,15 +326,18 @@ export function registerDefenseTests(quench) {
                         let actor;
                         let lifeSupport;
 
-                        function avadAttackItem(avadInput) {
+                        const allOrNothingAdderXml = `
+                                        <ADDER XMLID="NND" ID="1759300000007" BASECOST="-0.5" LEVELS="0" ALIAS="All Or Nothing" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="No" DISPLAYINSTRING="Yes" GROUP="No" SELECTED="YES">
+                                            <NOTES />
+                                        </ADDER>`;
+
+                        function avadAttackItem(avadInput, { allOrNothing = true } = {}) {
                             const xml = `
                                 <POWER XMLID="ENERGYBLAST" ID="1759300000005" BASECOST="0.0" LEVELS="6" ALIAS="Blast" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
                                     <NOTES />
                                     <MODIFIER XMLID="AVAD" ID="1759300000006" BASECOST="0.0" LEVELS="0" ALIAS="Attack Versus Alternate Defense" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="VERYVERY" OPTIONID="VERYVERY" OPTION_ALIAS="Very Common -&gt; Very Common" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="${avadInput}" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
                                         <NOTES />
-                                        <ADDER XMLID="NND" ID="1759300000007" BASECOST="-0.5" LEVELS="0" ALIAS="All Or Nothing" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="No" DISPLAYINSTRING="Yes" GROUP="No" SELECTED="YES">
-                                            <NOTES />
-                                        </ADDER>
+                                        ${allOrNothing ? allOrNothingAdderXml : ""}
                                     </MODIFIER>
                                 </POWER>
                             `;
@@ -352,6 +356,15 @@ export function registerDefenseTests(quench) {
 
                         afterEach(async function () {
                             await deleteQuenchActor({ quench: this, actor });
+                        });
+
+                        it("AVAD is all or nothing only with the NND adder", async function () {
+                            assert.isTrue(isAllOrNothingAvad(avadAttackItem("PD").findModsByXmlid("AVAD")));
+                            assert.isFalse(
+                                isAllOrNothingAvad(
+                                    avadAttackItem("PD", { allOrNothing: false }).findModsByXmlid("AVAD"),
+                                ),
+                            );
                         });
 
                         it("AVAD vs PD does not count Life Support", async function () {
@@ -439,6 +452,10 @@ export function registerDefenseTests(quench) {
 
                         afterEach(async function () {
                             await deleteQuenchActor({ quench: this, actor });
+                        });
+
+                        it("NND is always all or nothing", async function () {
+                            assert.isTrue(isAllOrNothingAvad(nndAttackItem("Life Support").findModsByXmlid("NND")));
                         });
 
                         it("NND vs Life Support counts Life Support", async function () {
