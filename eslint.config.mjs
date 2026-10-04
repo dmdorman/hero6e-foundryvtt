@@ -54,6 +54,7 @@ export default [
     {
         // Extra rules beyond the recommended set
         rules: {
+            "no-extra-boolean-cast": ["error", { enforceForInnerExpressions: true }],
             "no-use-before-define": [
                 "error",
                 {

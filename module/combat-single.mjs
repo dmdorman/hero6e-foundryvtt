@@ -3,8 +3,8 @@ import { HeroSystem6eActorActiveEffects } from "./actor/actor-active-effects.mjs
 import {
     endHaymakerManeuver,
     expireManeuverNextPhaseEffects,
-    maneuverHasBlockBasis,
-    maneuverHasDodgeBasis,
+    maneuverBlockBasis,
+    maneuverDodgeBasis,
 } from "./item/maneuver.mjs";
 import { userInteractiveVerifyOptionallyPromptThenSpendResources } from "./item/item-resources.mjs";
 import { rehydrateAttackItem } from "./item/item-attack.mjs";
@@ -4293,9 +4293,9 @@ export class HeroSystem6eCombatSingle extends Combat {
         // Match by maneuver element, not exact XMLID: uploaded dodge/block items can
         // carry XMLID "MANEUVER" (custom maneuvers); a bare-status fallback would
         // add a second "Dodging" effect alongside the maneuver's own
-        const element = { dodge: maneuverHasDodgeBasis, block: maneuverHasBlockBasis }[statusId];
-        const maneuverItem = element
-            ? actor.items.find((i) => ["maneuver", "martialart"].includes(i.type) && element(i))
+        const basisFn = { dodge: maneuverDodgeBasis, block: maneuverBlockBasis }[statusId];
+        const maneuverItem = basisFn
+            ? actor.items.find((i) => ["maneuver", "martialart"].includes(i.type) && !!basisFn(i))
             : null;
         if (maneuverItem) {
             if (!maneuverItem.isActive) await maneuverItem.toggle();

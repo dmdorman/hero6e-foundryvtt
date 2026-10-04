@@ -8,22 +8,22 @@ import {
 } from "./item/item-requires-roll.mjs";
 import { HeroSystem6eItem } from "./item/item.mjs";
 import {
-    maneuverHasBindBasis,
-    maneuverHasBlockBasis,
-    maneuverHasCrushElement,
-    maneuverHasDisarmBasis,
-    maneuverHasDodgeBasis,
-    maneuverHasExertBasis,
-    maneuverHasFlashBasis,
-    maneuverHasGrabBasis,
-    maneuverHasGrabWeaponBasis,
-    maneuverHasKillingDamageElement,
-    maneuverHasNoNormalDefenseDamageElement,
-    maneuverHasNormalDamageElement,
-    maneuverHasShoveElement,
-    maneuverHasStrikeBasis,
-    maneuverHasThrowBasis,
-    maneuverHasVelocityElement,
+    maneuverBindBasis,
+    maneuverBlockBasis,
+    maneuverCrushElement,
+    maneuverDisarmBasis,
+    maneuverDodgeBasis,
+    maneuverExertBasis,
+    maneuverFlashBasis,
+    maneuverGrabBasis,
+    maneuverGrabWeaponBasis,
+    maneuverKillingDamageElement,
+    maneuverNoNormalDefenseDamageElement,
+    maneuverNormalDamageElement,
+    maneuverShoveElement,
+    maneuverStrikeBasis,
+    maneuverThrowBasis,
+    maneuverVelocityElement,
 } from "./item/maneuver.mjs";
 import {
     characteristicValueToDiceParts,
@@ -8687,42 +8687,42 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 const behaviors = [];
 
                 // Do you dodge with this maneuver?
-                if (maneuverHasDodgeBasis(item)) {
+                if (maneuverDodgeBasis(item)) {
                     behaviors.push("activable");
                 }
 
                 // Do you roll to hit with this maneuver?
                 if (
-                    maneuverHasBindBasis(item) ||
-                    maneuverHasBlockBasis(item) ||
-                    maneuverHasCrushElement(item) ||
-                    maneuverHasDisarmBasis(item) ||
-                    maneuverHasFlashBasis(item) ||
-                    maneuverHasGrabBasis(item) ||
-                    maneuverHasGrabWeaponBasis(item) ||
-                    maneuverHasKillingDamageElement(item) ||
-                    maneuverHasNormalDamageElement(item) ||
-                    maneuverHasNoNormalDefenseDamageElement(item) ||
-                    maneuverHasShoveElement(item) ||
-                    maneuverHasStrikeBasis(item) ||
-                    maneuverHasThrowBasis(item)
+                    maneuverBindBasis(item) ||
+                    maneuverBlockBasis(item) ||
+                    maneuverCrushElement(item) ||
+                    maneuverDisarmBasis(item) ||
+                    maneuverFlashBasis(item) ||
+                    maneuverGrabBasis(item) ||
+                    maneuverGrabWeaponBasis(item) ||
+                    maneuverKillingDamageElement(item) ||
+                    maneuverNormalDamageElement(item) ||
+                    maneuverNoNormalDefenseDamageElement(item) ||
+                    maneuverShoveElement(item) ||
+                    maneuverStrikeBasis(item) ||
+                    maneuverThrowBasis(item)
                 ) {
                     behaviors.push("to-hit");
                 }
 
                 // Is there some kind of damage/effect roll with this maneuver?
                 if (
-                    maneuverHasCrushElement(item) ||
-                    maneuverHasDisarmBasis(item) ||
-                    maneuverHasExertBasis(item) ||
-                    maneuverHasFlashBasis(item) ||
-                    maneuverHasGrabBasis(item) ||
-                    maneuverHasGrabWeaponBasis(item) ||
-                    maneuverHasKillingDamageElement(item) ||
-                    maneuverHasNormalDamageElement(item) ||
-                    maneuverHasNoNormalDefenseDamageElement(item) ||
-                    maneuverHasStrikeBasis(item) ||
-                    maneuverHasVelocityElement(item)
+                    maneuverCrushElement(item) ||
+                    maneuverDisarmBasis(item) ||
+                    maneuverExertBasis(item) ||
+                    maneuverFlashBasis(item) ||
+                    maneuverGrabBasis(item) ||
+                    maneuverGrabWeaponBasis(item) ||
+                    maneuverKillingDamageElement(item) ||
+                    maneuverNormalDamageElement(item) ||
+                    maneuverNoNormalDefenseDamageElement(item) ||
+                    maneuverStrikeBasis(item) ||
+                    maneuverVelocityElement(item)
                 ) {
                     behaviors.push("dice");
                 }
@@ -8734,19 +8734,19 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             rangeForItem: function (item) {
                 // Attacks have a range other than self
                 if (
-                    maneuverHasBindBasis(item) ||
-                    maneuverHasBlockBasis(item) ||
-                    maneuverHasCrushElement(item) ||
-                    maneuverHasDisarmBasis(item) ||
-                    maneuverHasFlashBasis(item) ||
-                    maneuverHasGrabBasis(item) ||
-                    maneuverHasGrabWeaponBasis(item) ||
-                    maneuverHasKillingDamageElement(item) ||
-                    maneuverHasNormalDamageElement(item) ||
-                    maneuverHasNoNormalDefenseDamageElement(item) ||
-                    maneuverHasShoveElement(item) ||
-                    maneuverHasStrikeBasis(item) ||
-                    maneuverHasThrowBasis(item)
+                    maneuverBindBasis(item) ||
+                    maneuverBlockBasis(item) ||
+                    maneuverCrushElement(item) ||
+                    maneuverDisarmBasis(item) ||
+                    maneuverFlashBasis(item) ||
+                    maneuverGrabBasis(item) ||
+                    maneuverGrabWeaponBasis(item) ||
+                    maneuverKillingDamageElement(item) ||
+                    maneuverNormalDamageElement(item) ||
+                    maneuverNoNormalDefenseDamageElement(item) ||
+                    maneuverShoveElement(item) ||
+                    maneuverStrikeBasis(item) ||
+                    maneuverThrowBasis(item)
                 ) {
                     // Is this a HTH or a Ranged martial maneuver?
                     return isRangedMartialManeuver(item) ? HERO.RANGE_TYPES.STANDARD : HERO.RANGE_TYPES.NO_RANGE;
@@ -17350,7 +17350,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 const recoverable = modifierModel.RECOVERABLE;
 
                 // Don't cap if these are continuing, fuel, boostable, or recoverable charges.
-                if (!!continuing || !!fuel || !!boostable || !!recoverable) {
+                if (continuing || fuel || boostable || recoverable) {
                     return chargesBaseCost;
                 }
 

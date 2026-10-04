@@ -818,7 +818,7 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
 
             // If an origin was specified, check if it still exists.
             const sourceItem = this.origin?.includes("Item") ? fromUuidSync(this.origin) : null;
-            if (!!this.origin && !sourceItem) {
+            if (this.origin && !sourceItem) {
                 heroValidations.push({
                     message: `The actor/item that created this effect no longer exists.`,
                     severity: CONFIG.HERO.VALIDATION_SEVERITY.INFO,

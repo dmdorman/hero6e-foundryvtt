@@ -5,7 +5,7 @@ import { roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { calculateVelocityInSystemUnits } from "../utility/units.mjs";
 import { activeSingleTrackerCombatFor, isQuenchTestRunning } from "../utility/util.mjs";
 import { dehydrateAttackItem, rehydrateAttackItem } from "./item-attack.mjs";
-import { getManeuverEffectCapitalized, maneuverHasBasisOrElement } from "./maneuver-bases-and-elements.mjs";
+import { getManeuverEffectCapitalized, maneuverBasisOrElement } from "./maneuver-bases-and-elements.mjs";
 
 // FIXME: DCV should only be effective against HTH attacks unless it's a Dodge
 function addDcvChange(maneuverDcvChange) {
@@ -134,7 +134,7 @@ export async function endHaymakerManeuver(actor, { token } = {}) {
 export async function promptOutOfTurnAbortForManeuver(item) {
     try {
         const actor = item.actor;
-        if (!actor || !maneuverHasAbortElement(item)) return;
+        if (!actor || !maneuverAbortElement(item)) return;
         if (isQuenchTestRunning()) return;
 
         // Live single-tracker combats only, and outside this actor's own turn
@@ -168,30 +168,31 @@ export async function promptOutOfTurnAbortForManeuver(item) {
  * Maneuvers whose effect includes the "Abort" element can be aborted to.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasAbortElement(item) {
-    return maneuverHasBasisOrElement(item, "abort");
+export function maneuverAbortElement(item) {
+    return maneuverBasisOrElement(item, "abort");
 }
 
 /**
- * Maneuver includes the "Attacker Falls" element.
+ * Maneuver includes the "You Fall" element. This called "Fall" in the Ultimate Martial Artist
+ * should be written as "You Fall" but that's a less descriptive name than it's the attacker falls.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasAttackerFallsElement(item) {
-    return maneuverHasBasisOrElement(item, "attackerFalls");
+export function maneuverAttackerFallsElement(item) {
+    return maneuverBasisOrElement(item, "attackerFalls");
 }
 
 /**
  * Maneuver includes the "Bind" exclusive basis.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasBindBasis(item) {
-    return maneuverHasBasisOrElement(item, "bind");
+export function maneuverBindBasis(item) {
+    return maneuverBasisOrElement(item, "bind");
 }
 
 /**
@@ -200,10 +201,10 @@ export function maneuverHasBindBasis(item) {
  * excluded.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasBlockBasis(item) {
-    return maneuverHasBasisOrElement(item, "block");
+export function maneuverBlockBasis(item) {
+    return maneuverBasisOrElement(item, "block");
 }
 
 /**
@@ -211,70 +212,70 @@ export function maneuverHasBlockBasis(item) {
  * I'm not sure why they decided to create a new element for it.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasCrushElement(item) {
-    return maneuverHasBasisOrElement(item, "crush");
+export function maneuverCrushElement(item) {
+    return maneuverBasisOrElement(item, "crush");
 }
 
 /**
  * Maneuver includes the "Disable" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasDisableElement(item) {
-    return maneuverHasBasisOrElement(item, "disable");
+export function maneuverDisableElement(item) {
+    return maneuverBasisOrElement(item, "disable");
 }
 
 /**
  * Maneuver includes the "Disarm" exclusive basis.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasDisarmBasis(item) {
-    return maneuverHasBasisOrElement(item, "disarm");
+export function maneuverDisarmBasis(item) {
+    return maneuverBasisOrElement(item, "disarm");
 }
 
 /**
  * Maneuver includes the "Dodge" exclusive basis.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasDodgeBasis(item) {
-    return maneuverHasBasisOrElement(item, "dodge");
+export function maneuverDodgeBasis(item) {
+    return maneuverBasisOrElement(item, "dodge");
 }
 
 /**
  * Maneuver includes the "[STRDC]", which is not a strength damage, non-exclusive basis.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasExertBasis(item) {
-    return maneuverHasBasisOrElement(item, "exert");
+export function maneuverExertBasis(item) {
+    return maneuverBasisOrElement(item, "exert");
 }
 
 /**
  * Maneuver includes the "[FLASHDC]" exclusive basis.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasFlashBasis(item) {
-    return maneuverHasBasisOrElement(item, "flashDc");
+export function maneuverFlashBasis(item) {
+    return maneuverBasisOrElement(item, "flashDc");
 }
 
 /**
  * Maneuver includes the "FMove" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasFMoveElement(item) {
-    return maneuverHasBasisOrElement(item, "fmove");
+export function maneuverFMoveElement(item) {
+    return maneuverBasisOrElement(item, "fmove");
 }
 
 /**
@@ -282,60 +283,60 @@ export function maneuverHasFMoveElement(item) {
  * and "Must Follow Grab" are separate elements and do not count.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasGrabBasis(item) {
-    return maneuverHasBasisOrElement(item, "grab");
+export function maneuverGrabBasis(item) {
+    return maneuverBasisOrElement(item, "grab");
 }
 
 /**
  * Maneuver includes the "Grab Weapon" exclusive basis.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasGrabWeaponBasis(item) {
-    return maneuverHasBasisOrElement(item, "grabWeapon");
+export function maneuverGrabWeaponBasis(item) {
+    return maneuverBasisOrElement(item, "grabWeapon");
 }
 
 /**
  * Maneuver includes the "Half Move Required" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasHalfMoveRequiredElement(item) {
-    return maneuverHasBasisOrElement(item, "halfMoveRequired");
+export function maneuverHalfMoveRequiredElement(item) {
+    return maneuverBasisOrElement(item, "halfMoveRequired");
 }
 
 /**
  * Maneuver includes the "[KILLINGDC]" or "[WEAPONKILLINGDC]" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasKillingDamageElement(item) {
-    return maneuverHasBasisOrElement(item, "killingDc");
+export function maneuverKillingDamageElement(item) {
+    return maneuverBasisOrElement(item, "killingDc");
 }
 
 /**
  * Maneuver includes the "Lasting Restriction" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasLastingRestrictionElement(item) {
-    return maneuverHasBasisOrElement(item, "lastingRestriction");
+export function maneuverLastingRestrictionElement(item) {
+    return maneuverBasisOrElement(item, "lastingRestriction");
 }
 
 /**
  * Maneuver includes the "Must Follow" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasMustFollowElement(item) {
-    return maneuverHasBasisOrElement(item, "mustFollow");
+export function maneuverMustFollowElement(item) {
+    return maneuverBasisOrElement(item, "mustFollow");
 }
 
 /*
@@ -352,60 +353,60 @@ export function maneuverHasNoElements(item) {
  * Maneuver includes the "[NORMALDC]" or "[WEAPONDC]" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasNormalDamageElement(item) {
-    return maneuverHasBasisOrElement(item, "normalDc");
+export function maneuverNormalDamageElement(item) {
+    return maneuverBasisOrElement(item, "normalDc");
 }
 
 /**
  * Maneuver includes the "[NNDDC]" (No Normal Defense) element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasNoNormalDefenseDamageElement(item) {
-    return maneuverHasBasisOrElement(item, "nndDc");
+export function maneuverNoNormalDefenseDamageElement(item) {
+    return maneuverBasisOrElement(item, "nndDc");
 }
 
 /**
  * Maneuver includes the "Requires Both Hands" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasRequiresBothHandsElement(item) {
-    return maneuverHasBasisOrElement(item, "requiresBothHands");
+export function maneuverRequiresBothHandsElement(item) {
+    return maneuverBasisOrElement(item, "requiresBothHands");
 }
 
 /**
  * Maneuver includes the "Prone" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasRequiresProneTargetElement(item) {
-    return maneuverHasBasisOrElement(item, "prone");
+export function maneuverRequiresProneTargetElement(item) {
+    return maneuverBasisOrElement(item, "prone");
 }
 
 /**
  * Maneuver includes the "Can Only Be Used After X" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasResponseElement(item) {
-    return maneuverHasBasisOrElement(item, "response");
+export function maneuverResponseElement(item) {
+    return maneuverBasisOrElement(item, "response");
 }
 
 /**
  * Maneuver includes the "To Resist Shove" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasRootElement(item) {
-    return maneuverHasBasisOrElement(item, "root");
+export function maneuverRootElement(item) {
+    return maneuverBasisOrElement(item, "root");
 }
 
 /**
@@ -413,70 +414,60 @@ export function maneuverHasRootElement(item) {
  * not a Shove of its own, so the registry excludes it here.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasShoveElement(item) {
-    return maneuverHasBasisOrElement(item, "shove");
+export function maneuverShoveElement(item) {
+    return maneuverBasisOrElement(item, "shove");
 }
 
 /**
  * Maneuver includes the "Strike" basis.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasStrikeBasis(item) {
-    return maneuverHasBasisOrElement(item, "strike");
+export function maneuverStrikeBasis(item) {
+    return maneuverBasisOrElement(item, "strike");
 }
 
 /**
  * Maneuver includes the "Take Full DMG" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasTakeFullDmgElement(item) {
-    return maneuverHasBasisOrElement(item, "takeFullDmg");
+export function maneuverTakeFullDmgElement(item) {
+    return maneuverBasisOrElement(item, "takeFullDmg");
 }
 
 /**
  * Maneuver includes the "Take Half DMG" element.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasTakeHalfDmgElement(item) {
-    return maneuverHasBasisOrElement(item, "takeHalfDmg");
+export function maneuverTakeHalfDmgElement(item) {
+    return maneuverBasisOrElement(item, "takeHalfDmg");
 }
 
 /**
  * Maneuver includes the "throw" (e.g. "Target Falls", "He Falls", "Opponent Falls") non-exclusive basis.
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasThrowBasis(item) {
-    return maneuverHasBasisOrElement(item, "throw");
+export function maneuverThrowBasis(item) {
+    return maneuverBasisOrElement(item, "throw");
 }
 
 /**
  * Maneuver includes a velocity-scaled effect ("+v/5" and friends).
  *
  * @param {HeroSystem6eItem} item
- * @returns {boolean}
+ * @returns {string|undefined}
  */
-export function maneuverHasVelocityElement(item) {
-    return maneuverHasBasisOrElement(item, "velocity");
-}
-
-/**
- * Maneuver includes the "You Falls" element.
- *
- * @param {HeroSystem6eItem} item
- * @returns {boolean}
- */
-export function maneuverHasYouFallElement(item) {
-    return maneuverHasBasisOrElement(item, "youFall");
+export function maneuverVelocityElement(item) {
+    return maneuverBasisOrElement(item, "velocity");
 }
 
 // Maneuvers we recognize but have not implemented status effects for yet
@@ -499,7 +490,7 @@ const statusChanges = (_item, status) => foundry.utils.deepClone(activeEffectCha
 const MANEUVER_EFFECT_SPECS = [
     {
         // Element match rather than XMLID so custom/martial dodges qualify too
-        match: (item) => maneuverHasDodgeBasis(item),
+        match: (item) => !!maneuverDodgeBasis(item),
         statusKey: "dodgeEffect",
         name: (item, _status, { dcvChange }) =>
             item.name ? `${item.name} (${item.system.XMLID} +${dcvChange})` : `${item.system.XMLID} +${dcvChange}`,
@@ -507,7 +498,7 @@ const MANEUVER_EFFECT_SPECS = [
     },
     {
         // Element match rather than XMLID so custom/martial blocks qualify too
-        match: (item) => maneuverHasBlockBasis(item),
+        match: (item) => !!maneuverBlockBasis(item),
         statusKey: "blockEffect",
         name: nameWithXmlid,
         changes: cvChanges,
@@ -670,9 +661,9 @@ export async function doManeuverEffects(item, action, targetToken) {
         return;
     }
 
-    const hasAttackerFallsElement = maneuverHasAttackerFallsElement(item);
-    const hasGrabBasis = maneuverHasGrabBasis(item);
-    const hasThrowBasis = maneuverHasThrowBasis(item);
+    const hasAttackerFallsElement = !!maneuverAttackerFallsElement(item);
+    const hasGrabBasis = !!maneuverGrabBasis(item);
+    const hasThrowBasis = !!maneuverThrowBasis(item);
 
     const currentTargets = action.system.currentTargets || [];
     if (currentTargets.length === 0 && targetToken) {

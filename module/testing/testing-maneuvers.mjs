@@ -1,3 +1,4 @@
+import { maneuverBasisOrElement } from "../item/maneuver-bases-and-elements.mjs";
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
 
 export function registerManeuverTests(quench) {
@@ -14,308 +15,401 @@ export function registerManeuverTests(quench) {
                     // Using the Test-5e.hdc file content
                     const contents = `
                         <?xml version="1.0" encoding="UTF-16"?>
-                        <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic.hdt">
-                            <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" RULES="Default" />
-                            <CHARACTER_INFO CHARACTER_NAME="TEST 5e Maneuvers" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
-                                <BACKGROUND />
-                                <PERSONALITY />
-                                <QUOTE />
-                                <TACTICS />
-                                <CAMPAIGN_USE />
-                                <APPEARANCE />
-                                <NOTES1 />
-                                <NOTES2 />
-                                <NOTES3 />
-                                <NOTES4 />
-                                <NOTES5 />
-                            </CHARACTER_INFO>
-                            <CHARACTERISTICS>
-                                <STR XMLID="STR" ID="1766373645598" BASECOST="0.0" LEVELS="0" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </STR>
-                                <DEX XMLID="DEX" ID="1766373646365" BASECOST="0.0" LEVELS="0" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </DEX>
-                                <CON XMLID="CON" ID="1766373646426" BASECOST="0.0" LEVELS="0" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </CON>
-                                <BODY XMLID="BODY" ID="1766373645962" BASECOST="0.0" LEVELS="0" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </BODY>
-                                <INT XMLID="INT" ID="1766373646178" BASECOST="0.0" LEVELS="0" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </INT>
-                                <EGO XMLID="EGO" ID="1766373646143" BASECOST="0.0" LEVELS="0" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </EGO>
-                                <PRE XMLID="PRE" ID="1766373645964" BASECOST="0.0" LEVELS="0" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </PRE>
-                                <COM XMLID="COM" ID="1766373646317" BASECOST="0.0" LEVELS="0" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </COM>
-                                <PD XMLID="PD" ID="1766373645824" BASECOST="0.0" LEVELS="0" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </PD>
-                                <ED XMLID="ED" ID="1766373645563" BASECOST="0.0" LEVELS="0" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </ED>
-                                <SPD XMLID="SPD" ID="1766373646495" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </SPD>
-                                <REC XMLID="REC" ID="1766373645614" BASECOST="0.0" LEVELS="0" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </REC>
-                                <END XMLID="END" ID="1766373646021" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </END>
-                                <STUN XMLID="STUN" ID="1766373645863" BASECOST="0.0" LEVELS="0" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </STUN>
-                                <RUNNING XMLID="RUNNING" ID="1766373645885" BASECOST="0.0" LEVELS="0" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </RUNNING>
-                                <SWIMMING XMLID="SWIMMING" ID="1766373645668" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </SWIMMING>
-                                <LEAPING XMLID="LEAPING" ID="1766373646058" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </LEAPING>
-                            </CHARACTERISTICS>
-                            <SKILLS />
-                            <PERKS />
-                            <TALENTS />
-                            <MARTIALARTS>
-                                <LIST XMLID="GENERIC_OBJECT" ID="1754267038115" BASECOST="0.0" LEVELS="0" ALIAS="EXTRADCs" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="">
-                                <NOTES />
-                                </LIST>
-                                <EXTRADC XMLID="EXTRADC" ID="1753421156333" BASECOST="0.0" LEVELS="4" ALIAS="+4 HTH Damage Class(es)" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1754267038115" NAME="">
-                                <NOTES />
-                                </EXTRADC>
-                                <RANGEDDC XMLID="RANGEDDC" ID="1753421165484" BASECOST="0.0" LEVELS="4" ALIAS="+4 Ranged Damage Class(es)" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1754267038115" NAME="">
-                                <NOTES />
-                                </RANGEDDC>
-                                <LIST XMLID="GENERIC_OBJECT" ID="1760309784968" BASECOST="0.0" LEVELS="0" ALIAS=" " POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="">
-                                <NOTES />
-                                </LIST>
-                                <LIST XMLID="GENERIC_OBJECT" ID="1760309811196" BASECOST="0.0" LEVELS="0" ALIAS="Hand To Hand" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="">
-                                <NOTES />
-                                </LIST>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741411389" BASECOST="3.0" LEVELS="0" ALIAS="Basic Strike" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Basic Strike" OCV="+1" DCV="+0" DC="2" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741417485" BASECOST="4.0" LEVELS="0" ALIAS="Charge" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Charge" OCV="+0" DCV="-2" DC="2" PHASE="1/2" EFFECT="[NORMALDC] +v/5 Strike, FMove" ADDSTR="Yes" ACTIVECOST="30" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] +v/5 Strike, FMove">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741423269" BASECOST="4.0" LEVELS="0" ALIAS="Choke Hold" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Choke Hold" OCV="-2" DCV="+0" DC="4" PHASE="1/2" EFFECT="Grab One Limb; [NNDDC]" ADDSTR="No" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Grab One Limb; [NNDDC]">
-                                <NOTES />
-                                <MODIFIER XMLID="ACTIVATIONROLL" ID="1760209880193" BASECOST="-2.0" LEVELS="0" ALIAS="Activation Roll" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="8" OPTIONID="8" OPTION_ALIAS="8-" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
-                                    <NOTES />
-                                </MODIFIER>
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741426573" BASECOST="4.0" LEVELS="0" ALIAS="Counterstrike" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Counterstrike" OCV="+2" DCV="+2" DC="2" PHASE="1/2" EFFECT="[NORMALDC] Strike, Must Follow Block" ADDSTR="Yes" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike, Must Follow Block">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741429045" BASECOST="4.0" LEVELS="0" ALIAS="Crush" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Crush" OCV="+0" DCV="+0" DC="4" PHASE="1/2" EFFECT="[NORMALDC] Crush, Must Follow Grab" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Crush, Must Follow Grab">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741432133" BASECOST="5.0" LEVELS="0" ALIAS="Defensive Block" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Defensive Block" OCV="+1" DCV="+3" DC="0" PHASE="1/2" EFFECT="Block, Abort" ADDSTR="No" ACTIVECOST="25" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Block, Abort">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741436308" BASECOST="5.0" LEVELS="0" ALIAS="Defensive Strike" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Defensive Strike" OCV="+1" DCV="+3" DC="0" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741440525" BASECOST="3.0" LEVELS="0" ALIAS="Defensive Throw" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Defensive Throw" OCV="+1" DCV="+1" DC="0" PHASE="1/2" EFFECT="Block, Target Falls" ADDSTR="No" ACTIVECOST="30" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741443349" BASECOST="5.0" LEVELS="0" ALIAS="Disarming Throw" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Disarming Throw" OCV="+0" DCV="+0" DC="1" PHASE="1/2" EFFECT="Grab Weapon, [STRDC] to take weapon away; Target Falls" ADDSTR="Yes" ACTIVECOST="25" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741445981" BASECOST="4.0" LEVELS="0" ALIAS="Fast Strike" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Fast Strike" OCV="+2" DCV="+0" DC="2" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741448829" BASECOST="5.0" LEVELS="0" ALIAS="Flying Dodge" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Flying Dodge" OCV="--" DCV="+4" DC="0" PHASE="1/2" EFFECT="Dodge All Attacks, Abort; FMove" ADDSTR="No" ACTIVECOST="50" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741451741" BASECOST="5.0" LEVELS="0" ALIAS="Flying Grab" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Flying Grab" OCV="-2" DCV="-1" DC="2" PHASE="1/2" EFFECT="Grab Two Limbs, [STRDC] for holding on; FMove" ADDSTR="Yes" ACTIVECOST="25" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Grab Two Limbs, [STRDC] for holding on; FMove">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741454733" BASECOST="3.0" LEVELS="0" ALIAS="Flying Tackle" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Flying Tackle" OCV="+0" DCV="-1" DC="0" PHASE="1/2" EFFECT="[NORMALDC] +v/5 Strike; You Fall, Target Falls; FMove" ADDSTR="Yes" ACTIVECOST="40" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741457765" BASECOST="5.0" LEVELS="0" ALIAS="Grappling Block" POSITION="18" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Grappling Block" OCV="+1" DCV="+1" DC="0" PHASE="1/2" EFFECT="Grab One Limb, Block" ADDSTR="Yes" ACTIVECOST="-5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741460725" BASECOST="3.0" LEVELS="0" ALIAS="Grappling Throw" POSITION="19" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Grappling Throw" OCV="+0" DCV="+2" DC="2" PHASE="1/2" EFFECT="[NORMALDC] Strike; Target Falls; Must Follow Grab" ADDSTR="Yes" ACTIVECOST="25" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike; Target Falls; Must Follow Grab">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741464149" BASECOST="5.0" LEVELS="0" ALIAS="Joint Break" POSITION="20" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Joint Break" OCV="-1" DCV="-2" DC="4" PHASE="1/2" EFFECT="Grab One Limb; [KILLINGDC], Disable" ADDSTR="Yes" ACTIVECOST="0" DAMAGETYPE="0" MAXSTR="40" STRMULT="1" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741468605" BASECOST="4.0" LEVELS="0" ALIAS="Joint Lock/Throw" POSITION="21" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Joint Lock/Throw" OCV="+1" DCV="+0" DC="2" PHASE="1/2" EFFECT="Grab One Limb; [NNDDC]; Target Falls" ADDSTR="No" ACTIVECOST="27" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Grab One Limb; [NNDDC]; Target Falls">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741471293" BASECOST="4.0" LEVELS="0" ALIAS="Killing Strike" POSITION="22" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Killing Strike" OCV="-2" DCV="+0" DC="4" PHASE="1/2" EFFECT="[KILLINGDC]" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="40" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[WEAPONKILLINGDC]">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741474397" BASECOST="5.0" LEVELS="0" ALIAS="Killing Throw" POSITION="23" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Killing Throw" OCV="-2" DCV="+0" DC="4" PHASE="1/2" EFFECT="[KILLINGDC], Target Falls" ADDSTR="Yes" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="40" STRMULT="1" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741478397" BASECOST="3.0" LEVELS="0" ALIAS="Legsweep" POSITION="24" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Legsweep" OCV="+2" DCV="-1" DC="1" PHASE="1/2" EFFECT="[NORMALDC] Strike, Target Falls" ADDSTR="Yes" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike, Target Falls">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741481573" BASECOST="4.0" LEVELS="0" ALIAS="Martial Block" POSITION="25" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Block" OCV="+2" DCV="+2" DC="0" PHASE="1/2" EFFECT="Block, Abort" ADDSTR="No" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Block, Abort">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741484605" BASECOST="4.0" LEVELS="0" ALIAS="Martial Disarm" POSITION="26" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Disarm" OCV="-1" DCV="+1" DC="2" PHASE="1/2" EFFECT="Disarm; [STRDC] to Disarm" ADDSTR="Yes" ACTIVECOST="5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Disarm; [STRDC] to Disarm roll">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741487789" BASECOST="4.0" LEVELS="0" ALIAS="Martial Dodge" POSITION="27" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Dodge" OCV="--" DCV="+5" DC="0" PHASE="1/2" EFFECT="Dodge, Affects All Attacks, Abort" ADDSTR="No" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741490589" BASECOST="4.0" LEVELS="0" ALIAS="Martial Escape" POSITION="28" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Escape" OCV="+0" DCV="+0" DC="3" PHASE="1/2" EFFECT="[STRDC] vs. Grabs" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741493245" BASECOST="4.0" LEVELS="0" ALIAS="Martial Flash" POSITION="29" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" INPUT="Hearing" CATEGORY="Hand To Hand" DISPLAY="Martial Flash" OCV="-1" DCV="-1" DC="4" PHASE="1/2" EFFECT="[FLASHDC]" ADDSTR="No" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[FLASHDC]">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741496341" BASECOST="3.0" LEVELS="0" ALIAS="Martial Grab" POSITION="30" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Grab" OCV="-1" DCV="-1" DC="2" PHASE="1/2" EFFECT="Grab Two Limbs, [STRDC] for holding on" ADDSTR="Yes" ACTIVECOST="-5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Grab Two Limbs, [STRDC] for holding on">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741498917" BASECOST="4.0" LEVELS="0" ALIAS="Martial Strike" POSITION="31" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Strike" OCV="+0" DCV="+2" DC="2" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741501669" BASECOST="3.0" LEVELS="0" ALIAS="Martial Throw" POSITION="32" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Throw" OCV="+0" DCV="+1" DC="0" PHASE="1/2" EFFECT="[NORMALDC] +v/5, Target Falls" ADDSTR="Yes" ACTIVECOST="40" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] +v/5, Target Falls">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741504445" BASECOST="4.0" LEVELS="0" ALIAS="Nerve Strike" POSITION="33" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Nerve Strike" OCV="-1" DCV="+1" DC="4" PHASE="1/2" EFFECT="[NNDDC]" ADDSTR="No" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[NNDDC]">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741507181" BASECOST="5.0" LEVELS="0" ALIAS="Offensive Strike" POSITION="34" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Offensive Strike" OCV="-2" DCV="+1" DC="4" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741510085" BASECOST="5.0" LEVELS="0" ALIAS="Passing Disarm" POSITION="35" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Passing Disarm" OCV="-1" DCV="-1" DC="2" PHASE="1/2" EFFECT="Disarm, [STRDC] to Disarm; FMove" ADDSTR="Yes" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Disarm, [STRDC] to Disarm roll; FMove">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741513125" BASECOST="5.0" LEVELS="0" ALIAS="Passing Strike" POSITION="36" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Passing Strike" OCV="+1" DCV="+0" DC="0" PHASE="1/2" EFFECT="[NORMALDC] +v/5; FMove" ADDSTR="Yes" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] +v/5; FMove">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741516109" BASECOST="5.0" LEVELS="0" ALIAS="Passing Throw" POSITION="37" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Passing Throw" OCV="+0" DCV="+0" DC="0" PHASE="1/2" EFFECT="[NORMALDC] +v/5; Target Falls; FMove" ADDSTR="Yes" ACTIVECOST="55" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] +v/5; Target Falls; FMove">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741518765" BASECOST="4.0" LEVELS="0" ALIAS="Reversal" POSITION="38" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Reversal" OCV="-1" DCV="-2" DC="3" PHASE="var" EFFECT="[STRDC] to Escape; Grab Two Limbs" ADDSTR="Yes" ACTIVECOST="-10" DAMAGETYPE="0" MAXSTR="0" STRMULT="2" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741522725" BASECOST="4.0" LEVELS="0" ALIAS="Root" POSITION="39" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Root" OCV="+0" DCV="+0" DC="3" PHASE="1/2" EFFECT="[STRDC] to resist Shove; Block, Abort" ADDSTR="Yes" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741525429" BASECOST="4.0" LEVELS="0" ALIAS="Sacrifice Disarm" POSITION="40" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Sacrifice Disarm" OCV="+2" DCV="-2" DC="2" PHASE="1/2" EFFECT="Disarm, [STRDC] to Disarm" ADDSTR="Yes" ACTIVECOST="5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Disarm, [STRDC] to Disarm roll">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741528877" BASECOST="4.0" LEVELS="0" ALIAS="Sacrifice Lunge" POSITION="41" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Sacrifice Lunge" OCV="+2" DCV="-2" DC="0" PHASE="1/2" EFFECT="[NORMALDC] +v/5; FMove" ADDSTR="Yes" ACTIVECOST="30" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] +v/5; FMove">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741531429" BASECOST="5.0" LEVELS="0" ALIAS="Sacrifice Strike" POSITION="42" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Sacrifice Strike" OCV="+1" DCV="-2" DC="4" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741533941" BASECOST="3.0" LEVELS="0" ALIAS="Sacrifice Throw" POSITION="43" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Sacrifice Throw" OCV="+2" DCV="+1" DC="0" PHASE="1/2" EFFECT="[NORMALDC] Strike; You Fall, Target Falls" ADDSTR="Yes" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike; You Fall, Target Falls">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741536461" BASECOST="4.0" LEVELS="0" ALIAS="Shove" POSITION="44" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Shove" OCV="+0" DCV="+0" DC="3" PHASE="1/2" EFFECT="[STRDC] to Shove" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[STRDC] to Shove">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741538989" BASECOST="5.0" LEVELS="0" ALIAS="Takeaway" POSITION="45" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Takeaway" OCV="+0" DCV="+0" DC="2" PHASE="1/2" EFFECT="Grab Weapon, [STRDC] to take weapon away" ADDSTR="Yes" ACTIVECOST="5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Grab Weapon, [STRDC] to take weapon away">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741542829" BASECOST="3.0" LEVELS="0" ALIAS="Takedown" POSITION="46" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Takedown" OCV="+1" DCV="+1" DC="0" PHASE="1/2" EFFECT="[NORMALDC] Strike; Target Falls" ADDSTR="Yes" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike; Target Falls">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741545837" BASECOST="4.0" LEVELS="0" ALIAS="Weapon Bind" POSITION="47" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309811196" NAME="" CATEGORY="Hand To Hand" DISPLAY="Weapon Bind" OCV="+1" DCV="+0" DC="2" PHASE="1/2" EFFECT="Bind, [STRDC]" ADDSTR="Yes" ACTIVECOST="5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Bind, [STRDC]">
-                                <NOTES />
-                                </MANEUVER>
-                                <LIST XMLID="GENERIC_OBJECT" ID="1760309909855" BASECOST="0.0" LEVELS="0" ALIAS=" " POSITION="48" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="">
-                                <NOTES />
-                                </LIST>
-                                <LIST XMLID="GENERIC_OBJECT" ID="1760309910931" BASECOST="0.0" LEVELS="0" ALIAS="Ranged" POSITION="49" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="">
-                                <NOTES />
-                                </LIST>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741551477" BASECOST="4.0" LEVELS="0" ALIAS="Basic Shot" POSITION="50" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309910931" NAME="" CATEGORY="Ranged" DISPLAY="Basic Shot" OCV="+0" DCV="+0" DC="2" PHASE="1/2" EFFECT="Strike, [WEAPONDC]" ADDSTR="No" ACTIVECOST="16" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="2">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741554757" BASECOST="3.0" LEVELS="0" ALIAS="Defensive Shot" POSITION="51" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309910931" NAME="" CATEGORY="Ranged" DISPLAY="Defensive Shot" OCV="-1" DCV="+2" DC="0" PHASE="1/2" EFFECT="Strike [WEAPONDC]" ADDSTR="No" ACTIVECOST="5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="0">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741557276" BASECOST="5.0" LEVELS="0" ALIAS="Distance Shot" POSITION="52" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309910931" NAME="" CATEGORY="Ranged" DISPLAY="Distance Shot" OCV="+0" DCV="-2" DC="0" PHASE="1+1" EFFECT="Strike [WEAPONDC], +1 Segment" ADDSTR="No" ACTIVECOST="3" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="6">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741559765" BASECOST="5.0" LEVELS="0" ALIAS="Far Shot" POSITION="53" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309910931" NAME="" CATEGORY="Ranged" DISPLAY="Far Shot" OCV="+1" DCV="-1" DC="0" PHASE="1/2" EFFECT="Strike [WEAPONDC]" ADDSTR="No" ACTIVECOST="12" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="4">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741562517" BASECOST="5.0" LEVELS="0" ALIAS="Offensive Ranged Disarm" POSITION="54" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309910931" NAME="" CATEGORY="Ranged" DISPLAY="Offensive Ranged Disarm" OCV="+1" DCV="-1" DC="2" PHASE="1/2" EFFECT="Disarm, [WEAPONDC] to Disarm" ADDSTR="No" ACTIVECOST="11" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="2">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741565509" BASECOST="4.0" LEVELS="0" ALIAS="Offensive Shot" POSITION="55" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309910931" NAME="" CATEGORY="Ranged" DISPLAY="Offensive Shot" OCV="-1" DCV="-1" DC="4" PHASE="1/2" EFFECT="Strike, [WEAPONDC]" ADDSTR="No" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="0">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741568245" BASECOST="5.0" LEVELS="0" ALIAS="Offensive Trip" POSITION="56" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309910931" NAME="" CATEGORY="Ranged" DISPLAY="Offensive Trip" OCV="+1" DCV="-1" DC="0" PHASE="1/2" EFFECT="Strike [WEAPONDC] +v/5, Target Falls" ADDSTR="No" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="0">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741571221" BASECOST="4.0" LEVELS="0" ALIAS="Quick Shot" POSITION="57" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309910931" NAME="" CATEGORY="Ranged" DISPLAY="Quick Shot" OCV="+1" DCV="+0" DC="2" PHASE="1/2" EFFECT="Strike, [WEAPONDC]" ADDSTR="No" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="0">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741573621" BASECOST="4.0" LEVELS="0" ALIAS="Ranged Disarm" POSITION="58" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309910931" NAME="" CATEGORY="Ranged" DISPLAY="Ranged Disarm" OCV="+0" DCV="+0" DC="3" PHASE="1/2" EFFECT="Disarm, [WEAPONDC] to Disarm" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="0">
-                                <NOTES />
-                                </MANEUVER>
-                                <MANEUVER XMLID="MANEUVER" ID="1736741576645" BASECOST="4.0" LEVELS="0" ALIAS="Trip" POSITION="59" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1760309910931" NAME="" CATEGORY="Ranged" DISPLAY="Trip" OCV="-1" DCV="-1" DC="0" PHASE="1/2" EFFECT="v/5, Target Falls" ADDSTR="No" ACTIVECOST="31" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="2">
-                                <NOTES />
-                                </MANEUVER>
-                                <WEAPON_ELEMENT XMLID="WEAPON_ELEMENT" ID="1752445619294" BASECOST="0.0" LEVELS="0" ALIAS="Weapon Element" POSITION="60" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="">
-                                <NOTES />
-                                <ADDER XMLID="UNCOMMONMISSILEWEAPONS" ID="1752446009745" BASECOST="0.0" LEVELS="0" ALIAS="Uncommon Missile Weapons" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="No" DISPLAYINSTRING="Yes" GROUP="No" SELECTED="NO">
-                                    <NOTES />
-                                    <ADDER XMLID="SLING" ID="1752446009744" BASECOST="1.0" LEVELS="0" ALIAS="Sling" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="No" DISPLAYINSTRING="Yes" GROUP="No" SELECTED="YES">
-                                    <NOTES />
-                                    </ADDER>
-                                </ADDER>
-                                </WEAPON_ELEMENT>
-                                <MANEUVER XMLID="MANEUVER" ID="1754187078696" BASECOST="3.0" LEVELS="0" ALIAS="Custom Martial Strike (HTH)" POSITION="61" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CUSTOM="Yes" CATEGORY="Hand to Hand" DISPLAY="Custom Maneuver" OCV="+0" DCV="+0" DC="2" PHASE="1/2" EFFECT="Strike" ADDSTR="Yes" ACTIVECOST="0" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Strike">
-                                <NOTES />
-                                </MANEUVER>
-                            </MARTIALARTS>
-                              <POWERS />
-                            <DISADVANTAGES />
-                            <EQUIPMENT />
+                        <CHARACTER version="6.0" TEMPLATE="builtIn.Normal.hdt">
+                        <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" RULES="Default" />
+                        <CHARACTER_INFO CHARACTER_NAME="Test 5e Martial Arts Man" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
+                            <BACKGROUND />
+                            <PERSONALITY />
+                            <QUOTE />
+                            <TACTICS />
+                            <CAMPAIGN_USE />
+                            <APPEARANCE />
+                            <NOTES1 />
+                            <NOTES2 />
+                            <NOTES3 />
+                            <NOTES4 />
+                            <NOTES5 />
+                        </CHARACTER_INFO>
+                        <CHARACTERISTICS>
+                            <STR XMLID="STR" ID="1790379636286" BASECOST="0.0" LEVELS="0" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </STR>
+                            <DEX XMLID="DEX" ID="1790379636085" BASECOST="0.0" LEVELS="0" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </DEX>
+                            <CON XMLID="CON" ID="1790379636417" BASECOST="0.0" LEVELS="0" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </CON>
+                            <BODY XMLID="BODY" ID="1790379635972" BASECOST="0.0" LEVELS="0" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </BODY>
+                            <INT XMLID="INT" ID="1790379635567" BASECOST="0.0" LEVELS="0" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </INT>
+                            <EGO XMLID="EGO" ID="1790379636415" BASECOST="0.0" LEVELS="0" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </EGO>
+                            <PRE XMLID="PRE" ID="1790379636094" BASECOST="0.0" LEVELS="0" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </PRE>
+                            <COM XMLID="COM" ID="1790379635569" BASECOST="0.0" LEVELS="0" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </COM>
+                            <PD XMLID="PD" ID="1790379635940" BASECOST="0.0" LEVELS="0" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </PD>
+                            <ED XMLID="ED" ID="1790379636434" BASECOST="0.0" LEVELS="0" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </ED>
+                            <SPD XMLID="SPD" ID="1790379636049" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </SPD>
+                            <REC XMLID="REC" ID="1790379635984" BASECOST="0.0" LEVELS="0" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </REC>
+                            <END XMLID="END" ID="1790379636039" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </END>
+                            <STUN XMLID="STUN" ID="1790379635518" BASECOST="0.0" LEVELS="0" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </STUN>
+                            <RUNNING XMLID="RUNNING" ID="1790379635998" BASECOST="0.0" LEVELS="0" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </RUNNING>
+                            <SWIMMING XMLID="SWIMMING" ID="1790379635612" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </SWIMMING>
+                            <LEAPING XMLID="LEAPING" ID="1790379635748" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </LEAPING>
+                        </CHARACTERISTICS>
+                        <SKILLS />
+                        <PERKS />
+                        <TALENTS />
+                        <MARTIALARTS>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379650365" BASECOST="3.0" LEVELS="0" ALIAS="Basic Strike" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Basic Strike" OCV="+1" DCV="+0" DC="2" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379655501" BASECOST="4.0" LEVELS="0" ALIAS="Charge" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Charge" OCV="+0" DCV="-2" DC="2" PHASE="1/2" EFFECT="[NORMALDC] +v/5 Strike, FMove" ADDSTR="Yes" ACTIVECOST="30" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] +v/5 Strike, FMove">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379659292" BASECOST="4.0" LEVELS="0" ALIAS="Choke Hold" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Choke Hold" OCV="-2" DCV="+0" DC="4" PHASE="1/2" EFFECT="Grab One Limb; [NNDDC]" ADDSTR="No" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Grab One Limb; [NNDDC]">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379662605" BASECOST="4.0" LEVELS="0" ALIAS="Counterstrike" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Counterstrike" OCV="+2" DCV="+2" DC="2" PHASE="1/2" EFFECT="[NORMALDC] Strike, Must Follow Block" ADDSTR="Yes" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike, Must Follow Block">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379666188" BASECOST="4.0" LEVELS="0" ALIAS="Crush" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Crush" OCV="+0" DCV="+0" DC="4" PHASE="1/2" EFFECT="[NORMALDC] Crush, Must Follow Grab" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Crush, Must Follow Grab">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379671276" BASECOST="5.0" LEVELS="0" ALIAS="Defensive Block" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Defensive Block" OCV="+1" DCV="+3" DC="0" PHASE="1/2" EFFECT="Block, Abort" ADDSTR="No" ACTIVECOST="25" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Block, Abort">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379675045" BASECOST="5.0" LEVELS="0" ALIAS="Defensive Strike" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Defensive Strike" OCV="+1" DCV="+3" DC="0" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379677708" BASECOST="3.0" LEVELS="0" ALIAS="Defensive Throw" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Defensive Throw" OCV="+1" DCV="+1" DC="0" PHASE="1/2" EFFECT="Block, Target Falls" ADDSTR="No" ACTIVECOST="30" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379680668" BASECOST="5.0" LEVELS="0" ALIAS="Disarming Throw" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Disarming Throw" OCV="+0" DCV="+0" DC="1" PHASE="1/2" EFFECT="Grab Weapon, [STRDC] to take weapon away; Target Falls" ADDSTR="Yes" ACTIVECOST="25" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379683605" BASECOST="4.0" LEVELS="0" ALIAS="Fast Strike" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Fast Strike" OCV="+2" DCV="+0" DC="2" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379686332" BASECOST="5.0" LEVELS="0" ALIAS="Flying Dodge" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Flying Dodge" OCV="--" DCV="+4" DC="0" PHASE="1/2" EFFECT="Dodge All Attacks, Abort; FMove" ADDSTR="No" ACTIVECOST="50" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379689437" BASECOST="5.0" LEVELS="0" ALIAS="Flying Grab" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Flying Grab" OCV="-2" DCV="-1" DC="2" PHASE="1/2" EFFECT="Grab Two Limbs, [STRDC] for holding on; FMove" ADDSTR="Yes" ACTIVECOST="25" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Grab Two Limbs, [STRDC] for holding on; FMove">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379692997" BASECOST="3.0" LEVELS="0" ALIAS="Flying Tackle" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Flying Tackle" OCV="+0" DCV="-1" DC="0" PHASE="1/2" EFFECT="[NORMALDC] +v/5 Strike; You Fall, Target Falls; FMove" ADDSTR="Yes" ACTIVECOST="40" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379695709" BASECOST="5.0" LEVELS="0" ALIAS="Grappling Block" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Grappling Block" OCV="+1" DCV="+1" DC="0" PHASE="1/2" EFFECT="Grab One Limb, Block" ADDSTR="Yes" ACTIVECOST="-5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379698885" BASECOST="3.0" LEVELS="0" ALIAS="Grappling Throw" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Grappling Throw" OCV="+0" DCV="+2" DC="2" PHASE="1/2" EFFECT="[NORMALDC] Strike; Target Falls; Must Follow Grab" ADDSTR="Yes" ACTIVECOST="25" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike; Target Falls; Must Follow Grab">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379703076" BASECOST="5.0" LEVELS="0" ALIAS="Joint Break" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Joint Break" OCV="-1" DCV="-2" DC="4" PHASE="1/2" EFFECT="Grab One Limb; [KILLINGDC], Disable" ADDSTR="Yes" ACTIVECOST="0" DAMAGETYPE="0" MAXSTR="10" STRMULT="1" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379706412" BASECOST="4.0" LEVELS="0" ALIAS="Joint Lock/Throw" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Joint Lock/Throw" OCV="+1" DCV="+0" DC="2" PHASE="1/2" EFFECT="Grab One Limb; [NNDDC]; Target Falls" ADDSTR="No" ACTIVECOST="27" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Grab One Limb; [NNDDC]; Target Falls">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379708972" BASECOST="4.0" LEVELS="0" ALIAS="Killing Strike" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Killing Strike" OCV="-2" DCV="+0" DC="4" PHASE="1/2" EFFECT="[KILLINGDC]" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="10" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[WEAPONKILLINGDC]">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379711549" BASECOST="5.0" LEVELS="0" ALIAS="Killing Throw" POSITION="18" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Killing Throw" OCV="-2" DCV="+0" DC="4" PHASE="1/2" EFFECT="[KILLINGDC], Target Falls" ADDSTR="Yes" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="10" STRMULT="1" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379714101" BASECOST="3.0" LEVELS="0" ALIAS="Legsweep" POSITION="19" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Legsweep" OCV="+2" DCV="-1" DC="1" PHASE="1/2" EFFECT="[NORMALDC] Strike, Target Falls" ADDSTR="Yes" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike, Target Falls">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379716764" BASECOST="4.0" LEVELS="0" ALIAS="Martial Block" POSITION="20" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Block" OCV="+2" DCV="+2" DC="0" PHASE="1/2" EFFECT="Block, Abort" ADDSTR="No" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Block, Abort">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379719797" BASECOST="4.0" LEVELS="0" ALIAS="Martial Disarm" POSITION="21" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Disarm" OCV="-1" DCV="+1" DC="2" PHASE="1/2" EFFECT="Disarm; [STRDC] to Disarm" ADDSTR="Yes" ACTIVECOST="5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Disarm; [STRDC] to Disarm roll">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379722357" BASECOST="4.0" LEVELS="0" ALIAS="Martial Dodge" POSITION="22" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Dodge" OCV="--" DCV="+5" DC="0" PHASE="1/2" EFFECT="Dodge, Affects All Attacks, Abort" ADDSTR="No" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379725333" BASECOST="4.0" LEVELS="0" ALIAS="Martial Escape" POSITION="23" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Escape" OCV="+0" DCV="+0" DC="3" PHASE="1/2" EFFECT="[STRDC] vs. Grabs" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379728428" BASECOST="4.0" LEVELS="0" ALIAS="Martial Flash" POSITION="24" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="Hearing" CATEGORY="Hand To Hand" DISPLAY="Martial Flash" OCV="-1" DCV="-1" DC="4" PHASE="1/2" EFFECT="[FLASHDC]" ADDSTR="No" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[FLASHDC]">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379731117" BASECOST="3.0" LEVELS="0" ALIAS="Martial Grab" POSITION="25" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Grab" OCV="-1" DCV="-1" DC="2" PHASE="1/2" EFFECT="Grab Two Limbs, [STRDC] for holding on" ADDSTR="Yes" ACTIVECOST="-5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Grab Two Limbs, [STRDC] for holding on">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379734213" BASECOST="4.0" LEVELS="0" ALIAS="Martial Strike" POSITION="26" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Strike" OCV="+0" DCV="+2" DC="2" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379737109" BASECOST="3.0" LEVELS="0" ALIAS="Martial Throw" POSITION="27" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Martial Throw" OCV="+0" DCV="+1" DC="0" PHASE="1/2" EFFECT="[NORMALDC] +v/5, Target Falls" ADDSTR="Yes" ACTIVECOST="40" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] +v/5, Target Falls">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379740220" BASECOST="4.0" LEVELS="0" ALIAS="Nerve Strike" POSITION="28" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Nerve Strike" OCV="-1" DCV="+1" DC="4" PHASE="1/2" EFFECT="[NNDDC]" ADDSTR="No" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[NNDDC]">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379743428" BASECOST="5.0" LEVELS="0" ALIAS="Offensive Strike" POSITION="29" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Offensive Strike" OCV="-2" DCV="+1" DC="4" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379746213" BASECOST="5.0" LEVELS="0" ALIAS="Passing Disarm" POSITION="30" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Passing Disarm" OCV="-1" DCV="-1" DC="2" PHASE="1/2" EFFECT="Disarm, [STRDC] to Disarm; FMove" ADDSTR="Yes" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Disarm, [STRDC] to Disarm roll; FMove">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379749125" BASECOST="5.0" LEVELS="0" ALIAS="Passing Strike" POSITION="31" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Passing Strike" OCV="+1" DCV="+0" DC="0" PHASE="1/2" EFFECT="[NORMALDC] +v/5; FMove" ADDSTR="Yes" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] +v/5; FMove">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379752013" BASECOST="5.0" LEVELS="0" ALIAS="Passing Throw" POSITION="32" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Passing Throw" OCV="+0" DCV="+0" DC="0" PHASE="1/2" EFFECT="[NORMALDC] +v/5; Target Falls; FMove" ADDSTR="Yes" ACTIVECOST="55" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] +v/5; Target Falls; FMove">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379754541" BASECOST="4.0" LEVELS="0" ALIAS="Reversal" POSITION="33" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Reversal" OCV="-1" DCV="-2" DC="3" PHASE="var" EFFECT="[STRDC] to Escape; Grab Two Limbs" ADDSTR="Yes" ACTIVECOST="-10" DAMAGETYPE="0" MAXSTR="0" STRMULT="2" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379757733" BASECOST="4.0" LEVELS="0" ALIAS="Root" POSITION="34" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Root" OCV="+0" DCV="+0" DC="3" PHASE="1/2" EFFECT="[STRDC] to resist Shove; Block, Abort" ADDSTR="Yes" ACTIVECOST="20" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379761924" BASECOST="4.0" LEVELS="0" ALIAS="Sacrifice Disarm" POSITION="35" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Sacrifice Disarm" OCV="+2" DCV="-2" DC="2" PHASE="1/2" EFFECT="Disarm, [STRDC] to Disarm" ADDSTR="Yes" ACTIVECOST="5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Disarm, [STRDC] to Disarm roll">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379764837" BASECOST="4.0" LEVELS="0" ALIAS="Sacrifice Lunge" POSITION="36" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Sacrifice Lunge" OCV="+2" DCV="-2" DC="0" PHASE="1/2" EFFECT="[NORMALDC] +v/5; FMove" ADDSTR="Yes" ACTIVECOST="30" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] +v/5; FMove">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379767749" BASECOST="5.0" LEVELS="0" ALIAS="Sacrifice Strike" POSITION="37" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Sacrifice Strike" OCV="+1" DCV="-2" DC="4" PHASE="1/2" EFFECT="[NORMALDC] Strike" ADDSTR="Yes" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379770838" BASECOST="3.0" LEVELS="0" ALIAS="Sacrifice Throw" POSITION="38" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Sacrifice Throw" OCV="+2" DCV="+1" DC="0" PHASE="1/2" EFFECT="[NORMALDC] Strike; You Fall, Target Falls" ADDSTR="Yes" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike; You Fall, Target Falls">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379774628" BASECOST="4.0" LEVELS="0" ALIAS="Shove" POSITION="39" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Shove" OCV="+0" DCV="+0" DC="3" PHASE="1/2" EFFECT="[STRDC] to Shove" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="[STRDC] to Shove">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379780853" BASECOST="5.0" LEVELS="0" ALIAS="Takeaway" POSITION="40" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Takeaway" OCV="+0" DCV="+0" DC="2" PHASE="1/2" EFFECT="Grab Weapon, [STRDC] to take weapon away" ADDSTR="Yes" ACTIVECOST="5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Grab Weapon, [STRDC] to take weapon away">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379784565" BASECOST="3.0" LEVELS="0" ALIAS="Takedown" POSITION="41" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Takedown" OCV="+1" DCV="+1" DC="0" PHASE="1/2" EFFECT="[NORMALDC] Strike; Target Falls" ADDSTR="Yes" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Weapon [WEAPONDC] Strike; Target Falls">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379790284" BASECOST="4.0" LEVELS="0" ALIAS="Weapon Bind" POSITION="42" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Hand To Hand" DISPLAY="Weapon Bind" OCV="+1" DCV="+0" DC="2" PHASE="1/2" EFFECT="Bind, [STRDC]" ADDSTR="Yes" ACTIVECOST="5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Bind, [STRDC]">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379796012" BASECOST="4.0" LEVELS="0" ALIAS="Basic Shot" POSITION="43" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Ranged" DISPLAY="Basic Shot" OCV="+0" DCV="+0" DC="2" PHASE="1/2" EFFECT="Strike, [WEAPONDC]" ADDSTR="No" ACTIVECOST="16" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="2">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379799605" BASECOST="3.0" LEVELS="0" ALIAS="Defensive Shot" POSITION="44" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Ranged" DISPLAY="Defensive Shot" OCV="-1" DCV="+2" DC="0" PHASE="1/2" EFFECT="Strike [WEAPONDC]" ADDSTR="No" ACTIVECOST="5" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="0">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379802966" BASECOST="5.0" LEVELS="0" ALIAS="Distance Shot" POSITION="45" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Ranged" DISPLAY="Distance Shot" OCV="+0" DCV="-2" DC="0" PHASE="1+1" EFFECT="Strike [WEAPONDC], +1 Segment" ADDSTR="No" ACTIVECOST="3" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="6">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379805805" BASECOST="5.0" LEVELS="0" ALIAS="Far Shot" POSITION="46" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Ranged" DISPLAY="Far Shot" OCV="+1" DCV="-1" DC="0" PHASE="1/2" EFFECT="Strike [WEAPONDC]" ADDSTR="No" ACTIVECOST="12" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="4">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379808605" BASECOST="5.0" LEVELS="0" ALIAS="Offensive Ranged Disarm" POSITION="47" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Ranged" DISPLAY="Offensive Ranged Disarm" OCV="+1" DCV="-1" DC="2" PHASE="1/2" EFFECT="Disarm, [WEAPONDC] to Disarm" ADDSTR="No" ACTIVECOST="11" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="2">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379811356" BASECOST="4.0" LEVELS="0" ALIAS="Offensive Shot" POSITION="48" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Ranged" DISPLAY="Offensive Shot" OCV="-1" DCV="-1" DC="4" PHASE="1/2" EFFECT="Strike, [WEAPONDC]" ADDSTR="No" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="0">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379813917" BASECOST="5.0" LEVELS="0" ALIAS="Offensive Trip" POSITION="49" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Ranged" DISPLAY="Offensive Trip" OCV="+1" DCV="-1" DC="0" PHASE="1/2" EFFECT="Strike [WEAPONDC] +v/5, Target Falls" ADDSTR="No" ACTIVECOST="35" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="0">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379816837" BASECOST="4.0" LEVELS="0" ALIAS="Quick Shot" POSITION="50" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Ranged" DISPLAY="Quick Shot" OCV="+1" DCV="+0" DC="2" PHASE="1/2" EFFECT="Strike, [WEAPONDC]" ADDSTR="No" ACTIVECOST="15" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="0">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379819741" BASECOST="4.0" LEVELS="0" ALIAS="Ranged Disarm" POSITION="51" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Ranged" DISPLAY="Ranged Disarm" OCV="+0" DCV="+0" DC="3" PHASE="1/2" EFFECT="Disarm, [WEAPONDC] to Disarm" ADDSTR="Yes" ACTIVECOST="10" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="0">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1790379823100" BASECOST="4.0" LEVELS="0" ALIAS="Trip" POSITION="52" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CATEGORY="Ranged" DISPLAY="Trip" OCV="-1" DCV="-1" DC="0" PHASE="1/2" EFFECT="v/5, Target Falls" ADDSTR="No" ACTIVECOST="31" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" RANGE="2">
+                            <NOTES />
+                            </MANEUVER>
+                            <LIST XMLID="GENERIC_OBJECT" ID="1791060965055" BASECOST="0.0" LEVELS="0" ALIAS=" " POSITION="53" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="">
+                            <NOTES />
+                            </LIST>
+                            <LIST XMLID="GENERIC_OBJECT" ID="1791060966275" BASECOST="0.0" LEVELS="0" ALIAS="Custom Martial Arts" POSITION="54" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="">
+                            <NOTES />
+                            </LIST>
+                            <MANEUVER XMLID="MANEUVER" ID="1791060822287" BASECOST="3.0" LEVELS="0" ALIAS="Flowing Redirection" POSITION="55" MULTIPLIER="1.0" GRAPHIC="block" COLOR="255 255 255" SFX="Martial Arts" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1791060966275" NAME="" CUSTOM="Yes" CATEGORY="Hand to Hand" DISPLAY="Custom Maneuver" OCV="+0" DCV="+2" DC="1" PHASE="1" EFFECT="Target Falls, [DAMAGE] Strike; Can Only Be Used After an opponent misses the character with a Strike" ADDSTR="Yes" ACTIVECOST="0" DAMAGETYPE="0" MAXSTR="0" STRMULT="1" USEWEAPON="No" WEAPONEFFECT="Target Falls, [DAMAGE] Strike; Can Only Be Used After an opponent misses the character with a Strike">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1791063133721" BASECOST="4.0" LEVELS="0" ALIAS="Passing Slash (like a move-by)" POSITION="56" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1791060966275" NAME="" CUSTOM="Yes" CATEGORY="Hand to Hand" DISPLAY="Custom Maneuver" OCV="+1" DCV="+0" DC="0" PHASE="1/2" EFFECT="+ v/5; Strike, FMove; Attacker Takes Half Damage" ADDSTR="Yes" ACTIVECOST="0" DAMAGETYPE="3" MAXSTR="0" STRMULT="1" USEWEAPON="Yes" WEAPONEFFECT="+ v/5; Strike, FMove; Attacker Takes Half Damage">
+                            <NOTES />
+                            </MANEUVER>
+                            <MANEUVER XMLID="MANEUVER" ID="1791063526874" BASECOST="3.0" LEVELS="0" ALIAS="Meteor Drop" POSITION="57" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" PARENTID="1791060966275" NAME="" CUSTOM="Yes" CATEGORY="Hand to Hand" DISPLAY="Custom Maneuver" OCV="-2" DCV="-2" DC="4" PHASE="1/2" EFFECT="[NORMALDC] + v/3; Strike, FMove; Take Full Damage" ADDSTR="Yes" ACTIVECOST="0" DAMAGETYPE="3" MAXSTR="0" STRMULT="1" USEWEAPON="Yes" WEAPONEFFECT="[NORMALDC] + v/3; Strike, FMove; Take Full Damage">
+                            <NOTES />
+                            </MANEUVER>
+                        </MARTIALARTS>
+                        <POWERS />
+                        <DISADVANTAGES />
+                        <EQUIPMENT />
                         </CHARACTER>
                     `;
 
                     let actor;
+                    let maneuvers;
                     before(async function () {
                         actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
+
+                        maneuvers = actor.items.filter((item) => item.system.XMLID === "MANEUVER");
                     });
 
                     after(async function () {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("each martial art maneuver should have behaviorsByItem array with at least 1 string", function () {
-                        const maneuvers = actor.items.filter((item) => item.system.XMLID === "MANEUVER");
+                    // Full universe of maneuver bases/elements recognized by
+                    // module/item/maneuver-bases-and-elements.mjs
+                    // (MANEUVER_BASES_AND_ELEMENTS). Mirrored here so each test can
+                    // assert the EXACT set of elements a maneuver's EFFECT resolves
+                    // to. Keep in sync with that module.
+                    const ALL_MANEUVER_BASES_AND_ELEMENTS = [
+                        "abort",
+                        "attackerFalls",
+                        "bind",
+                        "block",
+                        "crush",
+                        "disable",
+                        "disarm",
+                        "dodge",
+                        "exert",
+                        "flashDc",
+                        "fmove",
+                        "grab",
+                        "grabWeapon",
+                        "halfMoveRequired",
+                        "killingDc",
+                        "lastingRestriction",
+                        "mustFollow",
+                        "nndDc",
+                        "normalDc",
+                        "prone",
+                        "requiresBothHands",
+                        "response",
+                        "root",
+                        "shove",
+                        "strike",
+                        "takeFullDmg",
+                        "takeHalfDmg",
+                        "throw",
+                        "velocity",
+                        "weaponDc",
+                    ];
 
-                        maneuvers.forEach((maneuver) => {
-                            const behaviors = maneuver.baseInfo.behaviorsByItem(maneuver);
-                            expect(behaviors).to.be.an(
-                                "array",
-                                `Maneuver "${maneuver.name}" should have behaviorsByItem return an array`,
+                    // The exact set of bases/elements each 5e martial-arts maneuver's
+                    // EFFECT attribute is expected to resolve to, keyed by ALIAS.
+                    const EXPECTED_5E_MANEUVER_BASES_AND_ELEMENTS = {
+                        "Basic Strike": ["normalDc", "strike"],
+                        Charge: ["fmove", "normalDc", "strike", "velocity"],
+                        "Choke Hold": ["grab", "nndDc"],
+                        Counterstrike: ["mustFollow", "normalDc", "strike"],
+                        Crush: ["crush", "mustFollow", "normalDc"],
+                        "Defensive Block": ["abort", "block"],
+                        "Defensive Strike": ["normalDc", "strike"],
+                        "Defensive Throw": ["block", "throw"],
+                        "Disarming Throw": ["exert", "grabWeapon", "throw"],
+                        "Fast Strike": ["normalDc", "strike"],
+                        "Flying Dodge": ["abort", "dodge", "fmove"],
+                        "Flying Grab": ["exert", "fmove", "grab"],
+                        "Flying Tackle": ["attackerFalls", "fmove", "normalDc", "strike", "throw", "velocity"],
+                        "Grappling Block": ["block", "grab"],
+                        "Grappling Throw": ["mustFollow", "normalDc", "strike", "throw"],
+                        "Joint Break": ["disable", "grab", "killingDc"],
+                        "Joint Lock/Throw": ["grab", "nndDc", "throw"],
+                        "Killing Strike": ["killingDc"],
+                        "Killing Throw": ["killingDc", "throw"],
+                        Legsweep: ["normalDc", "strike", "throw"],
+                        "Martial Block": ["abort", "block"],
+                        "Martial Disarm": ["disarm", "exert"],
+                        "Martial Dodge": ["abort", "dodge"],
+                        "Martial Escape": ["exert"],
+                        "Martial Flash": ["flashDc"],
+                        "Martial Grab": ["exert", "grab"],
+                        "Martial Strike": ["normalDc", "strike"],
+                        "Martial Throw": ["normalDc", "throw", "velocity"],
+                        "Nerve Strike": ["nndDc"],
+                        "Offensive Strike": ["normalDc", "strike"],
+                        "Passing Disarm": ["disarm", "exert", "fmove"],
+                        "Passing Strike": ["fmove", "normalDc", "velocity"],
+                        "Passing Throw": ["fmove", "normalDc", "throw", "velocity"],
+                        Reversal: ["exert", "grab"],
+                        Root: ["abort", "block", "exert", "root"],
+                        "Sacrifice Disarm": ["disarm", "exert"],
+                        "Sacrifice Lunge": ["fmove", "normalDc", "velocity"],
+                        "Sacrifice Strike": ["normalDc", "strike"],
+                        "Sacrifice Throw": ["attackerFalls", "normalDc", "strike", "throw"],
+                        Shove: ["exert", "shove"],
+                        Takeaway: ["exert", "grabWeapon"],
+                        Takedown: ["normalDc", "strike", "throw"],
+                        "Weapon Bind": ["bind", "exert"],
+                        "Basic Shot": ["normalDc", "strike", "weaponDc"],
+                        "Defensive Shot": ["normalDc", "strike", "weaponDc"],
+                        "Distance Shot": ["normalDc", "strike", "weaponDc"],
+                        "Far Shot": ["normalDc", "strike", "weaponDc"],
+                        "Offensive Ranged Disarm": ["disarm", "normalDc", "weaponDc"],
+                        "Offensive Shot": ["normalDc", "strike", "weaponDc"],
+                        "Offensive Trip": ["normalDc", "strike", "throw", "velocity", "weaponDc"],
+                        "Quick Shot": ["normalDc", "strike", "weaponDc"],
+                        "Ranged Disarm": ["disarm", "normalDc", "weaponDc"],
+                        Trip: ["throw", "velocity"],
+                        // Custom maneuver: "Target Falls" -> throw, "[DAMAGE] Strike" -> strike,
+                        // "Can Only Be Used After ..." -> response. The trailing prose only carries
+                        // the response marker; the "Strike" inside it never wins because the earlier
+                        // "[DAMAGE] Strike" element matches first.
+                        "Flowing Redirection": ["response", "strike", "throw"],
+                        // Custom maneuver: "Attacker Takes Half Damage" -> takeHalfDmg;
+                        // "+ v/5" -> velocity.
+                        "Passing Slash (like a move-by)": ["fmove", "strike", "takeHalfDmg", "velocity"],
+                        // Custom maneuver: "Take Full Damage" -> takeFullDmg;
+                        // "[NORMALDC] + v/3" -> normalDc and velocity.
+                        "Meteor Drop": ["fmove", "normalDc", "strike", "takeFullDmg", "velocity"],
+                    };
+
+                    it("every martial art maneuver is covered by the expectations table", function () {
+                        const uncovered = maneuvers
+                            .map((maneuver) => maneuver.system.ALIAS)
+                            .filter((alias) => !(alias in EXPECTED_5E_MANEUVER_BASES_AND_ELEMENTS));
+                        expect(
+                            uncovered,
+                            `Maneuvers missing from the expectations table: ${uncovered.join(", ")}`,
+                        ).to.deep.equal([]);
+                    });
+
+                    Object.entries(EXPECTED_5E_MANEUVER_BASES_AND_ELEMENTS).forEach(([alias, expectedElements]) => {
+                        const expected = [...expectedElements].sort();
+                        it(`"${alias}" should resolve to exactly [${expected.join(", ")}]`, function () {
+                            const maneuver = maneuvers.find((item) => item.system.ALIAS === alias);
+                            expect(maneuver, `Maneuver with ALIAS "${alias}" should exist`).to.exist;
+
+                            const actual = ALL_MANEUVER_BASES_AND_ELEMENTS.filter(
+                                (basisOrElementKey) => !!maneuverBasisOrElement(maneuver, basisOrElementKey),
+                            ).sort();
+
+                            expect(actual, `Maneuver "${alias}" EFFECT="${maneuver.system.EFFECT}"`).to.deep.equal(
+                                expected,
                             );
-                            expect(behaviors.length).to.be.greaterThan(
-                                0,
-                                `Maneuver "${maneuver.name}" should have at least 1 behavior`,
-                            );
-                            behaviors.forEach((behavior) => {
-                                expect(behavior).to.be.a(
-                                    "string",
-                                    `Each behavior for maneuver "${maneuver.name}" should be a string`,
-                                );
-                            });
                         });
                     });
                 });
