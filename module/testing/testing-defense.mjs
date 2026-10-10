@@ -2,6 +2,7 @@ import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench
 
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { performAdjustment } from "../actor/actor-adjustment.mjs";
+import { isAllOrNothingAvad } from "../item/item-attack.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { getActorDefensesVsAttack } from "../utility/defense.mjs";
 
@@ -294,6 +295,184 @@ export function registerDefenseTests(quench) {
                             );
                             assert.equal(defense.resistantValue, 30);
                             assert.equal(defense.defenseTotalValue, 30);
+                        });
+                    });
+                });
+
+                describe("Life Support vs AVAD/NND", function () {
+                    const lifeSupportBreathingXml = `
+                        <POWER XMLID="LIFESUPPORT" ID="1759300000001" BASECOST="0.0" LEVELS="0" ALIAS="Life Support" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            <ADDER XMLID="SELFCONTAINEDBREATHING" ID="1759300000002" BASECOST="10.0" LEVELS="0" ALIAS="Self-Contained Breathing" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="No" DISPLAYINSTRING="Yes" GROUP="No" SELECTED="YES">
+                                <NOTES />
+                            </ADDER>
+                        </POWER>
+                    `;
+
+                    const lifeSupportLongevityXml = `
+                        <POWER XMLID="LIFESUPPORT" ID="1759300000003" BASECOST="0.0" LEVELS="0" ALIAS="Life Support" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            <ADDER XMLID="LONGEVITY" ID="1759300000004" BASECOST="1.0" LEVELS="0" ALIAS="Longevity:" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="TWOHUNDRED" OPTIONID="TWOHUNDRED" OPTION_ALIAS="200 Years" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="No" DISPLAYINSTRING="Yes" GROUP="No" SELECTED="YES">
+                                <NOTES />
+                            </ADDER>
+                        </POWER>
+                    `;
+
+                    function lifeSupportTag(defense, lifeSupport) {
+                        return defense.defenseTags.find((tag) => tag.defenseItemId === lifeSupport.id);
+                    }
+
+                    describe("6e AVAD", function () {
+                        let actor;
+                        let lifeSupport;
+
+                        const allOrNothingAdderXml = `
+                                        <ADDER XMLID="NND" ID="1759300000007" BASECOST="-0.5" LEVELS="0" ALIAS="All Or Nothing" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" SHOWALIAS="Yes" PRIVATE="No" REQUIRED="No" INCLUDEINBASE="No" DISPLAYINSTRING="Yes" GROUP="No" SELECTED="YES">
+                                            <NOTES />
+                                        </ADDER>`;
+
+                        function avadAttackItem(avadInput, { allOrNothing = true } = {}) {
+                            const xml = `
+                                <POWER XMLID="ENERGYBLAST" ID="1759300000005" BASECOST="0.0" LEVELS="6" ALIAS="Blast" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                                    <NOTES />
+                                    <MODIFIER XMLID="AVAD" ID="1759300000006" BASECOST="0.0" LEVELS="0" ALIAS="Attack Versus Alternate Defense" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="VERYVERY" OPTIONID="VERYVERY" OPTION_ALIAS="Very Common -&gt; Very Common" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="${avadInput}" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                        <NOTES />
+                                        ${allOrNothing ? allOrNothingAdderXml : ""}
+                                    </MODIFIER>
+                                </POWER>
+                            `;
+                            return new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(xml, actor), {
+                                parent: actor,
+                            });
+                        }
+
+                        beforeEach(async function () {
+                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            lifeSupport = await HeroSystem6eItem.create(
+                                HeroSystem6eItem.itemDataFromXml(lifeSupportBreathingXml, actor),
+                                { parent: actor },
+                            );
+                        });
+
+                        afterEach(async function () {
+                            await deleteQuenchActor({ quench: this, actor });
+                        });
+
+                        it("AVAD is all or nothing only with the NND adder", async function () {
+                            assert.isTrue(isAllOrNothingAvad(avadAttackItem("PD").findModsByXmlid("AVAD")));
+                            assert.isFalse(
+                                isAllOrNothingAvad(
+                                    avadAttackItem("PD", { allOrNothing: false }).findModsByXmlid("AVAD"),
+                                ),
+                            );
+                        });
+
+                        it("AVAD vs PD does not count Life Support", async function () {
+                            const attack = avadAttackItem("PD");
+                            assert.equal(attack.attackDefenseVs, "PD");
+                            assert.isTrue(lifeSupport.isActive);
+
+                            const defense = getActorDefensesVsAttack(actor, attack);
+                            assert.notExists(lifeSupportTag(defense, lifeSupport));
+                            assert.equal(defense.defenseTotalValue, actor.system.characteristics.pd.value);
+                        });
+
+                        it("AVAD vs Life Support counts Life Support", async function () {
+                            const attack = avadAttackItem("Life Support");
+                            assert.equal(attack.attackDefenseVs, "LIFESUPPORT");
+
+                            const defense = getActorDefensesVsAttack(actor, attack);
+                            assert.exists(lifeSupportTag(defense, lifeSupport));
+                            assert.equal(defense.defenseTotalValue, 1);
+                        });
+
+                        it("AVAD vs Self-Contained Breathing counts Life Support with that adder", async function () {
+                            const attack = avadAttackItem("Life Support (Self-Contained Breathing)");
+                            assert.equal(attack.attackDefenseVs, "SELFCONTAINEDBREATHING");
+
+                            const defense = getActorDefensesVsAttack(actor, attack);
+                            assert.exists(lifeSupportTag(defense, lifeSupport));
+                            assert.equal(defense.defenseTotalValue, 1);
+                        });
+
+                        it("AVAD vs Self-Contained Breathing does not count other Life Support", async function () {
+                            const longevity = await HeroSystem6eItem.create(
+                                HeroSystem6eItem.itemDataFromXml(lifeSupportLongevityXml, actor),
+                                { parent: actor },
+                            );
+                            const attack = avadAttackItem("Life Support (Self-Contained Breathing)");
+
+                            const defense = getActorDefensesVsAttack(actor, attack);
+                            assert.notExists(lifeSupportTag(defense, longevity));
+                            assert.exists(lifeSupportTag(defense, lifeSupport));
+                        });
+
+                        it("Life Support unchecked in the conditional defense dialog is not counted", async function () {
+                            const attack = avadAttackItem("Life Support");
+
+                            const ignoredById = getActorDefensesVsAttack(actor, attack, {
+                                ignoreDefenseIds: [lifeSupport.id],
+                            });
+                            assert.notExists(lifeSupportTag(ignoredById, lifeSupport));
+                            assert.equal(ignoredById.defenseTotalValue, 0);
+
+                            const ignoredByXmlid = getActorDefensesVsAttack(actor, attack, {
+                                ignoreDefenseIds: ["LIFESUPPORT"],
+                            });
+                            assert.notExists(lifeSupportTag(ignoredByXmlid, lifeSupport));
+                            assert.equal(ignoredByXmlid.defenseTotalValue, 0);
+                        });
+                    });
+
+                    describe("5e NND", function () {
+                        let actor;
+                        let lifeSupport;
+
+                        function nndAttackItem(nndComments) {
+                            const xml = `
+                                <POWER XMLID="ENERGYBLAST" ID="1759300000008" BASECOST="0.0" LEVELS="6" ALIAS="Energy Blast" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                                    <NOTES />
+                                    <MODIFIER XMLID="NND" ID="1759300000009" BASECOST="1.0" LEVELS="0" ALIAS="No Normal Defense" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="STANDARD" OPTIONID="STANDARD" OPTION_ALIAS="[Standard]" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="${nndComments}" PRIVATE="No" FORCEALLOW="No">
+                                        <NOTES />
+                                    </MODIFIER>
+                                </POWER>
+                            `;
+                            return new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(xml, actor), {
+                                parent: actor,
+                            });
+                        }
+
+                        beforeEach(async function () {
+                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            lifeSupport = await HeroSystem6eItem.create(
+                                HeroSystem6eItem.itemDataFromXml(lifeSupportBreathingXml, actor),
+                                { parent: actor },
+                            );
+                        });
+
+                        afterEach(async function () {
+                            await deleteQuenchActor({ quench: this, actor });
+                        });
+
+                        it("NND is always all or nothing", async function () {
+                            assert.isTrue(isAllOrNothingAvad(nndAttackItem("Life Support").findModsByXmlid("NND")));
+                        });
+
+                        it("NND vs Life Support counts Life Support", async function () {
+                            const attack = nndAttackItem("Life Support");
+                            assert.equal(attack.attackDefenseVs, "LIFESUPPORT");
+                            assert.isTrue(lifeSupport.isActive);
+
+                            const defense = getActorDefensesVsAttack(actor, attack);
+                            assert.exists(lifeSupportTag(defense, lifeSupport));
+                            assert.equal(defense.defenseTotalValue, 1);
+                        });
+
+                        it("NND vs Force Field does not count Life Support", async function () {
+                            const attack = nndAttackItem("Force Field");
+
+                            const defense = getActorDefensesVsAttack(actor, attack);
+                            assert.notExists(lifeSupportTag(defense, lifeSupport));
                         });
                     });
                 });

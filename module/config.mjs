@@ -8026,7 +8026,14 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             rangeForItem: fixedValueFunction(HERO.RANGE_TYPES.SELF),
             costEnd: false,
             defenseTagVsAttack: function (actorItemDefense, attackItem, options) {
-                // Only vs AVAD, which is poorly supported
+                // Only defends vs AVAD/NND naming Life Support generally or one of the adders it has
+                const defenseVs = options.attackDefenseVs?.toUpperCase();
+                if (
+                    defenseVs !== "LIFESUPPORT" &&
+                    !actorItemDefense.adders.some((adder) => adder.XMLID === defenseVs)
+                ) {
+                    return null;
+                }
                 return createDefenseProfile(actorItemDefense, attackItem, 1, options);
             },
             baseEffectDicePartsBundle: noDamageBaseEffectDicePartsBundle,

@@ -135,6 +135,18 @@ export async function onMessageRendered(html) {
  * @param {HeroSystem6eItem} item
  * @returns {Object} plain item source
  */
+/**
+ * 6e AVAD with the All Or Nothing (NND) adder and every 5e NND do no damage if the target has any of the named defense.
+ * @param {object|undefined} avad - the AVAD or 5e NND modifier
+ * @returns {boolean}
+ */
+export function isAllOrNothingAvad(avad) {
+    if (!avad) {
+        return false;
+    }
+    return avad.XMLID === "NND" || !!avad.adders?.some((adder) => adder.XMLID === "NND");
+}
+
 function dehydrateItemSource(item) {
     const obj = item.toObject ? item.toObject(false) : foundry.utils.deepClone(item);
 
@@ -3539,21 +3551,16 @@ export async function _onApplyDamageToSpecificToken(item, _damageData, action, t
         vulnDesc: damageData.VulnDesc,
     } = determineVulerabilityToAttack(conditionalDefenses, ignoreDefenseIds));
 
-    // AVAD All or Nothing
-    if (avad) {
-        const nnd = avad.adders.find((o) => o.XMLID === "NND"); // Check for ALIAS="All Or Nothing" shouldn't be necessary
-        if (nnd && damageData.defenseAvad > 0) {
-            // render card
-            const speaker = ChatMessage.getSpeaker({ actor: item.actor, token: targetToken });
-            const chatData = {
-                author: game.user._id,
-                content: `${item.name} did no damage to ${targetToken.name}.`,
-                speaker: speaker,
-            };
+    if (isAllOrNothingAvad(avad) && damageData.defenseAvad > 0) {
+        const speaker = ChatMessage.getSpeaker({ actor: item.actor, token: targetToken });
+        const chatData = {
+            author: game.user._id,
+            content: `${item.name} did no damage to ${targetToken.name}.`,
+            speaker: speaker,
+        };
 
-            await ChatMessage.create(chatData);
-            return;
-        }
+        await ChatMessage.create(chatData);
+        return;
     }
 
     damageRoller.removeNDC(damageData.damageNegationValue);
