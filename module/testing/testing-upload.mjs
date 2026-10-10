@@ -9615,6 +9615,137 @@ export function registerUploadTests(quench) {
                     });
                 });
 
+                describe("Constant attack activation", function () {
+                    const continuousRkaContents = `
+                        <POWER XMLID="RKA" ID="1790405100001" BASECOST="0.0" LEVELS="2" ALIAS="Killing Attack - Ranged" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Continuous RKA" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            <MODIFIER XMLID="CONTINUOUS" ID="1790405100002" BASECOST="1.0" LEVELS="0" ALIAS="Continuous" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                                <NOTES />
+                            </MODIFIER>
+                        </POWER>
+                    `;
+                    const plainRkaContents = `
+                        <POWER XMLID="RKA" ID="1790405100003" BASECOST="0.0" LEVELS="2" ALIAS="Killing Attack - Ranged" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Plain RKA" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                        </POWER>
+                    `;
+                    const desolidificationContents = `
+                        <POWER XMLID="DESOLIDIFICATION" ID="1790405100004" BASECOST="40.0" LEVELS="0" ALIAS="Desolidification" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                        </POWER>
+                    `;
+                    const acrobaticsContents = `
+                        <SKILL XMLID="ACROBATICS" ID="1790405100005" BASECOST="3.0" LEVELS="0" ALIAS="Acrobatics" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" CHARACTERISTIC="DEX" FAMILIARITY="No" PROFICIENCY="No" LEVELSONLY="No">
+                            <NOTES />
+                        </SKILL>
+                    `;
+
+                    describe("created items 6e", function () {
+                        let actor;
+                        let continuousRka;
+                        let plainRka;
+                        let desolidification;
+                        let acrobatics;
+
+                        before(async function () {
+                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            const createItem = (contents) =>
+                                HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
+                                    parent: actor,
+                                });
+                            continuousRka = await createItem(continuousRkaContents);
+                            plainRka = await createItem(plainRkaContents);
+                            desolidification = await createItem(desolidificationContents);
+                            acrobatics = await createItem(acrobaticsContents);
+                        });
+
+                        after(async function () {
+                            await deleteQuenchActor({ quench: this, actor });
+                        });
+
+                        it("Continuous RKA is a constant power that costs END", function () {
+                            assert.equal(continuousRka.system.duration, CONFIG.HERO.DURATION_TYPES.CONSTANT);
+                            assert.isAbove(continuousRka.end, 0);
+                        });
+
+                        it("Continuous RKA is activatable", function () {
+                            assert.isTrue(continuousRka.isActivatable());
+                        });
+
+                        it("Continuous RKA starts inactive", function () {
+                            assert.isFalse(continuousRka.isActive);
+                        });
+
+                        it("Continuous RKA still rolls to hit", function () {
+                            assert.isTrue(continuousRka.rollsToHit());
+                        });
+
+                        it("Continuous RKA toggles on and off", async function () {
+                            await continuousRka.toggle();
+                            assert.isTrue(continuousRka.isActive);
+
+                            await continuousRka.toggle();
+                            assert.isFalse(continuousRka.isActive);
+                        });
+
+                        it("plain RKA is instant, not activatable, and stays active", function () {
+                            assert.equal(plainRka.system.duration, CONFIG.HERO.DURATION_TYPES.INSTANT);
+                            assert.isFalse(plainRka.isActivatable());
+                            assert.isTrue(plainRka.isActive);
+                        });
+
+                        it("constant non-attack power is activatable and starts active", function () {
+                            assert.equal(desolidification.system.duration, CONFIG.HERO.DURATION_TYPES.CONSTANT);
+                            assert.isTrue(desolidification.isActivatable());
+                            assert.isTrue(desolidification.isActive);
+                        });
+
+                        it("constant skill is not activatable", function () {
+                            assert.equal(acrobatics.system.duration, CONFIG.HERO.DURATION_TYPES.CONSTANT);
+                            assert.isFalse(acrobatics.isActivatable());
+                        });
+                    });
+
+                    describe("uploaded character 6e", function () {
+                        const contents = `<?xml version="1.0" encoding="UTF-16"?>
+                            <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic6E.hdt">
+                            <BASIC_CONFIGURATION BASE_POINTS="400" DISAD_POINTS="75" EXPERIENCE="0" RULES="Default" />
+                            <CHARACTER_INFO CHARACTER_NAME="Continuous attacker" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78" WEIGHT="220" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM=""><BACKGROUND /><PERSONALITY /><QUOTE /><TACTICS /><CAMPAIGN_USE /><APPEARANCE /><NOTES1 /><NOTES2 /><NOTES3 /><NOTES4 /><NOTES5 /></CHARACTER_INFO>
+                            <CHARACTERISTICS>
+                            <STR XMLID="STR" ID="1790405100010" BASECOST="0.0" LEVELS="0" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes"><NOTES /></STR>
+                            </CHARACTERISTICS>
+                            <SKILLS /><PERKS /><TALENTS /><MARTIALARTS />
+                            <POWERS>
+                            ${continuousRkaContents}
+                            ${plainRkaContents}
+                            </POWERS>
+                            <DISADVANTAGES /><EQUIPMENT />
+                            </CHARACTER>`;
+                        let actor;
+                        let continuousRka;
+                        let plainRka;
+
+                        before(async function () {
+                            actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                            continuousRka = actor.items.find((item) => item.name === "Continuous RKA");
+                            plainRka = actor.items.find((item) => item.name === "Plain RKA");
+                        });
+
+                        after(async function () {
+                            await deleteQuenchActor({ quench: this, actor });
+                        });
+
+                        it("Continuous RKA uploads inactive", function () {
+                            assert.isTrue(continuousRka.isActivatable());
+                            assert.isFalse(continuousRka.isActive);
+                        });
+
+                        it("plain RKA uploads active", function () {
+                            assert.isTrue(plainRka.isActive);
+                        });
+                    });
+                });
+
                 describe("VPP 6e", function () {
                     const contents = `
                         <VPP XMLID="GENERIC_OBJECT" ID="1747456137874" BASECOST="0.0" LEVELS="10" ALIAS="Variable Power Pool" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="Gadget Pool" QUANTITY="1">
