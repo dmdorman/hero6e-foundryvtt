@@ -6374,6 +6374,11 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
     }
 
     get endPer1mMovement() {
+        // FTL and Gliding cost no END unless bought with Costs END
+        if (this.baseInfo?.type?.includes("movement") && !this.baseInfo.costEnd && !this.findModsByXmlid("COSTSEND")) {
+            return 0;
+        }
+
         // All begin with all movements costing 1 END per fraction of 10m moved
         let end = 0.1;
 
@@ -6385,8 +6390,8 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         const reducedEnd =
             this.findModsByXmlid("REDUCEDEND") || (this.parentItem && this.parentItem.findModsByXmlid("REDUCEDEND"));
         if (reducedEnd && reducedEnd.OPTION === "HALFEND") {
-            end = roundFavorPlayerTowardsZero((this.system._activePointsWithoutEndMods || this.activePoints) / 10);
-            end = Math.max(1, roundFavorPlayerTowardsZero(end / 2));
+            // A per-metre rate; the movement total is rounded once when charged
+            end /= 2;
         } else if (reducedEnd && reducedEnd.OPTION === "ZERO") {
             end = 0;
         }
