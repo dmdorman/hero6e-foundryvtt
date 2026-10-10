@@ -1,6 +1,14 @@
 # Releases
 
-### Version 5.0.2 Hotfix 20260920 [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+### Version 5.0.3 20261010 [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+
+- Constant to-hit powers that cost END (e.g. RKA with Continuous modifier) now can be enabled and disabled.
+- Movement END is no longer prematurely capped and should properly use current rather than purchased values.
+- Movement powers with Reduced (Half) Endurance modifier should no longer unexpectedly cost a multiple of the power's active points.
+- Fixed active Life Support powers always counting as a defense against AVAD/NND attacks.
+- Hitting enter on the actor sheet should no longer create an active effect titled "New Effect."
+
+### Version 5.0.2 Hotfix 20260920
 
 - Fix issue with window derender for region replacement destroying combat tracker application.
 
