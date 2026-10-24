@@ -17,6 +17,7 @@ import {
 import { Attack, actionToJSON } from "../utility/attack.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
 import { characteristicValueToDiceParts } from "../utility/damage.mjs";
+import { actorMovementKey } from "../utility/movement.mjs";
 import { clamp, roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
 import {
@@ -3783,24 +3784,20 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         return price.toFixed(2);
     }
 
+    /**
+     * The movement characteristic key this actor uses.
+     *
+     * The actor is the source of truth for the active movement mode, the same way it holds STUN, BODY,
+     * and END for every linked token. `propagateMovementMode` writes the flag when a token HUD selection
+     * changes, and keeps every linked token carrying the matching HUD action key.
+     *
+     * A stored key the actor no longer owns falls back to the default mode, so a drained power cannot
+     * leave this getter reporting a mode the actor cannot use.
+     *
+     * @returns {string} A movement characteristic key, for example "flight", or "none".
+     */
     get activeMovement() {
-        const movementPowers = this.system.is5e ? CONFIG.HERO.movementPowers5e : CONFIG.HERO.movementPowers;
-
-        let movementItems = [];
-        for (const key of Object.keys(this.system.characteristics).filter((o) => movementPowers[o])) {
-            const char = this.getCharacteristic(key);
-            if ((parseInt(char.value) || 0) > 0) {
-                char._id = key;
-                char.name = movementPowers[key];
-                movementItems.push(char);
-            }
-        }
-        const _activeMovement =
-            movementItems.length === 0
-                ? "none"
-                : movementItems.find((o) => o._id === this.flags[game.system.id]?.activeMovement)?._id ||
-                  movementItems[0]._id;
-        return _activeMovement;
+        return actorMovementKey(this);
     }
 
     static stunThresholdForType(type) {

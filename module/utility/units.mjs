@@ -1,4 +1,5 @@
 import { roundFavorPlayerTowardsZero } from "./round.mjs";
+import { actorMovementKey, asTokenDocument } from "./movement.mjs";
 import { squelch } from "./util.mjs";
 
 export const lbsInOneKg = 2.2046226218;
@@ -253,21 +254,29 @@ export function currentSceneUsesHexGrid() {
 /**
  * Calculate the velocity in system units (5e is " and 6e in m).
  *
- * @param {Object} actor
+ * Pass the thing that is moving. A token resolves through its actor, so a token and its actor give the
+ * same answer. The actor holds the active movement mode, and every linked token stays in sync with it.
  *
- * @returns {Number}
+ * @param {HeroSystem6eActor|HeroSystem6eToken|HeroSystem6eTokenDocument} mover The actor or the
+ *                                                                             token that is
+ *                                                                             moving.
+ *
+ * @returns {number} Velocity in the current scene's system units.
  */
-export function calculateVelocityInSystemUnits(actor) {
-    let velocity;
+export function calculateVelocityInSystemUnits(mover) {
+    const tokenDocument = asTokenDocument(mover);
+    const actor = tokenDocument?.actor ?? mover;
+    const movementKey = actorMovementKey(actor);
 
     // Simplistic velocity calc using current movement
     // TODO: This is likely wrong for Teleport and other movements with quirky velocity rules.
-    velocity = parseInt(actor.getMovementCharacteristic(actor.activeMovement)?.value || 0);
+    let velocity = parseInt(actor.getMovementCharacteristic(movementKey)?.value || 0);
 
     // Sanity check
     if (velocity <= 0) {
         console.warn(`Calculated velocity of ${velocity} is invalid, using simplistic calculation`);
-        velocity = Math.max(0, parseInt(actor.getMovementCharacteristic(actor.activeMovement)?.value || 0));
+
+        velocity = Math.max(0, parseInt(actor.getMovementCharacteristic(movementKey)?.value || 0));
     }
 
     return velocity;

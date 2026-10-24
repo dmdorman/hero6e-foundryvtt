@@ -60,6 +60,7 @@ import {
 } from "../utility/damage.mjs";
 import { getActorDefensesVsAttack, getConditionalDefenses, getItemDefenseVsAttack } from "../utility/defense.mjs";
 import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMetres } from "../utility/range.mjs";
+import { AIRBORNE_MOVEMENT_KEYS, movementDisplayName, tokenMovementKey } from "../utility/movement.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import {
     calculateVelocityInSystemUnits,
@@ -332,7 +333,7 @@ export async function collectActionDataBeforeToHitOptions(item, options = {}) {
     // [NORMALDC] +v/5 Strike, FMove
     if ((item.system.effect || "").match(/v\/\d+/)) {
         data.showVelocity = true;
-        data.velocity = calculateVelocityInSystemUnits(item.actor);
+        data.velocity = calculateVelocityInSystemUnits(token ?? actor);
         data.velocitySystemUnits = getSystemDisplayUnits(item.is5e);
     }
 
@@ -4897,7 +4898,7 @@ async function _calcDamage(damageRoller, item, options) {
     return damageDetail;
 }
 
-async function _calcKnockback(bodyForKbCalculations, item, options, knockbackMultiplier) {
+export async function _calcKnockback(bodyForKbCalculations, item, options, knockbackMultiplier) {
     let useKnockback = false;
     let knockbackMessage = "";
     let knockbackRenderedResult = null;
@@ -4938,28 +4939,19 @@ async function _calcKnockback(bodyForKbCalculations, item, options, knockbackMul
 
         let knockbackDice = 2;
 
-        const actor = options?.targetToken?.actor;
+        // Target is in the air: -1d6.
+        // The actor holds the active movement mode, and every linked token stays in sync with it, so the
+        // answer does not depend on which token of the target we hold.
+        const activeMovement = tokenMovementKey(options.targetToken);
 
-        // Target is in the air -1d6
-        // TODO: This is perhaps not the right check as they could just have the movement radio on. Consider a flying status
-        //       when more than 0m off the ground? This same effect should also be considered for gliding.
-        const activeMovement = options.targetToken?.actor?.flags?.[game.system.id]?.activeMovement;
-        if (["flight", "gliding"].includes(activeMovement)) {
-            // Double check to make sure FLIGHT or GLIDING is still on
-            if (
-                options.targetToken.actor.items.find(
-                    (o) => o.system.XMLID === activeMovement.toUpperCase() && o.isActive,
-                )
-            ) {
-                knockbackDice -= 1;
-                knockbackTags.push({
-                    value: "-1d6KB",
-                    name: "target is in the air",
-                    title: `Knockback Modifier ${options.targetToken?.actor?.flags?.[game.system.id]?.activeMovement}`,
-                });
-            } else {
-                console.warn(`${activeMovement} selected but that power is not active.`);
-            }
+        if (AIRBORNE_MOVEMENT_KEYS.includes(activeMovement)) {
+            knockbackDice -= 1;
+
+            knockbackTags.push({
+                value: "-1d6KB",
+                name: "target is in the air",
+                title: `Knockback Modifier\n${movementDisplayName(activeMovement)}`,
+            });
         }
 
         // Target Roll With A Punch -1d6
