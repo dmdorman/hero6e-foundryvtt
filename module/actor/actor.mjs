@@ -17,7 +17,11 @@ import {
 import { Attack, actionToJSON } from "../utility/attack.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
 import { characteristicValueToDiceParts } from "../utility/damage.mjs";
-import { actorMovementKey } from "../utility/movement.mjs";
+import {
+    changedMovementCharacteristic,
+    isMovementPropagationOwner,
+    queueResyncMovementMode,
+} from "../utility/movement.mjs";
 import { clamp, roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
 import {
@@ -1258,6 +1262,13 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const systemData = changed?.system || {};
         if (systemData.senses || changed.effects) {
             canvas.perception?.update({ initializeVision: true, refreshLighting: true });
+        }
+
+        // 3. Drop a movement mode the actor can no longer move on. An effect can zero the characteristic
+        // behind the selected mode, and every token HUD would keep highlighting it. Re-resolving stores a
+        // usable mode, or "none" when no movement power is left.
+        if (isMovementPropagationOwner(userId) && changedMovementCharacteristic(this, changed)) {
+            queueResyncMovementMode(this);
         }
     }
 
@@ -3782,22 +3793,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const equipment = this.items.filter((item) => item.type === "equipment" && !item.parentItem && item.isCarried);
         const price = equipment.reduce((a, b) => a + b.system.PRICE, 0);
         return price.toFixed(2);
-    }
-
-    /**
-     * The movement characteristic key this actor uses.
-     *
-     * The actor is the source of truth for the active movement mode, the same way it holds STUN, BODY,
-     * and END for every linked token. `propagateMovementMode` writes the flag when a token HUD selection
-     * changes, and keeps every linked token carrying the matching HUD action key.
-     *
-     * A stored key the actor no longer owns falls back to the default mode, so a drained power cannot
-     * leave this getter reporting a mode the actor cannot use.
-     *
-     * @returns {string} A movement characteristic key, for example "flight", or "none".
-     */
-    get activeMovement() {
-        return actorMovementKey(this);
     }
 
     static stunThresholdForType(type) {

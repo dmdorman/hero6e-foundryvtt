@@ -1,6 +1,11 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { characteristicMaxAddChanges } from "../utility/active-effects.mjs";
-import { actorMovementKey, MOVEMENT_SYNC_OPTION, queuePropagateMovementMode } from "../utility/movement.mjs";
+import {
+    MOVEMENT_SYNC_OPTION,
+    isMovementPropagationOwner,
+    queuePropagateMovementMode,
+    queueInitializeTokenMovementAction,
+} from "../utility/movement.mjs";
 import { convertSystemUnitsToMetres, gridUnitsToMeters } from "../utility/units.mjs";
 
 const { TokenDocument } = foundry.documents;
@@ -103,6 +108,27 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
     }
 
     /**
+     * Give a new token the movement action its actor can use.
+     *
+     * A token created without an action inherits `CONFIG.Token.movement.defaultAction`, so a token whose
+     * actor cannot move would report the running distance.
+     *
+     * @override
+     * @param {object} data The created data.
+     * @param {object} options Options passed through the create operation.
+     * @param {string} userId The id of the user who created the token.
+     */
+    _onCreate(data, options, userId) {
+        super._onCreate(data, options, userId);
+
+        if (this._source.movementAction || !isMovementPropagationOwner(userId)) {
+            return;
+        }
+
+        queueInitializeTokenMovementAction(this);
+    }
+
+    /**
      * Fan a movement mode change out to the actor and to every token linked to that actor.
      *
      * Only the client that made the change propagates. Remote clients receive the same update through
@@ -124,23 +150,11 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
             return;
         }
 
-        if (userId !== game.user.id) {
+        if (!isMovementPropagationOwner(userId)) {
             return;
         }
 
         queuePropagateMovementMode(this, changed.movementAction);
-    }
-
-    /**
-     * The movement characteristic key this token's actor is using.
-     *
-     * The actor holds the mode. Every linked token stays in sync with the actor, so each token HUD shows
-     * the same selection.
-     *
-     * @returns {string} A movement characteristic key, for example `"flight"`, or `"none"`.
-     */
-    get activeMovement() {
-        return actorMovementKey(this.actor);
     }
 
     get _movementHistoryEndCost() {
@@ -209,15 +223,6 @@ function withOverflowRate(capabilities) {
 export class HeroSystem6eToken extends Token {
     constructor(document) {
         super(document);
-    }
-
-    /**
-     * The movement characteristic key this token's actor is using.
-     *
-     * @returns {string} A movement characteristic key, for example `"flight"`, or `"none"`.
-     */
-    get activeMovement() {
-        return this.document.activeMovement;
     }
 
     async _drawEffects() {

@@ -13,14 +13,35 @@
  *
  * The HUD registers its action keys in uppercase, such as `FLIGHT` and `GLIDING`. Characteristic keys
  * are lowercase, such as `flight` and `gliding`. The helpers below convert between the two.
+ *
+ * The mode `"none"` means the actor has no way to move.
  */
 
 /**
- * Movement modes that place the character in the air.
+ * HUD action key for the no-movement state.
  *
- * @type {ReadonlyArray<string>}
+ * HERO registers this key in `CONFIG.Token.movement.actions` with a maximum combat and non-combat distance
+ * of 0. A token that cannot move holds it, so every report of allowed distance reads 0. A token that holds
+ * nothing instead inherits {@link CONFIG.Token.movement.defaultAction}, which would report that mode's
+ * distance for a character who has none.
+ *
+ * @type {string}
  */
-export const AIRBORNE_MOVEMENT_KEYS = Object.freeze(["flight", "gliding"]);
+export const MOVEMENT_NONE_ACTION = "NONE";
+
+/**
+ * Convert a movement mode to the HUD action key that stores it.
+ *
+ * Characteristic keys are lowercase and HUD action keys are uppercase. The mode `"none"` becomes
+ * `MOVEMENT_NONE_ACTION`, which is a registered action worth 0 distance.
+ *
+ * @param {string} movementKey A movement characteristic key, or `"none"`.
+ *
+ * @returns {string} The HUD action key.
+ */
+export function movementActionForMode(movementKey) {
+    return movementKey.toUpperCase();
+}
 
 /**
  * Return the actor flag path that holds the active movement characteristic key.
@@ -31,7 +52,7 @@ export const AIRBORNE_MOVEMENT_KEYS = Object.freeze(["flight", "gliding"]);
  * @returns {string} A Foundry property path, for example `"flags.hero6efoundryvttv2.activeMovement"`.
  */
 export function activeMovementFlag() {
-    return `flags.${game.system.id || "hero6efoundryvttv2"}.activeMovement`;
+    return `flags.${game.system.id}.activeMovement`;
 }
 
 /**
@@ -96,19 +117,22 @@ export function defaultMovementKey(ownedKeys) {
 /**
  * Resolve a token HUD action to a movement characteristic key the actor can use.
  *
- * The HUD sends an uppercase action key such as `"FLIGHT"`, or `null` when the player picks Default.
- * A cleared selection resolves to running. A selection the actor does not own resolves to the default
- * mode, which covers a power drained to zero since the player made the selection.
+ * The HUD sends an uppercase action key such as `"FLIGHT"`. The token configuration sheet and macros can
+ * still send `null`. A cleared selection resolves to running. A selection the actor does not own resolves
+ * to the default mode, which covers a power drained to zero since the player made the selection.
+ *
+ * `MOVEMENT_NONE_ACTION` resolves to `"none"`. Players cannot select that action, so it reaches here only
+ * when the token holds the no-movement state.
  *
  * @param {HeroSystem6eActor} actor Actor the selection applies to.
- * @param {string|null} movementAction The HUD action key, or null for Default.
+ * @param {string|null} movementAction The HUD action key, or null for no selection.
  *
  * @returns {string} A movement characteristic key the actor owns, or `"none"`.
  */
 export function movementKeyForAction(actor, movementAction) {
     const ownedKeys = ownedMovementKeys(actor);
 
-    if (ownedKeys.length === 0) {
+    if (ownedKeys.length === 0 || movementAction === MOVEMENT_NONE_ACTION) {
         return "none";
     }
 
@@ -202,7 +226,10 @@ export function linkedTokenDocuments(actor) {
         return [];
     }
 
-    return game.scenes.contents.flatMap((scene) => scene.tokens.filter((token) => token.actorId === actor.id));
+    // An unlinked token reads its own copy of the actor, so it must not inherit another token's mode.
+    return game.scenes.contents.flatMap((scene) =>
+        scene.tokens.filter((token) => token.isLinked && token.actorId === actor.id),
+    );
 }
 
 /**
@@ -223,7 +250,7 @@ let propagationChain = Promise.resolve();
  * returned promise when you need to know the actor and its tokens are in sync.
  *
  * @param {HeroSystem6eTokenDocument} sourceTokenDocument The token whose movementAction changed.
- * @param {string|null} movementAction The new HUD action key, or null for Default.
+ * @param {string|null} movementAction The new HUD action key, or null for no selection.
  *
  * @returns {Promise<void>} Resolves when this propagation and any it waited behind have finished.
  */
@@ -238,12 +265,71 @@ export function queuePropagateMovementMode(sourceTokenDocument, movementAction) 
 }
 
 /**
+ * Queue a movement mode re-resolve behind any propagation already in flight.
+ *
+ * @param {HeroSystem6eActor} actor Actor whose characteristics changed.
+ *
+ * @returns {Promise<void>} Resolves when this re-resolve and any it waited behind have finished.
+ */
+export function queueResyncMovementMode(actor) {
+    propagationChain = propagationChain
+        .then(() => resyncMovementMode(actor))
+        .catch((error) => {
+            console.warn(`Hero System 6e: movement mode resync failed: ${error.message}`, error);
+        });
+
+    return propagationChain;
+}
+
+/**
+ * Report whether this client owns movement writes.
+ *
+ * Propagation writes the actor flag and the tokens of every scene. The GM holds those rights, so the GM
+ * takes the job and a player client never fails on a token it cannot write. `game.users.activeGM` names
+ * one GM, so two connected GMs do not both write. With no GM connected, the client that made the change
+ * propagates as far as its own rights allow.
+ *
+ * @param {string} userId The id of the user who made the originating change.
+ *
+ * @returns {boolean} True when this client must propagate.
+ */
+export function isMovementPropagationOwner(userId) {
+    const owner = game.users.activeGM ?? null;
+
+    return owner ? owner.id === game.user.id : userId === game.user.id;
+}
+
+/**
+ * Report whether an actor change touches a movement characteristic.
+ *
+ * A change to a movement value can cost the actor its selected mode, so the caller re-resolves the mode.
+ * The check covers the whole characteristic, because a max change recomputes the value.
+ *
+ * @param {HeroSystem6eActor} actor Actor that changed.
+ * @param {object} changed The change object `_onUpdate` received.
+ *
+ * @returns {boolean} True when a movement characteristic changed.
+ */
+export function changedMovementCharacteristic(actor, changed) {
+    const characteristics = changed?.system?.characteristics;
+
+    if (!characteristics) {
+        return false;
+    }
+
+    const movementPowers = actor.system.is5e ? CONFIG.HERO.movementPowers5e : CONFIG.HERO.movementPowers;
+
+    return Object.keys(foundry.utils.flattenObject(characteristics)).some((path) => movementPowers[path.split(".")[0]]);
+}
+
+/**
  * Return a promise that resolves once the propagation queue has fully drained.
  *
  * Each propagation queues one follow-up round that finds nothing left to write. Awaiting a snapshot of
  * the chain returns before that follow-up runs, so this loops until the chain reference stops changing.
  * Use it to read a settled state instead of guessing at a delay.
  *
+ * @internal
  * @returns {Promise<void>} Resolves when no propagation remains in flight.
  */
 export async function movementPropagationSettled() {
@@ -267,20 +353,24 @@ export async function movementPropagationSettled() {
 export const MOVEMENT_SYNC_OPTION = "heroSystem6eMovementSync";
 
 /**
- * Propagate a movement mode to the actor and to every token linked to that actor.
+ * Propagate a movement mode to the actor and to the tokens that read that actor.
  *
- * The actor flag is the authoritative record. Each linked token also receives the matching HUD action
- * key, because the token HUD highlights from the token's own persisted value. Writing every linked
- * token makes each HUD show the same selection.
+ * The actor flag is the authoritative record. Each token also receives the matching HUD action key,
+ * because the token HUD highlights from the token's own persisted value. Writing every affected token
+ * makes each HUD show the same selection.
  *
- * The originating token is part of the fan-out. That lets a cleared selection land on `RUNNING`
- * instead of staying `null`, so the actor always holds a valid mode.
+ * A linked token shares one actor with all that actor's tokens, so the fan-out spans all scenes. An
+ * unlinked token holds its own copy of the actor, so the fan-out covers only that token.
  *
- * Guards make this converge. A write only happens when the stored value differs, so the follow-up
- * updates this function triggers find nothing left to change and stop.
+ * The originating token is part of the fan-out. That lets a cleared selection land on the actor default,
+ * such as `RUNNING`, instead of staying `null`.
+ *
+ * An actor with no movement power, such as a base2, resolves to `"none"`. The fan-out then stores `null`
+ * on every linked token, which is the value that clears the HUD highlight.
+ *
  *
  * @param {HeroSystem6eTokenDocument} sourceTokenDocument The token whose movementAction changed.
- * @param {string|null} movementAction The new HUD action key, or null for Default.
+ * @param {string|null} movementAction The new HUD action key, or null for no selection.
  *
  * @returns {Promise<void>} Resolves when the actor and every linked token are in sync.
  */
@@ -291,17 +381,65 @@ export async function propagateMovementMode(sourceTokenDocument, movementAction)
         return;
     }
 
-    const movementKey = movementKeyForAction(actor, movementAction);
-    const actionKey = movementKey.toUpperCase();
+    await writeMovementMode(actor, movementKeyForAction(actor, movementAction));
+}
+
+/**
+ * Replace a stored movement mode the actor can no longer use.
+ *
+ * An effect can drain the characteristic behind the selected mode. The stored mode must then move to a
+ * mode the actor can still move on, or to "none" when no movement power is left, and every token has to
+ * follow so the HUD stops highlighting the unusable mode.
+ *
+ * An actor with no stored mode is left alone. Nothing needs correcting, and writing one would touch every
+ * token of that actor on any characteristic change.
+ *
+ * @param {HeroSystem6eActor} actor Actor whose characteristics changed.
+ *
+ * @returns {Promise<void>} Resolves when the actor and its tokens hold a usable mode.
+ */
+export async function resyncMovementMode(actor) {
+    const storedKey = actor ? foundry.utils.getProperty(actor, activeMovementFlag()) : undefined;
+
+    if (storedKey === undefined || storedKey === null) {
+        return;
+    }
+
+    const resolvedKey = actorMovementKey(actor);
+
+    if (resolvedKey === storedKey) {
+        return;
+    }
+
+    await writeMovementMode(actor, resolvedKey);
+}
+
+/**
+ * Write a resolved movement mode to the actor and to the tokens that read it.
+ *
+ * @param {HeroSystem6eActor} actor Actor that holds the mode.
+ * @param {string} movementKey Resolved movement characteristic key, or "none".
+ *
+ * @returns {Promise<void>} Resolves when the actor and its tokens hold the mode.
+ */
+async function writeMovementMode(actor, movementKey) {
+    // An actor with no movement power, such as a base2 actor or a character whose last power an effect
+    // drained, holds the registered no-movement action. That action reports a maximum combat and non-combat
+    // distance of 0, so the ruler, the HUD, and any distance report agree the token cannot move.
+    // Storing null instead would inherit CONFIG.Token.movement.defaultAction, which hands the token the
+    // running distance it does not have.
+    const actionKey = movementActionForMode(movementKey);
 
     if (foundry.utils.getProperty(actor, activeMovementFlag()) !== movementKey) {
         await actor.update({ [activeMovementFlag()]: movementKey });
     }
 
+    // An unlinked token owns a copy of the actor, so only that token reads this mode. A world actor is
+    // shared by every token linked to it, in every scene.
     // Compare the stored value, not the getter. The getter infers RUNNING for a null selection, which
-    // would hide a token that still needs the explicit value written. The HUD highlights from the stored
-    // value too, so writing it explicitly keeps every token HUD identical.
-    const staleTokens = linkedTokenDocuments(actor).filter((token) => token._source.movementAction !== actionKey);
+    // would hide a token that still needs the explicit value written.
+    const tokens = actor.parent?.documentName === "Token" ? [actor.parent] : linkedTokenDocuments(actor);
+    const staleTokens = tokens.filter((token) => token._source.movementAction !== actionKey);
 
     if (staleTokens.length === 0) {
         return;
@@ -316,18 +454,88 @@ export async function propagateMovementMode(sourceTokenDocument, movementAction)
         updatesByScene.set(token.parent.id, updates);
     }
 
+    await writeTokenActions(updatesByScene, `movement mode "${movementKey}"`);
+}
+
+/**
+ * Write movement actions to tokens, grouped by scene, without triggering propagation.
+ *
+ * `TokenDocument.updateDocuments` takes one parent scene, so callers group the updates first.
+ *
+ * @param {Map<string, object[]>} updatesByScene Token updates keyed by scene id.
+ * @param {string} description What is being written, for the warning when a scene cannot be written.
+ *
+ * @returns {Promise<void>} Resolves when every writable scene holds the new actions.
+ */
+async function writeTokenActions(updatesByScene, description) {
     for (const [sceneId, updates] of updatesByScene) {
         const scene = game.scenes.get(sceneId);
-        const options = {};
-        options[MOVEMENT_SYNC_OPTION] = true;
 
         try {
-            await foundry.documents.TokenDocument.updateDocuments(updates, { parent: scene, ...options });
+            await foundry.documents.TokenDocument.updateDocuments(updates, {
+                parent: scene,
+                [MOVEMENT_SYNC_OPTION]: true,
+            });
         } catch (error) {
             // A player who lacks permission for another scene's token must not break their own selection.
-            console.warn(
-                `Hero System 6e: could not sync movement mode "${movementKey}" to scene "${scene?.name}": ${error.message}`,
-            );
+            console.warn(`Hero System 6e: could not sync ${description} to scene "${scene?.name}": ${error.message}`);
         }
     }
+}
+
+/**
+ * Return the movement action a token should hold.
+ *
+ * A token with no action inherits `CONFIG.Token.movement.defaultAction`, which reports the running distance
+ * even for an actor who cannot move. This resolves the actor's mode instead, so movers hold their mode and
+ * tokens that cannot move hold `MOVEMENT_NONE_ACTION`, which is worth 0 distance.
+ *
+ * @param {HeroSystem6eTokenDocument} tokenDocument Token to read.
+ *
+ * @returns {string} The HUD action key.
+ */
+export function movementActionForToken(tokenDocument) {
+    return movementActionForMode(actorMovementKey(tokenDocument.actor));
+}
+
+/**
+ * Build the update that gives one token the movement action its actor can use.
+ *
+ * @param {HeroSystem6eTokenDocument} tokenDocument Token that holds no action.
+ *
+ * @returns {object} Token update data for `TokenDocument.updateDocuments`.
+ */
+function initializeUpdateForToken(tokenDocument) {
+    return { _id: tokenDocument.id, movementAction: movementActionForToken(tokenDocument) };
+}
+
+/**
+ * Queue a new token's movement action behind any propagation already in flight.
+ *
+ * A token created without an action inherits the default, which reports a distance its actor may not have.
+ * `TokenDocument#_onCreate` calls this on the client that owns movement writes.
+ *
+ * @param {HeroSystem6eTokenDocument} tokenDocument The token that was created.
+ *
+ * @returns {Promise<void>} Resolves when this write and any it waited behind have finished.
+ */
+export function queueInitializeTokenMovementAction(tokenDocument) {
+    propagationChain = propagationChain
+        .then(async () => {
+            if (!tokenDocument || tokenDocument._source.movementAction) {
+                return;
+            }
+
+            const update = initializeUpdateForToken(tokenDocument);
+
+            await writeTokenActions(
+                new Map([[tokenDocument.parent.id, [update]]]),
+                `a movement action to token "${tokenDocument.name}"`,
+            );
+        })
+        .catch((error) => {
+            console.warn(`Hero System 6e: assigning a movement action failed: ${error.message}`, error);
+        });
+
+    return propagationChain;
 }

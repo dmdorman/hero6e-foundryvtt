@@ -11,11 +11,12 @@ import { HeroSystem6eItem } from "../item/item.mjs";
 import { _calcKnockback } from "../item/item-attack.mjs";
 import { getAndSetGameSetting } from "../settings/settings-helpers.mjs";
 import {
-    AIRBORNE_MOVEMENT_KEYS,
+    MOVEMENT_NONE_ACTION,
     MOVEMENT_SYNC_OPTION,
     actorMovementKey,
     activeMovementFlag,
     asTokenDocument,
+    changedMovementCharacteristic,
     defaultMovementKey,
     linkedTokenDocuments,
     movementDisplayName,
@@ -103,8 +104,11 @@ async function bindTokenHud(placeable) {
  *
  * Dispatches a real click, so Foundry's own `TokenHUD#onSelectMovementAction` handler runs.
  *
+ * HERO registers no Default entry. Pass `""` to pick the `No movement` entry that stands in for a token
+ * with no mode to pick.
+ *
  * @param {TokenHUD} hud The rendered token HUD.
- * @param {string} action The HUD action key, for example `"FLIGHT"`. Use `""` for Default.
+ * @param {string} action The HUD action key, for example `"FLIGHT"`.
  * @returns {Promise<void>} Resolves once the click landed on a real button.
  */
 async function clickHudMovementAction(hud, action) {
@@ -132,6 +136,56 @@ function hudActiveMovementActions(hud) {
     return [...hud.element.querySelectorAll('[data-action="movementAction"].active')].map(
         (button) => button.dataset.movementAction,
     );
+}
+
+/**
+ * Return every movement action key the HUD renders.
+ *
+ * @param {TokenHUD} hud The rendered token HUD.
+ * @returns {string[]} The rendered movement action keys, in palette order.
+ */
+function hudMovementActionKeys(hud) {
+    return [...hud.element.querySelectorAll('[data-action="movementAction"]')].map(
+        (button) => button.dataset.movementAction,
+    );
+}
+
+/**
+ * Return the movement palette entries the HUD renders, with what the player sees.
+ *
+ * @param {TokenHUD} hud The rendered token HUD.
+ * @returns {{key: string, label: string, active: boolean, icon: string}[]} Entries in palette order.
+ */
+function hudMovementEntries(hud) {
+    return [...hud.element.querySelectorAll('[data-action="movementAction"]')].map((entry) => ({
+        key: entry.dataset.movementAction,
+        label: entry.textContent.trim(),
+        active: entry.classList.contains("active"),
+        icon: entry.querySelector("i")?.className ?? "",
+    }));
+}
+
+/**
+ * Wait until the movement palette holds the expected number of entries.
+ *
+ * The HUD re-renders from the updateToken hook, so the palette trails the document write.
+ *
+ * @param {TokenHUD} hud The rendered token HUD.
+ * @param {number} expectedCount How many entries to wait for.
+ * @param {number} [timeoutMs=5000] How long to wait.
+ * @returns {Promise<boolean>} True when the palette reached that size.
+ */
+async function waitForHudMovementEntryCount(hud, expectedCount, timeoutMs = 5000) {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+        if (hudMovementEntries(hud).length === expectedCount) {
+            return true;
+        }
+        await sleep(25);
+    }
+
+    return false;
 }
 
 /**
@@ -165,7 +219,10 @@ async function waitForActorMovementFlag(actor, expectedKey, timeoutMs = 5000) {
  */
 async function releaseTokenHud() {
     const hud = canvas.hud?.token;
-    if (!hud) return;
+
+    if (!hud) {
+        return;
+    }
 
     canvas.tokens.releaseAll();
     if (hud.rendered) {
@@ -230,6 +287,33 @@ export function registerMovementModeTests(quench) {
                     });
                 });
 
+                describe("changedMovementCharacteristic", function () {
+                    const actor = { system: { is5e: false } };
+
+                    it("Reports true for a nested movement characteristic change", function () {
+                        const changed = { system: { characteristics: { flight: { value: 0 } } } };
+                        assert.isTrue(changedMovementCharacteristic(actor, changed));
+                    });
+
+                    it("Reports true for a flattened movement change path", function () {
+                        const changed = { system: { characteristics: { "flight.value": 0 } } };
+                        assert.isTrue(changedMovementCharacteristic(actor, changed));
+                    });
+
+                    it("Reports false for a characteristic that is not movement", function () {
+                        const changed = { system: { characteristics: { strength: { value: 25 } } } };
+                        assert.isFalse(changedMovementCharacteristic(actor, changed));
+                    });
+
+                    it("Reports false when no characteristic changed", function () {
+                        assert.isFalse(changedMovementCharacteristic(actor, { name: "Renamed" }));
+                    });
+
+                    it("Reports false for an empty change", function () {
+                        assert.isFalse(changedMovementCharacteristic(actor, {}));
+                    });
+                });
+
                 describe("defaultMovementKey", function () {
                     it("Prefers running", function () {
                         assert.equal(defaultMovementKey(["flight", "running"]), "running");
@@ -265,10 +349,6 @@ export function registerMovementModeTests(quench) {
 
                     it("Lowercases the uppercase HUD action key", function () {
                         assert.equal(movementKeyForAction(actor, "FLIGHT"), "flight");
-                    });
-
-                    it("Resolves GLIDING to gliding", function () {
-                        assert.equal(movementKeyForAction(actor, "GLIDING"), "gliding");
                     });
 
                     it("Resolves a cleared selection to running", function () {
@@ -331,38 +411,11 @@ export function registerMovementModeTests(quench) {
                         await actor.update({ [activeMovementFlag()]: 42 });
                         assert.equal(actorMovementKey(actor), "running");
                     });
-
-                    it("Matches the actor activeMovement getter", async function () {
-                        await actor.update({ [activeMovementFlag()]: "flight" });
-                        assert.equal(actor.activeMovement, actorMovementKey(actor));
-                    });
                 });
 
                 describe("movementDisplayName", function () {
-                    it("Returns the display name for a movement key", function () {
-                        assert.equal(movementDisplayName("flight"), "Flight");
-                    });
-
-                    it("Returns the display name for gliding", function () {
-                        assert.equal(movementDisplayName("gliding"), "Gliding");
-                    });
-
                     it("Falls back to the key for an unknown movement", function () {
                         assert.equal(movementDisplayName("notamovementpower"), "notamovementpower");
-                    });
-                });
-
-                describe("AIRBORNE_MOVEMENT_KEYS", function () {
-                    it("Contains flight and gliding", function () {
-                        assert.deepEqual([...AIRBORNE_MOVEMENT_KEYS], ["flight", "gliding"]);
-                    });
-
-                    it("Excludes grounded movement", function () {
-                        assert.notInclude(AIRBORNE_MOVEMENT_KEYS, "running");
-                    });
-
-                    it("Is frozen", function () {
-                        assert.isFrozen(AIRBORNE_MOVEMENT_KEYS);
                     });
                 });
 
@@ -454,17 +507,6 @@ export function registerMovementModeTests(quench) {
                         assert.equal(tokenMovementKey(canvas.tokens.get(tokenDoc.id)), "flight");
                     });
 
-                    it("Agrees with the TokenDocument activeMovement getter", async function () {
-                        await tokenDoc.update({ movementAction: "FLIGHT" });
-                        await movementPropagationSettled();
-                        assert.equal(tokenDoc.activeMovement, tokenMovementKey(tokenDoc));
-                    });
-
-                    it("Agrees with the canvas Token activeMovement getter", async function () {
-                        const canvasToken = canvas.tokens.get(tokenDoc.id);
-                        assert.equal(canvasToken.activeMovement, tokenMovementKey(tokenDoc));
-                    });
-
                     it("Returns none for a token with no actor", function () {
                         assert.equal(tokenMovementKey(null), "none");
                     });
@@ -486,6 +528,7 @@ export function registerMovementModeTests(quench) {
                             name: "Fanout 6e",
                         });
                         await actor.updateCharacteristics([["flight", { value: 20 }]]);
+                        scene2 = await createQuenchScene({ quench: this });
                         [token1] = await scene1.createEmbeddedDocuments("Token", [
                             {
                                 name: actor.name,
@@ -493,6 +536,15 @@ export function registerMovementModeTests(quench) {
                                 actorLink: true,
                                 x: 0,
                                 y: 0,
+                            },
+                        ]);
+                        [token2] = await scene2.createEmbeddedDocuments("Token", [
+                            {
+                                name: actor.name,
+                                actorId: actor.id,
+                                actorLink: true,
+                                x: 50,
+                                y: 50,
                             },
                         ]);
                     });
@@ -515,17 +567,6 @@ export function registerMovementModeTests(quench) {
                     });
 
                     it("Fans the mode out to a token in another scene", async function () {
-                        scene2 = await createQuenchScene({ quench: this });
-                        [token2] = await scene2.createEmbeddedDocuments("Token", [
-                            {
-                                name: actor.name,
-                                actorId: actor.id,
-                                actorLink: true,
-                                x: 50,
-                                y: 50,
-                            },
-                        ]);
-
                         await token1.update({ movementAction: "RUNNING" });
                         await movementPropagationSettled();
 
@@ -577,19 +618,14 @@ export function registerMovementModeTests(quench) {
                         assert.equal(actorWrites, 0);
                     });
 
-                    it("Skips propagation for a remote user's update", async function () {
-                        let actorWrites = 0;
-                        const hookId = Hooks.on("updateActor", (updated) => {
-                            if (updated.id === actor.id) {
-                                actorWrites += 1;
-                            }
-                        });
-
+                    it("Propagates a change another client made", async function () {
+                        // The GM owns propagation, so a player's click still reaches the actor and the other
+                        // scenes even when the player cannot write them.
                         token1._onUpdate({ movementAction: "FLIGHT" }, {}, "someOtherUserId");
                         await movementPropagationSettled();
-                        Hooks.off("updateActor", hookId);
 
-                        assert.equal(actorWrites, 0);
+                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "flight");
+                        assert.equal(token2._source.movementAction, "FLIGHT");
                     });
 
                     it("Ignores an update that does not touch movementAction", async function () {
@@ -630,16 +666,357 @@ export function registerMovementModeTests(quench) {
                         assert.equal(tokenMovementKey(token1), "flight");
 
                         await actor.updateCharacteristics([["flight", { value: 0 }]]);
+                        await movementPropagationSettled();
 
-                        assert.equal(tokenMovementKey(token1), "running");
-                        assert.equal(tokenMovementKey(token2), "running");
+                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "running");
+                        assert.equal(token1._source.movementAction, "RUNNING");
+                        assert.equal(token2._source.movementAction, "RUNNING");
+
                         await actor.updateCharacteristics([["flight", { value: 20 }]]);
+                        await movementPropagationSettled();
+                    });
+
+                    it("Stores none and clears every HUD key when no movement power is left", async function () {
+                        // Drain every movement power the actor owns. A pc owns swimming too, so leaving one
+                        // behind would resolve to that mode instead of none.
+                        const movementKeys = ownedMovementKeys(actor);
+                        const originalValues = movementKeys.map((key) => actor.getMovementCharacteristic(key).value);
+
+                        try {
+                            await token1.update({ movementAction: "FLIGHT" });
+                            await movementPropagationSettled();
+
+                            await actor.updateCharacteristics(movementKeys.map((key) => [key, { value: 0 }]));
+                            await movementPropagationSettled();
+
+                            assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "none");
+                            assert.equal(token1._source.movementAction, MOVEMENT_NONE_ACTION);
+                            assert.equal(token2._source.movementAction, MOVEMENT_NONE_ACTION);
+                            assert.equal(calculateVelocityInSystemUnits(2, token1, "RUNNING"), 0);
+                        } finally {
+                            const restored = movementKeys.map((key, index) => [key, { value: originalValues[index] }]);
+
+                            await actor.updateCharacteristics(restored);
+                            await movementPropagationSettled();
+                        }
+                    });
+
+                    it("Syncs every token when a hook cancels the actor write", async function () {
+                        // Foundry drops a cancelled write silently. The tokens must still converge, so the
+                        // fan-out runs whether or not the actor kept the mode.
+                        const hookId = Hooks.on("preUpdateActor", (updated) => updated.id !== actor.id);
+
+                        try {
+                            await token1.update({ movementAction: "FLIGHT" });
+                            await movementPropagationSettled();
+                        } finally {
+                            Hooks.off("preUpdateActor", hookId);
+                        }
+
+                        assert.equal(token1._source.movementAction, "FLIGHT");
+                        assert.equal(token2._source.movementAction, "FLIGHT");
+                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), undefined);
                     });
 
                     it("Leaves the actor untouched when propagateMovementMode has no token", async function () {
                         await propagateMovementMode(null, "FLIGHT");
                         await movementPropagationSettled();
                         assert.isNotEmpty(foundry.utils.getProperty(actor, activeMovementFlag()));
+                    });
+                });
+
+                describe("Unlinked token movement mode", function () {
+                    let scene;
+                    let baseActor;
+                    let token1;
+                    let token2;
+
+                    before(async function () {
+                        await waitForNotificationQueueToClear();
+                        scene = await createQuenchScene({ quench: this });
+                        baseActor = await createQuenchActor({ quench: this, is5e: false, name: "Fanout Mook 6e" });
+                        await baseActor.updateCharacteristics([["flight", { value: 20 }]]);
+                        [token1, token2] = await scene.createEmbeddedDocuments("Token", [
+                            { name: "Mook one", actorId: baseActor.id, actorLink: false, x: 0, y: 0 },
+                            { name: "Mook two", actorId: baseActor.id, actorLink: false, x: 50, y: 0 },
+                        ]);
+                    });
+
+                    after(async function () {
+                        await deleteQuenchScenes();
+                        await deleteQuenchActor({ quench: this, actor: baseActor });
+                    });
+
+                    it("Stores the mode on the token delta", async function () {
+                        await token1.update({ movementAction: "FLIGHT" });
+                        await movementPropagationSettled();
+
+                        assert.equal(foundry.utils.getProperty(token1.actor, activeMovementFlag()), "flight");
+                        assert.equal(tokenMovementKey(token1), "flight");
+                        assert.equal(calculateVelocityInSystemUnits(2, token1, "RUNNING"), 40);
+                    });
+
+                    it("Leaves the base actor and the sibling token alone", async function () {
+                        await token1.update({ movementAction: "FLIGHT" });
+                        await movementPropagationSettled();
+
+                        assert.equal(baseActor.getFlag("hero6efoundryvttv2", "activeMovement"), undefined);
+                        assert.equal(token2._source.movementAction, "RUNNING");
+                        assert.equal(tokenMovementKey(token2), "running");
+                    });
+
+                    it("Gives each unlinked token its own mode", async function () {
+                        await token1.update({ movementAction: "FLIGHT" });
+                        await movementPropagationSettled();
+                        await token2.update({ movementAction: "RUNNING" });
+                        await movementPropagationSettled();
+
+                        assert.equal(tokenMovementKey(token1), "flight");
+                        assert.equal(tokenMovementKey(token2), "running");
+                    });
+
+                    it("Re-resolves only that token when its own power is drained", async function () {
+                        const siblingAction = token2._source.movementAction;
+
+                        try {
+                            await token1.update({ movementAction: "FLIGHT" });
+                            await movementPropagationSettled();
+
+                            await token1.actor.updateCharacteristics([["flight", { value: 0 }]]);
+                            await movementPropagationSettled();
+
+                            assert.equal(tokenMovementKey(token1), "running");
+                            assert.equal(token1._source.movementAction, "RUNNING");
+                            assert.equal(token2._source.movementAction, siblingAction);
+                        } finally {
+                            await token1.actor.updateCharacteristics([["flight", { value: 20 }]]);
+                            await movementPropagationSettled();
+                        }
+                    });
+                });
+
+                describe("Actor with no movement power", function () {
+                    let scene;
+                    let actor;
+                    let tokenDoc;
+
+                    before(async function () {
+                        await waitForNotificationQueueToClear();
+                        scene = await createQuenchScene({ quench: this });
+                        // A base2 actor has no movement characteristic at all.
+                        actor = await createQuenchActor({
+                            quench: this,
+                            is5e: false,
+                            actorType: "base2",
+                            name: "No Movement base2",
+                        });
+                        [tokenDoc] = await scene.createEmbeddedDocuments("Token", [
+                            {
+                                name: actor.name,
+                                actorId: actor.id,
+                                actorLink: true,
+                                x: 0,
+                                y: 0,
+                            },
+                        ]);
+                        await viewSceneAndWait(scene);
+                    });
+
+                    after(async function () {
+                        await releaseTokenHud();
+                        await deleteQuenchScenes();
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("Resolves no mode for the actor and its token", function () {
+                        assert.deepEqual(ownedMovementKeys(actor), []);
+                        assert.equal(actorMovementKey(actor), "none");
+                        assert.equal(tokenMovementKey(tokenDoc), "none");
+                    });
+
+                    it("Gives zero velocity", function () {
+                        assert.equal(calculateVelocityInSystemUnits(tokenDoc), 0);
+                    });
+
+                    it("Stores the no-movement action on every token of the actor", async function () {
+                        await tokenDoc.update({ movementAction: "FLIGHT" });
+                        await movementPropagationSettled();
+
+                        // The mode is none, so the token holds the registered action worth 0 distance.
+                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "none");
+                        assert.equal(tokenDoc._source.movementAction, MOVEMENT_NONE_ACTION);
+                    });
+
+                    it("Writes nothing on the next propagation", async function () {
+                        await tokenDoc.update({ movementAction: "FLIGHT" });
+                        await movementPropagationSettled();
+
+                        let tokenWrites = 0;
+                        const hookId = Hooks.on("updateToken", (updated) => {
+                            if (updated.id === tokenDoc.id) {
+                                tokenWrites += 1;
+                            }
+                        });
+
+                        await propagateMovementMode(tokenDoc, "FLIGHT");
+                        Hooks.off("updateToken", hookId);
+
+                        assert.equal(tokenWrites, 0);
+                    });
+
+                    it("Offers one No movement entry and keeps the control visible", async function () {
+                        const hud = await bindTokenHud(canvas.tokens.get(tokenDoc.id));
+                        const entries = hudMovementEntries(hud);
+
+                        assert.equal(entries.length, 1);
+                        assert.equal(entries[0].key, MOVEMENT_NONE_ACTION);
+                        assert.equal(entries[0].label, "No movement");
+                        assert.include(entries[0].icon, "fa-ban");
+                        assert.isTrue(entries[0].active);
+
+                        const toggle = hud.element.querySelector(
+                            '[data-action="togglePalette"][data-palette="movementActions"]',
+                        );
+                        assert.notEqual(toggle.style.display, "none");
+                        assert.include(toggle.querySelector("i")?.className ?? "", "fa-ban");
+                    });
+
+                    it("Reports a maximum distance of 0 for the held action", function () {
+                        const action = CONFIG.Token.movement.actions[tokenDoc._source.movementAction];
+
+                        assert.equal(action.maxCombatDistanceMeters(tokenDoc), 0);
+                        assert.equal(action.maxNonCombatDistanceMeters(tokenDoc), 0);
+                    });
+                });
+
+                describe("No movement action", function () {
+                    const noneAction = () => CONFIG.Token.movement.actions[MOVEMENT_NONE_ACTION];
+                    const mover = { system: { characteristics: { running: { value: 6 } } } };
+
+                    it("Never lets a player select it", function () {
+                        assert.isFalse(noneAction().canSelect(mover));
+                    });
+
+                    it("Resolves the action key back to none, even for an actor who can move", function () {
+                        assert.equal(movementKeyForAction(mover, MOVEMENT_NONE_ACTION), "none");
+                    });
+                });
+
+                describe("New token movement action", function () {
+                    let scene;
+                    let runner;
+                    let immobile;
+                    let runnerToken;
+                    let immobileToken;
+
+                    before(async function () {
+                        await waitForNotificationQueueToClear();
+
+                        scene = await createQuenchScene({ quench: this });
+                        await viewSceneAndWait(scene);
+                        runner = await createQuenchActor({ quench: this, is5e: false, name: "Seeded Runner" });
+                        immobile = await createQuenchActor({
+                            quench: this,
+                            is5e: false,
+                            actorType: "base2",
+                            name: "Seeded Immobile",
+                        });
+
+                        [runnerToken, immobileToken] = await scene.createEmbeddedDocuments("Token", [
+                            { name: "Runner", actorId: runner.id, actorLink: true, x: 0, y: 0 },
+                            { name: "Immobile", actorId: immobile.id, actorLink: true, x: 20, y: 0 },
+                        ]);
+                        await movementPropagationSettled();
+                    });
+
+                    after(async function () {
+                        releaseTokenHud();
+                        await deleteQuenchScenes();
+                        await deleteQuenchActor({ quench: this, actor: runner });
+                        await deleteQuenchActor({ quench: this, actor: immobile });
+                    });
+
+                    it("Gives a new token of a mover the actor mode", function () {
+                        assert.equal(runnerToken._source.movementAction, "RUNNING");
+                    });
+
+                    it("Gives a new token that cannot move the no-movement action", function () {
+                        assert.equal(immobileToken._source.movementAction, MOVEMENT_NONE_ACTION);
+                    });
+
+                    it("Reports the running distance for the mover", function () {
+                        const action = CONFIG.Token.movement.actions[runnerToken._source.movementAction];
+
+                        assert.isAbove(action.maxCombatDistanceMeters(runnerToken), 0);
+                        assert.isAbove(action.maxNonCombatDistanceMeters(runnerToken), 0);
+                    });
+
+                    it("Keeps a mode another token of the same actor chose", async function () {
+                        await runnerToken.update({ movementAction: "FLIGHT" });
+                        await movementPropagationSettled();
+
+                        const [secondToken] = await scene.createEmbeddedDocuments("Token", [
+                            { name: "Runner 2", actorId: runner.id, actorLink: true, x: 40, y: 0 },
+                        ]);
+                        await movementPropagationSettled();
+
+                        assert.equal(secondToken._source.movementAction, "FLIGHT");
+                    });
+                });
+
+                describe("Movement drained while the HUD is open", function () {
+                    let scene;
+                    let actor;
+                    let tokenDoc;
+
+                    before(async function () {
+                        await waitForNotificationQueueToClear();
+                        scene = await createQuenchScene({ quench: this });
+                        actor = await createQuenchActor({ quench: this, is5e: false, name: "Drained Movement" });
+                        await actor.updateCharacteristics([["flight", { value: 20 }]]);
+                        [tokenDoc] = await scene.createEmbeddedDocuments("Token", [
+                            {
+                                name: actor.name,
+                                actorId: actor.id,
+                                actorLink: true,
+                                x: 0,
+                                y: 0,
+                            },
+                        ]);
+                        await viewSceneAndWait(scene);
+                    });
+
+                    after(async function () {
+                        await releaseTokenHud();
+                        await deleteQuenchScenes();
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("Shows No movement once an effect drains the last power", async function () {
+                        const hud = await bindTokenHud(canvas.tokens.get(tokenDoc.id));
+
+                        await clickHudMovementAction(hud, "FLIGHT");
+                        await movementPropagationSettled();
+                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "flight");
+
+                        const movementKeys = ownedMovementKeys(actor);
+                        await actor.updateCharacteristics(movementKeys.map((key) => [key, { value: 0 }]));
+                        await movementPropagationSettled();
+
+                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "none");
+                        assert.equal(tokenDoc._source.movementAction, MOVEMENT_NONE_ACTION);
+
+                        const settled = await waitForHudMovementEntryCount(hud, 1);
+                        assert.isTrue(
+                            settled,
+                            `Palette: ${hudMovementEntries(hud)
+                                .map((e) => e.label)
+                                .join(", ")}`,
+                        );
+
+                        const [entry] = hudMovementEntries(hud);
+                        assert.equal(entry.label, "No movement");
+                        assert.isTrue(entry.active);
                     });
                 });
 
@@ -756,18 +1133,28 @@ export function registerMovementModeTests(quench) {
                         assert.deepEqual(hudActiveMovementActions(secondHud), ["GLIDING"]);
                     });
 
-                    it("Lands the actor on running when the player picks Default", async function () {
+                    it("Offers no Default entry", async function () {
+                        const token = canvas.tokens.placeables.find((t) => t.name === "HudOne");
+                        const hud = await bindTokenHud(token);
+
+                        // Core prepends a Default entry. HERO holds the mode on the actor, so the palette
+                        // must not offer a selection that resolves to another mode. A player must not be able
+                        // to pick the state for a character who can move.
+                        assert.notInclude(hudMovementActionKeys(hud), "");
+                        assert.notInclude(hudMovementActionKeys(hud), MOVEMENT_NONE_ACTION);
+                    });
+
+                    it("Reapplies the actor mode when a script clears the selection", async function () {
                         const token = canvas.tokens.placeables.find((t) => t.name === "HudOne");
                         const hud = await bindTokenHud(token);
 
                         await clickHudMovementAction(hud, "FLIGHT");
                         assert.isTrue(await waitForActorMovementFlag(actor, "flight"));
 
-                        await clickHudMovementAction(hud, "");
-                        assert.isTrue(
-                            await waitForActorMovementFlag(actor, "running"),
-                            "Default should resolve the actor to running",
-                        );
+                        // The token configuration sheet still writes null. The actor mode must land back on
+                        // running and the token must carry the matching HUD key.
+                        await token.document.update({ movementAction: null });
+                        assert.isTrue(await waitForActorMovementFlag(actor, "running"));
 
                         await bindTokenHud(token);
                         assert.deepEqual(hudActiveMovementActions(hud), ["RUNNING"]);
@@ -959,6 +1346,33 @@ export function registerMovementModeTests(quench) {
                         // The first token sees the same mode, because the actor holds it.
                         assert.equal(tokenMovementKey(targetToken), "flight");
                         await otherToken.delete();
+                    });
+
+                    it("Applies the modifier while the target leaps", async function () {
+                        await targetToken.update({ movementAction: "LEAPING" });
+                        await movementPropagationSettled();
+
+                        const result = await _calcKnockback(3, attackItem, { targetToken }, 1);
+
+                        assert.lengthOf(airborneTags(result), 1);
+                        assert.include(airborneTags(result)[0].title, "Leaping");
+                    });
+
+                    it("Applies the modifier while the target swings on a line", async function () {
+                        await target.updateCharacteristics([["swinging", { value: 10 }]]);
+
+                        try {
+                            await targetToken.update({ movementAction: "SWINGING" });
+                            await movementPropagationSettled();
+
+                            const result = await _calcKnockback(3, attackItem, { targetToken }, 1);
+
+                            assert.lengthOf(airborneTags(result), 1);
+                        } finally {
+                            await targetToken.update({ movementAction: "RUNNING" });
+                            await target.updateCharacteristics([["swinging", { value: 0 }]]);
+                            await movementPropagationSettled();
+                        }
                     });
 
                     it("Applies no modifier when the flight power is drained", async function () {

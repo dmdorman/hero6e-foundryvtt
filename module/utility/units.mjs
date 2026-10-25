@@ -268,6 +268,11 @@ export function calculateVelocityInSystemUnits(mover) {
     const actor = tokenDocument?.actor ?? mover;
     const movementKey = actorMovementKey(actor);
 
+    // An actor with no movement characteristic, such as a base2, has nothing to move on.
+    if (movementKey === "none") {
+        return 0;
+    }
+
     // Simplistic velocity calc using current movement
     // TODO: This is likely wrong for Teleport and other movements with quirky velocity rules.
     let velocity = parseInt(actor.getMovementCharacteristic(movementKey)?.value || 0);

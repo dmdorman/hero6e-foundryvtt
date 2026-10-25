@@ -60,7 +60,7 @@ import {
 } from "../utility/damage.mjs";
 import { getActorDefensesVsAttack, getConditionalDefenses, getItemDefenseVsAttack } from "../utility/defense.mjs";
 import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMetres } from "../utility/range.mjs";
-import { AIRBORNE_MOVEMENT_KEYS, movementDisplayName, tokenMovementKey } from "../utility/movement.mjs";
+import { movementDisplayName, tokenMovementKey } from "../utility/movement.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import {
     calculateVelocityInSystemUnits,
@@ -4898,6 +4898,30 @@ async function _calcDamage(damageRoller, item, options) {
     return damageDetail;
 }
 
+/**
+ * Movement modes that hold the character above the landscape. Knockback distance doubles against a target
+ * who is not in contact with the ground, so every mode that leaves the target off the ground counts:
+ * flying, gliding, mid-leap, and swinging on a line.
+ *
+ * Approximation: the selected mode is the only signal. The system does not read token height. A leaping
+ * character whose token sits on the ground still counts as airborne, and a flying character who has landed
+ * still counts. A later update should compare token height with the landscape.
+ *
+ * @type {ReadonlyArray<string>}
+ */
+const AIRBORNE_MOVEMENT_KEYS = Object.freeze(["flight", "gliding", "leaping", "swinging"]);
+
+/**
+ * Calculate the knockback a body takes.
+ *
+ * @param {number} bodyForKbCalculations Body the target uses for knockback.
+ * @param {HeroSystem6eItem} item Attack that landed.
+ * @param {object} options Attack options, including `targetToken`.
+ * @param {number} knockbackMultiplier The attack's knockback multiplier.
+ *
+ * @returns {Promise<object>} `useKnockback`, `knockbackMessage`, `knockbackRenderedResult`, `knockbackTags`,
+ * `knockbackRoller`, `knockbackResultTotal`, `shrinkingKB`, and `preKnockBackProneStatus`.
+ */
 export async function _calcKnockback(bodyForKbCalculations, item, options, knockbackMultiplier) {
     let useKnockback = false;
     let knockbackMessage = "";
@@ -4942,8 +4966,8 @@ export async function _calcKnockback(bodyForKbCalculations, item, options, knock
         // Target is in the air: -1d6.
         // The actor holds the active movement mode, and every linked token stays in sync with it, so the
         // answer does not depend on which token of the target we hold.
+        // Approximation: the mode stands in for height. Should really be checking token's position relative to the terrain.
         const activeMovement = tokenMovementKey(options.targetToken);
-
         if (AIRBORNE_MOVEMENT_KEYS.includes(activeMovement)) {
             knockbackDice -= 1;
 
