@@ -11,7 +11,7 @@ const needToPersistToDb = "persistMigrationToDb";
 
 export function tagObjectForPersistence(source) {
     // Notice that this value is never saved to the database
-    const needToCommitMigrationToDbField = `flags.${game.system.id || "hero6efoundryvttv2"}.${needToPersistToDb}`;
+    const needToCommitMigrationToDbField = `flags.${game.system.id}.${needToPersistToDb}`;
     foundry.utils.setProperty(source, needToCommitMigrationToDbField, true);
 }
 
@@ -382,6 +382,17 @@ export async function migrateWorld() {
         async () => await game.settings.set(game.system.id, "hdcResetPending", true),
     );
 
+    // 5.0.4 registers a no-movement action. A token with no action inherits
+    // CONFIG.Token.movement.defaultAction, so a token whose actor cannot move reports the running distance.
+    // Give every token the action its actor can use.
+    await migrateToVersion(
+        "5.0.4",
+        lastMigration,
+        game.scenes.contents.map((scene) => scene.tokens.contents).flat(),
+        "movement action",
+        async (token) => await migrateTokenMovementAction_5_0_4(token),
+    );
+
     // Placeholder for notifying GM of items missing XMLID
     // await migrateToVersion(
     //     game.system.version,
@@ -494,6 +505,103 @@ export async function migrateHitLocationSettings_5_0_0() {
     } else {
         // We already converted so we're good.
     }
+}
+
+/**
+ * 6E movement characteristic keys, as 5.0.4 defines them in `CONFIG.HERO.movementPowers`. 5E actors add
+ * gliding.
+ *
+ * Hard coded on purpose. A migration must keep the meaning it had the day it shipped, so it must not read
+ * configuration a later version changes.
+ */
+const MOVEMENT_POWER_KEYS_6E_5_0_4 = Object.freeze([
+    "extradimensionalmovement",
+    "flight",
+    "ftl",
+    "leaping",
+    "running",
+    "swimming",
+    "swinging",
+    "teleportation",
+    "tunneling",
+]);
+
+/**
+ * Give a token the movement action its actor can use.
+ *
+ * A token that already holds an action keeps it, so a player's selection never changes. An actorless token
+ * keeps its empty action: no characteristics decide how far it moves, so there is nothing to correct.
+ *
+ * The write carries no sync option, so the normal propagation runs with it. The actor records the mode and
+ * every other token of that actor takes it. Tokens the propagation already reached fail the guard below and
+ * cost nothing.
+ *
+ * @param {HeroSystem6eTokenDocument} token Token to migrate.
+ *
+ * @returns {Promise}
+ */
+async function migrateTokenMovementAction_5_0_4(token) {
+    if (token._source.movementAction || !token.actor) {
+        return;
+    }
+
+    await token.update({ movementAction: resolveMovementAction_5_0_4(token.actor) });
+}
+
+/**
+ * Return the HUD action key for the mode an actor moves on.
+ *
+ * Characteristic keys are lowercase and HUD action keys are uppercase, so the no-movement mode becomes
+ * "NONE", the action 5.0.4 registers with a maximum distance of 0.
+ *
+ * @param {HeroSystem6eActor} actor Actor to read.
+ *
+ * @returns {string} The HUD action key.
+ */
+function resolveMovementAction_5_0_4(actor) {
+    const ownedKeys = ownedMovementKeys_5_0_4(actor);
+
+    if (ownedKeys.length === 0) {
+        return "NONE";
+    }
+
+    // The actor flag holds the mode the player chose. A stored key the actor no longer owns falls back to
+    // the default mode, so a power drained to 0 cannot leave the actor reporting a mode it cannot use.
+    const storedKey = foundry.utils.getProperty(actor, `flags.${game.system.id}.activeMovement`);
+
+    if (typeof storedKey === "string" && ownedKeys.includes(storedKey)) {
+        return storedKey.toUpperCase();
+    }
+
+    // A character with no selection moves on foot, so running wins when the actor owns it.
+    return (ownedKeys.includes("running") ? "running" : ownedKeys[0]).toUpperCase();
+}
+
+/**
+ * List the movement characteristic keys the actor owns, in the order the actor stores them.
+ *
+ * An actor owns a movement characteristic when its value is greater than zero, so a drained power drops out.
+ *
+ * @param {HeroSystem6eActor} actor Actor to read.
+ *
+ * @returns {string[]} Characteristic keys, for example ["running", "flight"].
+ */
+function ownedMovementKeys_5_0_4(actor) {
+    const characteristics = actor?.system?.characteristics;
+
+    if (!characteristics) {
+        return [];
+    }
+
+    const movementKeys = [...MOVEMENT_POWER_KEYS_6E_5_0_4];
+
+    if (actor.system.is5e) {
+        movementKeys.push("gliding");
+    }
+
+    return Object.keys(characteristics)
+        .filter((key) => movementKeys.includes(key))
+        .filter((key) => (parseInt(actor.getMovementCharacteristic(key)?.value) || 0) > 0);
 }
 
 /**
