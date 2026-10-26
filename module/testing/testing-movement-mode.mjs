@@ -48,6 +48,19 @@ function airborneTags(knockbackResult) {
 }
 
 /**
+ * Snapshot the movement characteristic values an actor owns.
+ *
+ * `updateCharacteristics` writes the pair form the snapshot returns, so one call puts the values back.
+ *
+ * @param {HeroSystem6eActor} actor Actor to read.
+ *
+ * @returns {Array<Array>} One `[key, { value }]` pair per movement power the actor owns.
+ */
+function movementCharacteristicSnapshot(actor) {
+    return ownedMovementKeys(actor).map((key) => [key, { value: actor.getMovementCharacteristic(key).value }]);
+}
+
+/**
  * Sleep for a fixed time.
  *
  * @param {number} ms Milliseconds to wait.
@@ -234,7 +247,7 @@ export function registerMovementModeTests(quench) {
     quench.registerBatch(
         `${game.system.id}.movementMode`,
         (context) => {
-            const { after, before, beforeEach, describe, it, assert } = context;
+            const { after, afterEach, before, beforeEach, describe, it, assert } = context;
 
             describe("Movement Mode", function () {
                 // Actor, scene, and token creation exceeds Mocha's 2000ms default.
@@ -243,6 +256,7 @@ export function registerMovementModeTests(quench) {
                 describe("ownedMovementKeys", function () {
                     let runner6e;
                     let flyer5e;
+                    let runnerMovementValues;
 
                     before(async function () {
                         runner6e = await createQuenchActor({
@@ -256,11 +270,19 @@ export function registerMovementModeTests(quench) {
                             name: "Glider 5e",
                         });
                         await flyer5e.updateCharacteristics([["gliding", { value: 10 }]]);
+
+                        runnerMovementValues = movementCharacteristicSnapshot(runner6e);
                     });
 
                     after(async function () {
                         await deleteQuenchActor({ quench: this, actor: runner6e });
                         await deleteQuenchActor({ quench: this, actor: flyer5e });
+                    });
+
+                    beforeEach(async function () {
+                        // One test drains a movement power to zero, so give every power back before the next
+                        // test reads the ownership list.
+                        await runner6e.updateCharacteristics(runnerMovementValues);
                     });
 
                     it("Returns the movement characteristics above zero", function () {
@@ -376,6 +398,7 @@ export function registerMovementModeTests(quench) {
 
                 describe("actorMovementKey", function () {
                     let actor;
+                    let movementValues;
 
                     before(async function () {
                         actor = await createQuenchActor({
@@ -384,10 +407,20 @@ export function registerMovementModeTests(quench) {
                             name: "Actor Mode 6e",
                         });
                         await actor.updateCharacteristics([["flight", { value: 20 }]]);
+                        movementValues = movementCharacteristicSnapshot(actor);
                     });
 
                     after(async function () {
                         await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    beforeEach(async function () {
+                        // Each test stores its own key, and one test drains flight. Start from the same values
+                        // every time, with no stored mode.
+                        await actor.updateCharacteristics(movementValues);
+                        await actor.update({ [activeMovementFlag()]: null });
+
+                        await movementPropagationSettled();
                     });
 
                     it("Returns the default mode when no flag is stored", function () {
@@ -404,7 +437,6 @@ export function registerMovementModeTests(quench) {
                         await actor.update({ [activeMovementFlag()]: "flight" });
                         await actor.updateCharacteristics([["flight", { value: 0 }]]);
                         assert.equal(actorMovementKey(actor), "running");
-                        await actor.updateCharacteristics([["flight", { value: 20 }]]);
                     });
 
                     it("Falls back to the default when the stored key is not a string", async function () {
@@ -518,6 +550,7 @@ export function registerMovementModeTests(quench) {
                     let actor;
                     let token1;
                     let token2;
+                    let movementValues;
 
                     before(async function () {
                         await waitForNotificationQueueToClear();
@@ -528,6 +561,7 @@ export function registerMovementModeTests(quench) {
                             name: "Fanout 6e",
                         });
                         await actor.updateCharacteristics([["flight", { value: 20 }]]);
+                        movementValues = movementCharacteristicSnapshot(actor);
                         scene2 = await createQuenchScene({ quench: this });
                         [token1] = await scene1.createEmbeddedDocuments("Token", [
                             {
@@ -554,6 +588,19 @@ export function registerMovementModeTests(quench) {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
+                    beforeEach(async function () {
+                        // Put every test on the same ground: full movement powers, the running mode on the
+                        // actor, and RUNNING on both tokens. A test that drains a power repairs nothing itself.
+                        await actor.updateCharacteristics(movementValues);
+                        await movementPropagationSettled();
+
+                        // Converge through the product path, then drain the propagation queue. A test installs
+                        // hooks to count or to cancel actor writes, and a propagation left in flight from the
+                        // previous test would land under that hook and be counted as this test's work.
+                        await propagateMovementMode(token1, "RUNNING");
+                        await movementPropagationSettled();
+                    });
+
                     it("Writes the mode to the actor flag", async function () {
                         await token1.update({ movementAction: "FLIGHT" });
                         await movementPropagationSettled();
@@ -567,11 +614,11 @@ export function registerMovementModeTests(quench) {
                     });
 
                     it("Fans the mode out to a token in another scene", async function () {
-                        await token1.update({ movementAction: "RUNNING" });
+                        await token1.update({ movementAction: "FLIGHT" });
                         await movementPropagationSettled();
 
-                        assert.equal(token2._source.movementAction, "RUNNING");
-                        assert.equal(tokenMovementKey(token2), "running");
+                        assert.equal(token2._source.movementAction, "FLIGHT");
+                        assert.equal(tokenMovementKey(token2), "flight");
                     });
 
                     it("Finds every linked token across scenes", function () {
@@ -583,9 +630,6 @@ export function registerMovementModeTests(quench) {
                     });
 
                     it("Writes the actor once per player selection", async function () {
-                        await token1.update({ movementAction: "FLIGHT" });
-                        await movementPropagationSettled();
-
                         let actorWrites = 0;
                         const hookId = Hooks.on("updateActor", (updated) => {
                             if (updated.id === actor.id) {
@@ -593,9 +637,12 @@ export function registerMovementModeTests(quench) {
                             }
                         });
 
-                        await token1.update({ movementAction: "RUNNING" });
-                        await movementPropagationSettled();
-                        Hooks.off("updateActor", hookId);
+                        try {
+                            await token1.update({ movementAction: "FLIGHT" });
+                            await movementPropagationSettled();
+                        } finally {
+                            Hooks.off("updateActor", hookId);
+                        }
 
                         assert.equal(actorWrites, 1);
                     });
@@ -671,34 +718,23 @@ export function registerMovementModeTests(quench) {
                         assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "running");
                         assert.equal(token1._source.movementAction, "RUNNING");
                         assert.equal(token2._source.movementAction, "RUNNING");
-
-                        await actor.updateCharacteristics([["flight", { value: 20 }]]);
-                        await movementPropagationSettled();
                     });
 
                     it("Stores none and clears every HUD key when no movement power is left", async function () {
                         // Drain every movement power the actor owns. A pc owns swimming too, so leaving one
                         // behind would resolve to that mode instead of none.
                         const movementKeys = ownedMovementKeys(actor);
-                        const originalValues = movementKeys.map((key) => actor.getMovementCharacteristic(key).value);
 
-                        try {
-                            await token1.update({ movementAction: "FLIGHT" });
-                            await movementPropagationSettled();
+                        await token1.update({ movementAction: "FLIGHT" });
+                        await movementPropagationSettled();
 
-                            await actor.updateCharacteristics(movementKeys.map((key) => [key, { value: 0 }]));
-                            await movementPropagationSettled();
+                        await actor.updateCharacteristics(movementKeys.map((key) => [key, { value: 0 }]));
+                        await movementPropagationSettled();
 
-                            assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "none");
-                            assert.equal(token1._source.movementAction, MOVEMENT_NONE_ACTION);
-                            assert.equal(token2._source.movementAction, MOVEMENT_NONE_ACTION);
-                            assert.equal(calculateVelocityInSystemUnits(2, token1, "RUNNING"), 0);
-                        } finally {
-                            const restored = movementKeys.map((key, index) => [key, { value: originalValues[index] }]);
-
-                            await actor.updateCharacteristics(restored);
-                            await movementPropagationSettled();
-                        }
+                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "none");
+                        assert.equal(token1._source.movementAction, MOVEMENT_NONE_ACTION);
+                        assert.equal(token2._source.movementAction, MOVEMENT_NONE_ACTION);
+                        assert.equal(calculateVelocityInSystemUnits(token1), 0);
                     });
 
                     it("Syncs every token when a hook cancels the actor write", async function () {
@@ -715,13 +751,15 @@ export function registerMovementModeTests(quench) {
 
                         assert.equal(token1._source.movementAction, "FLIGHT");
                         assert.equal(token2._source.movementAction, "FLIGHT");
-                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), undefined);
+                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "running");
                     });
 
                     it("Leaves the actor untouched when propagateMovementMode has no token", async function () {
                         await propagateMovementMode(null, "FLIGHT");
                         await movementPropagationSettled();
-                        assert.isNotEmpty(foundry.utils.getProperty(actor, activeMovementFlag()));
+
+                        // Nothing reached the actor, so it still holds the mode `beforeEach` stored.
+                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "running");
                     });
                 });
 
@@ -730,21 +768,40 @@ export function registerMovementModeTests(quench) {
                     let baseActor;
                     let token1;
                     let token2;
+                    let movementValues;
 
                     before(async function () {
                         await waitForNotificationQueueToClear();
                         scene = await createQuenchScene({ quench: this });
                         baseActor = await createQuenchActor({ quench: this, is5e: false, name: "Fanout Mook 6e" });
                         await baseActor.updateCharacteristics([["flight", { value: 20 }]]);
-                        [token1, token2] = await scene.createEmbeddedDocuments("Token", [
+                        movementValues = movementCharacteristicSnapshot(baseActor);
+                        // Foundry returns created embedded documents in its own order, so match each token by
+                        // name. Both tokens are unlinked, so both hold the same actor id and that id cannot
+                        // tell them apart.
+                        const createdTokens = await scene.createEmbeddedDocuments("Token", [
                             { name: "Mook one", actorId: baseActor.id, actorLink: false, x: 0, y: 0 },
                             { name: "Mook two", actorId: baseActor.id, actorLink: false, x: 50, y: 0 },
                         ]);
+
+                        token1 = createdTokens.find((token) => token.name === "Mook one");
+                        token2 = createdTokens.find((token) => token.name === "Mook two");
                     });
 
                     after(async function () {
                         await deleteQuenchScenes();
                         await deleteQuenchActor({ quench: this, actor: baseActor });
+                    });
+
+                    beforeEach(async function () {
+                        // An unlinked token holds its own copy of the actor, so reset each copy: the movement
+                        // values it started with, and its own mode.
+                        for (const token of [token1, token2]) {
+                            await token.actor.updateCharacteristics(movementValues);
+                            await propagateMovementMode(token, "RUNNING");
+                        }
+
+                        await movementPropagationSettled();
                     });
 
                     it("Stores the mode on the token delta", async function () {
@@ -753,7 +810,7 @@ export function registerMovementModeTests(quench) {
 
                         assert.equal(foundry.utils.getProperty(token1.actor, activeMovementFlag()), "flight");
                         assert.equal(tokenMovementKey(token1), "flight");
-                        assert.equal(calculateVelocityInSystemUnits(2, token1, "RUNNING"), 40);
+                        assert.equal(calculateVelocityInSystemUnits(token1), 20);
                     });
 
                     it("Leaves the base actor and the sibling token alone", async function () {
@@ -776,22 +833,16 @@ export function registerMovementModeTests(quench) {
                     });
 
                     it("Re-resolves only that token when its own power is drained", async function () {
-                        const siblingAction = token2._source.movementAction;
+                        await token1.update({ movementAction: "FLIGHT" });
+                        await movementPropagationSettled();
 
-                        try {
-                            await token1.update({ movementAction: "FLIGHT" });
-                            await movementPropagationSettled();
+                        await token1.actor.updateCharacteristics([["flight", { value: 0 }]]);
+                        await movementPropagationSettled();
 
-                            await token1.actor.updateCharacteristics([["flight", { value: 0 }]]);
-                            await movementPropagationSettled();
-
-                            assert.equal(tokenMovementKey(token1), "running");
-                            assert.equal(token1._source.movementAction, "RUNNING");
-                            assert.equal(token2._source.movementAction, siblingAction);
-                        } finally {
-                            await token1.actor.updateCharacteristics([["flight", { value: 20 }]]);
-                            await movementPropagationSettled();
-                        }
+                        // The sibling keeps its own copy of the actor, so it keeps the mode `beforeEach` set.
+                        assert.equal(tokenMovementKey(token1), "running");
+                        assert.equal(token1._source.movementAction, "RUNNING");
+                        assert.equal(token2._source.movementAction, "RUNNING");
                     });
                 });
 
@@ -828,6 +879,13 @@ export function registerMovementModeTests(quench) {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
+                    beforeEach(async function () {
+                        // Bring the actor and its token to the settled no-movement state. Each test starts
+                        // there, so none of them inherits the write the previous test made.
+                        await propagateMovementMode(tokenDoc, "RUNNING");
+                        await movementPropagationSettled();
+                    });
+
                     it("Resolves no mode for the actor and its token", function () {
                         assert.deepEqual(ownedMovementKeys(actor), []);
                         assert.equal(actorMovementKey(actor), "none");
@@ -848,9 +906,6 @@ export function registerMovementModeTests(quench) {
                     });
 
                     it("Writes nothing on the next propagation", async function () {
-                        await tokenDoc.update({ movementAction: "FLIGHT" });
-                        await movementPropagationSettled();
-
                         let tokenWrites = 0;
                         const hookId = Hooks.on("updateToken", (updated) => {
                             if (updated.id === tokenDoc.id) {
@@ -858,8 +913,11 @@ export function registerMovementModeTests(quench) {
                             }
                         });
 
-                        await propagateMovementMode(tokenDoc, "FLIGHT");
-                        Hooks.off("updateToken", hookId);
+                        try {
+                            await propagateMovementMode(tokenDoc, "FLIGHT");
+                        } finally {
+                            Hooks.off("updateToken", hookId);
+                        }
 
                         assert.equal(tokenWrites, 0);
                     });
@@ -891,7 +949,22 @@ export function registerMovementModeTests(quench) {
 
                 describe("No movement action", function () {
                     const noneAction = () => CONFIG.Token.movement.actions[MOVEMENT_NONE_ACTION];
-                    const mover = { system: { characteristics: { running: { value: 6 } } } };
+                    // `ownedMovementKeys` reads a value through the actor characteristic funnel, so the stub
+                    // needs `getMovementCharacteristic` next to the characteristic nodes.
+                    const mover = {
+                        system: { characteristics: { running: { value: 6 } } },
+
+                        /**
+                         * Return the stub characteristic node for one label.
+                         *
+                         * @param {string} label Characteristic label, for example `"running"`.
+                         *
+                         * @returns {object|undefined} The node, or undefined when the stub holds none.
+                         */
+                        getMovementCharacteristic(label) {
+                            return this.system.characteristics[label];
+                        },
+                    };
 
                     it("Never lets a player select it", function () {
                         assert.isFalse(noneAction().canSelect(mover));
@@ -915,18 +988,38 @@ export function registerMovementModeTests(quench) {
                         scene = await createQuenchScene({ quench: this });
                         await viewSceneAndWait(scene);
                         runner = await createQuenchActor({ quench: this, is5e: false, name: "Seeded Runner" });
+                        await runner.updateCharacteristics([["flight", { value: 20 }]]);
                         immobile = await createQuenchActor({
                             quench: this,
                             is5e: false,
                             actorType: "base2",
                             name: "Seeded Immobile",
                         });
+                    });
 
-                        [runnerToken, immobileToken] = await scene.createEmbeddedDocuments("Token", [
+                    beforeEach(async function () {
+                        // Each test reads what a brand new token holds, and one test stores a mode on the
+                        // runner. Clear that mode, then create both tokens again so every test reads a token
+                        // no earlier test touched.
+                        await runner.update({ [activeMovementFlag()]: null });
+
+                        const createdTokens = await scene.createEmbeddedDocuments("Token", [
                             { name: "Runner", actorId: runner.id, actorLink: true, x: 0, y: 0 },
                             { name: "Immobile", actorId: immobile.id, actorLink: true, x: 20, y: 0 },
                         ]);
+
+                        // Foundry returns created embedded documents in its own order, so match each token to
+                        // its actor instead of to its place in the returned array.
+                        runnerToken = createdTokens.find((token) => token.actorId === runner.id);
+                        immobileToken = createdTokens.find((token) => token.actorId === immobile.id);
+
                         await movementPropagationSettled();
+                    });
+
+                    afterEach(async function () {
+                        const tokenIds = scene.tokens.contents.map((token) => token.id);
+
+                        await scene.deleteEmbeddedDocuments("Token", tokenIds);
                     });
 
                     after(async function () {
@@ -995,9 +1088,14 @@ export function registerMovementModeTests(quench) {
                     it("Shows No movement once an effect drains the last power", async function () {
                         const hud = await bindTokenHud(canvas.tokens.get(tokenDoc.id));
 
+                        // The click handler writes the token document asynchronously. Poll for the actor flag,
+                        // because the propagation queue does not hold that write yet.
                         await clickHudMovementAction(hud, "FLIGHT");
-                        await movementPropagationSettled();
-                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), "flight");
+
+                        assert.isTrue(
+                            await waitForActorMovementFlag(actor, "flight"),
+                            "actor flag should read flight after the HUD click",
+                        );
 
                         const movementKeys = ownedMovementKeys(actor);
                         await actor.updateCharacteristics(movementKeys.map((key) => [key, { value: 0 }]));
@@ -1246,6 +1344,7 @@ export function registerMovementModeTests(quench) {
                     let targetToken;
                     let attackItem;
                     let previousKnockbackSetting;
+                    let movementValues;
 
                     before(async function () {
                         previousKnockbackSetting = await getAndSetGameSetting("knockback", true);
@@ -1262,6 +1361,7 @@ export function registerMovementModeTests(quench) {
                             name: "KB Target",
                         });
                         await target.updateCharacteristics([["flight", { value: 20 }]]);
+                        movementValues = movementCharacteristicSnapshot(target);
                         [attackItem] = await HeroSystem6eItem.createDocuments(
                             [HeroSystem6eItem.itemDataFromXml(ENERGY_BLAST_XML, attacker)],
                             { parent: attacker },
@@ -1282,6 +1382,13 @@ export function registerMovementModeTests(quench) {
                         await deleteQuenchActor({ quench: this, actor: attacker });
                         await deleteQuenchActor({ quench: this, actor: target });
                         await getAndSetGameSetting("knockback", previousKnockbackSetting);
+                    });
+
+                    beforeEach(async function () {
+                        // Tests drain a movement power and add one of their own, so each one starts from the
+                        // values this fixture was built with.
+                        await target.updateCharacteristics(movementValues);
+                        await movementPropagationSettled();
                     });
 
                     it("Applies -1d6 while the target flies", async function () {
@@ -1380,10 +1487,11 @@ export function registerMovementModeTests(quench) {
                         await movementPropagationSettled();
 
                         await target.updateCharacteristics([["flight", { value: 0 }]]);
-                        const result = await _calcKnockback(3, attackItem, { targetToken }, 1);
-                        assert.isEmpty(airborneTags(result));
+                        await movementPropagationSettled();
 
-                        await target.updateCharacteristics([["flight", { value: 20 }]]);
+                        const result = await _calcKnockback(3, attackItem, { targetToken }, 1);
+
+                        assert.isEmpty(airborneTags(result));
                     });
                 });
 
