@@ -1112,9 +1112,26 @@ export function registerMovementModeTests(quench) {
                                 .join(", ")}`,
                         );
 
+                        // Check everything the player sees: the entry, its icon, and its selected state.
                         const [entry] = hudMovementEntries(hud);
+                        assert.equal(entry.key, MOVEMENT_NONE_ACTION);
                         assert.equal(entry.label, "No movement");
+                        assert.include(entry.icon, "fa-ban");
                         assert.isTrue(entry.active);
+
+                        // The collapsed HUD shows one icon for the movement control. A legacy token that
+                        // drained to no movement still held FLIGHT before the resync, so the control must
+                        // show the no-movement icon, not the last mode's.
+                        const toggle = hud.element.querySelector(
+                            '[data-action="togglePalette"][data-palette="movementActions"]',
+                        );
+                        assert.notEqual(toggle.style.display, "none");
+                        assert.include(toggle.querySelector("i")?.className ?? "", "fa-ban");
+
+                        // The held action must also report 0 distance, so ruler and distance reports agree.
+                        const action = CONFIG.Token.movement.actions[tokenDoc._source.movementAction];
+                        assert.equal(action.maxCombatDistanceMeters(tokenDoc), 0);
+                        assert.equal(action.maxNonCombatDistanceMeters(tokenDoc), 0);
                     });
                 });
 
