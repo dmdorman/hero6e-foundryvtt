@@ -141,7 +141,8 @@
     "Movement": {
         "Half": "Half Move",
         "Full": "Full Move",
-        "Noncombat": "Noncombat Move"
+        "Noncombat": "Noncombat Move",
+        "None": "No movement"
     },
 
     "COMBAT": {

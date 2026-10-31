@@ -1,5 +1,5 @@
+import { MOVEMENT_NONE_ACTION } from "../utility/movement.mjs";
 import { convertSystemUnitsToMetres, lightYearInMetres, turnsPerGregorianYear } from "../utility/units.mjs";
-import { characteristicMaxAddChanges } from "../utility/active-effects.mjs";
 import { ftlLevelsToLightYearsPerYear } from "../item/item.mjs";
 
 // PH: FIXME: Need to get extra dimensional appearing. We have icon now.
@@ -9,29 +9,72 @@ import { ftlLevelsToLightYearsPerYear } from "../item/item.mjs";
 const { TokenHUD } = foundry.applications.hud;
 
 /**
- * Generate a canSelect function that is appropriate for the characteristic
- * @param {String} characteristic
+ * Return whether the token can move on a movement action right now.
+ *
+ * @param {HeroSystem6eTokenDocument} tokenDocument Token the palette renders for.
+ * @param {string} action Registered HUD action key.
+ *
+ * @returns {boolean} True when the actor holds the power behind that action.
+ */
+function canSelectMovementAction(tokenDocument, action) {
+    const config = CONFIG.Token.movement.actions[action];
+
+    return config?.canSelect(tokenDocument) ?? false;
+}
+
+/**
+ * Build the palette entry for one registered movement action.
+ *
+ * Core builds this shape in `TokenHUD#_getMovementActionChoices`, and it lists an action only when
+ * `canSelect` passes or the token already holds it. `MOVEMENT_NONE_ACTION` is never selectable, so the
+ * no-movement state needs this entry built by hand. Keep the field list matched to core's, so a core
+ * change to that method shows up here as a diff.
+ *
+ * @param {string} action Registered HUD action key.
+ * @param {boolean} isActive Whether the token holds that action.
+ *
+ * @returns {object} The palette entry.
+ */
+function movementChoice(action, isActive) {
+    const config = CONFIG.Token.movement.actions[action];
+
+    return {
+        id: action,
+        label: game.i18n.localize(config.label),
+        icon: config.icon,
+        img: config.img,
+        isActive,
+        cssClass: isActive ? "active" : "",
+    };
+}
+
+/**
+ * Return the distance value, in system units, that the token can move on right now.
+ *
+ * @param {HeroSystem6eToken|HeroSystem6eTokenDocument} token Token to read. Either form.
+ * @param {string} characteristic Movement characteristic key, for example `"flight"`.
+ *
+ * @returns {number} The characteristic value, floored at zero.
  */
 function combatMovementValueInSystemUnits(token, characteristic) {
     return Math.max(0, token.actor?.getMovementCharacteristic(characteristic)?.value || 0);
 }
 
+/**
+ * Generate the canSelect function for a movement characteristic.
+ *
+ * A mode selects only when the actor can move on it now. A mode that effects pushed to 0 grants no
+ * distance, so picking it would do nothing. This rule matches `ownedMovementKeys`, which stores the mode,
+ * and `calculateVelocityInSystemUnits`, which measures it, so the palette, the stored mode, and the
+ * distance never disagree. Core still lists the current action when canSelect returns false, so a mode
+ * reduced to 0 stays visible while it is selected.
+ *
+ * @param {string} characteristic Movement characteristic key, for example `"flight"`.
+ *
+ * @returns {(token: object) => boolean} The predicate core uses to offer the mode.
+ */
 function generateMovementCanSelectFunction(characteristic) {
-    return (token) => {
-        const actor = token.actor;
-        if ((actor?.getMovementCharacteristic(characteristic)?.value || 0) > 0) {
-            return true;
-        }
-
-        // Keep modes the actor owns but that actor-embedded effects (adjustments, encumbrance)
-        // pushed to 0 or below; item-parented AEs are the mode's own grant and stay counted.
-        const actorLevelChange = characteristicMaxAddChanges(actor, characteristic, { actorLevelOnly: true }).reduce(
-            (sum, entry) => sum + entry.value,
-            0,
-        );
-        const unadjustedMax = (actor?.getMovementCharacteristic(characteristic)?.max || 0) - actorLevelChange;
-        return unadjustedMax > 0;
-    };
+    return (token) => combatMovementValueInSystemUnits(token, characteristic) > 0;
 }
 
 /**
@@ -174,6 +217,20 @@ export class HeroSystemTokenHud extends TokenHUD {
         // PH: FIXME: FoundryVTT makes the assumption that the types of movement are defined by the system rather than by the token.
         // NOTE: maxCombatDistanceMeters and maxNonCombatDistanceMeters properties are custom to hero system
         return {
+            // The state a token holds when its actor has no way to move. Players cannot pick it. Its two
+            // distance reports are 0, so the ruler, the HUD, and any distance report agree the token cannot
+            // move, instead of inheriting the running distance that a missing action implies.
+            [MOVEMENT_NONE_ACTION]: {
+                label: "Movement.None",
+                icon: "fa-solid fa-ban",
+                order: -1,
+                teleport: false,
+                canSelect: () => false,
+                deriveTerrainDifficulty: () => 1,
+                getCostFunction: getMovementCostFunctionForGravityAffectedMovementType,
+                maxCombatDistanceMeters: () => 0,
+                maxNonCombatDistanceMeters: () => 0,
+            },
             RUNNING: {
                 label: "Running",
                 icon: "fa-solid fa-person-running",
@@ -314,5 +371,70 @@ export class HeroSystemTokenHud extends TokenHUD {
                 maxNonCombatDistanceMeters: () => 0,
             },
         };
+    }
+
+    /**
+     * List the movement modes this token can pick.
+     *
+     * Core prepends a Default entry that writes a null action. HERO has no default mode. The actor holds
+     * the mode, and `propagateMovementMode` writes it to every linked token, so a cleared selection would
+     * land straight back on an explicit mode. Dropping the entry keeps the palette honest.
+     *
+     * Core keeps an action the token holds even when `canSelect` fails, so a drained actor can still list
+     * the mode its token holds. HERO drops that entry: no power backs the mode, and selecting it moves
+     * nobody. `canSelectMovementAction` applies the same test core applied to every other entry.
+     *
+     * An actor with no movement power, such as a base2 actor or an actor whose powers an effect drained to
+     * zero, gets one entry: `No movement`, shown with a ban icon and selected.
+     *
+     * @returns {object} The movement action choices, keyed by HUD action key.
+     */
+    _getMovementActionChoices() {
+        const choices = super._getMovementActionChoices();
+
+        delete choices[""];
+
+        const heldAction = this.document._source.movementAction;
+
+        if (choices[heldAction] && !canSelectMovementAction(this.document, heldAction)) {
+            delete choices[heldAction];
+        }
+
+        if (Object.keys(choices).length > 0) {
+            return choices;
+        }
+
+        // Nothing is selectable, so list the one state this character is in. Core already built this entry
+        // when the token holds the no-movement action, so reuse it rather than rebuild it.
+        return {
+            [MOVEMENT_NONE_ACTION]: choices[MOVEMENT_NONE_ACTION] ?? movementChoice(MOVEMENT_NONE_ACTION, true),
+        };
+    }
+
+    /**
+     * Put the no-movement icon on the movement control when the token has no mode to pick.
+     *
+     * Core fills two template slots: the palette entries, and the control icon from `movementActionsConfig`.
+     * Core takes the control icon from the action the token holds, and infers the default mode when that
+     * value is null. A legacy token that cannot move still holds null, so core would show Running for an
+     * actor that cannot run. This fills the second slot from the entry `_getMovementActionChoices` built,
+     * so the two can never disagree. Once every token holds an action, this override is idle.
+     *
+     * @param {object} options The render options.
+     *
+     * @returns {Promise<object>} The render context.
+     */
+    async _prepareContext(options) {
+        const context = await super._prepareContext(options);
+        const noMovement = context.movementActions?.[MOVEMENT_NONE_ACTION];
+
+        if (!noMovement) {
+            return context;
+        }
+
+        // The control template uses only the icon. It has no entry label to show.
+        context.movementActionsConfig = { icon: noMovement.icon };
+
+        return context;
     }
 }

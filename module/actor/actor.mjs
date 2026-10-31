@@ -17,6 +17,11 @@ import {
 import { Attack, actionToJSON } from "../utility/attack.mjs";
 import { HeroObjectCacheMixin } from "../utility/cache.mjs";
 import { characteristicValueToDiceParts } from "../utility/damage.mjs";
+import {
+    changedMovementCharacteristic,
+    isMovementPropagationOwner,
+    queueResyncMovementMode,
+} from "../utility/movement.mjs";
 import { clamp, roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
 import {
@@ -1257,6 +1262,13 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const systemData = changed?.system || {};
         if (systemData.senses || changed.effects) {
             canvas.perception?.update({ initializeVision: true, refreshLighting: true });
+        }
+
+        // 3. Drop a movement mode the actor can no longer move on. An effect can zero the characteristic
+        // behind the selected mode, and every token HUD would keep highlighting it. Re-resolving stores a
+        // usable mode, or "none" when no movement power is left.
+        if (isMovementPropagationOwner(userId) && changedMovementCharacteristic(this, changed)) {
+            queueResyncMovementMode(this);
         }
     }
 
@@ -3781,26 +3793,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const equipment = this.items.filter((item) => item.type === "equipment" && !item.parentItem && item.isCarried);
         const price = equipment.reduce((a, b) => a + b.system.PRICE, 0);
         return price.toFixed(2);
-    }
-
-    get activeMovement() {
-        const movementPowers = this.system.is5e ? CONFIG.HERO.movementPowers5e : CONFIG.HERO.movementPowers;
-
-        let movementItems = [];
-        for (const key of Object.keys(this.system.characteristics).filter((o) => movementPowers[o])) {
-            const char = this.getCharacteristic(key);
-            if ((parseInt(char.value) || 0) > 0) {
-                char._id = key;
-                char.name = movementPowers[key];
-                movementItems.push(char);
-            }
-        }
-        const _activeMovement =
-            movementItems.length === 0
-                ? "none"
-                : movementItems.find((o) => o._id === this.flags[game.system.id]?.activeMovement)?._id ||
-                  movementItems[0]._id;
-        return _activeMovement;
     }
 
     static stunThresholdForType(type) {

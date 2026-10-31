@@ -1,5 +1,11 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { characteristicMaxAddChanges } from "../utility/active-effects.mjs";
+import {
+    isMovementPropagationOwner,
+    isTokenToActorMovementCopySuppressed,
+    queuePropagateMovementMode,
+    queueInitializeTokenMovementAction,
+} from "../utility/movement.mjs";
 import { convertSystemUnitsToMetres, gridUnitsToMeters } from "../utility/units.mjs";
 
 const { TokenDocument } = foundry.documents;
@@ -99,6 +105,61 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
         }
         // Use least expensive movements first
         return possibleMovements.sort(({ endPer1mMovement: a }, { endPer1mMovement: b }) => a - b);
+    }
+
+    /**
+     * Give a new token the movement action its actor can use.
+     *
+     * A token created without an action inherits `CONFIG.Token.movement.defaultAction`, so a token whose
+     * actor cannot move would report the running distance.
+     *
+     * Only the client that owns movement writes queues the task, and the task re-reads the stored action when
+     * it runs, so a token that arrives with an action is left alone.
+     *
+     * @override
+     * @param {object} data The created data.
+     * @param {object} options Options passed through the create operation.
+     * @param {string} userId The id of the user who created the token.
+     */
+    _onCreate(data, options, userId) {
+        super._onCreate(data, options, userId);
+
+        if (!isMovementPropagationOwner(userId)) {
+            return;
+        }
+
+        queueInitializeTokenMovementAction(this);
+    }
+
+    /**
+     * Fan a movement mode change out to the actor and to every token linked to that actor.
+     *
+     * Only the client that made the change propagates. Remote clients receive the same update through
+     * the socket, and if each one fanned out they would write the same tokens over each other.
+     *
+     * @override
+     * @param {object} changed The fields applied to this token document.
+     * @param {object} options Options passed through the update operation.
+     * @param {string} userId The id of the user who performed the update.
+     */
+    _onUpdate(changed, options, userId) {
+        super._onUpdate(changed, options, userId);
+
+        if (!("movementAction" in changed)) {
+            return;
+        }
+
+        // A tagged write came from the actor's movement mode. Copying it back would write the actor a
+        // second time, once per token.
+        if (isTokenToActorMovementCopySuppressed(options)) {
+            return;
+        }
+
+        if (!isMovementPropagationOwner(userId)) {
+            return;
+        }
+
+        queuePropagateMovementMode(this, changed.movementAction);
     }
 
     get _movementHistoryEndCost() {

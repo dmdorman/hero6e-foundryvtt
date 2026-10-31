@@ -1,8 +1,20 @@
-import { forceReplaceFields } from "./utility/util.mjs";
-import { HeroProgressBar } from "./utility/progress-bar.mjs";
-import { CreateHeroCompendiums } from "./heroCompendiums.mjs";
-import { migrateCombatsToSingleCombatantTracker } from "./combat-single.mjs";
-import { HeroItemCharacteristic } from "./item/HeroSystem6eTypeDataModels.mjs";
+/**
+ * Warning: keep this module self-contained.
+ *
+ * A migration must apply the rules of the version it belongs to. Code outside this module keeps changing.
+ * A shared helper that changes later would silently change what an old migration does, so a world migrating
+ * from an old version would get behaviour that version never had.
+ *
+ * So do not import behaviour from outside this module. Copy what the step needs, and name the copy after
+ * the version that froze it, for example `linkedTokenDocuments_5_0_4`. Name the live helper the copy came
+ * from in its comment, so a reader can compare the two. Keep the copy unchanged when the live helper moves
+ * on, and add a new copy for the new version instead.
+ *
+ */
+import { migrateCombatsToSingleCombatantTracker } from "./combat-single.mjs"; // FIXME: This implementation needs to be in this file.
+import { CreateHeroCompendiums } from "./heroCompendiums.mjs"; // Always want to create compendia for this version of software.
+import { HeroItemCharacteristic } from "./item/HeroSystem6eTypeDataModels.mjs"; // This import is dodgy but is fine if only using for a type and not properties.
+import { HeroProgressBar } from "./utility/progress-bar.mjs"; // Always want to use the progress bar for this version of software.
 
 const { Item } = foundry.documents;
 
@@ -11,8 +23,27 @@ const needToPersistToDb = "persistMigrationToDb";
 
 export function tagObjectForPersistence(source) {
     // Notice that this value is never saved to the database
-    const needToCommitMigrationToDbField = `flags.${game.system.id || "hero6efoundryvttv2"}.${needToPersistToDb}`;
+    const needToCommitMigrationToDbField = `flags.${game.system.id}.${needToPersistToDb}`;
     foundry.utils.setProperty(source, needToCommitMigrationToDbField, true);
+}
+
+/**
+ * Update payload that force-replaces each field in forcedFields (skipping the default
+ * recursive merge), with otherFields merged normally.
+ *
+ * NOTE: This is a copy of a function available elsewhere to ensure migrations continue to remain
+ *       functionally the same always.
+ *
+ * @param {object} forcedFields - Map of field name (unprefixed) to replacement value
+ * @param {object} [otherFields={}]
+ * @returns {object}
+ */
+function forceReplaceFields_ForMigration(forcedFields, otherFields = {}) {
+    const payload = { ...otherFields };
+    for (const [key, value] of Object.entries(forcedFields)) {
+        payload[key] = foundry.data.operators.ForcedReplacement.create(value);
+    }
+    return payload;
 }
 
 /**
@@ -382,6 +413,17 @@ export async function migrateWorld() {
         async () => await game.settings.set(game.system.id, "hdcResetPending", true),
     );
 
+    // 5.0.4 registers a no-movement action, and moves the mode from the token to the actor. A token with no
+    // action inherits CONFIG.Token.movement.defaultAction, so a token whose actor cannot move reports the
+    // running distance. Record the mode on the actor, then give every token the action that mode maps to.
+    await migrateToVersion(
+        "5.0.4",
+        lastMigration,
+        game.scenes.contents.map((scene) => scene.tokens.contents).flat(),
+        "movement action",
+        async (token) => await migrateTokenMovementAction_5_0_4(token),
+    );
+
     // Placeholder for notifying GM of items missing XMLID
     // await migrateToVersion(
     //     game.system.version,
@@ -416,7 +458,10 @@ export async function migrateWorld() {
                 console.log(item);
                 console.warn(`changing ${item.name} type from "${item.type}" to "power"`, item);
                 await item.update(
-                    forceReplaceFields({ system: item.system }, { type: "power", name: `[INVALID] ${item.name}` }),
+                    forceReplaceFields_ForMigration(
+                        { system: item.system },
+                        { type: "power", name: `[INVALID] ${item.name}` },
+                    ),
                 );
             } else {
                 console.error("unexpected item.type", item);
@@ -441,14 +486,14 @@ async function commitActorAndItemMigrateDataChangesByActor(actor) {
         const { _id, system, flags, type } = actor.toObject();
         delete flags[game.system.id][needToPersistToDb];
         //TODO: what about items that we removed (like the STR placeholder?), not working as intended.
-        await actor.update(forceReplaceFields({ system, flags }, { _id, type }));
+        await actor.update(forceReplaceFields_ForMigration({ system, flags }, { _id, type }));
     }
 
     for (const item of actor.items) {
         if (item.flags[game.system.id]?.[needToPersistToDb]) {
             const { _id, system, flags, type } = item.toObject();
             delete flags[game.system.id][needToPersistToDb];
-            itemUpdates.push(forceReplaceFields({ system, flags }, { _id, type }));
+            itemUpdates.push(forceReplaceFields_ForMigration({ system, flags }, { _id, type }));
         }
     }
 
@@ -465,7 +510,7 @@ async function commitItemsCollectionMigrateDataChanges(item) {
     if (item.flags[game.system.id]?.[needToPersistToDb]) {
         const { system, flags, type } = item.toObject();
         delete flags[game.system.id][needToPersistToDb];
-        await item.update(forceReplaceFields({ system, flags }, { type }));
+        await item.update(forceReplaceFields_ForMigration({ system, flags }, { type }));
     }
 }
 
@@ -475,7 +520,7 @@ async function commitItemsCollectionMigrateDataChanges(item) {
  *
  * @returns {Promise}
  */
-export async function migrateHitLocationSettings_5_0_0() {
+async function migrateHitLocationSettings_5_0_0() {
     const hitLocationSetting = game.settings.get(game.system.id, "hit locations");
     // "true"/"false" are the stringified pre-5.0.0 Boolean values; the prose
     // strings were written by an early 5.0.0 dev build and match no choice key.
@@ -494,6 +539,192 @@ export async function migrateHitLocationSettings_5_0_0() {
     } else {
         // We already converted so we're good.
     }
+}
+
+/**
+ * Flag path that holds the movement mode an actor chose.
+ *
+ * Copy of `activeMovementFlag` in `module/utility/movement.mjs`, frozen at 5.0.4.
+ *
+ * @returns {string} The flag path.
+ */
+function activeMovementFlag_5_0_4() {
+    return `flags.${game.system.id}.activeMovement`;
+}
+
+/**
+ * Return every token linked to an actor, across all scenes.
+ *
+ * Copy of `linkedTokenDocuments` in `module/utility/movement.mjs`, frozen at 5.0.4. An unlinked token holds
+ * its own copy of the actor, so it never appears here.
+ *
+ * @param {HeroSystem6eActor} actor Actor to look up.
+ *
+ * @returns {HeroSystem6eTokenDocument[]} The linked tokens.
+ */
+function linkedTokenDocuments_5_0_4(actor) {
+    if (!actor) {
+        return [];
+    }
+
+    return game.scenes.contents.flatMap((scene) =>
+        scene.tokens.filter((token) => token.isLinked && token.actorId === actor.id),
+    );
+}
+
+/**
+ * Update option that keeps a token write from copying its movement action back to the actor.
+ *
+ * Copy of `withTokenToActorMovementCopySuppressed` in `module/utility/movement.mjs`, frozen at 5.0.4. The
+ * token document class reads this key to tell a system write from a player selection. A migration must pass
+ * it so the propagation loop stays out of the migration.
+ *
+ * The key must match the live constant `TOKEN_TO_ACTOR_MOVEMENT_COPY_SUPPRESSED`. Drift costs an extra
+ * propagation round per token, and the actor still settles on the right mode, so a stale copy is noisy
+ * rather than wrong.
+ *
+ * @returns {object} Update options for `TokenDocument#update`.
+ */
+function withTokenToActorMovementCopySuppressed_5_0_4() {
+    return { heroSystem6eTokenToActorMovementCopySuppressed: true };
+}
+
+/**
+ * 6E movement characteristic keys, as 5.0.4 defines them in `CONFIG.HERO.movementPowers`. 5E actors add
+ * gliding.
+ *
+ * Hard coded on purpose. A migration must keep the meaning it had the day it shipped, so it must not read
+ * configuration a later version changes.
+ */
+const MOVEMENT_POWER_KEYS_6E_5_0_4 = Object.freeze([
+    "extradimensionalmovement",
+    "flight",
+    "ftl",
+    "leaping",
+    "running",
+    "swimming",
+    "swinging",
+    "teleportation",
+    "tunneling",
+]);
+
+/**
+ * Record the mode a token moves on, on the actor and on the token.
+ *
+ * Before 5.0.4 nothing stored a mode on the actor, so an upgrade must put one there.
+ *
+ * The token write carries `withTokenToActorMovementCopySuppressed_5_0_4`, so the normal propagation stays
+ * out of the migration. That loop rewrites every token of the actor, and the migration is about to visit
+ * those tokens anyway.
+ *
+ * A characteristic key is lowercase and a HUD action key is uppercase, so the mode key uppercases into the
+ * action. 5.0.4 fixes that mapping, so this step keeps its own copy.
+ *
+ * Only a world actor records the mode. Foundry routes a write to an unlinked token's actor copy into that
+ * token's ActorDelta, so such a write would persist and pin the mode on that one token. It would stop
+ * following the world actor, and no player chose that. This step leaves the copy untouched, so the token
+ * keeps reading through to the world actor, and keeps its own action when the world actor stores no mode.
+ * `actorMovementKey` resolves the distance from the same copy, so it follows the same rule.
+ *
+ * An actorless token is left alone. No characteristics decide how far it moves, so there is nothing to
+ * record and nothing to correct.
+ *
+ * @param {HeroSystem6eTokenDocument} token Token to migrate.
+ *
+ * @returns {Promise}
+ */
+async function migrateTokenMovementAction_5_0_4(token) {
+    const actor = token.actor;
+
+    if (!actor) {
+        return;
+    }
+
+    const movementKey = resolveMovementKey_5_0_4(actor, token);
+
+    const movementFlag = activeMovementFlag_5_0_4();
+
+    if (!actor.isToken && foundry.utils.getProperty(actor, movementFlag) !== movementKey) {
+        await actor.update({ [movementFlag]: movementKey });
+    }
+
+    const actionKey = movementKey.toUpperCase();
+
+    if (token._source.movementAction !== actionKey) {
+        await token.update({ movementAction: actionKey }, withTokenToActorMovementCopySuppressed_5_0_4());
+    }
+}
+
+/**
+ * Return the movement mode an actor holds, taking what the documents already record.
+ *
+ * Resolution order:
+ *
+ * 1. A stored key the actor still owns, so a mode written by 5.0.4 or later survives.
+ * 2. The action this token already holds, when the actor owns that power. Before 5.0.4 the token was the
+ *    only record of a player's selection, so adopting it keeps that choice.
+ * 3. The default mode. A character with no selection moves on foot, so running wins when the actor owns it.
+ *
+ * An actor that owns no movement power resolves to "none", the mode 5.0.4 registers at distance 0.
+ *
+ * A linked token shares its mode with every token of that actor, so adoption reads all of them. 5.0.4 gives
+ * an actor one mode, so when those tokens hold different actions the first one in scene order wins.
+ *
+ * @param {HeroSystem6eActor} actor Actor to read.
+ * @param {HeroSystem6eTokenDocument} token The token the migration reached.
+ *
+ * @returns {string} A movement characteristic key, or "none".
+ */
+function resolveMovementKey_5_0_4(actor, token) {
+    const ownedKeys = ownedMovementKeys_5_0_4(actor);
+
+    if (ownedKeys.length === 0) {
+        return "none";
+    }
+
+    // A stored key the actor no longer owns falls through, so a power drained to 0 cannot leave the actor
+    // reporting a mode it cannot use.
+    const storedKey = foundry.utils.getProperty(actor, activeMovementFlag_5_0_4());
+
+    if (ownedKeys.includes(storedKey)) {
+        return storedKey;
+    }
+
+    // An unlinked token holds its own copy of the actor, so only that token reads this mode.
+    const tokens = actor.isToken ? [token] : linkedTokenDocuments_5_0_4(actor);
+
+    const heldKey = tokens
+        .map((linked) => (linked._source.movementAction ?? "").toLowerCase())
+        .find((key) => ownedKeys.includes(key));
+
+    return heldKey ?? (ownedKeys.includes("running") ? "running" : ownedKeys[0]);
+}
+
+/**
+ * List the movement characteristic keys the actor owns, in the order the actor stores them.
+ *
+ * An actor owns a movement characteristic when its value is greater than zero, so a drained power drops out.
+ *
+ * @param {HeroSystem6eActor} actor Actor to read.
+ *
+ * @returns {string[]} Characteristic keys, for example ["running", "flight"].
+ */
+function ownedMovementKeys_5_0_4(actor) {
+    const characteristics = actor?.system?.characteristics;
+
+    if (!characteristics) {
+        return [];
+    }
+
+    const movementKeys = [...MOVEMENT_POWER_KEYS_6E_5_0_4];
+
+    if (actor.system.is5e) {
+        movementKeys.push("gliding");
+    }
+
+    return Object.keys(characteristics)
+        .filter((key) => movementKeys.includes(key))
+        .filter((key) => (parseInt(actor.getMovementCharacteristic(key)?.value) || 0) > 0);
 }
 
 /**

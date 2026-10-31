@@ -60,6 +60,7 @@ import {
 } from "../utility/damage.mjs";
 import { getActorDefensesVsAttack, getConditionalDefenses, getItemDefenseVsAttack } from "../utility/defense.mjs";
 import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMetres } from "../utility/range.mjs";
+import { movementDisplayName, tokenMovementKey } from "../utility/movement.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import {
     calculateVelocityInSystemUnits,
@@ -332,7 +333,7 @@ export async function collectActionDataBeforeToHitOptions(item, options = {}) {
     // [NORMALDC] +v/5 Strike, FMove
     if ((item.system.effect || "").match(/v\/\d+/)) {
         data.showVelocity = true;
-        data.velocity = calculateVelocityInSystemUnits(item.actor);
+        data.velocity = calculateVelocityInSystemUnits(token ?? actor);
         data.velocitySystemUnits = getSystemDisplayUnits(item.is5e);
     }
 
@@ -4897,7 +4898,31 @@ async function _calcDamage(damageRoller, item, options) {
     return damageDetail;
 }
 
-async function _calcKnockback(bodyForKbCalculations, item, options, knockbackMultiplier) {
+/**
+ * Movement modes that hold the character above the landscape. Knockback distance doubles against a target
+ * who is not in contact with the ground, so every mode that leaves the target off the ground counts:
+ * flying, gliding, mid-leap, and swinging on a line.
+ *
+ * Approximation: the selected mode is the only signal. The system does not read token height. A leaping
+ * character whose token sits on the ground still counts as airborne, and a flying character who has landed
+ * still counts. A later update should compare token height with the landscape.
+ *
+ * @type {ReadonlyArray<string>}
+ */
+const AIRBORNE_MOVEMENT_KEYS = Object.freeze(["flight", "gliding", "leaping", "swinging"]);
+
+/**
+ * Calculate the knockback a body takes.
+ *
+ * @param {number} bodyForKbCalculations Body the target uses for knockback.
+ * @param {HeroSystem6eItem} item Attack that landed.
+ * @param {object} options Attack options, including `targetToken`.
+ * @param {number} knockbackMultiplier The attack's knockback multiplier.
+ *
+ * @returns {Promise<object>} `useKnockback`, `knockbackMessage`, `knockbackRenderedResult`, `knockbackTags`,
+ * `knockbackRoller`, `knockbackResultTotal`, `shrinkingKB`, and `preKnockBackProneStatus`.
+ */
+export async function _calcKnockback(bodyForKbCalculations, item, options, knockbackMultiplier) {
     let useKnockback = false;
     let knockbackMessage = "";
     let knockbackRenderedResult = null;
@@ -4938,28 +4963,19 @@ async function _calcKnockback(bodyForKbCalculations, item, options, knockbackMul
 
         let knockbackDice = 2;
 
-        const actor = options?.targetToken?.actor;
+        // Target is in the air: -1d6.
+        // The actor holds the active movement mode, and every linked token stays in sync with it, so the
+        // answer does not depend on which token of the target we hold.
+        // Approximation: the mode stands in for height. Should really be checking token's position relative to the terrain.
+        const activeMovement = tokenMovementKey(options.targetToken);
+        if (AIRBORNE_MOVEMENT_KEYS.includes(activeMovement)) {
+            knockbackDice -= 1;
 
-        // Target is in the air -1d6
-        // TODO: This is perhaps not the right check as they could just have the movement radio on. Consider a flying status
-        //       when more than 0m off the ground? This same effect should also be considered for gliding.
-        const activeMovement = options.targetToken?.actor?.flags?.[game.system.id]?.activeMovement;
-        if (["flight", "gliding"].includes(activeMovement)) {
-            // Double check to make sure FLIGHT or GLIDING is still on
-            if (
-                options.targetToken.actor.items.find(
-                    (o) => o.system.XMLID === activeMovement.toUpperCase() && o.isActive,
-                )
-            ) {
-                knockbackDice -= 1;
-                knockbackTags.push({
-                    value: "-1d6KB",
-                    name: "target is in the air",
-                    title: `Knockback Modifier ${options.targetToken?.actor?.flags?.[game.system.id]?.activeMovement}`,
-                });
-            } else {
-                console.warn(`${activeMovement} selected but that power is not active.`);
-            }
+            knockbackTags.push({
+                value: "-1d6KB",
+                name: "target is in the air",
+                title: `Knockback Modifier\n${movementDisplayName(activeMovement)}`,
+            });
         }
 
         // Target Roll With A Punch -1d6
