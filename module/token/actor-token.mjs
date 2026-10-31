@@ -1,8 +1,8 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { characteristicMaxAddChanges } from "../utility/active-effects.mjs";
 import {
-    MOVEMENT_SYNC_OPTION,
     isMovementPropagationOwner,
+    isTokenToActorMovementCopySuppressed,
     queuePropagateMovementMode,
     queueInitializeTokenMovementAction,
 } from "../utility/movement.mjs";
@@ -113,6 +113,9 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
      * A token created without an action inherits `CONFIG.Token.movement.defaultAction`, so a token whose
      * actor cannot move would report the running distance.
      *
+     * Only the client that owns movement writes queues the task, and the task re-reads the stored action when
+     * it runs, so a token that arrives with an action is left alone.
+     *
      * @override
      * @param {object} data The created data.
      * @param {object} options Options passed through the create operation.
@@ -121,7 +124,7 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
     _onCreate(data, options, userId) {
         super._onCreate(data, options, userId);
 
-        if (this._source.movementAction || !isMovementPropagationOwner(userId)) {
+        if (!isMovementPropagationOwner(userId)) {
             return;
         }
 
@@ -146,7 +149,9 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
             return;
         }
 
-        if (options?.[MOVEMENT_SYNC_OPTION]) {
+        // A tagged write came from the actor's movement mode. Copying it back would write the actor a
+        // second time, once per token.
+        if (isTokenToActorMovementCopySuppressed(options)) {
             return;
         }
 

@@ -12,7 +12,6 @@ import { _calcKnockback } from "../item/item-attack.mjs";
 import { getAndSetGameSetting } from "../settings/settings-helpers.mjs";
 import {
     MOVEMENT_NONE_ACTION,
-    MOVEMENT_SYNC_OPTION,
     actorMovementKey,
     activeMovementFlag,
     asTokenDocument,
@@ -25,6 +24,7 @@ import {
     ownedMovementKeys,
     propagateMovementMode,
     tokenMovementKey,
+    withTokenToActorMovementCopySuppressed,
 } from "../utility/movement.mjs";
 import { calculateVelocityInSystemUnits } from "../utility/units.mjs";
 
@@ -249,6 +249,22 @@ export function registerMovementModeTests(quench) {
         (context) => {
             const { after, afterEach, before, beforeEach, describe, it, assert } = context;
 
+            /**
+             * Assert that an actor holds no stored movement mode.
+             *
+             * A flag that was never written is undefined. A flag cleared through `Actor#update` stays null,
+             * because Foundry keeps the key. Both mean "no stored mode", and `actorMovementKey` falls back
+             * for both.
+             */
+            function assertNoStoredMode(actor) {
+                const storedMode = foundry.utils.getProperty(actor, activeMovementFlag());
+
+                assert.isTrue(
+                    storedMode === undefined || storedMode === null,
+                    `Expected no stored movement mode, got "${storedMode}"`,
+                );
+            }
+
             describe("Movement Mode", function () {
                 // Actor, scene, and token creation exceeds Mocha's 2000ms default.
                 setQuenchTimeout(this, 30000);
@@ -424,7 +440,7 @@ export function registerMovementModeTests(quench) {
                     });
 
                     it("Returns the default mode when no flag is stored", function () {
-                        assert.equal(foundry.utils.getProperty(actor, activeMovementFlag()), undefined);
+                        assertNoStoredMode(actor);
                         assert.equal(actorMovementKey(actor), "running");
                     });
 
@@ -648,8 +664,7 @@ export function registerMovementModeTests(quench) {
                     });
 
                     it("Skips propagation for a fan-out write", async function () {
-                        const options = {};
-                        options[MOVEMENT_SYNC_OPTION] = true;
+                        const options = withTokenToActorMovementCopySuppressed();
 
                         let actorWrites = 0;
                         const hookId = Hooks.on("updateActor", (updated) => {
@@ -1132,6 +1147,78 @@ export function registerMovementModeTests(quench) {
                         const action = CONFIG.Token.movement.actions[tokenDoc._source.movementAction];
                         assert.equal(action.maxCombatDistanceMeters(tokenDoc), 0);
                         assert.equal(action.maxNonCombatDistanceMeters(tokenDoc), 0);
+                    });
+                });
+
+                describe("Upgraded token drained with no stored mode", function () {
+                    let scene;
+                    let actor;
+                    let tokenDoc;
+                    let movementValues;
+
+                    before(async function () {
+                        await waitForNotificationQueueToClear();
+                        scene = await createQuenchScene({ quench: this });
+                        actor = await createQuenchActor({ quench: this, is5e: false, name: "Legacy Flight 6e" });
+                        await actor.updateCharacteristics([["flight", { value: 20 }]]);
+                        movementValues = movementCharacteristicSnapshot(actor);
+
+                        // A token created with an action skips seeding, so nothing records the mode on the
+                        // actor. Compendium content, macros, and default token data all arrive this way.
+                        [tokenDoc] = await scene.createEmbeddedDocuments("Token", [
+                            {
+                                name: actor.name,
+                                actorId: actor.id,
+                                actorLink: true,
+                                x: 0,
+                                y: 0,
+                                movementAction: "FLIGHT",
+                            },
+                        ]);
+
+                        await viewSceneAndWait(scene);
+                    });
+
+                    after(async function () {
+                        await releaseTokenHud();
+                        await deleteQuenchScenes();
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    beforeEach(async function () {
+                        // Every run starts with the power in hand and no stored mode.
+                        await actor.updateCharacteristics(movementValues);
+                        await actor.update({ [activeMovementFlag()]: null });
+                        await movementPropagationSettled();
+                    });
+
+                    it("Shows No movement when a drained token holds a mode no power backs", async function () {
+                        // Precondition, the upgrade shape. The token holds a mode, and the actor holds no
+                        // record of one. That split is what breaks the palette.
+                        assert.equal(tokenDoc._source.movementAction, "FLIGHT");
+                        assertNoStoredMode(actor);
+
+                        const movementKeys = ownedMovementKeys(actor);
+                        await actor.updateCharacteristics(movementKeys.map((key) => [key, { value: 0 }]));
+                        await movementPropagationSettled();
+
+                        assert.deepEqual(ownedMovementKeys(actor), []);
+                        assert.equal(actorMovementKey(actor), "none");
+
+                        // A player opens the HUD on this token now. Nothing is selectable, so the palette must
+                        // read "No movement", not the flight mode the token still holds.
+                        const hud = await bindTokenHud(canvas.tokens.get(tokenDoc.id));
+                        const entries = hudMovementEntries(hud);
+                        const rendered = entries.map((entry) => `${entry.key} (${entry.label})`).join(", ");
+
+                        assert.include(
+                            entries.map((entry) => entry.key),
+                            MOVEMENT_NONE_ACTION,
+                            `Rendered palette: ${rendered}`,
+                        );
+                        assert.equal(entries.length, 1, `Rendered palette: ${rendered}`);
+                        assert.equal(entries[0].label, "No movement");
+                        assert.isTrue(entries[0].active);
                     });
                 });
 

@@ -56,6 +56,20 @@ export function activeMovementFlag() {
 }
 
 /**
+ * Return the movement power table that lists this actor's powers.
+ *
+ * 5E adds gliding, so a 5E actor reads the wider table. Callers reach this only for an actor that holds
+ * characteristics.
+ *
+ * @param {HeroSystem6eActor} actor Actor to read.
+ *
+ * @returns {object} The movement power table for that edition, keyed by characteristic key.
+ */
+function movementPowerTable(actor) {
+    return actor.system.is5e ? CONFIG.HERO.movementPowers5e : CONFIG.HERO.movementPowers;
+}
+
+/**
  * Return the movement characteristic keys the actor owns, in schema order.
  *
  * An actor owns a movement characteristic when its value is greater than zero. A drained power drops
@@ -72,9 +86,7 @@ export function ownedMovementKeys(actor) {
         return [];
     }
 
-    const movementPowers = actor.system.is5e ? CONFIG.HERO.movementPowers5e : CONFIG.HERO.movementPowers;
-
-    const movementKeys = Object.keys(characteristics).filter((key) => movementPowers[key]);
+    const movementKeys = Object.keys(characteristics).filter((key) => movementPowerTable(actor)[key]);
 
     return movementKeys.filter((key) => {
         const value = parseInt(actor.getMovementCharacteristic(key)?.value) || 0;
@@ -91,9 +103,10 @@ export function ownedMovementKeys(actor) {
  * @returns {string} The display name, for example `"Flight"`. Falls back to the key itself.
  */
 export function movementDisplayName(movementKey) {
-    const allMovementPowers = CONFIG.HERO.movementPowers5e ?? CONFIG.HERO.movementPowers;
+    // The 5E table holds every 6E key plus gliding, so one lookup covers both editions.
+    const allMovementPowers = CONFIG.HERO.movementPowers5e;
 
-    return allMovementPowers?.[movementKey] ?? movementKey;
+    return allMovementPowers[movementKey] ?? movementKey;
 }
 
 /**
@@ -285,9 +298,8 @@ export function queueResyncMovementMode(actor) {
  * Report whether this client owns movement writes.
  *
  * Propagation writes the actor flag and the tokens of every scene. The GM holds those rights, so the GM
- * takes the job and a player client never fails on a token it cannot write. `game.users.activeGM` names
- * one GM, so two connected GMs do not both write. With no GM connected, the client that made the change
- * propagates as far as its own rights allow.
+ * takes the job and a player client never fails on a token it cannot write. With no GM connected, the client
+ * that made the change propagates as far as its own rights allow.
  *
  * @param {string} userId The id of the user who made the originating change.
  *
@@ -317,7 +329,7 @@ export function changedMovementCharacteristic(actor, changed) {
         return false;
     }
 
-    const movementPowers = actor.system.is5e ? CONFIG.HERO.movementPowers5e : CONFIG.HERO.movementPowers;
+    const movementPowers = movementPowerTable(actor);
 
     return Object.keys(foundry.utils.flattenObject(characteristics)).some((path) => movementPowers[path.split(".")[0]]);
 }
@@ -342,15 +354,47 @@ export async function movementPropagationSettled() {
 }
 
 /**
- * Update option that marks a write as part of our own movement fan-out.
+ * Update option for a token movementAction write whose value already came from the actor.
  *
- * A fan-out write lands on sibling tokens, and each of those writes would otherwise trigger another
- * propagation. That follow-up finds the actor already correct and writes it again. Tagging the fan-out
- * writes lets `_onUpdate` skip them, so one player action costs one actor write.
+ * `HeroSystem6eTokenDocument#_onUpdate` copies a token selection to the actor, then copies the actor's mode
+ * to that actor's other tokens. That copy back is wrong for a write we produced from the actor itself, so
+ * the option suppresses it. Without it, a fan-out write lands on every sibling token, each of those writes
+ * starts another propagation, and one player action costs several actor writes.
+ *
+ * Set this key through `withTokenToActorMovementCopySuppressed`, and test it through
+ * `isTokenToActorMovementCopySuppressed`. A macro that sets it by hand stops the actor from learning the
+ * selection, which leaves the actor and its tokens disagreeing.
  *
  * @type {string}
  */
-export const MOVEMENT_SYNC_OPTION = "heroSystem6eMovementSync";
+const TOKEN_TO_ACTOR_MOVEMENT_COPY_SUPPRESSED = "heroSystem6eTokenToActorMovementCopySuppressed";
+
+/**
+ * Tag a token update so it does not copy its movementAction back to the actor.
+ *
+ * Use it for a write whose value came from the actor's movement mode, or from a migration that resolved
+ * that mode.
+ *
+ * @param {object} [options] Existing update options to extend. Omit it when the caller has none.
+ *
+ * @returns {object} The options, tagged for `HeroSystem6eTokenDocument#_onUpdate`.
+ */
+export function withTokenToActorMovementCopySuppressed(options) {
+    const baseOptions = options ?? {};
+
+    return { ...baseOptions, [TOKEN_TO_ACTOR_MOVEMENT_COPY_SUPPRESSED]: true };
+}
+
+/**
+ * Report whether a token update must not copy its movementAction back to the actor.
+ *
+ * @param {object} [options] Update options the token update received.
+ *
+ * @returns {boolean} True when the write already mirrors the actor's mode.
+ */
+export function isTokenToActorMovementCopySuppressed(options) {
+    return Boolean(options?.[TOKEN_TO_ACTOR_MOVEMENT_COPY_SUPPRESSED]);
+}
 
 /**
  * Propagate a movement mode to the actor and to the tokens that read that actor.
@@ -472,10 +516,10 @@ async function writeTokenActions(updatesByScene, description) {
         const scene = game.scenes.get(sceneId);
 
         try {
-            await foundry.documents.TokenDocument.updateDocuments(updates, {
-                parent: scene,
-                [MOVEMENT_SYNC_OPTION]: true,
-            });
+            await foundry.documents.TokenDocument.updateDocuments(
+                updates,
+                withTokenToActorMovementCopySuppressed({ parent: scene }),
+            );
         } catch (error) {
             // A player who lacks permission for another scene's token must not break their own selection.
             console.warn(`Hero System 6e: could not sync ${description} to scene "${scene?.name}": ${error.message}`);

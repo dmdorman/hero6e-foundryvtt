@@ -9,22 +9,42 @@ import { ftlLevelsToLightYearsPerYear } from "../item/item.mjs";
 const { TokenHUD } = foundry.applications.hud;
 
 /**
- * Build the palette entry for the registered no-movement action.
+ * Return whether the token can move on a movement action right now.
  *
- * Core lists an action only when `canSelect` passes or the token already holds it. `MOVEMENT_NONE_ACTION`
- * is never selectable, so a token that holds it needs this entry built by hand.
+ * @param {HeroSystem6eTokenDocument} tokenDocument Token the palette renders for.
+ * @param {string} action Registered HUD action key.
  *
- * @returns {{id: string, label: string, icon: string, isActive: boolean, cssClass: string}} The entry.
+ * @returns {boolean} True when the actor holds the power behind that action.
  */
-function noMovementChoice() {
-    const config = CONFIG.Token.movement.actions[MOVEMENT_NONE_ACTION];
+function canSelectMovementAction(tokenDocument, action) {
+    const config = CONFIG.Token.movement.actions[action];
+
+    return config?.canSelect(tokenDocument) ?? false;
+}
+
+/**
+ * Build the palette entry for one registered movement action.
+ *
+ * Core builds this shape in `TokenHUD#_getMovementActionChoices`, and it lists an action only when
+ * `canSelect` passes or the token already holds it. `MOVEMENT_NONE_ACTION` is never selectable, so the
+ * no-movement state needs this entry built by hand. Keep the field list matched to core's, so a core
+ * change to that method shows up here as a diff.
+ *
+ * @param {string} action Registered HUD action key.
+ * @param {boolean} isActive Whether the token holds that action.
+ *
+ * @returns {object} The palette entry.
+ */
+function movementChoice(action, isActive) {
+    const config = CONFIG.Token.movement.actions[action];
 
     return {
-        id: MOVEMENT_NONE_ACTION,
+        id: action,
         label: game.i18n.localize(config.label),
         icon: config.icon,
-        isActive: true,
-        cssClass: "active",
+        img: config.img,
+        isActive,
+        cssClass: isActive ? "active" : "",
     };
 }
 
@@ -360,10 +380,12 @@ export class HeroSystemTokenHud extends TokenHUD {
      * the mode, and `propagateMovementMode` writes it to every linked token, so a cleared selection would
      * land straight back on an explicit mode. Dropping the entry keeps the palette honest.
      *
+     * Core keeps an action the token holds even when `canSelect` fails, so a drained actor can still list
+     * the mode its token holds. HERO drops that entry: no power backs the mode, and selecting it moves
+     * nobody. `canSelectMovementAction` applies the same test core applied to every other entry.
+     *
      * An actor with no movement power, such as a base2 actor or an actor whose powers an effect drained to
      * zero, gets one entry: `No movement`, shown with a ban icon and selected.
-     *
-     * `noMovementChoice` builds the fallback entry from the registered action.
      *
      * @returns {object} The movement action choices, keyed by HUD action key.
      */
@@ -372,11 +394,21 @@ export class HeroSystemTokenHud extends TokenHUD {
 
         delete choices[""];
 
+        const heldAction = this.document._source.movementAction;
+
+        if (choices[heldAction] && !canSelectMovementAction(this.document, heldAction)) {
+            delete choices[heldAction];
+        }
+
         if (Object.keys(choices).length > 0) {
             return choices;
         }
 
-        return { [MOVEMENT_NONE_ACTION]: noMovementChoice() };
+        // Nothing is selectable, so list the one state this character is in. Core already built this entry
+        // when the token holds the no-movement action, so reuse it rather than rebuild it.
+        return {
+            [MOVEMENT_NONE_ACTION]: choices[MOVEMENT_NONE_ACTION] ?? movementChoice(MOVEMENT_NONE_ACTION, true),
+        };
     }
 
     /**
