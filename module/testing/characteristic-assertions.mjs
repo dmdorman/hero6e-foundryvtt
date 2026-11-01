@@ -17,8 +17,8 @@
  * lowercases. Helpers normalize and report the canonical uppercase label.
  */
 
-import { getCharacteristicInfoArrayForActor } from "../utility/util.mjs";
 import { FrozenSet } from "../utility/frozen-set.mjs";
+import { getCharacteristicInfoArrayForActor } from "../utility/util.mjs";
 
 /** Fields a test may assert on a characteristic node. */
 const ASSERTABLE_FIELDS = new FrozenSet([
@@ -75,7 +75,7 @@ export function charMax(actor, label) {
 /**
  * List the characteristic labels this actor type may use.
  *
- * Reads the config permission set, not ownership. A label here means the actor type
+ * Reads the config permission set, not node storage. A label here means the actor type
  * may hold that characteristic. It does not mean the actor bought it.
  *
  * @param {HeroSystem6eActor} actor Actor to read from.
@@ -128,11 +128,11 @@ export function createCharacteristicAssertions(assert) {
     }
 
     /**
-     * Assert the actor owns a characteristic node.
+     * Assert the actor has a characteristic node.
      *
-     * Presence and ownership differ. `hasCharacteristic` answers what the actor type
-     * may use. This answers whether the storage node exists. See bug 3 in
-     * `characteristics_bugs.md`.
+     * Having a characteristic and having its node differ. `hasCharacteristic` answers
+     * what the actor type may use. This answers whether the storage node exists. See
+     * bug 3 in `characteristics_bugs.md`.
      *
      * @param {HeroSystem6eActor} actor
      * @param {string} label Characteristic label. Any case.
@@ -142,7 +142,7 @@ export function createCharacteristicAssertions(assert) {
     }
 
     /**
-     * Assert the actor owns no characteristic node for this label.
+     * Assert the actor has no characteristic node for this label.
      *
      * @param {HeroSystem6eActor} actor
      * @param {string} label Characteristic label. Any case.
@@ -169,7 +169,7 @@ export function createCharacteristicAssertions(assert) {
         }
         const node = charNode(actor, label);
         if (node === undefined || node === null) {
-            assert.fail(`${tag(actor, label)}: no characteristic node. Assert presence with assertHasNode first.`);
+            assert.fail(`${tag(actor, label)}: no characteristic node. Check for the node with assertHasNode first.`);
             return; // Chai throws above. The guard keeps the read safe if a caller swaps in a non-throwing assert.
         }
         assert.equal(node[field], expected, message ?? `${tag(actor, label)}.${field}`);
@@ -208,16 +208,16 @@ export function createCharacteristicAssertions(assert) {
     }
 
     /**
-     * Assert a presence matrix for one actor.
+     * Assert which characteristics one actor has, and which nodes it has.
      *
      * @param {HeroSystem6eActor} actor
      * @param {object} matrix
      * @param {string[]} [matrix.has] Labels the actor must have.
      * @param {string[]} [matrix.lacks] Labels the actor must not have.
-     * @param {string[]} [matrix.nodes] Labels the actor must own a node for.
-     * @param {string[]} [matrix.noNodes] Labels the actor must own no node for.
+     * @param {string[]} [matrix.nodes] Labels the actor must have a node for.
+     * @param {string[]} [matrix.noNodes] Labels the actor must have no node for.
      */
-    function assertPresenceMatrix(actor, { has = [], lacks = [], nodes = [], noNodes = [] } = {}) {
+    function assertHasCharacteristicMatrix(actor, { has = [], lacks = [], nodes = [], noNodes = [] } = {}) {
         for (const label of has) assertHasChar(actor, label);
         for (const label of lacks) assertLacksChar(actor, label);
         for (const label of nodes) assertHasNode(actor, label);
@@ -308,7 +308,7 @@ export function createCharacteristicAssertions(assert) {
         assertCharField,
         assertCharFields,
         assertCharTable,
-        assertPresenceMatrix,
+        assertHasCharacteristicMatrix,
         assertExactCharSet,
         setChar,
         setChars,

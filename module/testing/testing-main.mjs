@@ -107,7 +107,7 @@ Hooks.on("quenchReady", async (quench) => {
             import("./testing-config.mjs"),
             import("./testing-csl.mjs"),
             import("./testing-damage-functions.mjs"),
-            import("./testing-default-characteristics.mjs"),
+            import("./testing-characteristics.mjs"),
             import("./testing-defense.mjs"),
             import("./testing-dice.mjs"),
             import("./testing-drag-and-drop.mjs"),
