@@ -104,10 +104,6 @@ export function registerAutomatonTests(quench) {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("should have the STUN characteristic", function () {
-                        expect(actor.hasCharacteristic("STUN")).to.be.true;
-                    });
-
                     it("should have the correct template", function () {
                         expect(actor.system.CHARACTER.TEMPLATE.name).to.equal("builtIn.Automaton.hdt");
                     });
@@ -211,10 +207,6 @@ export function registerAutomatonTests(quench) {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("should NOT have the STUN characteristic", function () {
-                        expect(actor.hasCharacteristic("STUN")).to.be.false;
-                    });
-
                     it("should recognize that it has the takes no stun but loses body functions special automaton power", function () {
                         expect(actor.getAutomatonSpecialPowers().takesNoStunButLosesFunctionOnBody).to.be.true;
                     });
@@ -316,10 +308,6 @@ export function registerAutomatonTests(quench) {
 
                     after(async function () {
                         await deleteQuenchActor({ quench: this, actor });
-                    });
-
-                    it("should NOT have the STUN characteristic", function () {
-                        expect(actor.hasCharacteristic("STUN")).to.be.false;
                     });
 
                     it("should recognize that it does not have the takes no stun but loses body functions special automaton power", function () {
@@ -435,10 +423,6 @@ export function registerAutomatonTests(quench) {
 
                     after(async function () {
                         await deleteQuenchActor({ quench: this, actor });
-                    });
-
-                    it("should NOT have the STUN characteristic", function () {
-                        expect(actor.hasCharacteristic("STUN")).to.be.false;
                     });
 
                     it("should recognize that it has the cannot be stunned special automaton power", function () {
@@ -568,10 +552,6 @@ export function registerAutomatonTests(quench) {
 
                     after(async function () {
                         await deleteQuenchActor({ quench: this, actor });
-                    });
-
-                    it("should NOT have the STUN characteristic", function () {
-                        expect(actor.hasCharacteristic("STUN")).to.be.false;
                     });
 
                     it("should recognize that it has the takes no stun but loses body functions special automaton power", function () {

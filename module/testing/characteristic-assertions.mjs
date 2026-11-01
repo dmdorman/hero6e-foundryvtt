@@ -6,6 +6,12 @@
  * `actor.system.characteristics` directly. That keeps the storage shape in one place,
  * so the shape can change without a rewrite of 600-plus assertions.
  *
+ * Movement labels go through `assertHasMovementMode`, `assertLacksMovementMode`, and
+ * `assertHasMovementMatrix`, which call `actor.hasMovementCharacteristic`. Characteristic labels go
+ * through `assertHasChar`, `assertLacksChar`, and `assertHasCharacteristicMatrix`, which call
+ * `actor.hasCharacteristic`. Movement modes leave characteristic storage later. Route them through the
+ * movement helpers now, so a test does not change then.
+ *
  * Quench hands each batch its own `assert`. Bind it once per batch with
  * `createCharacteristicAssertions(assert)`, then call the returned helpers.
  *
@@ -17,7 +23,7 @@
  * lowercases. Helpers normalize and report the canonical uppercase label.
  */
 
-import { FrozenSet } from "../utility/frozen-set.mjs";
+import { FrozenSet } from "../utility/freeze-helpers.mjs";
 import { getCharacteristicInfoArrayForActor } from "../utility/util.mjs";
 
 /** Fields a test may assert on a characteristic node. */
@@ -33,7 +39,7 @@ const ASSERTABLE_FIELDS = new FrozenSet([
 ]);
 
 /**
- * Read a characteristic node through the actor funnel.
+ * Read the actor's characteristic node. Use to get `max`, `value`, and the other fields.
  *
  * @param {HeroSystem6eActor} actor Actor to read from.
  * @param {string} label Characteristic label. Any case.
@@ -128,27 +134,42 @@ export function createCharacteristicAssertions(assert) {
     }
 
     /**
-     * Assert the actor has a characteristic node.
-     *
-     * Having a characteristic and having its node differ. `hasCharacteristic` answers
-     * what the actor type may use. This answers whether the storage node exists. See
-     * bug 3 in `characteristics_bugs.md`.
+     * Assert the actor has this movement mode.
      *
      * @param {HeroSystem6eActor} actor
-     * @param {string} label Characteristic label. Any case.
+     * @param {string} label Movement label. Any case.
+     * @param {string} [message] Overrides the generated failure message.
      */
-    function assertHasNode(actor, label) {
-        assert.isDefined(charNode(actor, label), `${tag(actor, label)}: expected a characteristic node, got none`);
+    function assertHasMovementMode(actor, label, message) {
+        requireLabel(label, "assertHasMovementMode");
+        const has = actor.hasMovementCharacteristic(label);
+        assert.isTrue(has, message ?? `${tag(actor, label)}: expected the actor to have this movement mode`);
     }
 
     /**
-     * Assert the actor has no characteristic node for this label.
+     * Assert the actor does not have this movement mode.
      *
      * @param {HeroSystem6eActor} actor
-     * @param {string} label Characteristic label. Any case.
+     * @param {string} label Movement label. Any case.
+     * @param {string} [message] Overrides the generated failure message.
      */
-    function assertNoNode(actor, label) {
-        assert.isUndefined(charNode(actor, label), `${tag(actor, label)}: expected no characteristic node`);
+    function assertLacksMovementMode(actor, label, message) {
+        requireLabel(label, "assertLacksMovementMode");
+        const has = actor.hasMovementCharacteristic(label);
+        assert.isFalse(has, message ?? `${tag(actor, label)}: expected the actor to lack this movement mode`);
+    }
+
+    /**
+     * Assert which movement modes an actor has.
+     *
+     * @param {HeroSystem6eActor} actor
+     * @param {object} matrix
+     * @param {string[]} [matrix.has] Movement labels the actor must have.
+     * @param {string[]} [matrix.lacks] Movement labels the actor must not have.
+     */
+    function assertHasMovementMatrix(actor, { has = [], lacks = [] } = {}) {
+        for (const label of has) assertHasMovementMode(actor, label);
+        for (const label of lacks) assertLacksMovementMode(actor, label);
     }
 
     /**
@@ -169,7 +190,7 @@ export function createCharacteristicAssertions(assert) {
         }
         const node = charNode(actor, label);
         if (node === undefined || node === null) {
-            assert.fail(`${tag(actor, label)}: no characteristic node. Check for the node with assertHasNode first.`);
+            assert.fail(`${tag(actor, label)}: no characteristic node. Assert the characteristic first.`);
             return; // Chai throws above. The guard keeps the read safe if a caller swaps in a non-throwing assert.
         }
         assert.equal(node[field], expected, message ?? `${tag(actor, label)}.${field}`);
@@ -189,7 +210,7 @@ export function createCharacteristicAssertions(assert) {
     }
 
     /**
-     * Assert fields across many characteristics of one actor.
+     * Assert fields across many characteristics of an actor.
      *
      * Drives whole-scenario coverage from one table:
      *
@@ -208,20 +229,16 @@ export function createCharacteristicAssertions(assert) {
     }
 
     /**
-     * Assert which characteristics one actor has, and which nodes it has.
+     * Assert which characteristics an actor has.
      *
      * @param {HeroSystem6eActor} actor
      * @param {object} matrix
      * @param {string[]} [matrix.has] Labels the actor must have.
      * @param {string[]} [matrix.lacks] Labels the actor must not have.
-     * @param {string[]} [matrix.nodes] Labels the actor must have a node for.
-     * @param {string[]} [matrix.noNodes] Labels the actor must have no node for.
      */
-    function assertHasCharacteristicMatrix(actor, { has = [], lacks = [], nodes = [], noNodes = [] } = {}) {
+    function assertHasCharacteristicMatrix(actor, { has = [], lacks = [] } = {}) {
         for (const label of has) assertHasChar(actor, label);
         for (const label of lacks) assertLacksChar(actor, label);
-        for (const label of nodes) assertHasNode(actor, label);
-        for (const label of noNodes) assertNoNode(actor, label);
     }
 
     /**
@@ -303,11 +320,12 @@ export function createCharacteristicAssertions(assert) {
         charLabels,
         assertHasChar,
         assertLacksChar,
-        assertHasNode,
-        assertNoNode,
         assertCharField,
         assertCharFields,
         assertCharTable,
+        assertHasMovementMode,
+        assertLacksMovementMode,
+        assertHasMovementMatrix,
         assertHasCharacteristicMatrix,
         assertExactCharSet,
         setChar,

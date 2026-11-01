@@ -1,19 +1,31 @@
+import { createCharacteristicAssertions } from "./characteristic-assertions.mjs";
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
 
-import { getCharacteristicInfoArrayForActor } from "../utility/util.mjs";
-
+/**
+ * Uploaded base template values.
+ *
+ * The contract lives elsewhere: `testing-characteristics.mjs` asserts which characteristics a
+ * base has, from its `HAS_CHARACTERISTIC` table. This suite answers what an uploaded base
+ * costs, per characteristic.
+ */
 export function registerBaseTests(quench) {
     quench.registerBatch(
         `${game.system.id}.actor.base`,
         (context) => {
-            const { after, before, describe, expect, it } = context;
+            const { after, assert, before, describe, it } = context;
+            const chars = createCharacteristicAssertions(assert);
 
             describe("Base Tests", function () {
                 // Mocha's 2000ms default is too short when several actors are created at the same time.
                 setQuenchTimeout(this, 20000);
 
-                describe("5e Characteristics", async function () {
-                    const contents = `
+                describe("5e Characteristic Values", async function () {
+                    let actor;
+
+                    before(async function () {
+                        actor = await createQuenchActor({
+                            quench: this,
+                            contents: `
                         <?xml version="1.0" encoding="UTF-16"?>
                         <CHARACTER version="6.0" TEMPLATE="builtIn.Base.hdt">
                           <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" RULES="Default" />
@@ -49,63 +61,30 @@ export function registerBaseTests(quench) {
                           <DISADVANTAGES />
                           <EQUIPMENT />
                         </CHARACTER>
-                    `;
-
-                    let actor;
-                    before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "base2" });
+                    `,
+                            is5e: true,
+                            actorType: "base2",
+                        });
                     });
 
                     after(async function () {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("should have the BASESIZE characteristic", function () {
-                        expect(actor.hasCharacteristic("BASESIZE")).to.be.true;
-                    });
-
-                    it("should have the BODY characteristic", function () {
-                        expect(actor.hasCharacteristic("BODY")).to.be.true;
-                    });
-
-                    it("should have the DEF characteristic", function () {
-                        expect(actor.hasCharacteristic("DEF")).to.be.true;
-                    });
-
-                    it("should NOT have the PD characteristic", function () {
-                        expect(actor.hasCharacteristic("PD")).to.be.false;
-                    });
-
-                    it("should NOT have the ED characteristic", function () {
-                        expect(actor.hasCharacteristic("ED")).to.be.false;
-                    });
-
-                    it("should NOT have the STUN characteristic", function () {
-                        expect(actor.hasCharacteristic("STUN")).to.be.false;
-                    });
-
-                    it("should NOT have the SIZE characteristic", function () {
-                        expect(actor.hasCharacteristic("SIZE")).to.be.false;
-                    });
-
                     it("should have correct characteristic values", function () {
-                        expect(actor.system.characteristics.body.value).to.equal(4); // Base 2 + 2 levels
-                        expect(actor.system.characteristics.def.value).to.equal(15); // 2 base + 13 levels
-                        expect(actor.system.characteristics.basesize.value).to.equal(20); // 0 base + 20 levels
-                    });
-
-                    it("should only have the expected 5e base characteristics", function () {
-                        const characteristics = getCharacteristicInfoArrayForActor(actor);
-                        const characteristicKeys = characteristics.map((c) => c.key);
-
-                        // Should have exactly these three characteristics
-                        expect(characteristics.length).to.equal(3);
-                        expect(characteristicKeys).to.include.members(["BASESIZE", "BODY", "DEF"]);
+                        chars.assertCharFields(actor, "body", { value: 4 }); // Base 2 + 2 levels
+                        chars.assertCharFields(actor, "def", { value: 15 }); // 2 base + 13 levels
+                        chars.assertCharFields(actor, "basesize", { value: 20 }); // 0 base + 20 levels
                     });
                 });
 
-                describe("6e Characteristics", async function () {
-                    const contents = `
+                describe("6e Characteristic Values", async function () {
+                    let actor;
+
+                    before(async function () {
+                        actor = await createQuenchActor({
+                            quench: this,
+                            contents: `
                         <?xml version="1.0" encoding="UTF-16"?>
                         <CHARACTER version="6.0" TEMPLATE="builtIn.Base6E.hdt">
                           <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" RULES="Default" />
@@ -144,70 +123,21 @@ export function registerBaseTests(quench) {
                           <DISADVANTAGES />
                           <EQUIPMENT />
                         </CHARACTER>
-                    `;
-
-                    let actor;
-                    before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "base2" });
+                    `,
+                            is5e: false,
+                            actorType: "base2",
+                        });
                     });
 
                     after(async function () {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("should have the BASESIZE characteristic", function () {
-                        expect(actor.hasCharacteristic("BASESIZE")).to.be.true;
-                    });
-
-                    it("should have the BODY characteristic", function () {
-                        expect(actor.hasCharacteristic("BODY")).to.be.true;
-                    });
-
-                    it("should have the PD characteristic", function () {
-                        expect(actor.hasCharacteristic("PD")).to.be.true;
-                    });
-
-                    it("should have the ED characteristic", function () {
-                        expect(actor.hasCharacteristic("ED")).to.be.true;
-                    });
-
-                    it("should NOT have the DEF characteristic", function () {
-                        // Shows an error in the log, which is expected.
-                        // TODO: Improve actor.hasCharacteristic such that is doesn't REQUIRE baseInfo (if possible)
-                        // shouldhavetheBASESIZEcharacteristic/Natural DEF/DEF/DEF: Unable to find 6e power entry.
-                        expect(actor.hasCharacteristic("DEF")).to.be.false;
-                    });
-
-                    it("should NOT have the STUN characteristic", function () {
-                        expect(actor.hasCharacteristic("STUN")).to.be.false;
-                    });
-
-                    it("should NOT have the SIZE characteristic", function () {
-                        expect(actor.hasCharacteristic("SIZE")).to.be.false;
-                    });
-
-                    it("should NOT have the OCV characteristic", function () {
-                        expect(actor.hasCharacteristic("OCV")).to.be.false;
-                    });
-
-                    it("should NOT have the DCV characteristic", function () {
-                        expect(actor.hasCharacteristic("DCV")).to.be.false;
-                    });
-
                     it("should have correct characteristic values", function () {
-                        expect(actor.system.characteristics.body.value).to.equal(10); // Base 2 + 8 levels
-                        expect(actor.system.characteristics.pd.value).to.equal(7); // 2 base + 5 levels
-                        expect(actor.system.characteristics.ed.value).to.equal(6); // 2 base + 4 levels
-                        expect(actor.system.characteristics.basesize.value).to.equal(14); // 0 base + 14 levels
-                    });
-
-                    it("should only have the expected 6e base characteristics", function () {
-                        const characteristics = getCharacteristicInfoArrayForActor(actor);
-                        const characteristicKeys = characteristics.map((c) => c.key);
-
-                        // Should have exactly these four characteristics
-                        expect(characteristics.length).to.equal(4);
-                        expect(characteristicKeys).to.include.members(["BASESIZE", "BODY", "PD", "ED"]);
+                        chars.assertCharFields(actor, "body", { value: 10 }); // Base 2 + 8 levels
+                        chars.assertCharFields(actor, "pd", { value: 7 }); // 2 base + 5 levels
+                        chars.assertCharFields(actor, "ed", { value: 6 }); // 2 base + 4 levels
+                        chars.assertCharFields(actor, "basesize", { value: 14 }); // 0 base + 14 levels
                     });
                 });
             });

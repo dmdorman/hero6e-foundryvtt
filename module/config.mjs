@@ -845,9 +845,17 @@ function noDamageBaseEffectDicePartsBundle(item /* , _options */) {
 }
 
 function staticIgnoreForActorFunction(alwaysIgnore) {
-    return function (actor) {
-        return alwaysIgnore.includes(actor.type);
+    const ignoreForTypes = freezeDeep([...alwaysIgnore]);
+
+    const ignoreForActor = function (actor) {
+        return ignoreForTypes.includes(actor.type);
     };
+
+    // The declared scope. Tests and tooling read which actor types ignore a power without calling
+    // the function, so `CONFIG.HERO.characteristicHasTypes6e` and `...5e` can be built from it.
+    Object.defineProperty(ignoreForActor, "ignoreForTypes", { value: ignoreForTypes });
+
+    return ignoreForActor;
 }
 
 function pdEdCostPerLevel(itemOrActor) {
@@ -3248,6 +3256,70 @@ function movementTable(powerList) {
 // No other section adds `type: ["movement"]`, so the two tables are complete here.
 HERO.movementPowers6e = movementTable(HERO.powers6e);
 HERO.movementPowers5e = movementTable(HERO.powers5e);
+
+/**
+ * Actor types a bare `Actor.create()` accepts.
+ *
+ * The legacy `base` type is absent on purpose. It builds no characteristics, and creating one throws
+ * inside `_preparePreCreateCharacteristics`.
+ */
+HERO.creatableActorTypes = freezeDeep(["pc", "npc", "vehicle", "base2", "computer", "automaton", "ai"]);
+
+/**
+ * Characteristic labels the config reserves and nothing builds yet.
+ *
+ * Each one takes a slot in uploaded XML and an entry in the power list. No builder exists, so no
+ * actor can hold one. Give a label a builder, remove it here, and it joins the scope tables below.
+ */
+HERO.customCharacteristicLabels = freezeDeep([
+    "CUSTOM1",
+    "CUSTOM2",
+    "CUSTOM3",
+    "CUSTOM4",
+    "CUSTOM5",
+    "CUSTOM6",
+    "CUSTOM7",
+    "CUSTOM8",
+    "CUSTOM9",
+    "CUSTOM10",
+]);
+
+/**
+ * Build the actor scope of every label one edition defines.
+ *
+ * A characteristic or movement description states which actor types ignore it, through
+ * `staticIgnoreForActorFunction`. Subtracting that list from `HERO.creatableActorTypes` gives the
+ * types that have the label. A description with a dynamic `ignoreForActor` declares no scope, so its
+ * entry is `null` and callers decide by actor. STUN is the one case: an automaton built with
+ * "cannot be stunned" has no STUN, and the flag lives on the actor, not in the description.
+ *
+ * @param {object[]} powerList Power descriptions of one edition.
+ *
+ * @returns {object} Frozen map of uppercase label to the sorted actor types that have it, or `null`.
+ */
+function hasTypesByLabel(powerList) {
+    const scopes = {};
+
+    for (const type of ["characteristic", "movement"]) {
+        for (const { label, power } of powersOfType(powerList, type)) {
+            if (HERO.customCharacteristicLabels.includes(label)) {
+                continue;
+            }
+
+            const ignoreForTypes = power.ignoreForActor?.ignoreForTypes;
+
+            scopes[label] =
+                ignoreForTypes === undefined
+                    ? null
+                    : freezeDeep(HERO.creatableActorTypes.filter((actorType) => !ignoreForTypes.includes(actorType)));
+        }
+    }
+
+    return freezeDeep(scopes);
+}
+
+HERO.characteristicHasTypes6e = hasTypesByLabel(HERO.powers6e);
+HERO.characteristicHasTypes5e = hasTypesByLabel(HERO.powers5e);
 
 (function addSkillsToPowerList() {
     addPower(
