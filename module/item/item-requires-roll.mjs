@@ -2,7 +2,7 @@ import { HEROSYS } from "../herosystem6e.mjs";
 
 import { HeroRoll, HeroRoller } from "../heroRoller/dice.mjs";
 import { calculateDicePartsForItem } from "../utility/damage.mjs";
-import { FrozenSet } from "../utility/frozen-set.mjs";
+import { FrozenSet } from "../utility/freeze-helpers.mjs";
 import { roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, emphasizeSuccessFailureFlavour, generateSuccessChatCard } from "../utility/success-card.mjs";
 import { tokenEducatedGuess } from "../utility/util.mjs";

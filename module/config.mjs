@@ -34,7 +34,7 @@ import {
 } from "./utility/damage.mjs";
 import { createDefenseProfile } from "./utility/defense.mjs";
 import * as heroEncounter from "./utility/encounter/encounter.mjs";
-import { FrozenSet } from "./utility/frozen-set.mjs";
+import { FrozenSet } from "./utility/freeze-helpers.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "./utility/round.mjs";
 import {
     convertHexesToSystemUnits,
