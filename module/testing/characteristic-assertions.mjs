@@ -6,11 +6,13 @@
  * `actor.system.characteristics` directly. That keeps the storage shape in one place,
  * so the shape can change without a rewrite of 600-plus assertions.
  *
- * Movement labels go through `assertHasMovementMode`, `assertLacksMovementMode`, and
- * `assertHasMovementMatrix`, which call `actor.hasMovementCharacteristic`. Characteristic labels go
- * through `assertHasChar`, `assertLacksChar`, and `assertHasCharacteristicMatrix`, which call
- * `actor.hasCharacteristic`. Movement modes leave characteristic storage later. Route them through the
- * movement helpers now, so a test does not change then.
+ * Movement modes go through `assertHasMovementMode` and `assertLacksMovementMode`, which call
+ * `actor.hasMovementCharacteristic`. Characteristic labels go through `assertHasChar` and
+ * `assertLacksChar`, which call `actor.hasCharacteristic`. Movement modes leave characteristic storage
+ * later. Route them through the movement helpers now, so a test does not change then.
+ *
+ * One helper asserts one thing. No helper loops over names, so a caller registers one test per name
+ * and a failure names the characteristic label or movement mode that answered wrong.
  *
  * Quench hands each batch its own `assert`. Bind it once per batch with
  * `createCharacteristicAssertions(assert)`, then call the returned helpers.
@@ -19,12 +21,25 @@
  *   const chars = createCharacteristicAssertions(assert);
  *   chars.assertCharField(actor, "str", "max", 11);
  *
- * Labels accept any case. `hasCharacteristic` uppercases, `getCharacteristic`
- * lowercases. Helpers normalize and report the canonical uppercase label.
+ * A "name" is a characteristic label or a movement mode. A helper that reads or writes a node takes
+ * either. `assertHasChar` and `assertLacksChar` take a characteristic label, and
+ * `assertHasMovementMode` and `assertLacksMovementMode` take a movement mode.
+ *
+ * Names accept any case. `hasCharacteristic` uppercases, `getCharacteristic`
+ * lowercases. Helpers normalize and report the canonical uppercase form.
  */
 
 import { FrozenSet } from "../utility/freeze-helpers.mjs";
 import { getCharacteristicInfoArrayForActor } from "../utility/util.mjs";
+
+/** Words for a name that names a characteristic. Used in thrown messages. */
+const CHARACTERISTIC_NAME = "characteristic label";
+
+/** Words for a name that names a movement mode. Used in thrown messages. */
+const MOVEMENT_MODE_NAME = "movement mode";
+
+/** Words for a parameter that accepts either kind. Used in thrown messages. */
+const EITHER_NAME = "characteristic label or movement mode";
 
 /** Fields a test may assert on a characteristic node. */
 const ASSERTABLE_FIELDS = new FrozenSet([
@@ -41,57 +56,65 @@ const ASSERTABLE_FIELDS = new FrozenSet([
 /**
  * Read the actor's characteristic node. Use to get `max`, `value`, and the other fields.
  *
+ * A movement mode whose node the schema builds, such as RUNNING, reads through here too.
+ *
  * @param {HeroSystem6eActor} actor Actor to read from.
- * @param {string} label Characteristic label. Any case.
+ * @param {string} name Characteristic label or movement mode. Any case.
  *
  * @returns {object|undefined} The node, or undefined when absent.
  */
-export function charNode(actor, label) {
-    requireLabel(label, "charNode");
+export function charNode(actor, name) {
+    requireName(name, "charNode", EITHER_NAME);
+
     if (!actor) {
-        throw new Error(`charNode: missing actor for "${canonical(label)}"`);
+        throw new Error(`charNode: missing actor for "${canonical(name)}"`);
     }
-    return actor.getCharacteristic(label);
+
+    return actor.getCharacteristic(name);
 }
 
 /**
- * Read the current value of a characteristic.
+ * Read the current value of a characteristic, or of a movement mode that has a node.
  *
  * @param {HeroSystem6eActor} actor Actor to read from.
- * @param {string} label Characteristic label. Any case.
+ * @param {string} name Characteristic label or movement mode. Any case.
  *
  * @returns {number|undefined} The value, or undefined when the node is absent.
  */
-export function charValue(actor, label) {
-    return charNode(actor, label)?.value;
+export function charValue(actor, name) {
+    return charNode(actor, name)?.value;
 }
 
 /**
- * Read the maximum of a characteristic.
+ * Read the maximum of a characteristic, or of a movement mode that has a node.
  *
  * @param {HeroSystem6eActor} actor Actor to read from.
- * @param {string} label Characteristic label. Any case.
+ * @param {string} name Characteristic label or movement mode. Any case.
  *
  * @returns {number|undefined} The max, or undefined when the node is absent.
  */
-export function charMax(actor, label) {
-    return charNode(actor, label)?.max;
+export function charMax(actor, name) {
+    return charNode(actor, name)?.max;
 }
 
 /**
- * List the characteristic labels this actor type may use.
+ * List the names this actor type may use.
  *
- * Reads the config permission set, not node storage. A label here means the actor type
- * may hold that characteristic. It does not mean the actor bought it.
+ * Reads the config permission set, not node storage. A name here means the actor type may hold that
+ * characteristic or move that way. It does not mean the actor bought it.
+ *
+ * Movement modes appear beside characteristics. The movement tables key each mode by its
+ * characteristic name, so RUNNING answers here next to STR.
  *
  * @param {HeroSystem6eActor} actor Actor to read from.
  *
- * @returns {string[]} Uppercase labels.
+ * @returns {string[]} Uppercase names.
  */
-export function charLabels(actor) {
+export function usableNames(actor) {
     if (!actor) {
-        throw new Error("charLabels: missing actor");
+        throw new Error("usableNames: missing actor");
     }
+
     return getCharacteristicInfoArrayForActor(actor).map((info) => canonical(info.key));
 }
 
@@ -115,7 +138,7 @@ export function createCharacteristicAssertions(assert) {
      * @param {string} [message] Overrides the generated failure message.
      */
     function assertHasChar(actor, label, message) {
-        requireLabel(label, "assertHasChar");
+        requireName(label, "assertHasChar", CHARACTERISTIC_NAME);
         const has = actor.hasCharacteristic(label);
         assert.isTrue(has, message ?? `${tag(actor, label)}: expected the actor to have this characteristic`);
     }
@@ -128,7 +151,7 @@ export function createCharacteristicAssertions(assert) {
      * @param {string} [message] Overrides the generated failure message.
      */
     function assertLacksChar(actor, label, message) {
-        requireLabel(label, "assertLacksChar");
+        requireName(label, "assertLacksChar", CHARACTERISTIC_NAME);
         const has = actor.hasCharacteristic(label);
         assert.isFalse(has, message ?? `${tag(actor, label)}: expected the actor to lack this characteristic`);
     }
@@ -137,132 +160,86 @@ export function createCharacteristicAssertions(assert) {
      * Assert the actor has this movement mode.
      *
      * @param {HeroSystem6eActor} actor
-     * @param {string} label Movement label. Any case.
+     * @param {string} mode Movement mode. Any case.
      * @param {string} [message] Overrides the generated failure message.
      */
-    function assertHasMovementMode(actor, label, message) {
-        requireLabel(label, "assertHasMovementMode");
-        const has = actor.hasMovementCharacteristic(label);
-        assert.isTrue(has, message ?? `${tag(actor, label)}: expected the actor to have this movement mode`);
+    function assertHasMovementMode(actor, mode, message) {
+        requireName(mode, "assertHasMovementMode", MOVEMENT_MODE_NAME);
+        const has = actor.hasMovementCharacteristic(mode);
+        assert.isTrue(has, message ?? `${tag(actor, mode)}: expected the actor to have this movement mode`);
     }
 
     /**
      * Assert the actor does not have this movement mode.
      *
      * @param {HeroSystem6eActor} actor
-     * @param {string} label Movement label. Any case.
+     * @param {string} mode Movement mode. Any case.
      * @param {string} [message] Overrides the generated failure message.
      */
-    function assertLacksMovementMode(actor, label, message) {
-        requireLabel(label, "assertLacksMovementMode");
-        const has = actor.hasMovementCharacteristic(label);
-        assert.isFalse(has, message ?? `${tag(actor, label)}: expected the actor to lack this movement mode`);
-    }
-
-    /**
-     * Assert which movement modes an actor has.
-     *
-     * @param {HeroSystem6eActor} actor
-     * @param {object} matrix
-     * @param {string[]} [matrix.has] Movement labels the actor must have.
-     * @param {string[]} [matrix.lacks] Movement labels the actor must not have.
-     */
-    function assertHasMovementMatrix(actor, { has = [], lacks = [] } = {}) {
-        for (const label of has) assertHasMovementMode(actor, label);
-        for (const label of lacks) assertLacksMovementMode(actor, label);
+    function assertLacksMovementMode(actor, mode, message) {
+        requireName(mode, "assertLacksMovementMode", MOVEMENT_MODE_NAME);
+        const has = actor.hasMovementCharacteristic(mode);
+        assert.isFalse(has, message ?? `${tag(actor, mode)}: expected the actor to lack this movement mode`);
     }
 
     /**
      * Assert one field on one characteristic node.
      *
+     * Pass a movement mode for a mode the schema builds a node for, such as LEAPING. Assert
+     * possession through a movement helper. This helper reads the node, and every actor type stores a
+     * node for every name.
+     *
      * @param {HeroSystem6eActor} actor
-     * @param {string} label Characteristic label. Any case.
+     * @param {string} name Characteristic label or movement mode. Any case.
      * @param {string} field Field name. Must be in ASSERTABLE_FIELDS.
      * @param {number|null} expected Expected value.
      * @param {string} [message] Overrides the generated failure message.
      */
-    function assertCharField(actor, label, field, expected, message) {
+    function assertCharField(actor, name, field, expected, message) {
         if (!ASSERTABLE_FIELDS.has(field)) {
             throw new Error(
-                `assertCharField: unknown field "${field}" for ${canonical(label)}. ` +
+                `assertCharField: unknown field "${field}" for ${canonical(name)}. ` +
                     `Assertable fields: ${[...ASSERTABLE_FIELDS].join(", ")}.`,
             );
         }
-        const node = charNode(actor, label);
+        const node = charNode(actor, name);
+
         if (node === undefined || node === null) {
-            assert.fail(`${tag(actor, label)}: no characteristic node. Assert the characteristic first.`);
+            assert.fail(`${tag(actor, name)}: no characteristic node. Assert possession first.`);
             return; // Chai throws above. The guard keeps the read safe if a caller swaps in a non-throwing assert.
         }
-        assert.equal(node[field], expected, message ?? `${tag(actor, label)}.${field}`);
+
+        assert.equal(node[field], expected, message ?? `${tag(actor, name)}.${field}`);
     }
 
     /**
-     * Assert several fields on one characteristic node.
+     * Assert the actor's usable name set matches exactly.
+     *
+     * The set holds characteristic labels and movement modes. Fails on a missing name and on an
+     * unexpected extra name.
      *
      * @param {HeroSystem6eActor} actor
-     * @param {string} label Characteristic label. Any case.
-     * @param {object} expectedFields Map of field name to expected value.
+     * @param {string[]} expectedNames The complete expected set.
      */
-    function assertCharFields(actor, label, expectedFields) {
-        for (const [field, expected] of Object.entries(expectedFields)) {
-            assertCharField(actor, label, field, expected);
-        }
-    }
+    function assertExactUsableSet(actor, expectedNames) {
+        const expected = [...new Set(expectedNames.map(canonical))].sort();
+        const actual = [...new Set(usableNames(actor))].sort();
 
-    /**
-     * Assert fields across many characteristics of an actor.
-     *
-     * Drives whole-scenario coverage from one table:
-     *
-     *   chars.assertCharTable(actor, {
-     *       str: { max: 11, realCost: 1 },
-     *       dex: { max: 12, realCost: 6 },
-     *   });
-     *
-     * @param {HeroSystem6eActor} actor
-     * @param {Object<string, object>} table Maps label to a field expectation object.
-     */
-    function assertCharTable(actor, table) {
-        for (const [label, expectedFields] of Object.entries(table)) {
-            assertCharFields(actor, label, expectedFields);
-        }
-    }
-
-    /**
-     * Assert which characteristics an actor has.
-     *
-     * @param {HeroSystem6eActor} actor
-     * @param {object} matrix
-     * @param {string[]} [matrix.has] Labels the actor must have.
-     * @param {string[]} [matrix.lacks] Labels the actor must not have.
-     */
-    function assertHasCharacteristicMatrix(actor, { has = [], lacks = [] } = {}) {
-        for (const label of has) assertHasChar(actor, label);
-        for (const label of lacks) assertLacksChar(actor, label);
-    }
-
-    /**
-     * Assert the actor's usable characteristic set matches exactly.
-     *
-     * Fails on a missing label and on an unexpected extra label.
-     *
-     * @param {HeroSystem6eActor} actor
-     * @param {string[]} expectedLabels The complete expected set.
-     */
-    function assertExactCharSet(actor, expectedLabels) {
-        const expected = [...new Set(expectedLabels.map(canonical))].sort();
-        const actual = [...new Set(charLabels(actor))].sort();
-
-        const missing = expected.filter((label) => !actual.includes(label));
-        const extra = actual.filter((label) => !expected.includes(label));
+        const missing = expected.filter((name) => !actual.includes(name));
+        const extra = actual.filter((name) => !expected.includes(name));
 
         if (missing.length > 0 || extra.length > 0) {
             const parts = [];
-            if (missing.length > 0) parts.push(`missing [${missing.join(", ")}]`);
-            if (extra.length > 0) parts.push(`unexpected [${extra.join(", ")}]`);
-            assert.fail(
-                `${tag(actor, "characteristics")}: expected exactly [${expected.join(", ")}]; ${parts.join("; ")}`,
-            );
+
+            if (missing.length > 0) {
+                parts.push(`missing [${missing.join(", ")}]`);
+            }
+
+            if (extra.length > 0) {
+                parts.push(`unexpected [${extra.join(", ")}]`);
+            }
+
+            assert.fail(`${tag(actor, "usable set")}: expected exactly [${expected.join(", ")}]; ${parts.join("; ")}`);
         }
     }
 
@@ -273,7 +250,7 @@ export function createCharacteristicAssertions(assert) {
      * reach a state the app cannot produce.
      *
      * @param {HeroSystem6eActor} actor
-     * @param {string} label Characteristic label. Any case.
+     * @param {string} name Characteristic label or movement mode. Any case.
      * @param {number} value Value to write.
      * @param {object} [options]
      * @param {string} [options.field] Field to write. Defaults to `value`.
@@ -281,15 +258,18 @@ export function createCharacteristicAssertions(assert) {
      *
      * @returns {Promise<HeroSystem6eActor>} The updated actor.
      */
-    async function setChar(actor, label, value, { field = "value", updateOptions = {} } = {}) {
-        requireLabel(label, "setChar");
+    async function setChar(actor, name, value, { field = "value", updateOptions = {} } = {}) {
+        requireName(name, "setChar", EITHER_NAME);
+
         if (!ASSERTABLE_FIELDS.has(field)) {
-            throw new Error(`setChar: unknown field "${field}" for ${canonical(label)}`);
+            throw new Error(`setChar: unknown field "${field}" for ${canonical(name)}`);
         }
+
         if (!actor) {
-            throw new Error(`setChar: missing actor for ${canonical(label)}`);
+            throw new Error(`setChar: missing actor for ${canonical(name)}`);
         }
-        return actor.updateCharacteristics([[label.toLowerCase(), { [field]: value }]], updateOptions);
+
+        return actor.updateCharacteristics([[name.toLowerCase(), { [field]: value }]], updateOptions);
     }
 
     /**
@@ -298,15 +278,15 @@ export function createCharacteristicAssertions(assert) {
      *   await chars.setChars(actor, { stun: -5, end: 10 });
      *
      * @param {HeroSystem6eActor} actor
-     * @param {Object<string, number>} values Maps label to the value to write.
+     * @param {Object<string, number>} values Maps a characteristic label or movement mode to its value.
      * @param {object} [options]
-     * @param {string} [options.field] Field to write for every label. Defaults to `value`.
+     * @param {string} [options.field] Field to write for every name. Defaults to `value`.
      * @param {object} [options.updateOptions] Options forwarded to `actor.update`.
      *
      * @returns {Promise<HeroSystem6eActor>} The updated actor.
      */
     async function setChars(actor, values, { field = "value", updateOptions = {} } = {}) {
-        const tuplets = Object.entries(values).map(([label, value]) => [label.toLowerCase(), { [field]: value }]);
+        const tuplets = Object.entries(values).map(([name, value]) => [name.toLowerCase(), { [field]: value }]);
         if (tuplets.length === 0) {
             throw new Error("setChars: pass at least one characteristic");
         }
@@ -317,55 +297,52 @@ export function createCharacteristicAssertions(assert) {
         charNode,
         charValue,
         charMax,
-        charLabels,
+        usableNames,
         assertHasChar,
         assertLacksChar,
         assertCharField,
-        assertCharFields,
-        assertCharTable,
         assertHasMovementMode,
         assertLacksMovementMode,
-        assertHasMovementMatrix,
-        assertHasCharacteristicMatrix,
-        assertExactCharSet,
+        assertExactUsableSet,
         setChar,
         setChars,
     };
 }
 
 /**
- * Canonical label for messages.
+ * Canonical form of a characteristic label or movement mode, for messages.
  *
- * @param {string} label
+ * @param {string} name
  *
  * @returns {string}
  */
-function canonical(label) {
-    return String(label).toUpperCase();
+function canonical(name) {
+    return String(name).toUpperCase();
 }
 
 /**
  * Prefix a failure message with the actor type and edition.
  *
  * @param {HeroSystem6eActor} actor
- * @param {string} label
+ * @param {string} name Characteristic label or movement mode.
  *
  * @returns {string}
  */
-function tag(actor, label) {
+function tag(actor, name) {
     const type = actor?.type ?? "unknown";
     const edition = actor?.is5e === true ? "5e" : "6e";
-    return `[${type} ${edition}] ${canonical(label)}`;
+    return `[${type} ${edition}] ${canonical(name)}`;
 }
 
 /**
- * Reject a missing or blank label before it reads the wrong node.
+ * Reject a missing or blank name before it reads the wrong node.
  *
- * @param {string} label
+ * @param {string} name Characteristic label or movement mode.
  * @param {string} caller Name shown in the thrown message.
+ * @param {string} kind What the name names. Pass CHARACTERISTIC_NAME or MOVEMENT_MODE_NAME.
  */
-function requireLabel(label, caller) {
-    if (typeof label !== "string" || label.trim() === "") {
-        throw new Error(`${caller}: characteristic label must be a non-empty string, got ${JSON.stringify(label)}`);
+function requireName(name, caller, kind) {
+    if (typeof name !== "string" || name.trim() === "") {
+        throw new Error(`${caller}: ${kind} must be a non-empty string, got ${JSON.stringify(name)}`);
     }
 }

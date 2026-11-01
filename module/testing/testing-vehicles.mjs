@@ -1,3 +1,12 @@
+/**
+ * Vehicle upload behaviour that only a vehicle has.
+ *
+ * The characteristic contract of these templates lives in `testing-characteristics.mjs`. That suite
+ * states which characteristics a vehicle has, and what every level in these templates adds up to.
+ * What stays here is what a vehicle upload does around those values: stun automation, the movement
+ * powers the template buys, the template name, and SIZE driven sheet updates.
+ */
+
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
 
 export function registerVehicleTests(quench) {
@@ -89,87 +98,9 @@ export function registerVehicleTests(quench) {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("should have the correct SIZE characteristic value", function () {
-                        expect(actor.system.characteristics.size.value).to.equal(8);
-                    });
-
-                    it("should have the correct SIZE cost", function () {
-                        expect(actor.system.characteristics.size.realCost).to.equal(40);
-                    });
-
-                    it("should have the correct STR characteristic value", function () {
-                        expect(actor.system.characteristics.str.value).to.equal(55);
-                    });
-
-                    it("should have the correct STR cost", function () {
-                        expect(actor.system.characteristics.str.realCost).to.equal(5);
-                    });
-
-                    it("should have the correct DEX characteristic value", function () {
-                        expect(actor.system.characteristics.dex.value).to.equal(0);
-                    });
-
-                    it("should have the correct DEX cost", function () {
-                        expect(actor.system.characteristics.dex.realCost).to.equal(-20);
-                    });
-
-                    it("should have the correct BODY characteristic value", function () {
-                        expect(actor.system.characteristics.body.value).to.equal(18);
-                    });
-
-                    it("should have the correct BODY cost", function () {
-                        expect(actor.system.characteristics.body.realCost).to.equal(0);
-                    });
-
-                    it("should have the correct SPD characteristic value", function () {
-                        expect(actor.system.characteristics.spd.value).to.equal(5);
-                    });
-
-                    it("should have the correct SPD cost", function () {
-                        expect(actor.system.characteristics.spd.realCost).to.equal(30);
-                    });
-
-                    it("should have the correct OCV characteristic value", function () {
-                        expect(actor.system.characteristics.ocv.value).to.equal(5);
-                    });
-
-                    it("should have the correct OCV cost", function () {
-                        expect(actor.system.characteristics.ocv.realCost).to.equal(10);
-                    });
-
-                    it("should have the correct DCV characteristic value", function () {
-                        // NOTE: Different from HD because we make size a DCV penalty to the big vehicle
-                        //       rather than an OCV bonus to the attacker.
-                        expect(actor.system.characteristics.dcv.value).to.equal(2);
-                    });
-
-                    it("should have the correct DCV cost", function () {
-                        expect(actor.system.characteristics.dcv.realCost).to.equal(20);
-                    });
-
-                    it("should have the correct PD characteristic value", function () {
-                        expect(actor.system.characteristics.pd.value).to.equal(4);
-                    });
-
-                    it("should have the correct PD cost", function () {
-                        expect(actor.system.characteristics.pd.realCost).to.equal(3);
-                    });
-
-                    it("should have the correct ED characteristic value", function () {
-                        expect(actor.system.characteristics.ed.value).to.equal(4);
-                    });
-
-                    it("should have the correct ED cost", function () {
-                        expect(actor.system.characteristics.ed.realCost).to.equal(3);
-                    });
-
                     it("should not be knocked out by upload (stun automation)", function () {
                         expect(actor.statuses.has("knockedOut")).to.be.false;
                         expect(actor.statuses.has("prone")).to.be.false;
-                    });
-
-                    it("should have 0m of leaping", function () {
-                        expect(actor.system.characteristics.leaping.value).to.equal(0);
                     });
 
                     it("should have Flight power", function () {
@@ -370,69 +301,9 @@ export function registerVehicleTests(quench) {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("should have the correct SIZE characteristic value", function () {
-                        expect(actor.system.characteristics.size.value).to.equal(12);
-                    });
-
-                    it("should have the correct SIZE cost", function () {
-                        expect(actor.system.characteristics.size.realCost).to.equal(60);
-                    });
-
-                    it("should have the correct STR characteristic value", function () {
-                        expect(actor.system.characteristics.str.value).to.equal(20);
-                    });
-
-                    it("should have the correct STR cost", function () {
-                        expect(actor.system.characteristics.str.realCost).to.equal(-50);
-                    });
-
-                    it("should have the correct DEX characteristic value", function () {
-                        expect(actor.system.characteristics.dex.value).to.equal(32);
-                    });
-
-                    it("should have the correct DEX cost", function () {
-                        expect(actor.system.characteristics.dex.realCost).to.equal(66);
-                    });
-
-                    it("should have the correct BODY characteristic value", function () {
-                        expect(actor.system.characteristics.body.value).to.equal(22);
-                    });
-
-                    it("should have the correct BODY cost", function () {
-                        expect(actor.system.characteristics.body.realCost).to.equal(0);
-                    });
-
-                    it("should have the correct SPD characteristic value", function () {
-                        expect(actor.system.characteristics.spd.value).to.equal(5);
-                    });
-
-                    it("should have the correct SPD cost", function () {
-                        expect(actor.system.characteristics.spd.realCost).to.equal(8);
-                    });
-
-                    it("should have the correct OCV characteristic value", function () {
-                        expect(actor.system.characteristics.ocv.value).to.equal(11);
-                    });
-
-                    it("should have the correct OCV cost", function () {
-                        expect(actor.system.characteristics.ocv.realCost).to.equal(0);
-                    });
-
-                    it("should have the correct DCV characteristic value", function () {
-                        expect(actor.system.characteristics.dcv.value).to.equal(3);
-                    });
-
-                    it("should have the correct DCV cost", function () {
-                        expect(actor.system.characteristics.dcv.realCost).to.equal(0);
-                    });
-
                     it("should not be knocked out by upload (stun automation)", function () {
                         expect(actor.statuses.has("knockedOut")).to.be.false;
                         expect(actor.statuses.has("prone")).to.be.false;
-                    });
-
-                    it('should have 0" of leaping', function () {
-                        expect(actor.system.characteristics.leaping.value).to.equal(0);
                     });
 
                     it("should have Flight power", function () {
