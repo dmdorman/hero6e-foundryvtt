@@ -651,7 +651,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
                     ];
                     for (const usableas of this.modifiers.filter((o) => o.XMLID === "USABLEAS")) {
                         let foundMatch = false;
-                        for (const movementKey of Object.keys(CONFIG.HERO.movementPowers)) {
+                        for (const movementKey of Object.keys(CONFIG.HERO.movementPowers6e)) {
                             if (
                                 usableas.ALIAS?.match(new RegExp(movementKey, "i")) ||
                                 usableas.COMMENTS?.match(new RegExp(movementKey, "i"))

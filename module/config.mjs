@@ -34,7 +34,7 @@ import {
 } from "./utility/damage.mjs";
 import { createDefenseProfile } from "./utility/defense.mjs";
 import * as heroEncounter from "./utility/encounter/encounter.mjs";
-import { FrozenSet } from "./utility/freeze-helpers.mjs";
+import { FrozenSet, freezeDeep } from "./utility/freeze-helpers.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "./utility/round.mjs";
 import {
     convertHexesToSystemUnits,
@@ -552,24 +552,6 @@ HERO.CSL_WEAPON_MASTER_WEAPON_TYPES = Object.freeze({
     explicit: "explicit",
 });
 
-// TODO: This could be created from powers.
-HERO.movementPowers = Object.freeze({
-    extradimensionalmovement: "Extra Dimensional Movement",
-    flight: "Flight",
-    ftl: "Faster Than Light",
-    leaping: "Leaping",
-    running: "Running",
-    swimming: "Swimming",
-    swinging: "Swinging",
-    teleportation: "Teleportation",
-    tunneling: "Tunneling",
-});
-
-HERO.movementPowers5e = Object.freeze({
-    ...HERO.movementPowers,
-    gliding: "Gliding",
-});
-
 function validatePowers() {
     let numViolations = 0;
 
@@ -996,6 +978,47 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             HERO.powers5eDict.set(powerDescription5e.key, [powerDescriptionClone]);
         }
     }
+}
+
+/**
+ * Yield every power of one type from one edition's descriptions, each power once.
+ *
+ * A power description marks its kind with `type`, for example `type: ["characteristic"]`. Every
+ * derived list and table walks this generator, so the mark is read in one place.
+ *
+ * @param {object[]} powerList Power descriptions of one edition.
+ * @param {string} type        Type mark to select, for example `movement`.
+ *
+ * @yields {{label: string, power: object}} The uppercase key and its description.
+ */
+function* powersOfType(powerList, type) {
+    const seen = new Set();
+
+    for (const power of powerList) {
+        if (power.key === undefined || !power.type?.includes(type)) {
+            continue;
+        }
+
+        const label = String(power.key).toUpperCase();
+
+        if (seen.has(label)) {
+            continue;
+        }
+        seen.add(label);
+        yield { label, power };
+    }
+}
+
+/**
+ * Collect the sorted labels of one power type for one edition.
+ *
+ * @param {object[]} powerList Power descriptions of one edition.
+ * @param {string} type        Type mark to select, for example `characteristic`.
+ *
+ * @returns {string[]} Uppercase labels, sorted and frozen.
+ */
+function labelsWithType(powerList, type) {
+    return freezeDeep([...powersOfType(powerList, type)].map(({ label }) => label).sort());
 }
 
 (function addCharacteristicsToPowerList() {
@@ -1987,6 +2010,8 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         {},
     );
 })();
+HERO.characteristicPowers6e = labelsWithType(HERO.powers6e, "characteristic");
+HERO.characteristicPowers5e = labelsWithType(HERO.powers5e, "characteristic");
 
 (function addManeuversToPowerList() {
     addPower(undefined, {
@@ -3186,6 +3211,43 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         },
     );
 })();
+
+/**
+ * Movement keys that carry the movement mark but are not modes an actor moves by.
+ *
+ * Hero Designer models both as options on Teleportation. This system stores them as powers, so they
+ * carry `type: ["movement"]`, yet no actor owns a value for either and the actor schema has no node
+ * for them. Build them as adders on TELEPORTATION and this list can go away.
+ */
+const MOVEMENT_KEYS_WITHOUT_VALUE = freezeDeep(["FIXEDLOCATION", "FLOATINGLOCATION"]);
+
+/**
+ * Build the movement table of one edition from the movement section above.
+ *
+ * The table maps the lowercase characteristic key to the power name, for example
+ * `{ running: "Running" }`. Callers read it as the set of movement modes and as the label source.
+ *
+ * @param {object[]} powerList Power descriptions of one edition.
+ *
+ * @returns {object} Frozen map of lowercase movement key to power name.
+ */
+function movementTable(powerList) {
+    const table = {};
+
+    for (const { label, power } of powersOfType(powerList, "movement")) {
+        if (MOVEMENT_KEYS_WITHOUT_VALUE.includes(label)) {
+            continue;
+        }
+
+        table[label.toLowerCase()] = power.name;
+    }
+
+    return freezeDeep(table);
+}
+
+// No other section adds `type: ["movement"]`, so the two tables are complete here.
+HERO.movementPowers6e = movementTable(HERO.powers6e);
+HERO.movementPowers5e = movementTable(HERO.powers5e);
 
 (function addSkillsToPowerList() {
     addPower(
@@ -19849,7 +19911,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 const usableAs = modifier;
                 let foundMatch = false;
 
-                for (const movementKey of Object.keys(CONFIG.HERO.movementPowers)) {
+                for (const movementKey of Object.keys(CONFIG.HERO.movementPowers6e)) {
                     if (
                         usableAs.ALIAS?.match(new RegExp(movementKey, "i")) ||
                         usableAs.COMMENTS?.match(new RegExp(movementKey, "i"))
@@ -19861,7 +19923,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 if (!foundMatch) {
                     validations.push({
                         property: "ALIAS",
-                        message: `Unable to determine USABLEAS movement type. Expecting ${Object.keys(CONFIG.HERO.movementPowers).join(", ")}.`,
+                        message: `Unable to determine USABLEAS movement type. Expecting ${Object.keys(CONFIG.HERO.movementPowers6e).join(", ")}.`,
                         example: `Usable as swimming`,
                         severity: HERO.VALIDATION_SEVERITY.WARNING,
                         modifierID: modifier.ID,

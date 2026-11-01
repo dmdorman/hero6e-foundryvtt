@@ -66,7 +66,7 @@ export function activeMovementFlag() {
  * @returns {object} The movement power table for that edition, keyed by characteristic key.
  */
 function movementPowerTable(actor) {
-    return actor.system.is5e ? CONFIG.HERO.movementPowers5e : CONFIG.HERO.movementPowers;
+    return actor.system.is5e ? CONFIG.HERO.movementPowers5e : CONFIG.HERO.movementPowers6e;
 }
 
 /**
