@@ -125,6 +125,11 @@
 
     // Beyond the former recommended set.
     "eslint/no-extra-boolean-cast": ["error", { "enforceForInnerExpressions": true }],
+    // `functions: false` allows a call to a function declared lower in the file. Function
+    // declarations hoist, so the call works, and this repo lists helpers below their callers.
+    // ESLint's default is `true`. Measured with oxlint 1.87: `true` reports 353 findings in 29
+    // files under `module/`. `variables` and `classes` stay on. Those cover the cases that throw
+    // at run time, where a `const` or `class` is read above its declaration.
     "eslint/no-use-before-define": [
       "error",
       {
@@ -137,6 +142,15 @@
         "ignoreTypeReferences": true
       }
     ],
+
+    // Rules the old ESLint config never carried. Each one is clean across `module/` today, so
+    // keeping them on costs nothing. `no-dupe-args` and `no-octal` need no entry: the parser
+    // reports both regardless of configuration.
+    "eslint/no-constructor-return": "error",
+    "eslint/no-new-native-nonconstructor": "error",
+    "eslint/no-self-compare": "error",
+    "eslint/no-unexpected-multiline": "error",
+    "eslint/no-unused-private-class-members": "error",
 
     // Additional coverage only oxlint provides. These have no ESLint equivalent.
     "oxc/missing-throw": "error",
