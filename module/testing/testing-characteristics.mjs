@@ -5,7 +5,7 @@
  * into both halves of the contract: the names the row lists, and every name it leaves out.
  * Adding an actor type means adding one row.
  *
- * Read the two caveats before you edit a row. They come from `characteristics_bugs.md`.
+ * Read the two caveats before you edit a row.
  *
  * Bug 4: five movement powers have no uppercase node, so `hasCharacteristic` answers false
  * for them even though the config grants them. They are FLIGHT, FTL, GLIDING, SWINGING,
@@ -934,6 +934,329 @@ const PC_6E_AUTOMATON_BODY_DAMAGE_REMOVES_ABILITY_XML = `
                         </CHARACTER>
                     `;
 
+const PC_5E_SUPERHERO_SIMPLE_XML = `
+                        <?xml version="1.0" encoding="UTF-16"?>
+                        <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic.hdt">
+                        <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" RULES="Default" />
+                        <CHARACTER_INFO CHARACTER_NAME="5e superhero simple" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.46224760379584" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
+                            <BACKGROUND />
+                            <PERSONALITY />
+                            <QUOTE />
+                            <TACTICS />
+                            <CAMPAIGN_USE />
+                            <APPEARANCE />
+                            <NOTES1 />
+                            <NOTES2 />
+                            <NOTES3 />
+                            <NOTES4 />
+                            <NOTES5 />
+                        </CHARACTER_INFO>
+                        <CHARACTERISTICS>
+                            <STR XMLID="STR" ID="1683328673465" BASECOST="0.0" LEVELS="1" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </STR>
+                            <DEX XMLID="DEX" ID="1683328012642" BASECOST="0.0" LEVELS="2" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </DEX>
+                            <CON XMLID="CON" ID="1683331008620" BASECOST="0.0" LEVELS="3" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </CON>
+                            <BODY XMLID="BODY" ID="1683328674200" BASECOST="0.0" LEVELS="4" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </BODY>
+                            <INT XMLID="INT" ID="1683331009492" BASECOST="0.0" LEVELS="5" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </INT>
+                            <EGO XMLID="EGO" ID="1683331009412" BASECOST="0.0" LEVELS="6" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </EGO>
+                            <PRE XMLID="PRE" ID="1683331008889" BASECOST="0.0" LEVELS="7" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </PRE>
+                            <COM XMLID="COM" ID="1683331009574" BASECOST="0.0" LEVELS="8" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </COM>
+                            <PD XMLID="PD" ID="1683331009505" BASECOST="0.0" LEVELS="0" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </PD>
+                            <ED XMLID="ED" ID="1683331009320" BASECOST="0.0" LEVELS="0" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </ED>
+                            <SPD XMLID="SPD" ID="1683328013371" BASECOST="0.0" LEVELS="2" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </SPD>
+                            <REC XMLID="REC" ID="1683331009019" BASECOST="0.0" LEVELS="0" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </REC>
+                            <END XMLID="END" ID="1683331008978" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </END>
+                            <STUN XMLID="STUN" ID="1683331009203" BASECOST="0.0" LEVELS="0" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </STUN>
+                            <RUNNING XMLID="RUNNING" ID="1683328673592" BASECOST="0.0" LEVELS="21" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </RUNNING>
+                            <SWIMMING XMLID="SWIMMING" ID="1683328673922" BASECOST="0.0" LEVELS="26" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </SWIMMING>
+                            <LEAPING XMLID="LEAPING" ID="1683328674010" BASECOST="0.0" LEVELS="27" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </LEAPING>
+                        </CHARACTERISTICS>
+                        <SKILLS />
+                        <PERKS />
+                        <TALENTS />
+                        <MARTIALARTS />
+                        <POWERS />
+                        <DISADVANTAGES />
+                        <EQUIPMENT />
+                        </CHARACTER>
+                    `;
+
+const PC_5E_SUPERHERO_BUYBACK_XML = `
+                        <?xml version="1.0" encoding="UTF-16"?>
+                        <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic.hdt">
+                        <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" RULES="Default" />
+                        <CHARACTER_INFO CHARACTER_NAME="5e superhero" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.46224760379584" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
+                            <BACKGROUND />
+                            <PERSONALITY />
+                            <QUOTE />
+                            <TACTICS />
+                            <CAMPAIGN_USE />
+                            <APPEARANCE />
+                            <NOTES1 />
+                            <NOTES2 />
+                            <NOTES3 />
+                            <NOTES4 />
+                            <NOTES5 />
+                        </CHARACTER_INFO>
+                        <CHARACTERISTICS>
+                            <STR XMLID="STR" ID="1683328673465" BASECOST="0.0" LEVELS="-5" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </STR>
+                            <DEX XMLID="DEX" ID="1683328012642" BASECOST="0.0" LEVELS="-5" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </DEX>
+                            <CON XMLID="CON" ID="1683331008620" BASECOST="0.0" LEVELS="-5" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </CON>
+                            <BODY XMLID="BODY" ID="1683328674200" BASECOST="0.0" LEVELS="-5" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </BODY>
+                            <INT XMLID="INT" ID="1683331009492" BASECOST="0.0" LEVELS="-5" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </INT>
+                            <EGO XMLID="EGO" ID="1683331009412" BASECOST="0.0" LEVELS="-5" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </EGO>
+                            <PRE XMLID="PRE" ID="1683331008889" BASECOST="0.0" LEVELS="-5" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </PRE>
+                            <COM XMLID="COM" ID="1683331009574" BASECOST="0.0" LEVELS="-5" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </COM>
+                            <PD XMLID="PD" ID="1683331009505" BASECOST="0.0" LEVELS="0" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </PD>
+                            <ED XMLID="ED" ID="1683331009320" BASECOST="0.0" LEVELS="-1" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </ED>
+                            <SPD XMLID="SPD" ID="1683328013371" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </SPD>
+                            <REC XMLID="REC" ID="1683331009019" BASECOST="0.0" LEVELS="0" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </REC>
+                            <END XMLID="END" ID="1683331008978" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </END>
+                            <STUN XMLID="STUN" ID="1683331009203" BASECOST="0.0" LEVELS="0" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </STUN>
+                            <RUNNING XMLID="RUNNING" ID="1683328673592" BASECOST="0.0" LEVELS="0" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </RUNNING>
+                            <SWIMMING XMLID="SWIMMING" ID="1683328673922" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </SWIMMING>
+                            <LEAPING XMLID="LEAPING" ID="1683328674010" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </LEAPING>
+                        </CHARACTERISTICS>
+                        <SKILLS />
+                        <PERKS />
+                        <TALENTS />
+                        <MARTIALARTS />
+                        <POWERS />
+                        <DISADVANTAGES />
+                        <EQUIPMENT />
+                        </CHARACTER>
+                    `;
+
+const PC_5E_MINUS_10_COM_XML = `
+                        <?xml version="1.0" encoding="UTF-16"?>
+                        <CHARACTER version="6.0" TEMPLATE="builtIn.Normal.hdt">
+                        <BASIC_CONFIGURATION BASE_POINTS="100" DISAD_POINTS="40" EXPERIENCE="0" RULES="Default" />
+                        <CHARACTER_INFO CHARACTER_NAME="Demon" ALTERNATE_IDENTITIES="Minor Gluttony Demon" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
+                            <BACKGROUND />
+                            <PERSONALITY>Eat</PERSONALITY>
+                            <QUOTE />
+                            <TACTICS />
+                            <CAMPAIGN_USE />
+                            <APPEARANCE />
+                            <NOTES1 />
+                            <NOTES2 />
+                            <NOTES3 />
+                            <NOTES4 />
+                            <NOTES5 />
+                        </CHARACTER_INFO>
+                        <CHARACTERISTICS>
+                            <STR XMLID="STR" ID="1761270254938" BASECOST="0.0" LEVELS="10" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </STR>
+                            <DEX XMLID="DEX" ID="1761270254623" BASECOST="0.0" LEVELS="2" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </DEX>
+                            <CON XMLID="CON" ID="1761270254608" BASECOST="0.0" LEVELS="10" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </CON>
+                            <BODY XMLID="BODY" ID="1761270254723" BASECOST="0.0" LEVELS="4" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </BODY>
+                            <INT XMLID="INT" ID="1761270254461" BASECOST="0.0" LEVELS="-2" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </INT>
+                            <EGO XMLID="EGO" ID="1761270255394" BASECOST="0.0" LEVELS="3" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </EGO>
+                            <PRE XMLID="PRE" ID="1761270255027" BASECOST="0.0" LEVELS="8" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </PRE>
+                            <COM XMLID="COM" ID="1761270254639" BASECOST="0.0" LEVELS="-20" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </COM>
+                            <PD XMLID="PD" ID="1761270254491" BASECOST="0.0" LEVELS="4" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </PD>
+                            <ED XMLID="ED" ID="1761270254624" BASECOST="0.0" LEVELS="4" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </ED>
+                            <SPD XMLID="SPD" ID="1761270255411" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </SPD>
+                            <REC XMLID="REC" ID="1761270254879" BASECOST="0.0" LEVELS="2" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </REC>
+                            <END XMLID="END" ID="1761270255229" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </END>
+                            <STUN XMLID="STUN" ID="1761270255222" BASECOST="0.0" LEVELS="2" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </STUN>
+                            <RUNNING XMLID="RUNNING" ID="1761270255315" BASECOST="0.0" LEVELS="1" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </RUNNING>
+                            <SWIMMING XMLID="SWIMMING" ID="1761270254726" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </SWIMMING>
+                            <LEAPING XMLID="LEAPING" ID="1761270255321" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </LEAPING>
+                        </CHARACTERISTICS>
+                        <SKILLS>
+                        </SKILLS>
+                        <PERKS />
+                        <TALENTS />
+                        <MARTIALARTS />
+                        <POWERS>
+                        </POWERS>
+                        <DISADVANTAGES />
+                        <EQUIPMENT />
+                        </CHARACTER>
+                    `;
+
+const PC_5E_MINUS_30_COM_XML = `
+                        <?xml version="1.0" encoding="UTF-16"?>
+                        <CHARACTER version="6.0" TEMPLATE="builtIn.Normal.hdt">
+                        <BASIC_CONFIGURATION BASE_POINTS="100" DISAD_POINTS="40" EXPERIENCE="0" RULES="Default" />
+                        <CHARACTER_INFO CHARACTER_NAME="Demon" ALTERNATE_IDENTITIES="Minor Gluttony Demon" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
+                            <BACKGROUND />
+                            <PERSONALITY>Eat</PERSONALITY>
+                            <QUOTE />
+                            <TACTICS />
+                            <CAMPAIGN_USE />
+                            <APPEARANCE />
+                            <NOTES1 />
+                            <NOTES2 />
+                            <NOTES3 />
+                            <NOTES4 />
+                            <NOTES5 />
+                        </CHARACTER_INFO>
+                        <CHARACTERISTICS>
+                            <STR XMLID="STR" ID="1761270254938" BASECOST="0.0" LEVELS="10" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </STR>
+                            <DEX XMLID="DEX" ID="1761270254623" BASECOST="0.0" LEVELS="2" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </DEX>
+                            <CON XMLID="CON" ID="1761270254608" BASECOST="0.0" LEVELS="10" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </CON>
+                            <BODY XMLID="BODY" ID="1761270254723" BASECOST="0.0" LEVELS="4" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </BODY>
+                            <INT XMLID="INT" ID="1761270254461" BASECOST="0.0" LEVELS="-2" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </INT>
+                            <EGO XMLID="EGO" ID="1761270255394" BASECOST="0.0" LEVELS="3" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </EGO>
+                            <PRE XMLID="PRE" ID="1761270255027" BASECOST="0.0" LEVELS="8" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </PRE>
+                            <COM XMLID="COM" ID="1761270254639" BASECOST="0.0" LEVELS="-40" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </COM>
+                            <PD XMLID="PD" ID="1761270254491" BASECOST="0.0" LEVELS="4" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </PD>
+                            <ED XMLID="ED" ID="1761270254624" BASECOST="0.0" LEVELS="4" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </ED>
+                            <SPD XMLID="SPD" ID="1761270255411" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </SPD>
+                            <REC XMLID="REC" ID="1761270254879" BASECOST="0.0" LEVELS="2" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </REC>
+                            <END XMLID="END" ID="1761270255229" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </END>
+                            <STUN XMLID="STUN" ID="1761270255222" BASECOST="0.0" LEVELS="2" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </STUN>
+                            <RUNNING XMLID="RUNNING" ID="1761270255315" BASECOST="0.0" LEVELS="1" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </RUNNING>
+                            <SWIMMING XMLID="SWIMMING" ID="1761270254726" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </SWIMMING>
+                            <LEAPING XMLID="LEAPING" ID="1761270255321" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                            <NOTES />
+                            </LEAPING>
+                        </CHARACTERISTICS>
+                        <SKILLS>
+                        </SKILLS>
+                        <PERKS />
+                        <TALENTS />
+                        <MARTIALARTS />
+                        <POWERS>
+                        </POWERS>
+                        <DISADVANTAGES />
+                        <EQUIPMENT />
+                        </CHARACTER>
+                    `;
 /**
  * Uploaded templates that must answer exactly like their actor type.
  *
@@ -949,8 +1272,19 @@ const PC_6E_AUTOMATON_BODY_DAMAGE_REMOVES_ABILITY_XML = `
  * actor type stays the same.
  *
  * `values` states what the levels add up to, per characteristic label or movement mode. Each entry
- * becomes one `it` per field under `Actor template values`, so a failure names one name and one field.
- * LEAPING is the movement mode that appears here.
+ * becomes one `it` per field, so a failure names one name and one field. LEAPING, RUNNING, and
+ * SWIMMING are the movement modes that appear here.
+ *
+ * `claimGroup` names the group that reads `values`. Leave it out for `Actor template values`, which asks
+ * what an upload is worth. Set it to "cost" for `Uploaded characteristic cost`, which asks what an
+ * upload charges and states `max` and `realCost`. `totals` adds the actor-level sums, and only a cost
+ * row carries them.
+ *
+ * Six old claims stated FLIGHT, GLIDING, and TUNNELING at `max` 0 on the rising-levels fixture. That
+ * fixture names none of the three. Each claim read a stored node for a mode the character does not have,
+ * so it could not fail. A stored node proves nothing about ownership, and `hasCharacteristic` answers
+ * false for those modes. Do not re-add such a claim. `Has characteristic by template` asks the honest
+ * question instead. `characteristics_coverage_gaps.md` lists the mode coverage still missing.
  */
 const UPLOADED_TEMPLATE_CONTRACTS = freezeDeep([
     {
@@ -1058,6 +1392,111 @@ const UPLOADED_TEMPLATE_CONTRACTS = freezeDeep([
         usableSet: false,
         lacksBecauseOfPowers: ["STUN"],
     },
+
+    {
+        // Old suite: "Characteristics 5e simple". Each characteristic holds the levels of its own
+        // position, so STR 1, DEX 2, CON 3, and so on. Costs show the 5e character charges: DEX 6 for 2
+        // levels, SPD 18 for 2, and BODY 8 for 4.
+        title: "5e superheroic pc with rising levels",
+        actorType: "pc",
+        is5e: true,
+        edition: "5e",
+        contents: PC_5E_SUPERHERO_SIMPLE_XML,
+        usableSet: false,
+        claimGroup: "cost",
+        values: {
+            STR: { max: 11, realCost: 1 },
+            DEX: { max: 12, realCost: 6 },
+            CON: { max: 13, realCost: 6 },
+            BODY: { max: 14, realCost: 8 },
+            INT: { max: 15, realCost: 5 },
+            EGO: { max: 16, realCost: 12 },
+            PRE: { max: 17, realCost: 7 },
+            COM: { max: 18, realCost: 4 },
+            PD: { max: 2, realCost: 0 },
+            ED: { max: 3, realCost: 0 },
+            SPD: { max: 4, realCost: 18 },
+            REC: { max: 5, realCost: 0 },
+            END: { max: 26, realCost: 0 },
+            STUN: { max: 27, realCost: 0 },
+            OCV: { max: 4, realCost: 0 },
+            DCV: { max: 4, realCost: 0 },
+            OMCV: { max: 5, realCost: 0 },
+            DMCV: { max: 5, realCost: 0 },
+            RUNNING: { max: 27, realCost: 42 },
+            SWIMMING: { max: 28, realCost: 26 },
+            LEAPING: { max: 29, realCost: 27 },
+        },
+        totals: {
+            realCost: 162,
+            activePoints: 162,
+        },
+    },
+    {
+        // Old suite: "Characteristics 5e buyback". Every characteristic is bought back, so costs go
+        // negative while values stay positive.
+        title: "5e superheroic pc that buys characteristics back",
+        actorType: "pc",
+        is5e: true,
+        edition: "5e",
+        contents: PC_5E_SUPERHERO_BUYBACK_XML,
+        usableSet: false,
+        claimGroup: "cost",
+        values: {
+            STR: { max: 5, realCost: -5 },
+            DEX: { max: 5, realCost: -15 },
+            CON: { max: 5, realCost: -10 },
+            BODY: { max: 5, realCost: -10 },
+            INT: { max: 5, realCost: -5 },
+            EGO: { max: 5, realCost: -10 },
+            PRE: { max: 5, realCost: -5 },
+            COM: { max: 5, realCost: -2 },
+            PD: { max: 1, realCost: 0 },
+            ED: { max: 0, realCost: -1 },
+            SPD: { max: 1, realCost: 0 },
+            REC: { max: 2, realCost: 0 },
+            END: { max: 10, realCost: 0 },
+            STUN: { max: 11, realCost: 0 },
+            OCV: { max: 2, realCost: 0 },
+            DCV: { max: 2, realCost: 0 },
+            OMCV: { max: 2, realCost: 0 },
+            DMCV: { max: 2, realCost: 0 },
+            RUNNING: { max: 6, realCost: 0 },
+            SWIMMING: { max: 2, realCost: 0 },
+            LEAPING: { max: 1, realCost: 0 },
+        },
+        totals: {
+            realCost: -63,
+            activePoints: -63,
+        },
+    },
+    {
+        // Old suite: "Characteristics 5e negative COM / -10 COM". Negative levels cost nothing.
+        title: "5e normal pc with COM at -10",
+        actorType: "pc",
+        is5e: true,
+        edition: "5e",
+        contents: PC_5E_MINUS_10_COM_XML,
+        usableSet: false,
+        claimGroup: "cost",
+        values: {
+            COM: { max: -10, realCost: 0 },
+        },
+    },
+    {
+        // Old suite: "Characteristics 5e negative COM / -30 COM". Past -25 COM the charge turns
+        // positive, so the character pays 10 for COM it does not have.
+        title: "5e normal pc with COM at -30",
+        actorType: "pc",
+        is5e: true,
+        edition: "5e",
+        contents: PC_5E_MINUS_30_COM_XML,
+        usableSet: false,
+        claimGroup: "cost",
+        values: {
+            COM: { max: -30, realCost: 10 },
+        },
+    },
 ]);
 
 /**
@@ -1121,6 +1560,18 @@ const VALUE_FIELD_CLAIMS = freezeDeep({
     max: (name, expected) => `${name} allows ${expected} as its maximum`,
     realCost: (name, expected) => `${name} costs ${expected}`,
     value: (name, expected) => `${name} is ${expected}`,
+});
+
+/**
+ * The report wording for one actor-level cost total.
+ *
+ * A total sums every characteristic at once, so it names no characteristic. `realCost` is what the
+ * upload charges. `activePoints` is what the character offers for spending. A row states both under
+ * `totals`, and `assertActorTotal` reads them from the actor.
+ */
+const TOTAL_FIELD_CLAIMS = freezeDeep({
+    realCost: (expected) => `charges ${expected} in total`,
+    activePoints: (expected) => `offers ${expected} active points`,
 });
 
 /**
@@ -1317,98 +1768,133 @@ export function registerDefaultCharacteristicsForEachActorTypeTests(quench) {
                     );
                 });
 
-                describe("Has characteristic by template", () => {
-                    for (const template of UPLOADED_TEMPLATE_CONTRACTS) {
-                        describe(template.title, async function () {
-                            let actor;
+                /**
+                 * Register one describe per uploaded template, inside one group.
+                 *
+                 * Each describe uploads its own actor in `before` and deletes it in `after`. Mocha runs
+                 * that hook before the next sibling describe, so an actor cannot cross a describe
+                 * boundary. Two groups that cover one template therefore upload twice. That keeps the two
+                 * contracts independent, so a value failure cannot hide an existence failure.
+                 *
+                 * @param {string} name   Group title.
+                 * @param {object[]} rows Templates the group covers.
+                 * @param {Function} body Registers the claims of one template, given how to load its actor.
+                 */
+                const registerUploadedGroup = (name, rows, body) => {
+                    describe(name, () => {
+                        for (const template of rows) {
+                            describe(template.title, function () {
+                                let actor;
 
-                            before(async function () {
-                                actor = await createQuenchActor({
-                                    quench: this,
-                                    contents: template.contents,
-                                    is5e: template.is5e,
-                                    actorType: template.actorType,
-                                });
-                            });
-
-                            after(async function () {
-                                await deleteQuenchActor({ quench: this, actor });
-                            });
-
-                            const contract = contractFor(template);
-                            const load = async () => actor;
-
-                            describe("Characteristics", () => {
-                                registerOwnershipCases(
-                                    ownershipCases(contract.characteristics, "the upload"),
-                                    load,
-                                    chars.assertHasChar,
-                                    chars.assertLacksChar,
-                                );
-                            });
-
-                            describe("Movement modes", () => {
-                                registerOwnershipCases(
-                                    ownershipCases(contract.movement, "the upload"),
-                                    load,
-                                    chars.assertHasMovementMode,
-                                    chars.assertLacksMovementMode,
-                                );
-                            });
-
-                            if (template.usableSet) {
-                                it("can use exactly the set it has", function () {
-                                    chars.assertExactUsableSet(actor, [
-                                        ...contract.characteristics.has,
-                                        ...contract.movement.has,
-                                    ]);
-                                });
-                            }
-                        });
-                    }
-                });
-
-                describe("Actor template values", () => {
-                    // This uploads a template that `Has characteristic by template` uploads too. Mocha
-                    // deletes each describe's actor in its own `after` hook, before the next sibling runs,
-                    // so an actor cannot cross a describe boundary. One upload per contract keeps the two
-                    // contracts independent, and a value failure cannot hide an existence failure.
-                    for (const template of UPLOADED_TEMPLATE_CONTRACTS.filter((row) => row.values)) {
-                        describe(template.title, async function () {
-                            let actor;
-
-                            before(async function () {
-                                actor = await createQuenchActor({
-                                    quench: this,
-                                    contents: template.contents,
-                                    is5e: template.is5e,
-                                    actorType: template.actorType,
-                                });
-                            });
-
-                            after(async function () {
-                                await deleteQuenchActor({ quench: this, actor });
-                            });
-
-                            for (const [name, fields] of Object.entries(template.values)) {
-                                for (const [field, expected] of Object.entries(fields)) {
-                                    const claim = VALUE_FIELD_CLAIMS[field];
-
-                                    if (claim === undefined) {
-                                        throw new Error(
-                                            `${template.title} states field "${field}" for ${name}, ` +
-                                                "which VALUE_FIELD_CLAIMS does not name.",
-                                        );
-                                    }
-
-                                    it(claim(name, expected), function () {
-                                        chars.assertCharField(actor, name, field, expected);
+                                before(async function () {
+                                    actor = await createQuenchActor({
+                                        quench: this,
+                                        contents: template.contents,
+                                        is5e: template.is5e,
+                                        actorType: template.actorType,
                                     });
-                                }
+                                });
+
+                                after(async function () {
+                                    await deleteQuenchActor({ quench: this, actor });
+                                });
+
+                                body(template, async () => actor);
+                            });
+                        }
+                    });
+                };
+
+                /**
+                 * Register one `it` per value claim of one uploaded template.
+                 *
+                 * A claim names one characteristic label or movement mode, and one field, so a failure
+                 * names the one number that answered wrong. A `totals` map adds one `it` per actor-level
+                 * sum. Both maps are optional, so a row that states nothing registers nothing.
+                 *
+                 * @param {object} template One entry of `UPLOADED_TEMPLATE_CONTRACTS`.
+                 * @param {Function} load    Resolves the uploaded actor the claim asks about.
+                 */
+                const registerValueCases = (template, load) => {
+                    for (const [name, fields] of Object.entries(template.values ?? {})) {
+                        for (const [field, expected] of Object.entries(fields)) {
+                            const claim = VALUE_FIELD_CLAIMS[field];
+
+                            if (claim === undefined) {
+                                throw new Error(
+                                    `${template.title} states field "${field}" for ${name}, ` +
+                                        "which VALUE_FIELD_CLAIMS does not name.",
+                                );
                             }
+
+                            it(claim(name, expected), async function () {
+                                chars.assertCharField(await load(), name, field, expected);
+                            });
+                        }
+                    }
+
+                    for (const [field, expected] of Object.entries(template.totals ?? {})) {
+                        const claim = TOTAL_FIELD_CLAIMS[field];
+
+                        if (claim === undefined) {
+                            throw new Error(
+                                `${template.title} states total "${field}", ` +
+                                    "which TOTAL_FIELD_CLAIMS does not name.",
+                            );
+                        }
+
+                        it(claim(expected), async function () {
+                            chars.assertActorTotal(await load(), field, expected);
                         });
                     }
-                });
+                };
+
+                // Only a row that states `values` belongs in a value group. A row that states nothing
+                // would register an empty describe and inflate the suite count.
+                const statedRows = UPLOADED_TEMPLATE_CONTRACTS.filter((row) => row.values);
+                const costRows = statedRows.filter((row) => row.claimGroup === "cost");
+                const valueRows = statedRows.filter((row) => row.claimGroup !== "cost");
+
+                registerUploadedGroup(
+                    "Has characteristic by template",
+                    UPLOADED_TEMPLATE_CONTRACTS,
+                    (template, load) => {
+                        const contract = contractFor(template);
+
+                        describe("Characteristics", () => {
+                            registerOwnershipCases(
+                                ownershipCases(contract.characteristics, "the upload"),
+                                load,
+                                chars.assertHasChar,
+                                chars.assertLacksChar,
+                            );
+                        });
+
+                        describe("Movement modes", () => {
+                            registerOwnershipCases(
+                                ownershipCases(contract.movement, "the upload"),
+                                load,
+                                chars.assertHasMovementMode,
+                                chars.assertLacksMovementMode,
+                            );
+                        });
+
+                        if (template.usableSet) {
+                            it("can use exactly the set it has", async function () {
+                                const actor = await load();
+
+                                chars.assertExactUsableSet(actor, [
+                                    ...contract.characteristics.has,
+                                    ...contract.movement.has,
+                                ]);
+                            });
+                        }
+                    },
+                );
+
+                registerUploadedGroup("Actor template values", valueRows, registerValueCases);
+
+                registerUploadedGroup("Uploaded characteristic cost", costRows, registerValueCases);
 
                 /**
                  * Each default name, beside the accessor that answers whether the actor has it.

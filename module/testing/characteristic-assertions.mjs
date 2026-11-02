@@ -11,6 +11,9 @@
  * `assertLacksChar`, which call `actor.hasCharacteristic`. Movement modes leave characteristic storage
  * later. Route them through the movement helpers now, so a test does not change then.
  *
+ * Cost totals go through `assertActorTotal`. A total sums every characteristic at once, so it names
+ * nothing but the actor.
+ *
  * One helper asserts one thing. No helper loops over names, so a caller registers one test per name
  * and a failure names the characteristic label or movement mode that answered wrong.
  *
@@ -52,6 +55,9 @@ const ASSERTABLE_FIELDS = new FrozenSet([
     "characteristicMax",
     "roll",
 ]);
+
+/** Actor-level cost totals a test may assert. These sums carry no characteristic label. */
+const ASSERTABLE_TOTAL_FIELDS = new FrozenSet(["realCost", "activePoints"]);
 
 /**
  * Read the actor's characteristic node. Use to get `max`, `value`, and the other fields.
@@ -213,6 +219,31 @@ export function createCharacteristicAssertions(assert) {
     }
 
     /**
+     * Assert one actor-level cost total.
+     *
+     * A total sums every characteristic at once, so it carries no name. Assert a total beside the
+     * per-name claims, so a cost change reports both the name that moved and the sum it changed.
+     *
+     * @param {HeroSystem6eActor} actor
+     * @param {string} field Total name. Must be in ASSERTABLE_TOTAL_FIELDS.
+     * @param {number} expected Expected value.
+     * @param {string} [message] Overrides the generated failure message.
+     */
+    function assertActorTotal(actor, field, expected, message) {
+        if (!ASSERTABLE_TOTAL_FIELDS.has(field)) {
+            throw new Error(
+                `assertActorTotal: unknown total "${field}". Assertable totals: ${[...ASSERTABLE_TOTAL_FIELDS].join(", ")}.`,
+            );
+        }
+
+        if (!actor) {
+            throw new Error(`assertActorTotal: missing actor for "${field}"`);
+        }
+
+        assert.equal(actor[field], expected, message ?? `${actor.name}: expected ${field} ${expected}`);
+    }
+
+    /**
      * Assert the actor's usable name set matches exactly.
      *
      * The set holds characteristic labels and movement modes. Fails on a missing name and on an
@@ -301,6 +332,7 @@ export function createCharacteristicAssertions(assert) {
         assertHasChar,
         assertLacksChar,
         assertCharField,
+        assertActorTotal,
         assertHasMovementMode,
         assertLacksMovementMode,
         assertExactUsableSet,
