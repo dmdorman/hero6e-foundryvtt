@@ -1,4 +1,5 @@
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
+import { createCharacteristicAssertions } from "./characteristic-assertions.mjs";
 
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { getAndSetGameSetting } from "../settings/settings-helpers.mjs";
@@ -13,6 +14,7 @@ export function registerFullCharacterTests(quench) {
         `${game.system.id}.utils.full`,
         (context) => {
             const { after, afterEach, assert, before, beforeEach, describe, expect, it } = context;
+            const chars = createCharacteristicAssertions(assert);
 
             describe("Full Character Tests", function () {
                 // Mocha's 2000ms default is too short when several actors are created at the same time.
@@ -328,150 +330,150 @@ export function registerFullCharacterTests(quench) {
                     });
 
                     it("str.max", async function () {
-                        assert.equal(actor.system.characteristics.str.max, 55);
+                        chars.assertCharField(actor, "STR", "max", 55);
                     });
                     it("str.realCost", async function () {
-                        assert.equal(actor.system.characteristics.str.realCost, 45);
+                        chars.assertCharField(actor, "STR", "realCost", 45);
                     });
 
                     it("dex.max", async function () {
-                        assert.equal(actor.system.characteristics.dex.max, 20);
+                        chars.assertCharField(actor, "DEX", "max", 20);
                     });
                     it("dex.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dex.realCost, 30);
+                        chars.assertCharField(actor, "DEX", "realCost", 30);
                     });
 
                     it("con.max", async function () {
-                        assert.equal(actor.system.characteristics.con.max, 35);
+                        chars.assertCharField(actor, "CON", "max", 35);
                     });
                     it("con.realCost", async function () {
-                        assert.equal(actor.system.characteristics.con.realCost, 50);
+                        chars.assertCharField(actor, "CON", "realCost", 50);
                     });
 
                     it("body.max", async function () {
-                        assert.equal(actor.system.characteristics.body.max, 25);
+                        chars.assertCharField(actor, "BODY", "max", 25);
                     });
                     it("body.realCost", async function () {
-                        assert.equal(actor.system.characteristics.body.realCost, 30);
+                        chars.assertCharField(actor, "BODY", "realCost", 30);
                     });
 
                     it("int.max", async function () {
-                        assert.equal(actor.system.characteristics.int.max, 15);
+                        chars.assertCharField(actor, "INT", "max", 15);
                     });
                     it("int.realCost", async function () {
-                        assert.equal(actor.system.characteristics.int.realCost, 5);
+                        chars.assertCharField(actor, "INT", "realCost", 5);
                     });
 
                     it("ego.max", async function () {
-                        assert.equal(actor.system.characteristics.ego.max, 14);
+                        chars.assertCharField(actor, "EGO", "max", 14);
                     });
                     it("ego.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ego.realCost, 8);
+                        chars.assertCharField(actor, "EGO", "realCost", 8);
                     });
 
                     it("pre.max", async function () {
-                        assert.equal(actor.system.characteristics.pre.max, 22);
+                        chars.assertCharField(actor, "PRE", "max", 22);
                     });
                     it("pre.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pre.realCost, 12);
+                        chars.assertCharField(actor, "PRE", "realCost", 12);
                     });
 
                     it("com.max", async function () {
-                        assert.equal(actor.system.characteristics.com.max, 10);
+                        chars.assertCharField(actor, "COM", "max", 10);
                     });
                     it("com.realCost", async function () {
-                        assert.equal(actor.system.characteristics.com.realCost, 0);
+                        chars.assertCharField(actor, "COM", "realCost", 0);
                     });
 
                     it("pd.max", async function () {
-                        assert.equal(actor.system.characteristics.pd.max, 25);
+                        chars.assertCharField(actor, "PD", "max", 25);
                     });
                     it("pd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pd.realCost, 14);
+                        chars.assertCharField(actor, "PD", "realCost", 14);
                     });
 
                     it("ed.max", async function () {
-                        assert.equal(actor.system.characteristics.ed.max, 20);
+                        chars.assertCharField(actor, "ED", "max", 20);
                     });
                     it("ed.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ed.realCost, 13);
+                        chars.assertCharField(actor, "ED", "realCost", 13);
                     });
 
                     it("spd.max", async function () {
-                        assert.equal(actor.system.characteristics.spd.max, 5);
+                        chars.assertCharField(actor, "SPD", "max", 5);
                     });
                     it("spd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.spd.realCost, 20);
+                        chars.assertCharField(actor, "SPD", "realCost", 20);
                     });
 
                     it("rec.max", async function () {
-                        assert.equal(actor.system.characteristics.rec.max, 21);
+                        chars.assertCharField(actor, "REC", "max", 21);
                     });
                     it("rec.realCost", async function () {
-                        assert.equal(actor.system.characteristics.rec.realCost, 6);
+                        chars.assertCharField(actor, "REC", "realCost", 6);
                     });
 
                     it("end.max", async function () {
-                        assert.equal(actor.system.characteristics.end.max, 85);
+                        chars.assertCharField(actor, "END", "max", 85);
                     });
                     it("end.realCost", async function () {
-                        assert.equal(actor.system.characteristics.end.realCost, 8);
+                        chars.assertCharField(actor, "END", "realCost", 8);
                     });
 
                     it("stun.max", async function () {
-                        assert.equal(actor.system.characteristics.stun.max, 125);
+                        chars.assertCharField(actor, "STUN", "max", 125);
                     });
                     it("stun.realCost", async function () {
-                        assert.equal(actor.system.characteristics.stun.realCost, 54);
+                        chars.assertCharField(actor, "STUN", "realCost", 54);
                     });
 
                     it("ocv.max", async function () {
-                        assert.equal(actor.system.characteristics.ocv.max, 7);
+                        chars.assertCharField(actor, "OCV", "max", 7);
                     });
                     it("ocv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ocv.realCost, 0);
+                        chars.assertCharField(actor, "OCV", "realCost", 0);
                     });
 
                     it("dcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dcv.max, 7);
+                        chars.assertCharField(actor, "DCV", "max", 7);
                     });
                     it("dcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dcv.realCost, 0);
+                        chars.assertCharField(actor, "DCV", "realCost", 0);
                     });
 
                     it("omcv.max", async function () {
-                        assert.equal(actor.system.characteristics.omcv.max, 5);
+                        chars.assertCharField(actor, "OMCV", "max", 5);
                     });
                     it("omcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.omcv.realCost, 0);
+                        chars.assertCharField(actor, "OMCV", "realCost", 0);
                     });
 
                     it("dmcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.max, 5);
+                        chars.assertCharField(actor, "DMCV", "max", 5);
                     });
                     it("dmcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.realCost, 0);
+                        chars.assertCharField(actor, "DMCV", "realCost", 0);
                     });
 
                     it("running.max", async function () {
-                        assert.equal(actor.system.characteristics.running.max, 13); //8 + 5 (Active Effect)
+                        chars.assertCharField(actor, "RUNNING", "max", 13); //8 + 5 (Active Effect)
                     });
                     it("running.realCost", async function () {
-                        assert.equal(actor.system.characteristics.running.realCost, 4);
+                        chars.assertCharField(actor, "RUNNING", "realCost", 4);
                     });
 
                     it("swimming.max", async function () {
-                        assert.equal(actor.system.characteristics.swimming.max, 2);
+                        chars.assertCharField(actor, "SWIMMING", "max", 2);
                     });
                     it("swimming.realCost", async function () {
-                        assert.equal(actor.system.characteristics.swimming.realCost, 0);
+                        chars.assertCharField(actor, "SWIMMING", "realCost", 0);
                     });
 
                     it("leaping.max", async function () {
-                        assert.equal(actor.system.characteristics.leaping.max, 11);
+                        chars.assertCharField(actor, "LEAPING", "max", 11);
                     });
                     it("leaping.realCost", async function () {
-                        assert.equal(actor.system.characteristics.leaping.realCost, 0);
+                        chars.assertCharField(actor, "LEAPING", "realCost", 0);
                     });
 
                     it("total points spent", async function () {
@@ -585,143 +587,143 @@ export function registerFullCharacterTests(quench) {
                     });
 
                     it("str.max", async function () {
-                        assert.equal(actor.system.characteristics.str.max, 10);
+                        chars.assertCharField(actor, "STR", "max", 10);
                     });
                     it("str.realCost", async function () {
-                        assert.equal(actor.system.characteristics.str.realCost, 0);
+                        chars.assertCharField(actor, "STR", "realCost", 0);
                     });
 
                     it("dex.max", async function () {
-                        assert.equal(actor.system.characteristics.dex.max, 10);
+                        chars.assertCharField(actor, "DEX", "max", 10);
                     });
                     it("dex.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dex.realCost, 0);
+                        chars.assertCharField(actor, "DEX", "realCost", 0);
                     });
 
                     it("con.max", async function () {
-                        assert.equal(actor.system.characteristics.con.max, 10);
+                        chars.assertCharField(actor, "CON", "max", 10);
                     });
                     it("con.realCost", async function () {
-                        assert.equal(actor.system.characteristics.con.realCost, 0);
+                        chars.assertCharField(actor, "CON", "realCost", 0);
                     });
 
                     it("body.max", async function () {
-                        assert.equal(actor.system.characteristics.body.max, 10);
+                        chars.assertCharField(actor, "BODY", "max", 10);
                     });
                     it("body.realCost", async function () {
-                        assert.equal(actor.system.characteristics.body.realCost, 0);
+                        chars.assertCharField(actor, "BODY", "realCost", 0);
                     });
 
                     it("int.max", async function () {
-                        assert.equal(actor.system.characteristics.int.max, 10);
+                        chars.assertCharField(actor, "INT", "max", 10);
                     });
                     it("int.realCost", async function () {
-                        assert.equal(actor.system.characteristics.int.realCost, 0);
+                        chars.assertCharField(actor, "INT", "realCost", 0);
                     });
 
                     it("ego.max", async function () {
-                        assert.equal(actor.system.characteristics.ego.max, 10);
+                        chars.assertCharField(actor, "EGO", "max", 10);
                     });
                     it("ego.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ego.realCost, 0);
+                        chars.assertCharField(actor, "EGO", "realCost", 0);
                     });
 
                     it("pre.max", async function () {
-                        assert.equal(actor.system.characteristics.pre.max, 10);
+                        chars.assertCharField(actor, "PRE", "max", 10);
                     });
                     it("pre.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pre.realCost, 0);
+                        chars.assertCharField(actor, "PRE", "realCost", 0);
                     });
 
                     it("pd.max", async function () {
-                        assert.equal(actor.system.characteristics.pd.max, 2);
+                        chars.assertCharField(actor, "PD", "max", 2);
                     });
                     it("pd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pd.realCost, 0);
+                        chars.assertCharField(actor, "PD", "realCost", 0);
                     });
 
                     it("ed.max", async function () {
-                        assert.equal(actor.system.characteristics.ed.max, 2);
+                        chars.assertCharField(actor, "ED", "max", 2);
                     });
                     it("ed.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ed.realCost, 0);
+                        chars.assertCharField(actor, "ED", "realCost", 0);
                     });
 
                     it("spd.max", async function () {
-                        assert.equal(actor.system.characteristics.spd.max, 2);
+                        chars.assertCharField(actor, "SPD", "max", 2);
                     });
                     it("spd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.spd.realCost, 0);
+                        chars.assertCharField(actor, "SPD", "realCost", 0);
                     });
 
                     it("rec.max", async function () {
-                        assert.equal(actor.system.characteristics.rec.max, 4);
+                        chars.assertCharField(actor, "REC", "max", 4);
                     });
                     it("rec.realCost", async function () {
-                        assert.equal(actor.system.characteristics.rec.realCost, 0);
+                        chars.assertCharField(actor, "REC", "realCost", 0);
                     });
 
                     it("end.max", async function () {
-                        assert.equal(actor.system.characteristics.end.max, 20);
+                        chars.assertCharField(actor, "END", "max", 20);
                     });
                     it("end.realCost", async function () {
-                        assert.equal(actor.system.characteristics.end.realCost, 0);
+                        chars.assertCharField(actor, "END", "realCost", 0);
                     });
 
                     it("stun.max", async function () {
-                        assert.equal(actor.system.characteristics.stun.max, 20);
+                        chars.assertCharField(actor, "STUN", "max", 20);
                     });
                     it("stun.realCost", async function () {
-                        assert.equal(actor.system.characteristics.stun.realCost, 0);
+                        chars.assertCharField(actor, "STUN", "realCost", 0);
                     });
 
                     it("ocv.max", async function () {
-                        assert.equal(actor.system.characteristics.ocv.max, 3);
+                        chars.assertCharField(actor, "OCV", "max", 3);
                     });
                     it("ocv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ocv.realCost, 0);
+                        chars.assertCharField(actor, "OCV", "realCost", 0);
                     });
 
                     it("dcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dcv.max, 3);
+                        chars.assertCharField(actor, "DCV", "max", 3);
                     });
                     it("dcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dcv.realCost, 0);
+                        chars.assertCharField(actor, "DCV", "realCost", 0);
                     });
 
                     it("omcv.max", async function () {
-                        assert.equal(actor.system.characteristics.omcv.max, 3);
+                        chars.assertCharField(actor, "OMCV", "max", 3);
                     });
                     it("omcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.omcv.realCost, 0);
+                        chars.assertCharField(actor, "OMCV", "realCost", 0);
                     });
 
                     it("dmcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.max, 3);
+                        chars.assertCharField(actor, "DMCV", "max", 3);
                     });
                     it("dmcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.realCost, 0);
+                        chars.assertCharField(actor, "DMCV", "realCost", 0);
                     });
 
                     it("running.max", async function () {
-                        assert.equal(actor.system.characteristics.running.max, 12);
+                        chars.assertCharField(actor, "RUNNING", "max", 12);
                     });
                     it("running.realCost", async function () {
-                        assert.equal(actor.system.characteristics.running.realCost, 0);
+                        chars.assertCharField(actor, "RUNNING", "realCost", 0);
                     });
 
                     it("swimming.max", async function () {
-                        assert.equal(actor.system.characteristics.swimming.max, 4);
+                        chars.assertCharField(actor, "SWIMMING", "max", 4);
                     });
                     it("swimming.realCost", async function () {
-                        assert.equal(actor.system.characteristics.swimming.realCost, 0);
+                        chars.assertCharField(actor, "SWIMMING", "realCost", 0);
                     });
 
                     it("leaping.max", async function () {
-                        assert.equal(actor.system.characteristics.leaping.max, 4);
+                        chars.assertCharField(actor, "LEAPING", "max", 4);
                     });
                     it("leaping.realCost", async function () {
-                        assert.equal(actor.system.characteristics.leaping.realCost, 0);
+                        chars.assertCharField(actor, "LEAPING", "realCost", 0);
                     });
 
                     it("realCost", async function () {

@@ -2,6 +2,7 @@ import { _startIfIsAContinuingCharge, HeroSystem6eItem } from "../item/item.mjs"
 import { activeEffectChanges } from "../utility/active-effects.mjs";
 import { getPowerInfo } from "../utility/util.mjs";
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
+import { charMax, charValue, setChar } from "./characteristic-assertions.mjs";
 
 const { Actor } = foundry.documents;
 
@@ -105,7 +106,7 @@ export function registerItemActiveEffectSyncTests(quench) {
                             "Effect change carries the initial LEVELS.",
                         );
                         assert.strictEqual(
-                            parseInt(testActor.system.characteristics.flight.max),
+                            parseInt(charMax(testActor, "FLIGHT")),
                             10,
                             "Actor flight max reflects the transferred effect.",
                         );
@@ -121,7 +122,7 @@ export function registerItemActiveEffectSyncTests(quench) {
                             "Existing effect's system.changes updated to the new LEVELS.",
                         );
                         assert.strictEqual(
-                            parseInt(testActor.system.characteristics.flight.max),
+                            parseInt(charMax(testActor, "FLIGHT")),
                             15,
                             "Actor flight max follows the updated effect.",
                         );
@@ -390,12 +391,12 @@ export function registerItemActiveEffectSyncTests(quench) {
                     const secondsPerBodyForRec = (recValue) => Math.floor(2.628e6 / Math.max(1, recValue));
 
                     it("refreshes a disabled effect's rate instead of duplicating it, then deletes it on full BODY", async function () {
-                        const bodyMax = testActor.system.characteristics.body.max;
+                        const bodyMax = charMax(testActor, "BODY");
                         assert.ok(bodyMax > 0, "Actor starts with a positive BODY max.");
-                        const originalRec = testActor.system.characteristics.rec.value;
+                        const originalRec = charValue(testActor, "REC");
 
                         // Damage BODY: setNaturalHealing's create branch runs
-                        await testActor.update({ "system.characteristics.body.value": bodyMax - 1 });
+                        await setChar(testActor, "BODY", bodyMax - 1);
 
                         let naturalBodyHealing = findNaturalBodyHealing();
                         assert.ok(naturalBodyHealing, "Natural healing effect created while BODY is below max.");
@@ -407,7 +408,7 @@ export function registerItemActiveEffectSyncTests(quench) {
                         // distinguishable from the original; the lookup (unlike core's
                         // temporaryEffects) must still find the disabled effect.
                         const newRec = originalRec + 20;
-                        await testActor.update({ "system.characteristics.rec.value": newRec });
+                        await setChar(testActor, "REC", newRec);
 
                         const afterRetrigger = testActor.effects.filter(
                             (ae) => ae.flags[game.system.id]?.XMLID === "naturalBodyHealing",
@@ -424,7 +425,7 @@ export function registerItemActiveEffectSyncTests(quench) {
                         );
 
                         // Restore BODY to full: the delete branch must fire even though the effect is disabled
-                        await testActor.update({ "system.characteristics.body.value": bodyMax });
+                        await setChar(testActor, "BODY", bodyMax);
 
                         assert.notOk(
                             findNaturalBodyHealing(),

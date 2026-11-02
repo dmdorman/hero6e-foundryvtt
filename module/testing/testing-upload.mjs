@@ -1,4 +1,5 @@
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
+import { charMax, charNode, charValue, seedChar, setChar } from "./characteristic-assertions.mjs";
 
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { isDefaultActorName, resolveUploadName } from "../actor/actor-upload.mjs";
@@ -205,7 +206,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = false;
-                        actor.system.characteristics.dex.value = 15;
+                        seedChar(actor, "DEX", 15);
 
                         item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
@@ -1198,7 +1199,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = false;
-                        actor.system.characteristics.dex.value = 15;
+                        seedChar(actor, "DEX", 15);
 
                         item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
@@ -1260,7 +1261,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = false;
-                        actor.system.characteristics.ego.value = 38;
+                        seedChar(actor, "EGO", 38);
 
                         item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
@@ -1428,7 +1429,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = false;
-                        actor.system.characteristics.ego.value = 38;
+                        seedChar(actor, "EGO", 38);
 
                         item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
@@ -1490,7 +1491,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = false;
-                        actor.system.characteristics.ego.value = 38;
+                        seedChar(actor, "EGO", 38);
 
                         item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
@@ -2482,7 +2483,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = false;
-                        actor.system.characteristics.str.value = 10;
+                        seedChar(actor, "STR", 10);
 
                         item = new HeroSystem6eItem(
                             {
@@ -2541,7 +2542,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = false;
-                        actor.system.characteristics.str.value = 15;
+                        seedChar(actor, "STR", 15);
 
                         item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
@@ -2607,7 +2608,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = false;
-                        actor.system.characteristics.str.value = 15;
+                        seedChar(actor, "STR", 15);
 
                         item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
@@ -3402,7 +3403,7 @@ export function registerUploadTests(quench) {
                                 {},
                             );
                             actor.system.is5e = false;
-                            actor.system.characteristics.int.value = 25;
+                            seedChar(actor, "INT", 25);
 
                             item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
@@ -3460,7 +3461,7 @@ export function registerUploadTests(quench) {
                                 {},
                             );
                             actor.system.is5e = false;
-                            actor.system.characteristics.int.value = 13;
+                            seedChar(actor, "INT", 13);
 
                             item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
@@ -3519,7 +3520,7 @@ export function registerUploadTests(quench) {
                                 {},
                             );
                             actor.system.is5e = false;
-                            actor.system.characteristics.int.value = 13;
+                            seedChar(actor, "INT", 13);
 
                             item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
@@ -3574,7 +3575,7 @@ export function registerUploadTests(quench) {
                                 {},
                             );
                             actor.system.is5e = false;
-                            actor.system.characteristics.int.value = 13;
+                            seedChar(actor, "INT", 13);
 
                             item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
@@ -6937,7 +6938,7 @@ export function registerUploadTests(quench) {
                                 {},
                             );
                             actor.system.is5e = false;
-                            actor.system.characteristics.dex.value = 15;
+                            seedChar(actor, "DEX", 15);
 
                             item = new HeroSystem6eItem(
                                 {
@@ -7106,7 +7107,7 @@ export function registerUploadTests(quench) {
                                 {},
                             );
                             actor.system.is5e = false;
-                            actor.system.characteristics.dex.value = 15;
+                            seedChar(actor, "DEX", 15);
 
                             item = await new HeroSystem6eItem(
                                 {
@@ -7157,7 +7158,7 @@ export function registerUploadTests(quench) {
                             previousDoubleDamageLimitSetting = await getAndSetGameSetting("DoubleDamageLimit", true);
 
                             actor = await createQuenchActor({ quench: this, is5e: false });
-                            await actor.update({ "system.characteristics.dex.max ": 15 });
+                            await setChar(actor, "DEX", 15, { field: "max" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -7268,7 +7269,7 @@ export function registerUploadTests(quench) {
                             {},
                         );
                         actor.system.is5e = true;
-                        actor.system.characteristics.int.value = 15;
+                        seedChar(actor, "INT", 15);
 
                         await actor.addPerception();
 
@@ -8130,7 +8131,7 @@ export function registerUploadTests(quench) {
                         let actor;
                         before(async function () {
                             actor = await createQuenchActor({ quench: this, is5e: false });
-                            await actor.update({ "system.characteristics.ego.max": 38 });
+                            await setChar(actor, "EGO", 38, { field: "max" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -8191,7 +8192,7 @@ export function registerUploadTests(quench) {
                                 {},
                             );
                             actor.system.is5e = false;
-                            actor.system.characteristics.ego.value = 38;
+                            seedChar(actor, "EGO", 38);
 
                             item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
@@ -8250,7 +8251,7 @@ export function registerUploadTests(quench) {
                                 {},
                             );
                             actor.system.is5e = false;
-                            actor.system.characteristics.ego.value = 38;
+                            seedChar(actor, "EGO", 38);
 
                             item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
@@ -8309,7 +8310,7 @@ export function registerUploadTests(quench) {
                                 {},
                             );
                             actor.system.is5e = false;
-                            actor.system.characteristics.ego.value = 38;
+                            seedChar(actor, "EGO", 38);
 
                             item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
@@ -8369,7 +8370,7 @@ export function registerUploadTests(quench) {
                                 {},
                             );
                             actor.system.is5e = false;
-                            actor.system.characteristics.ego.value = 38;
+                            seedChar(actor, "EGO", 38);
 
                             item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
@@ -8796,34 +8797,16 @@ export function registerUploadTests(quench) {
                             });
 
                             it("does increase STR", function () {
-                                assert.equal(
-                                    actor.system.characteristics.str.base + 25,
-                                    actor.system.characteristics.str.max,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.str.base + 25,
-                                    actor.system.characteristics.str.value,
-                                );
+                                assert.equal(charNode(actor, "STR").base + 25, charMax(actor, "STR"));
+                                assert.equal(charNode(actor, "STR").base + 25, charValue(actor, "STR"));
                             });
 
                             it("does increase ED and PD", function () {
-                                assert.equal(
-                                    actor.system.characteristics.pd.base + 5,
-                                    actor.system.characteristics.pd.max,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.ed.base + 5,
-                                    actor.system.characteristics.ed.max,
-                                );
+                                assert.equal(charNode(actor, "PD").base + 5, charMax(actor, "PD"));
+                                assert.equal(charNode(actor, "ED").base + 5, charMax(actor, "ED"));
 
-                                assert.equal(
-                                    actor.system.characteristics.pd.base + 5,
-                                    actor.system.characteristics.pd.value,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.ed.base + 5,
-                                    actor.system.characteristics.ed.value,
-                                );
+                                assert.equal(charNode(actor, "PD").base + 5, charValue(actor, "PD"));
+                                assert.equal(charNode(actor, "ED").base + 5, charValue(actor, "ED"));
                             });
                         });
 
@@ -8878,14 +8861,8 @@ export function registerUploadTests(quench) {
                             });
 
                             it("does not increase STR", function () {
-                                assert.equal(
-                                    actor.system.characteristics.str.base,
-                                    actor.system.characteristics.str.max,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.str.base,
-                                    actor.system.characteristics.str.value,
-                                );
+                                assert.equal(charNode(actor, "STR").base, charMax(actor, "STR"));
+                                assert.equal(charNode(actor, "STR").base, charValue(actor, "STR"));
                             });
                         });
 
@@ -8940,22 +8917,13 @@ export function registerUploadTests(quench) {
                             });
 
                             it("does not increase PD", function () {
-                                assert.equal(actor.system.characteristics.pd.base, actor.system.characteristics.pd.max);
-                                assert.equal(
-                                    actor.system.characteristics.pd.base,
-                                    actor.system.characteristics.pd.value,
-                                );
+                                assert.equal(charNode(actor, "PD").base, charMax(actor, "PD"));
+                                assert.equal(charNode(actor, "PD").base, charValue(actor, "PD"));
                             });
 
                             it("does increase ED", function () {
-                                assert.equal(
-                                    actor.system.characteristics.ed.base + 5,
-                                    actor.system.characteristics.ed.max,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.ed.base + 5,
-                                    actor.system.characteristics.ed.value,
-                                );
+                                assert.equal(charNode(actor, "ED").base + 5, charMax(actor, "ED"));
+                                assert.equal(charNode(actor, "ED").base + 5, charValue(actor, "ED"));
                             });
                         });
 
@@ -9010,22 +8978,13 @@ export function registerUploadTests(quench) {
                             });
 
                             it("does increase PD", function () {
-                                assert.equal(
-                                    actor.system.characteristics.pd.base + 5,
-                                    actor.system.characteristics.pd.max,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.pd.base + 5,
-                                    actor.system.characteristics.pd.value,
-                                );
+                                assert.equal(charNode(actor, "PD").base + 5, charMax(actor, "PD"));
+                                assert.equal(charNode(actor, "PD").base + 5, charValue(actor, "PD"));
                             });
 
                             it("does not increase ED", function () {
-                                assert.equal(actor.system.characteristics.ed.base, actor.system.characteristics.ed.max);
-                                assert.equal(
-                                    actor.system.characteristics.ed.base,
-                                    actor.system.characteristics.ed.value,
-                                );
+                                assert.equal(charNode(actor, "ED").base, charMax(actor, "ED"));
+                                assert.equal(charNode(actor, "ED").base, charValue(actor, "ED"));
                             });
                         });
 
@@ -9080,19 +9039,13 @@ export function registerUploadTests(quench) {
                             });
 
                             it("does not increase PD", function () {
-                                assert.equal(actor.system.characteristics.pd.base, actor.system.characteristics.pd.max);
-                                assert.equal(
-                                    actor.system.characteristics.pd.base,
-                                    actor.system.characteristics.pd.value,
-                                );
+                                assert.equal(charNode(actor, "PD").base, charMax(actor, "PD"));
+                                assert.equal(charNode(actor, "PD").base, charValue(actor, "PD"));
                             });
 
                             it("does not increase ED", function () {
-                                assert.equal(actor.system.characteristics.ed.base, actor.system.characteristics.ed.max);
-                                assert.equal(
-                                    actor.system.characteristics.ed.base,
-                                    actor.system.characteristics.ed.value,
-                                );
+                                assert.equal(charNode(actor, "ED").base, charMax(actor, "ED"));
+                                assert.equal(charNode(actor, "ED").base, charValue(actor, "ED"));
                             });
                         });
                     });
@@ -9146,34 +9099,16 @@ export function registerUploadTests(quench) {
                             });
 
                             it("does increase STR", function () {
-                                assert.equal(
-                                    actor.system.characteristics.str.base + 25,
-                                    actor.system.characteristics.str.max,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.str.base + 25,
-                                    actor.system.characteristics.str.value,
-                                );
+                                assert.equal(charNode(actor, "STR").base + 25, charMax(actor, "STR"));
+                                assert.equal(charNode(actor, "STR").base + 25, charValue(actor, "STR"));
                             });
 
                             it("does increase ED and PD", function () {
-                                assert.equal(
-                                    actor.system.characteristics.pd.base + 5,
-                                    actor.system.characteristics.pd.max,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.ed.base + 5,
-                                    actor.system.characteristics.ed.max,
-                                );
+                                assert.equal(charNode(actor, "PD").base + 5, charMax(actor, "PD"));
+                                assert.equal(charNode(actor, "ED").base + 5, charMax(actor, "ED"));
 
-                                assert.equal(
-                                    actor.system.characteristics.pd.base + 5,
-                                    actor.system.characteristics.pd.value,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.ed.base + 5,
-                                    actor.system.characteristics.ed.value,
-                                );
+                                assert.equal(charNode(actor, "PD").base + 5, charValue(actor, "PD"));
+                                assert.equal(charNode(actor, "ED").base + 5, charValue(actor, "ED"));
                             });
                         });
 
@@ -9228,14 +9163,8 @@ export function registerUploadTests(quench) {
                             });
 
                             it("does not increase STR", function () {
-                                assert.equal(
-                                    actor.system.characteristics.str.base,
-                                    actor.system.characteristics.str.max,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.str.base,
-                                    actor.system.characteristics.str.value,
-                                );
+                                assert.equal(charNode(actor, "STR").base, charMax(actor, "STR"));
+                                assert.equal(charNode(actor, "STR").base, charValue(actor, "STR"));
                             });
                         });
 
@@ -9290,22 +9219,13 @@ export function registerUploadTests(quench) {
                             });
 
                             it("does not increase PD", function () {
-                                assert.equal(actor.system.characteristics.pd.base, actor.system.characteristics.pd.max);
-                                assert.equal(
-                                    actor.system.characteristics.pd.base,
-                                    actor.system.characteristics.pd.value,
-                                );
+                                assert.equal(charNode(actor, "PD").base, charMax(actor, "PD"));
+                                assert.equal(charNode(actor, "PD").base, charValue(actor, "PD"));
                             });
 
                             it("does increase ED", function () {
-                                assert.equal(
-                                    actor.system.characteristics.ed.base + 5,
-                                    actor.system.characteristics.ed.max,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.ed.base + 5,
-                                    actor.system.characteristics.ed.value,
-                                );
+                                assert.equal(charNode(actor, "ED").base + 5, charMax(actor, "ED"));
+                                assert.equal(charNode(actor, "ED").base + 5, charValue(actor, "ED"));
                             });
                         });
 
@@ -9360,22 +9280,13 @@ export function registerUploadTests(quench) {
                             });
 
                             it("does increase PD", function () {
-                                assert.equal(
-                                    actor.system.characteristics.pd.base + 5,
-                                    actor.system.characteristics.pd.max,
-                                );
-                                assert.equal(
-                                    actor.system.characteristics.pd.base + 5,
-                                    actor.system.characteristics.pd.value,
-                                );
+                                assert.equal(charNode(actor, "PD").base + 5, charMax(actor, "PD"));
+                                assert.equal(charNode(actor, "PD").base + 5, charValue(actor, "PD"));
                             });
 
                             it("does not increase ED", function () {
-                                assert.equal(actor.system.characteristics.ed.base, actor.system.characteristics.ed.max);
-                                assert.equal(
-                                    actor.system.characteristics.ed.base,
-                                    actor.system.characteristics.ed.value,
-                                );
+                                assert.equal(charNode(actor, "ED").base, charMax(actor, "ED"));
+                                assert.equal(charNode(actor, "ED").base, charValue(actor, "ED"));
                             });
                         });
 
@@ -9430,19 +9341,13 @@ export function registerUploadTests(quench) {
                             });
 
                             it("does not increase PD", function () {
-                                assert.equal(actor.system.characteristics.pd.base, actor.system.characteristics.pd.max);
-                                assert.equal(
-                                    actor.system.characteristics.pd.base,
-                                    actor.system.characteristics.pd.value,
-                                );
+                                assert.equal(charNode(actor, "PD").base, charMax(actor, "PD"));
+                                assert.equal(charNode(actor, "PD").base, charValue(actor, "PD"));
                             });
 
                             it("does not increase ED", function () {
-                                assert.equal(actor.system.characteristics.ed.base, actor.system.characteristics.ed.max);
-                                assert.equal(
-                                    actor.system.characteristics.ed.base,
-                                    actor.system.characteristics.ed.value,
-                                );
+                                assert.equal(charNode(actor, "ED").base, charMax(actor, "ED"));
+                                assert.equal(charNode(actor, "ED").base, charValue(actor, "ED"));
                             });
                         });
                     });
@@ -10048,7 +9953,7 @@ export function registerUploadTests(quench) {
                         );
                         actor.system.is5e = false;
 
-                        actor.system.characteristics.pre.value = 18;
+                        seedChar(actor, "PRE", 18);
 
                         skill = new HeroSystem6eItem(
                             { ...HeroSystem6eItem.itemDataFromXml(contents, actor), type: "power" },
@@ -11598,15 +11503,15 @@ export function registerUploadTests(quench) {
                         });
 
                         it("dex, ocv, dcv", function () {
-                            assert.equal(actor.system.characteristics.dex.value, 10);
-                            assert.equal(actor.system.characteristics.ocv.value, 3);
-                            assert.equal(actor.system.characteristics.dcv.value, 3);
+                            assert.equal(charValue(actor, "DEX"), 10);
+                            assert.equal(charValue(actor, "OCV"), 3);
+                            assert.equal(charValue(actor, "DCV"), 3);
                         });
 
                         it("ego, omcv, dmcv", function () {
-                            assert.equal(actor.system.characteristics.ego.value, 10);
-                            assert.equal(actor.system.characteristics.omcv.value, 3);
-                            assert.equal(actor.system.characteristics.dmcv.value, 3);
+                            assert.equal(charValue(actor, "EGO"), 10);
+                            assert.equal(charValue(actor, "OMCV"), 3);
+                            assert.equal(charValue(actor, "DMCV"), 3);
                         });
                     });
 
@@ -11662,27 +11567,27 @@ export function registerUploadTests(quench) {
                         });
 
                         it("dex", function () {
-                            assert.equal(actor.system.characteristics.dex.value, 20);
+                            assert.equal(charValue(actor, "DEX"), 20);
                         });
                         it("ocv", function () {
                             // Would prefer to check value, but async race issues
-                            assert.equal(actor.system.characteristics.ocv.base, 7);
+                            assert.equal(charNode(actor, "OCV").base, 7);
                         });
                         it("dcv", function () {
                             // Would prefer to check value, but async race issues
-                            assert.equal(actor.system.characteristics.dcv.base, 7);
+                            assert.equal(charNode(actor, "DCV").base, 7);
                         });
 
                         it("ego", function () {
-                            assert.equal(actor.system.characteristics.ego.value, 11);
+                            assert.equal(charValue(actor, "EGO"), 11);
                         });
                         it("omcv", function () {
                             // Would prefer to check value, but async race issues
-                            assert.equal(actor.system.characteristics.omcv.base, 4);
+                            assert.equal(charNode(actor, "OMCV").base, 4);
                         });
                         it("dmcv", function () {
                             // Would prefer to check value, but async race issues
-                            assert.equal(actor.system.characteristics.dmcv.base, 4);
+                            assert.equal(charNode(actor, "DMCV").base, 4);
                         });
 
                         it("figured DEX", function () {
@@ -11696,7 +11601,7 @@ export function registerUploadTests(quench) {
                             );
                         });
                         it("spd", function () {
-                            assert.equal(actor.system.characteristics.spd.value, 3);
+                            assert.equal(charValue(actor, "SPD"), 3);
                         });
                     });
                 });

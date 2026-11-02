@@ -7,6 +7,7 @@ import {
     deleteQuenchScenes,
     waitForNotificationQueueToClear,
 } from "./quench-helper.mjs";
+import { charMax, charNode, charValue, setChar } from "./characteristic-assertions.mjs";
 
 const { Actor, TokenDocument } = foundry.documents;
 
@@ -359,7 +360,7 @@ export function registerStatusEffectsLogicTests(quench) {
 
                             // A. DOWNWARD DAMAGE PATH
                             // 1. Drop STUN to -1 (Yellow)
-                            await quenchActor.update({ "system.characteristics.stun.value": -1 });
+                            await setChar(quenchActor, "STUN", -1);
                             let tokenTargetUpdate = await waitForActorTokenTintUpdate(
                                 quenchActor,
                                 () => capturedUpdates,
@@ -373,7 +374,7 @@ export function registerStatusEffectsLogicTests(quench) {
 
                             // 2. Drop STUN to -11 (Stays Yellow for PC)
                             capturedUpdates = null;
-                            await quenchActor.update({ "system.characteristics.stun.value": -11 });
+                            await setChar(quenchActor, "STUN", -11);
                             await quenchActor.toggleStatusEffect("knockedOut", { active: true, overlay: true });
                             tokenTargetUpdate = await waitForActorTokenTintUpdate(
                                 quenchActor,
@@ -388,7 +389,7 @@ export function registerStatusEffectsLogicTests(quench) {
 
                             // 3. Drop STUN to -31 (Red)
                             capturedUpdates = null;
-                            await quenchActor.update({ "system.characteristics.stun.value": -31 });
+                            await setChar(quenchActor, "STUN", -31);
                             tokenTargetUpdate = await waitForActorTokenTintUpdate(
                                 quenchActor,
                                 () => capturedUpdates,
@@ -403,7 +404,7 @@ export function registerStatusEffectsLogicTests(quench) {
                             // B. NEW: UPWARD HEALING RECOVERY PATH
                             // 4. Heal back up to -1 from -31 (Should shift back from Red to Yellow!)
                             capturedUpdates = null;
-                            await quenchActor.update({ "system.characteristics.stun.value": -1 });
+                            await setChar(quenchActor, "STUN", -1);
                             await quenchActor.toggleStatusEffect("knockedOut", { active: true, overlay: true });
                             tokenTargetUpdate = await waitForActorTokenTintUpdate(
                                 quenchActor,
@@ -497,10 +498,10 @@ export function registerStatusEffectsLogicTests(quench) {
                         });
 
                         try {
-                            const dcvMaxBefore = actor6e.system.characteristics.dcv.max;
+                            const dcvMaxBefore = charMax(actor6e, "DCV");
                             assert.ok(dcvMaxBefore > 0, "6e actor starts with a positive DCV max.");
                             assert.strictEqual(
-                                actor6e.system.characteristics.dcv.value,
+                                charValue(actor6e, "DCV"),
                                 dcvMaxBefore,
                                 "6e actor starts with DCV value at max.",
                             );
@@ -509,18 +510,18 @@ export function registerStatusEffectsLogicTests(quench) {
                             await actor6e.toggleStatusEffect(effectsObj.proneEffect.id, { active: true });
                             await hookPromise;
 
-                            const dcv = actor6e.system.characteristics.dcv;
+                            const dcv = charNode(actor6e, "DCV");
                             assert.ok(dcv.max < dcvMaxBefore, "Prone lowered the DCV max.");
                             assert.strictEqual(dcv.value, dcv.max, "DCV value follows the halved max on 6e.");
 
                             await actor6e.toggleStatusEffect(effectsObj.proneEffect.id, { active: false });
                             assert.strictEqual(
-                                actor6e.system.characteristics.dcv.max,
+                                charMax(actor6e, "DCV"),
                                 dcvMaxBefore,
                                 "DCV max restored after prone removed.",
                             );
                             assert.strictEqual(
-                                actor6e.system.characteristics.dcv.value,
+                                charValue(actor6e, "DCV"),
                                 dcvMaxBefore,
                                 "DCV value restored after prone removed.",
                             );
@@ -546,7 +547,7 @@ export function registerStatusEffectsLogicTests(quench) {
                     });
 
                     it("Redundant halving dedup keeps a co-located ADD change intact", async function () {
-                        const dcvMaxBefore = quenchActor.system.characteristics.dcv.max;
+                        const dcvMaxBefore = charMax(quenchActor, "DCV");
 
                         // Prone and Stunned each carry an independent 0.5 MULTIPLY on the same key,
                         // exercising the MULTIPLY-only dedup in _removeRedundantHalvingActiveEffects
@@ -573,7 +574,7 @@ export function registerStatusEffectsLogicTests(quench) {
                         try {
                             const expectedDcvMax = roundFavorPlayerAwayFromZero((dcvMaxBefore + 4) * 0.5);
                             assert.strictEqual(
-                                quenchActor.system.characteristics.dcv.max,
+                                charMax(quenchActor, "DCV"),
                                 expectedDcvMax,
                                 "ADD applied before the single surviving 0.5 MULTIPLY, per priority order.",
                             );
@@ -586,23 +587,20 @@ export function registerStatusEffectsLogicTests(quench) {
                     });
 
                     it("Post-Segment-12 recovery does not wake a KO'd character", async function () {
-                        await quenchActor.update({ "system.characteristics.stun.value": 20 });
-                        await quenchActor.update({ "system.characteristics.stun.value": -5 });
+                        await setChar(quenchActor, "STUN", 20);
+                        await setChar(quenchActor, "STUN", -5);
                         assert.ok(
                             quenchActor.statuses.has(effectsObj.knockedOutEffect.id),
                             "Actor KO'd at negative STUN.",
                         );
 
-                        await quenchActor.update(
-                            { "system.characteristics.stun.value": 10 },
-                            { preventRecoverFromStun: true },
-                        );
+                        await setChar(quenchActor, "STUN", 10, { updateOptions: { preventRecoverFromStun: true } });
                         assert.ok(
                             quenchActor.statuses.has(effectsObj.knockedOutEffect.id),
                             "preventRecoverFromStun keeps the actor KO'd despite positive STUN.",
                         );
 
-                        await quenchActor.update({ "system.characteristics.stun.value": 12 });
+                        await setChar(quenchActor, "STUN", 12);
                         assert.ok(
                             !quenchActor.statuses.has(effectsObj.knockedOutEffect.id),
                             "Normal recovery clears knockedOut.",
@@ -610,16 +608,16 @@ export function registerStatusEffectsLogicTests(quench) {
                     });
 
                     it("BODY at or below negative max marks dead; recovery clears it", async function () {
-                        const bodyMax = quenchActor.system.characteristics.body.max;
+                        const bodyMax = charMax(quenchActor, "BODY");
                         assert.ok(bodyMax > 0, "Actor starts with a positive BODY max.");
 
-                        await quenchActor.update({ "system.characteristics.body.value": -bodyMax });
+                        await setChar(quenchActor, "BODY", -bodyMax);
                         assert.ok(
                             quenchActor.statuses.has(effectsObj.deadEffect.id),
                             "Actor marked dead at -BODY max.",
                         );
 
-                        await quenchActor.update({ "system.characteristics.body.value": bodyMax });
+                        await setChar(quenchActor, "BODY", bodyMax);
                         assert.ok(
                             !quenchActor.statuses.has(effectsObj.deadEffect.id),
                             "Dead cleared when BODY recovers above the threshold.",
@@ -683,7 +681,7 @@ export function registerStatusEffectsLogicTests(quench) {
 
                             // A. NPC TO PC PATH
                             // 1. Drop NPC to -11 (Red)
-                            await npcTestActor.update({ "system.characteristics.stun.value": -11 });
+                            await setChar(npcTestActor, "STUN", -11);
                             let tokenTargetUpdate = await waitForActorTokenTintUpdate(
                                 npcTestActor,
                                 () => capturedUpdates,
@@ -881,7 +879,7 @@ export function registerStatusEffectsLogicTests(quench) {
                             img: "icons/svg/mystery-man.svg",
                             system: { is5e: false },
                         });
-                        naturalDcvMax = quenchActor.system.characteristics.dcv.max;
+                        naturalDcvMax = charMax(quenchActor, "DCV");
                         assert.ok(naturalDcvMax > 0, "Actor starts with a positive DCV max.");
                     });
 
@@ -904,7 +902,7 @@ export function registerStatusEffectsLogicTests(quench) {
                         ]);
 
                         assert.strictEqual(
-                            quenchActor.system.characteristics.dcv.max,
+                            charMax(quenchActor, "DCV"),
                             roundFavorPlayerAwayFromZero((naturalDcvMax + 9) * 0.25),
                             "Only the x1/4 applied: it neither stacked with nor lost to the x1/2.",
                         );
@@ -917,7 +915,7 @@ export function registerStatusEffectsLogicTests(quench) {
                         ]);
 
                         assert.strictEqual(
-                            quenchActor.system.characteristics.dcv.max,
+                            charMax(quenchActor, "DCV"),
                             roundFavorPlayerAwayFromZero(roundFavorPlayerAwayFromZero((naturalDcvMax + 9) * 2) * 0.5),
                             "The x2 survived the halving dedup and the x1/2 applied once.",
                         );
@@ -943,7 +941,7 @@ export function registerStatusEffectsLogicTests(quench) {
                             "ADD, then x2, then the most severe halving only.",
                         );
                         assert.strictEqual(
-                            quenchActor.system.characteristics.dcv.max,
+                            charMax(quenchActor, "DCV"),
                             recomputedMax,
                             "Natively applied max and hand-recomputed max agree.",
                         );

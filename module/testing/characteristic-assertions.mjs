@@ -80,6 +80,27 @@ export function charNode(actor, name) {
 }
 
 /**
+ * Read the node as the database stores it, with no active effects applied.
+ *
+ * Use this only to check what a write persisted. Every other read goes through `charNode`, which
+ * answers with the value the app plays.
+ *
+ * @param {HeroSystem6eActor} actor Actor to read from.
+ * @param {string} name Characteristic label or movement mode. Any case.
+ *
+ * @returns {object|undefined} The stored node, or undefined when absent.
+ */
+export function charSourceNode(actor, name) {
+    requireName(name, "charSourceNode", EITHER_NAME);
+
+    if (!actor) {
+        throw new Error(`charSourceNode: missing actor for "${canonical(name)}"`);
+    }
+
+    return actor._source?.system?.characteristics?.[canonical(name).toLowerCase()];
+}
+
+/**
  * Read the current value of a characteristic, or of a movement mode that has a node.
  *
  * @param {HeroSystem6eActor} actor Actor to read from.
@@ -104,6 +125,43 @@ export function charMax(actor, name) {
 }
 
 /**
+ * Write one characteristic field on an unsaved actor, in place.
+ *
+ * A fixture built with `new HeroSystem6eActor()` has no id, so `actor.update()` cannot persist to
+ * it. Seed the value before the fixture adds items, then read it back with `charNode`. Pass a saved
+ * actor and this helper refuses: use `setChar`, which runs the update funnel.
+ *
+ * @param {HeroSystem6eActor} actor Unsaved actor to seed.
+ * @param {string} name Characteristic label or movement mode. Any case.
+ * @param {number} value Value to write.
+ * @param {object} [options]
+ * @param {string} [options.field] Field to write. Defaults to `value`.
+ */
+export function seedChar(actor, name, value, { field = "value" } = {}) {
+    requireName(name, "seedChar", EITHER_NAME);
+
+    if (!ASSERTABLE_FIELDS.has(field)) {
+        throw new Error(`seedChar: unknown field "${field}" for ${canonical(name)}`);
+    }
+
+    if (!actor) {
+        throw new Error(`seedChar: missing actor for ${canonical(name)}`);
+    }
+
+    if (actor.id) {
+        throw new Error(`seedChar: ${actor.name} is saved. Use setChar, which runs the update funnel.`);
+    }
+
+    const node = actor.system?.characteristics?.[canonical(name).toLowerCase()];
+
+    if (!node) {
+        throw new Error(`seedChar: ${actor.name} has no "${canonical(name)}" node to seed`);
+    }
+
+    node[field] = value;
+}
+
+/**
  * List the names this actor type may use.
  *
  * Reads the config permission set, not node storage. A name here means the actor type may hold that
@@ -122,6 +180,56 @@ export function usableNames(actor) {
     }
 
     return getCharacteristicInfoArrayForActor(actor).map((info) => canonical(info.key));
+}
+
+/**
+ * Write one characteristic field through the update funnel.
+ *
+ * Never assigns to the model. A direct write skips `_preUpdate`, so a test can
+ * reach a state the app cannot produce.
+ *
+ * @param {HeroSystem6eActor} actor
+ * @param {string} name Characteristic label or movement mode. Any case.
+ * @param {number} value Value to write.
+ * @param {object} [options]
+ * @param {string} [options.field] Field to write. Defaults to `value`.
+ * @param {object} [options.updateOptions] Options forwarded to `actor.update`.
+ *
+ * @returns {Promise<HeroSystem6eActor>} The updated actor.
+ */
+export async function setChar(actor, name, value, { field = "value", updateOptions = {} } = {}) {
+    requireName(name, "setChar", EITHER_NAME);
+
+    if (!ASSERTABLE_FIELDS.has(field)) {
+        throw new Error(`setChar: unknown field "${field}" for ${canonical(name)}`);
+    }
+
+    if (!actor) {
+        throw new Error(`setChar: missing actor for ${canonical(name)}`);
+    }
+
+    return actor.updateCharacteristics([[name.toLowerCase(), { [field]: value }]], updateOptions);
+}
+
+/**
+ * Write several characteristic values in one update.
+ *
+ *   await chars.setChars(actor, { stun: -5, end: 10 });
+ *
+ * @param {HeroSystem6eActor} actor
+ * @param {Object<string, number>} values Maps a characteristic label or movement mode to its value.
+ * @param {object} [options]
+ * @param {string} [options.field] Field to write for every name. Defaults to `value`.
+ * @param {object} [options.updateOptions] Options forwarded to `actor.update`.
+ *
+ * @returns {Promise<HeroSystem6eActor>} The updated actor.
+ */
+export async function setChars(actor, values, { field = "value", updateOptions = {} } = {}) {
+    const tuplets = Object.entries(values).map(([name, value]) => [name.toLowerCase(), { [field]: value }]);
+    if (tuplets.length === 0) {
+        throw new Error("setChars: pass at least one characteristic");
+    }
+    return actor.updateCharacteristics(tuplets, updateOptions);
 }
 
 /**
@@ -274,60 +382,12 @@ export function createCharacteristicAssertions(assert) {
         }
     }
 
-    /**
-     * Write one characteristic field through the update funnel.
-     *
-     * Never assigns to the model. A direct write skips `_preUpdate`, so a test can
-     * reach a state the app cannot produce.
-     *
-     * @param {HeroSystem6eActor} actor
-     * @param {string} name Characteristic label or movement mode. Any case.
-     * @param {number} value Value to write.
-     * @param {object} [options]
-     * @param {string} [options.field] Field to write. Defaults to `value`.
-     * @param {object} [options.updateOptions] Options forwarded to `actor.update`.
-     *
-     * @returns {Promise<HeroSystem6eActor>} The updated actor.
-     */
-    async function setChar(actor, name, value, { field = "value", updateOptions = {} } = {}) {
-        requireName(name, "setChar", EITHER_NAME);
-
-        if (!ASSERTABLE_FIELDS.has(field)) {
-            throw new Error(`setChar: unknown field "${field}" for ${canonical(name)}`);
-        }
-
-        if (!actor) {
-            throw new Error(`setChar: missing actor for ${canonical(name)}`);
-        }
-
-        return actor.updateCharacteristics([[name.toLowerCase(), { [field]: value }]], updateOptions);
-    }
-
-    /**
-     * Write several characteristic values in one update.
-     *
-     *   await chars.setChars(actor, { stun: -5, end: 10 });
-     *
-     * @param {HeroSystem6eActor} actor
-     * @param {Object<string, number>} values Maps a characteristic label or movement mode to its value.
-     * @param {object} [options]
-     * @param {string} [options.field] Field to write for every name. Defaults to `value`.
-     * @param {object} [options.updateOptions] Options forwarded to `actor.update`.
-     *
-     * @returns {Promise<HeroSystem6eActor>} The updated actor.
-     */
-    async function setChars(actor, values, { field = "value", updateOptions = {} } = {}) {
-        const tuplets = Object.entries(values).map(([name, value]) => [name.toLowerCase(), { [field]: value }]);
-        if (tuplets.length === 0) {
-            throw new Error("setChars: pass at least one characteristic");
-        }
-        return actor.updateCharacteristics(tuplets, updateOptions);
-    }
-
     return {
         charNode,
+        charSourceNode,
         charValue,
         charMax,
+        seedChar,
         usableNames,
         assertHasChar,
         assertLacksChar,
