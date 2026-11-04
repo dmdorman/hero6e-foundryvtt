@@ -2,7 +2,7 @@ import { HeroSystem6eItem } from "../item/item.mjs";
 import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
 import { performAdjustment } from "../actor/actor-adjustment.mjs";
 import { setQuenchTimeout } from "./quench-helper.mjs";
-import { charMax, charNode, charSourceNode, charValue, setChar } from "./characteristic-assertions.mjs";
+import { charMax, charNode, charSourceNode, charValue, hasChar, setChar } from "./characteristic-assertions.mjs";
 
 const { Actor } = foundry.documents;
 
@@ -146,7 +146,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             assert.ok(!!qActor, `[${targetType}] Failed to fetch instantiated actor record.`);
 
                             // 3. Absence vs Boundary Node Inspection (Safety check for intangibles)
-                            if (!qActor.hasCharacteristic("ocv")) {
+                            if (!hasChar(qActor, "ocv")) {
                                 assert.isFalse(
                                     targetType === "pc" || targetType === "npc",
                                     `[${targetType}] Missing OCV characteristic node.`,
@@ -158,7 +158,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
 
                             // Step 1: Verify Initial 5e Baseline Starting Values
                             for (const key of ["ocv", "spd", "rec", "stun"]) {
-                                if (qActor.hasCharacteristic(key)) {
+                                if (hasChar(qActor, key)) {
                                     const liveNode = charNode(qActor, key);
                                     const isPurePhysicalTrait = ["rec", "stun"].includes(key);
 
@@ -233,7 +233,8 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                                 expectedPd,
                                 `[${targetType}] Figured PD calculation ratio mismatch.`,
                             );
-                            if (qActor.hasCharacteristic("spd")) {
+
+                            if (hasChar(qActor, "spd")) {
                                 const expectedSpd = Math.floor(
                                     1 +
                                         Number((dexSourceValue / 10).toFixed(1)) +
@@ -251,7 +252,8 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                                     `[${targetType}] Figured SPD calculation ratio mismatch.`,
                                 );
                             }
-                            if (qActor.hasCharacteristic("rec")) {
+
+                            if (hasChar(qActor, "rec")) {
                                 const conSourceValue = effectiveSourceValue("con");
                                 const expectedRec =
                                     roundFavorPlayerAwayFromZero(strSourceValue / 5) +
@@ -312,7 +314,8 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                                 0,
                                 `[${targetType}] Calculated OCV should follow DEX lowered below 1 down to the 0 floor.`,
                             );
-                            if (qActor.hasCharacteristic("pd")) {
+
+                            if (hasChar(qActor, "pd")) {
                                 const expectedFlooredPd =
                                     qActor.getCharacteristic("str").baseSumFiguredCharacteristicsFromItems(5) +
                                     (qActor.system.PD?.LEVELS ?? 0);

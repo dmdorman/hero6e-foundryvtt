@@ -350,13 +350,13 @@ export function registerItemActiveEffectSyncTests(quench) {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("should give each effect-bearing power exactly one effect", function () {
-                        for (const xmlid of ["DENSITYINCREASE", "FLIGHT", "NIGHTVISION"]) {
+                    for (const xmlid of ["DENSITYINCREASE", "FLIGHT", "NIGHTVISION"]) {
+                        it(`should give ${xmlid} exactly one effect`, function () {
                             const item = actor.items.find((i) => i.system.XMLID === xmlid);
                             assert.ok(item, `${xmlid} survived the re-upload.`);
                             assert.strictEqual(item.effects.size, 1, `${xmlid} has a single effect.`);
-                        }
-                    });
+                        });
+                    }
 
                     it("should not leave duplicate effects on any item", function () {
                         assert.deepEqual(

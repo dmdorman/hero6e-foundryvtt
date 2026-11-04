@@ -76,6 +76,7 @@ export function charNode(actor, name) {
         throw new Error(`charNode: missing actor for "${canonical(name)}"`);
     }
 
+    requireKnownName(actor.system?.characteristics, "charNode", name);
     return actor.getCharacteristic(name);
 }
 
@@ -97,6 +98,7 @@ export function charSourceNode(actor, name) {
         throw new Error(`charSourceNode: missing actor for "${canonical(name)}"`);
     }
 
+    requireKnownName(actor.system?.characteristics, "charSourceNode", name);
     return actor._source?.system?.characteristics?.[canonical(name).toLowerCase()];
 }
 
@@ -183,6 +185,28 @@ export function usableNames(actor) {
 }
 
 /**
+ * Ask whether this actor type may hold a characteristic or move that way.
+ *
+ * The one door to `Actor#hasCharacteristic`. Keep the question here, so a semantics change lands in
+ * one place. A "yes" answers permission, not purchase: every actor type stores a node for every
+ * label, so a stored node proves nothing. Read a value with `charValue` to learn what the actor bought.
+ *
+ * @param {HeroSystem6eActor} actor Actor to ask.
+ * @param {string} name Characteristic label or movement mode. Any case.
+ *
+ * @returns {boolean} True when the actor type may hold the name.
+ */
+export function hasChar(actor, name) {
+    requireName(name, "hasChar", EITHER_NAME);
+
+    if (!actor) {
+        throw new Error(`hasChar: missing actor for ${canonical(name)}`);
+    }
+
+    return actor.hasCharacteristic(canonical(name));
+}
+
+/**
  * Write one characteristic field through the update funnel.
  *
  * Never assigns to the model. A direct write skips `_preUpdate`, so a test can
@@ -208,6 +232,7 @@ export async function setChar(actor, name, value, { field = "value", updateOptio
         throw new Error(`setChar: missing actor for ${canonical(name)}`);
     }
 
+    requireKnownName(actor.system?.characteristics, "setChar", name);
     return actor.updateCharacteristics([[name.toLowerCase(), { [field]: value }]], updateOptions);
 }
 
@@ -225,10 +250,25 @@ export async function setChar(actor, name, value, { field = "value", updateOptio
  * @returns {Promise<HeroSystem6eActor>} The updated actor.
  */
 export async function setChars(actor, values, { field = "value", updateOptions = {} } = {}) {
+    if (!ASSERTABLE_FIELDS.has(field)) {
+        throw new Error(`setChars: unknown field "${field}". Assertable fields: ${[...ASSERTABLE_FIELDS].join(", ")}.`);
+    }
+
+    if (!actor) {
+        throw new Error("setChars: missing actor");
+    }
+
+    for (const name of Object.keys(values)) {
+        requireName(name, "setChars", EITHER_NAME);
+        requireKnownName(actor.system?.characteristics, "setChars", name);
+    }
+
     const tuplets = Object.entries(values).map(([name, value]) => [name.toLowerCase(), { [field]: value }]);
+
     if (tuplets.length === 0) {
         throw new Error("setChars: pass at least one characteristic");
     }
+
     return actor.updateCharacteristics(tuplets, updateOptions);
 }
 
@@ -437,4 +477,27 @@ function requireName(name, caller, kind) {
     if (typeof name !== "string" || name.trim() === "") {
         throw new Error(`${caller}: ${kind} must be a non-empty string, got ${JSON.stringify(name)}`);
     }
+}
+
+/**
+ * Refuse a name the model has no node for.
+ *
+ * Every actor type and both editions store a node for the same 30 names, so a miss means a typo, not a
+ * characteristic the actor lacks. Ask `hasChar` the ownership question.
+ *
+ * @param {object|undefined} nodes Characteristic map, from `actor.system.characteristics`.
+ * @param {string} caller Name shown in the thrown message.
+ * @param {string} name Name to check. Any case.
+ */
+function requireKnownName(nodes, caller, name) {
+    const key = canonical(name).toLowerCase();
+    const known = Object.keys(nodes ?? {});
+
+    if (known.includes(key)) {
+        return;
+    }
+
+    const close = known.filter((one) => one.startsWith(key.slice(0, 2))).slice(0, 5);
+    const hint = close.length === 0 ? "none" : close.map((one) => one.toUpperCase()).join(", ");
+    throw new Error(`${caller}: "${canonical(name)}" is not a characteristic or movement mode. Closest: ${hint}.`);
 }
