@@ -6578,9 +6578,13 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         }
     }
 
-    // TODO: Start using this everywhere we are using this combination in strings.
+    /**
+     * Identify this item in a string: name and perhaps XMLID.
+     *
+     * @returns {string} For example `Fly Me To The Moon [FLIGHT]`.
+     */
     detailedName() {
-        // Fake the
+        // Internal items shouldn't be given their raw names
         if (this.system.XMLID === "__STRENGTHDAMAGE") {
             if (this.system.ALIAS === "__InternalStrengthPlaceholder") {
                 return "Your STRENGTH";

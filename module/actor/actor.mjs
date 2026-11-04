@@ -3588,6 +3588,15 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         return this.system.is5e;
     }
 
+    /**
+     * Identify this actor in a string: name, type, and edition.
+     *
+     * @returns {string} For example `TEST 5e Base [base2 5e]`.
+     */
+    detailedName() {
+        return `${this.name} [${this.type} ${this.is5e ? "5e" : "6e"}]`;
+    }
+
     get _characterPoints() {
         return this.characterPointCost;
     }

@@ -294,7 +294,10 @@ export function createCharacteristicAssertions(assert) {
     function assertHasChar(actor, label, message) {
         requireName(label, "assertHasChar", CHARACTERISTIC_NAME);
         const has = actor.hasCharacteristic(label);
-        assert.isTrue(has, message ?? `${tag(actor, label)}: expected the actor to have this characteristic`);
+        assert.isTrue(
+            has,
+            message ?? `${actor.detailedName()} ${label}: expected the actor to have this characteristic`,
+        );
     }
 
     /**
@@ -307,7 +310,10 @@ export function createCharacteristicAssertions(assert) {
     function assertLacksChar(actor, label, message) {
         requireName(label, "assertLacksChar", CHARACTERISTIC_NAME);
         const has = actor.hasCharacteristic(label);
-        assert.isFalse(has, message ?? `${tag(actor, label)}: expected the actor to lack this characteristic`);
+        assert.isFalse(
+            has,
+            message ?? `${actor.detailedName()} ${label}: expected the actor to lack this characteristic`,
+        );
     }
 
     /**
@@ -320,7 +326,7 @@ export function createCharacteristicAssertions(assert) {
     function assertHasMovementMode(actor, mode, message) {
         requireName(mode, "assertHasMovementMode", MOVEMENT_MODE_NAME);
         const has = actor.hasMovementCharacteristic(mode);
-        assert.isTrue(has, message ?? `${tag(actor, mode)}: expected the actor to have this movement mode`);
+        assert.isTrue(has, message ?? `${actor.detailedName()} ${mode}: expected the actor to have this movement mode`);
     }
 
     /**
@@ -333,7 +339,10 @@ export function createCharacteristicAssertions(assert) {
     function assertLacksMovementMode(actor, mode, message) {
         requireName(mode, "assertLacksMovementMode", MOVEMENT_MODE_NAME);
         const has = actor.hasMovementCharacteristic(mode);
-        assert.isFalse(has, message ?? `${tag(actor, mode)}: expected the actor to lack this movement mode`);
+        assert.isFalse(
+            has,
+            message ?? `${actor.detailedName()} ${mode}: expected the actor to lack this movement mode`,
+        );
     }
 
     /**
@@ -359,11 +368,11 @@ export function createCharacteristicAssertions(assert) {
         const node = charNode(actor, name);
 
         if (node === undefined || node === null) {
-            assert.fail(`${tag(actor, name)}: no characteristic node. Assert possession first.`);
+            assert.fail(`${actor.detailedName()} ${name}: no characteristic node. Assert possession first.`);
             return; // Chai throws above. The guard keeps the read safe if a caller swaps in a non-throwing assert.
         }
 
-        assert.equal(node[field], expected, message ?? `${tag(actor, name)}.${field}`);
+        assert.equal(node[field], expected, message ?? `${actor.detailedName()} ${name}.${field}`);
     }
 
     /**
@@ -418,7 +427,9 @@ export function createCharacteristicAssertions(assert) {
                 parts.push(`unexpected [${extra.join(", ")}]`);
             }
 
-            assert.fail(`${tag(actor, "usable set")}: expected exactly [${expected.join(", ")}]; ${parts.join("; ")}`);
+            assert.fail(
+                `${actor.detailedName()} usable set: expected exactly [${expected.join(", ")}]; ${parts.join("; ")}`,
+            );
         }
     }
 
@@ -439,20 +450,6 @@ export function createCharacteristicAssertions(assert) {
         setChar,
         setChars,
     };
-}
-
-/**
- * Prefix a failure message with the actor type and edition.
- *
- * @param {HeroSystem6eActor} actor
- * @param {string} name Characteristic label or movement mode.
- *
- * @returns {string}
- */
-function tag(actor, name) {
-    const type = actor?.type ?? "unknown";
-    const edition = actor?.is5e === true ? "5e" : "6e";
-    return `[${type} ${edition}] ${name}`;
 }
 
 /**
