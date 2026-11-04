@@ -28,8 +28,8 @@
  * either. `assertHasChar` and `assertLacksChar` take a characteristic label, and
  * `assertHasMovementMode` and `assertLacksMovementMode` take a movement mode.
  *
- * Names accept any case. `hasCharacteristic` uppercases, `getCharacteristic`
- * lowercases. Helpers normalize and report the canonical uppercase form.
+ * A name must be a string. Case does not matter: `hasCharacteristic` uppercases and
+ * `getCharacteristic` lowercases. This module keeps no name helper, so a non-string fails loudly.
  */
 
 import { FrozenSet } from "../utility/freeze-helpers.mjs";
@@ -73,7 +73,7 @@ export function charNode(actor, name) {
     requireName(name, "charNode", EITHER_NAME);
 
     if (!actor) {
-        throw new Error(`charNode: missing actor for "${canonical(name)}"`);
+        throw new Error(`charNode: missing actor for "${name}"`);
     }
 
     requireKnownName(actor.system?.characteristics, "charNode", name);
@@ -95,11 +95,11 @@ export function charSourceNode(actor, name) {
     requireName(name, "charSourceNode", EITHER_NAME);
 
     if (!actor) {
-        throw new Error(`charSourceNode: missing actor for "${canonical(name)}"`);
+        throw new Error(`charSourceNode: missing actor for "${name}"`);
     }
 
     requireKnownName(actor.system?.characteristics, "charSourceNode", name);
-    return actor._source?.system?.characteristics?.[canonical(name).toLowerCase()];
+    return actor._source?.system?.characteristics?.[name.toLowerCase()];
 }
 
 /**
@@ -143,21 +143,21 @@ export function seedChar(actor, name, value, { field = "value" } = {}) {
     requireName(name, "seedChar", EITHER_NAME);
 
     if (!ASSERTABLE_FIELDS.has(field)) {
-        throw new Error(`seedChar: unknown field "${field}" for ${canonical(name)}`);
+        throw new Error(`seedChar: unknown field "${field}" for ${name}`);
     }
 
     if (!actor) {
-        throw new Error(`seedChar: missing actor for ${canonical(name)}`);
+        throw new Error(`seedChar: missing actor for ${name}`);
     }
 
     if (actor.id) {
         throw new Error(`seedChar: ${actor.name} is saved. Use setChar, which runs the update funnel.`);
     }
 
-    const node = actor.system?.characteristics?.[canonical(name).toLowerCase()];
+    const node = actor.system?.characteristics?.[name.toLowerCase()];
 
     if (!node) {
-        throw new Error(`seedChar: ${actor.name} has no "${canonical(name)}" node to seed`);
+        throw new Error(`seedChar: ${actor.name} has no "${name}" node to seed`);
     }
 
     node[field] = value;
@@ -181,7 +181,7 @@ export function usableNames(actor) {
         throw new Error("usableNames: missing actor");
     }
 
-    return getCharacteristicInfoArrayForActor(actor).map((info) => canonical(info.key));
+    return getCharacteristicInfoArrayForActor(actor).map((info) => info.key.toUpperCase());
 }
 
 /**
@@ -200,10 +200,10 @@ export function hasChar(actor, name) {
     requireName(name, "hasChar", EITHER_NAME);
 
     if (!actor) {
-        throw new Error(`hasChar: missing actor for ${canonical(name)}`);
+        throw new Error(`hasChar: missing actor for ${name}`);
     }
 
-    return actor.hasCharacteristic(canonical(name));
+    return actor.hasCharacteristic(name);
 }
 
 /**
@@ -225,11 +225,11 @@ export async function setChar(actor, name, value, { field = "value", updateOptio
     requireName(name, "setChar", EITHER_NAME);
 
     if (!ASSERTABLE_FIELDS.has(field)) {
-        throw new Error(`setChar: unknown field "${field}" for ${canonical(name)}`);
+        throw new Error(`setChar: unknown field "${field}" for ${name}`);
     }
 
     if (!actor) {
-        throw new Error(`setChar: missing actor for ${canonical(name)}`);
+        throw new Error(`setChar: missing actor for ${name}`);
     }
 
     requireKnownName(actor.system?.characteristics, "setChar", name);
@@ -352,7 +352,7 @@ export function createCharacteristicAssertions(assert) {
     function assertCharField(actor, name, field, expected, message) {
         if (!ASSERTABLE_FIELDS.has(field)) {
             throw new Error(
-                `assertCharField: unknown field "${field}" for ${canonical(name)}. ` +
+                `assertCharField: unknown field "${field}" for ${name}. ` +
                     `Assertable fields: ${[...ASSERTABLE_FIELDS].join(", ")}.`,
             );
         }
@@ -401,7 +401,7 @@ export function createCharacteristicAssertions(assert) {
      * @param {string[]} expectedNames The complete expected set.
      */
     function assertExactUsableSet(actor, expectedNames) {
-        const expected = [...new Set(expectedNames.map(canonical))].sort();
+        const expected = [...new Set(expectedNames.map((one) => one.toUpperCase()))].sort();
         const actual = [...new Set(usableNames(actor))].sort();
 
         const missing = expected.filter((name) => !actual.includes(name));
@@ -442,17 +442,6 @@ export function createCharacteristicAssertions(assert) {
 }
 
 /**
- * Canonical form of a characteristic label or movement mode, for messages.
- *
- * @param {string} name
- *
- * @returns {string}
- */
-function canonical(name) {
-    return String(name).toUpperCase();
-}
-
-/**
  * Prefix a failure message with the actor type and edition.
  *
  * @param {HeroSystem6eActor} actor
@@ -463,7 +452,7 @@ function canonical(name) {
 function tag(actor, name) {
     const type = actor?.type ?? "unknown";
     const edition = actor?.is5e === true ? "5e" : "6e";
-    return `[${type} ${edition}] ${canonical(name)}`;
+    return `[${type} ${edition}] ${name}`;
 }
 
 /**
@@ -490,7 +479,7 @@ function requireName(name, caller, kind) {
  * @param {string} name Name to check. Any case.
  */
 function requireKnownName(nodes, caller, name) {
-    const key = canonical(name).toLowerCase();
+    const key = name.toLowerCase();
     const known = Object.keys(nodes ?? {});
 
     if (known.includes(key)) {
@@ -499,5 +488,5 @@ function requireKnownName(nodes, caller, name) {
 
     const close = known.filter((one) => one.startsWith(key.slice(0, 2))).slice(0, 5);
     const hint = close.length === 0 ? "none" : close.map((one) => one.toUpperCase()).join(", ");
-    throw new Error(`${caller}: "${canonical(name)}" is not a characteristic or movement mode. Closest: ${hint}.`);
+    throw new Error(`${caller}: "${name}" is not a characteristic or movement mode. Closest: ${hint}.`);
 }
