@@ -1,7 +1,6 @@
+import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { captureChatBaseline, deleteRunChatMessages } from "./quench-chat.mjs";
-
-const { Actor } = foundry.documents;
 
 // Quench runs batches in key order, so the `a.` and `z.` prefixes keep global setup
 // first and global teardown last. These names exclude the `${game.system.id}.` prefix.
@@ -32,7 +31,7 @@ export async function createQuenchActor({ quench, contents, is5e, actorType: typ
     }
 
     // Create new actor for this test
-    const actor = await Actor.create(
+    const actor = await HeroSystem6eActor.create(
         {
             name: quenchName,
             type,
@@ -148,7 +147,7 @@ export async function deleteQuenchTokensAndActors() {
 
     if (actorIds.length > 0) {
         try {
-            await Actor.deleteDocuments(actorIds);
+            await HeroSystem6eActor.deleteDocuments(actorIds);
             deleted.actorIds = actorIds;
         } catch (err) {
             failures.push(`actors: ${err?.message ?? err}`);
