@@ -1,14 +1,9 @@
 /**
- * Vehicle upload behaviour that only a vehicle has.
- *
- * The characteristic contract of these templates lives in `testing-characteristics.mjs`. That suite
- * states which characteristics a vehicle has, and what every level in these templates adds up to.
- * What stays here is what a vehicle upload does around those values: stun automation, the movement
- * powers the template buys, the template name, and SIZE driven sheet updates.
+ * Vehicle specific behaviour testing.
  */
 
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
-import { charMax, setChar } from "./characteristic-assertions.mjs";
+import { getCharacteristicMaxFromActor, updateCharacteristicPropertiesOnActor } from "./characteristic-assertions.mjs";
 
 export function registerVehicleTests(quench) {
     quench.registerBatch(
@@ -389,24 +384,24 @@ export function registerVehicleTests(quench) {
                     it("should start with a size 1 effect", function () {
                         expect(sizeEffect()?.name).to.equal("size1");
                         expect(strChangeValue()).to.equal(5);
-                        expect(charMax(actor, "STR")).to.equal(15);
-                        expect(charMax(actor, "BODY")).to.equal(11);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(15);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(11);
                     });
 
                     it("should apply derived changes immediately when SIZE is increased", async function () {
-                        await setChar(actor, "SIZE", 2);
+                        await updateCharacteristicPropertiesOnActor(actor, "SIZE", { value: 2 });
                         expect(sizeEffect()?.name).to.equal("size2");
                         expect(strChangeValue()).to.equal(10);
-                        expect(charMax(actor, "STR")).to.equal(20);
-                        expect(charMax(actor, "BODY")).to.equal(12);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(20);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(12);
                     });
 
                     it("should apply derived changes immediately when SIZE is decreased back", async function () {
-                        await setChar(actor, "SIZE", 1);
+                        await updateCharacteristicPropertiesOnActor(actor, "SIZE", { value: 1 });
                         expect(sizeEffect()?.name).to.equal("size1");
                         expect(strChangeValue()).to.equal(5);
-                        expect(charMax(actor, "STR")).to.equal(15);
-                        expect(charMax(actor, "BODY")).to.equal(11);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(15);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(11);
                     });
                 });
 
@@ -473,24 +468,24 @@ export function registerVehicleTests(quench) {
                     it("should start with a size 1 effect", function () {
                         expect(sizeEffect()?.name).to.equal("size1");
                         expect(strChangeValue()).to.equal(5);
-                        expect(charMax(actor, "STR")).to.equal(15);
-                        expect(charMax(actor, "BODY")).to.equal(11);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(15);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(11);
                     });
 
                     it("should apply derived changes immediately when SIZE is increased", async function () {
-                        await setChar(actor, "SIZE", 2);
+                        await updateCharacteristicPropertiesOnActor(actor, "SIZE", { value: 2 });
                         expect(sizeEffect()?.name).to.equal("size2");
                         expect(strChangeValue()).to.equal(10);
-                        expect(charMax(actor, "STR")).to.equal(20);
-                        expect(charMax(actor, "BODY")).to.equal(12);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(20);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(12);
                     });
 
                     it("should apply derived changes immediately when SIZE is decreased back", async function () {
-                        await setChar(actor, "SIZE", 1);
+                        await updateCharacteristicPropertiesOnActor(actor, "SIZE", { value: 1 });
                         expect(sizeEffect()?.name).to.equal("size1");
                         expect(strChangeValue()).to.equal(5);
-                        expect(charMax(actor, "STR")).to.equal(15);
-                        expect(charMax(actor, "BODY")).to.equal(11);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(15);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(11);
                     });
                 });
             });

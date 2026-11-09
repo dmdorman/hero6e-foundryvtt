@@ -11,7 +11,7 @@ import { HeroSystem6eItem } from "../item/item.mjs";
 import { movementEndCost } from "../token/actor-token.mjs";
 
 /**
- * Movement history waypoints only need the fields the END calculation reads.
+ * Movement history waypoints only need the properties the END calculation reads.
  * @param {string} action
  * @param {number[]} costs
  */
@@ -35,7 +35,7 @@ export function registerMovementEndTests(quench) {
         `${game.system.id}.movementEnd`,
         (context) => {
             const { describe, it, assert, before, after } = context;
-            const chars = createCharacteristicAssertions(assert);
+            const characteristicAssertions = createCharacteristicAssertions(assert);
 
             describe("Movement END", function () {
                 // The default timeout tends to be insufficient with multiple actors being created at the same time.
@@ -199,7 +199,7 @@ export function registerMovementEndTests(quench) {
                     });
 
                     it("6e Running 12m moving 12m costs 2 END", function () {
-                        chars.assertCharField(actor6e, "RUNNING", "max", 12);
+                        characteristicAssertions.assertCharacteristicProperty(actor6e, "RUNNING", "max", 12);
                         stubMovementHistory(token6e, [12]);
                         assert.equal(token6e._movementHistoryEndCost, 2);
                     });
@@ -210,7 +210,7 @@ export function registerMovementEndTests(quench) {
                     });
 
                     it('5e Running 6" moving 30m costs 3 END', function () {
-                        chars.assertCharField(actor5e, "RUNNING", "max", 6);
+                        characteristicAssertions.assertCharacteristicProperty(actor5e, "RUNNING", "max", 6);
                         stubMovementHistory(token5e, [30]);
                         assert.equal(token5e._movementHistoryEndCost, 3);
                     });

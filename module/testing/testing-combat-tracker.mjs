@@ -1,6 +1,12 @@
 import { getAndSetGameSetting, SETTINGS_GROUPS } from "../settings/settings-helpers.mjs";
 import { messagesSince, setQuenchTimeout, snapshotMessages, waitUntil } from "./quench-helper.mjs";
-import { charMax, charSourceNode, charValue, setChar, setChars } from "./characteristic-assertions.mjs";
+import {
+    getCharacteristicMaxFromActor,
+    getStoredCharacteristicFromActor,
+    getCharacteristicValueFromActor,
+    updateCharacteristicPropertiesOnActor,
+    updateMultipleCharacteristicsOnActor,
+} from "./characteristic-assertions.mjs";
 
 const { Actor } = foundry.documents;
 
@@ -38,8 +44,10 @@ function makeHarness({ actorDocuments, combatDocuments }) {
         actor.prepareData();
         // A drift between the seeded purchase and the figured formula would silently
         // skew every phase expectation downstream; fail loudly at the source instead
-        if (extra.is5e === true && charMax(actor, "SPD") !== spd) {
-            throw new Error(`makeActor(${name}): 5e figured SPD came out ${charMax(actor, "SPD")}, wanted ${spd}`);
+        if (extra.is5e === true && getCharacteristicMaxFromActor(actor, "SPD") !== spd) {
+            throw new Error(
+                `makeActor(${name}): 5e figured SPD came out ${getCharacteristicMaxFromActor(actor, "SPD")}, wanted ${spd}`,
+            );
         }
         actorDocuments.push(actor);
         return actor;
@@ -187,7 +195,7 @@ export function registerSpeedChartCombatValidationTests(quench) {
 
                     const testCombatDocument = await makeCombat([]);
 
-                    // Combatant has no per-combatant characteristic override field; DEX/SPD
+                    // Combatant has no per-combatant characteristic override property; DEX/SPD
                     // come from the actors the before() roster seeded
                     const combatantData = actorDocuments.map((actor) => ({ actorId: actor.id }));
 
@@ -501,13 +509,16 @@ export function registerSpeedChartCombatValidationTests(quench) {
                     try {
                         const actor = await makeActor("_Quench Recovery PC", { dex: 10, spd: 2 });
 
-                        const rec = charValue(actor, "REC");
-                        const stunMax = charMax(actor, "STUN");
-                        const endMax = charMax(actor, "END");
+                        const rec = getCharacteristicValueFromActor(actor, "REC");
+                        const stunMax = getCharacteristicMaxFromActor(actor, "STUN");
+                        const endMax = getCharacteristicMaxFromActor(actor, "END");
                         expect(rec, "test actor has positive REC").to.be.greaterThan(0);
 
                         // Damage well below max so the recovery isn't capped
-                        await setChars(actor, { STUN: stunMax - rec - 3, END: endMax - rec - 3 });
+                        await updateMultipleCharacteristicsOnActor(actor, {
+                            STUN: { value: stunMax - rec - 3 },
+                            END: { value: endMax - rec - 3 },
+                        });
 
                         const combat = await makeCombat([actor]);
                         await combat.startCombat();
@@ -517,8 +528,8 @@ export function registerSpeedChartCombatValidationTests(quench) {
                         await combat.nextTurn();
                         expect(combat.round).to.equal(2);
                         expect(combat.segment).to.equal(6);
-                        expect(charValue(actor, "STUN")).to.equal(stunMax - 3);
-                        expect(charValue(actor, "END")).to.equal(endMax - 3);
+                        expect(getCharacteristicValueFromActor(actor, "STUN")).to.equal(stunMax - 3);
+                        expect(getCharacteristicValueFromActor(actor, "END")).to.equal(endMax - 3);
 
                         // Rewind across the boundary and advance again: the recoveredRounds ledger
                         // must prevent a second application
@@ -528,8 +539,8 @@ export function registerSpeedChartCombatValidationTests(quench) {
 
                         await combat.nextTurn();
                         expect(combat.round).to.equal(2);
-                        expect(charValue(actor, "STUN")).to.equal(stunMax - 3);
-                        expect(charValue(actor, "END")).to.equal(endMax - 3);
+                        expect(getCharacteristicValueFromActor(actor, "STUN")).to.equal(stunMax - 3);
+                        expect(getCharacteristicValueFromActor(actor, "END")).to.equal(endMax - 3);
                     } finally {
                         await game.settings.set(game.system.id, "automation", automationSetting);
                     }
@@ -567,12 +578,14 @@ export function registerSpeedChartCombatValidationTests(quench) {
                         ]);
                         expect(tokenDoc.actor.isToken, "token actor is synthetic (unlinked)").to.be.true;
 
-                        const rec = charValue(tokenDoc.actor, "REC");
-                        const stunMax = charMax(tokenDoc.actor, "STUN");
+                        const rec = getCharacteristicValueFromActor(tokenDoc.actor, "REC");
+                        const stunMax = getCharacteristicMaxFromActor(tokenDoc.actor, "STUN");
                         expect(rec, "test npc has positive REC").to.be.greaterThan(0);
 
-                        await setChar(tokenDoc.actor, "STUN", stunMax - rec - 3);
-                        const worldStun = charValue(npcActor, "STUN");
+                        await updateCharacteristicPropertiesOnActor(tokenDoc.actor, "STUN", {
+                            value: stunMax - rec - 3,
+                        });
+                        const worldStun = getCharacteristicValueFromActor(npcActor, "STUN");
 
                         const combat = await Combat.create({ name: "_Quench Combat", scene: scene.id, active: true });
                         combatDocuments.push(combat);
@@ -584,10 +597,13 @@ export function registerSpeedChartCombatValidationTests(quench) {
 
                         expect(combat.round).to.equal(2);
                         expect(
-                            charValue(tokenDoc.actor, "STUN"),
+                            getCharacteristicValueFromActor(tokenDoc.actor, "STUN"),
                             "unlinked token actor received the recovery",
                         ).to.equal(stunMax - 3);
-                        expect(charValue(npcActor, "STUN"), "world actor was not modified").to.equal(worldStun);
+                        expect(
+                            getCharacteristicValueFromActor(npcActor, "STUN"),
+                            "world actor was not modified",
+                        ).to.equal(worldStun);
                     } finally {
                         if (tokenDoc) await tokenDoc.delete();
                         await game.settings.set(game.system.id, "automation", automationSetting);
@@ -1640,7 +1656,7 @@ export function registerSpeedChartCombatValidationTests(quench) {
                     expect(combat.combatant.actorId).to.equal(bravo.id);
 
                     // Simulate an Aid to DEX on Bravo; order is re-evaluated each segment
-                    await setChar(bravo, "DEX", 25);
+                    await updateCharacteristicPropertiesOnActor(bravo, "DEX", { value: 25 });
 
                     await combat.nextTurn();
                     expect(combat.segment).to.equal(6);
@@ -1678,11 +1694,11 @@ export function registerSpeedChartCombatValidationTests(quench) {
                     try {
                         const actor = await makeActor("_Quench Round Recovery PC", { dex: 10, spd: 2 });
 
-                        const rec = charValue(actor, "REC");
-                        const stunMax = charMax(actor, "STUN");
+                        const rec = getCharacteristicValueFromActor(actor, "REC");
+                        const stunMax = getCharacteristicMaxFromActor(actor, "STUN");
                         expect(rec, "test actor has positive REC").to.be.greaterThan(0);
 
-                        await setChar(actor, "STUN", stunMax - rec - 3);
+                        await updateCharacteristicPropertiesOnActor(actor, "STUN", { value: stunMax - rec - 3 });
 
                         const combat = await makeCombat([actor]);
                         await combat.startCombat();
@@ -1691,7 +1707,7 @@ export function registerSpeedChartCombatValidationTests(quench) {
                         await combat.nextRound();
                         expect(combat.round).to.equal(2);
                         expect(combat.segment).to.equal(12);
-                        expect(charValue(actor, "STUN")).to.equal(stunMax - 3);
+                        expect(getCharacteristicValueFromActor(actor, "STUN")).to.equal(stunMax - 3);
 
                         // Rewinding and skipping forward again must not double-apply
                         await combat.previousRound();
@@ -1699,7 +1715,7 @@ export function registerSpeedChartCombatValidationTests(quench) {
 
                         await combat.nextRound();
                         expect(combat.round).to.equal(2);
-                        expect(charValue(actor, "STUN")).to.equal(stunMax - 3);
+                        expect(getCharacteristicValueFromActor(actor, "STUN")).to.equal(stunMax - 3);
                     } finally {
                         await game.settings.set(game.system.id, "automation", automationSetting);
                     }
@@ -1730,7 +1746,7 @@ export function registerSpeedChartCombatValidationTests(quench) {
                     // A sheet edit is a VOLUNTARY change and defers to Post-Segment 12; the GM's
                     // apply-immediately override converts it into the adjustment-style lockout,
                     // which is what the rest of this test exercises.
-                    await setChar(slow, "SPD", 4);
+                    await updateCharacteristicPropertiesOnActor(slow, "SPD", { value: 4 });
 
                     await combat.nextTurn(); // Crosses into Segment 2; boundary detects the change
                     expect(combat.segment).to.equal(2);
@@ -1786,9 +1802,10 @@ export function registerSpeedChartCombatValidationTests(quench) {
                     // figures SPD 3, the actor was seeded at -1 LEVELS for SPD 2, so 0
                     // LEVELS is SPD 3. The purchase must persist through the figured path.
                     await slow.update({ "system.SPD.LEVELS": 0 });
-                    expect(charSourceNode(slow, "SPD").value, "SPD purchase persisted via the figured path").to.equal(
-                        3,
-                    );
+                    expect(
+                        getStoredCharacteristicFromActor(slow, "SPD").value,
+                        "SPD purchase persisted via the figured path",
+                    ).to.equal(3);
 
                     await combat.nextTurn(); // Segment 2 boundary detects the change
                     const deferred = await waitUntil(() => !!slowCombatant.getFlag(game.system.id, "pendingSpd"));
@@ -2323,7 +2340,7 @@ export function registerCombatTrackerFixValidationTests(quench) {
                     expect(seeded, "SPD baseline seeded at a boundary").to.be.true;
 
                     // A sheet edit is a VOLUNTARY change: deferred, old SPD still governs
-                    await setChar(changer, "SPD", 6);
+                    await updateCharacteristicPropertiesOnActor(changer, "SPD", { value: 6 });
                     await combat.nextTurn();
                     const deferred = await waitUntil(() => !!combatant.getFlag(game.system.id, "pendingSpd"));
                     expect(deferred, "voluntary change deferred via pendingSpd").to.be.true;
@@ -2366,7 +2383,7 @@ export function registerCombatTrackerFixValidationTests(quench) {
                             ],
                         },
                     ]);
-                    expect(charValue(insulated, "DEX"), "the drain itself landed").to.equal(10);
+                    expect(getCharacteristicValueFromActor(insulated, "DEX"), "the drain itself landed").to.equal(10);
                     expect(combatant.combatSpd, "figured SPD is insulated from the DEX drain").to.equal(4);
 
                     // Cross two boundaries: a bogus cascade would be detected here
@@ -2409,7 +2426,7 @@ export function registerCombatTrackerFixValidationTests(quench) {
                         },
                     ]);
                     expect(combatant.combatSpd, "drain lowers the effective SPD").to.equal(2);
-                    expect(charSourceNode(drained, "SPD").value, "sheet SPD untouched").to.equal(3);
+                    expect(getStoredCharacteristicFromActor(drained, "SPD").value, "sheet SPD untouched").to.equal(3);
 
                     await combat.nextTurn(); // boundary detects the effective-only change
                     const locked = await waitUntil(() => !!combatant.getFlag(game.system.id, "spdLockout"));
@@ -2437,8 +2454,13 @@ export function registerCombatTrackerFixValidationTests(quench) {
                     // sheet and effective SPD move together, so the tracker must classify
                     // the change as voluntary and defer it to Post-Segment 12
                     await grower.update({ "system.DEX.LEVELS": 10 });
-                    expect(charSourceNode(grower, "DEX").value, "DEX purchase persisted").to.equal(20);
-                    expect(charSourceNode(grower, "SPD").value, "figured SPD cascaded into the source").to.equal(3);
+                    expect(getStoredCharacteristicFromActor(grower, "DEX").value, "DEX purchase persisted").to.equal(
+                        20,
+                    );
+                    expect(
+                        getStoredCharacteristicFromActor(grower, "SPD").value,
+                        "figured SPD cascaded into the source",
+                    ).to.equal(3);
 
                     await combat.nextTurn();
                     const deferred = await waitUntil(() => !!combatant.getFlag(game.system.id, "pendingSpd"));
@@ -2559,7 +2581,7 @@ export function registerCombatTrackerFixValidationTests(quench) {
 
                     // Deep enough to stay KO'd through the first Recovery, inside the
                     // every-Phase band (>= -10)
-                    await setChar(sleeper, "STUN", -5);
+                    await updateCharacteristicPropertiesOnActor(sleeper, "STUN", { value: -5 });
                     await sleeper.createEmbeddedDocuments("ActiveEffect", [
                         { name: "Knocked Out", img: "icons/svg/unconscious.svg", statuses: ["knockedOut"] },
                     ]);
@@ -2579,7 +2601,7 @@ export function registerCombatTrackerFixValidationTests(quench) {
                             () => combatant.getFlag(game.system.id, "koRecoveredAbs") === abs(1, 12),
                         );
                         expect(granted, "skipped Phase in Segment 12 granted the free Recovery").to.be.true;
-                        const stunAfter = charValue(sleeper, "STUN");
+                        const stunAfter = getCharacteristicValueFromActor(sleeper, "STUN");
                         expect(stunAfter, "REC applied to the negative STUN total").to.be.greaterThan(-5);
                     } finally {
                         await game.settings.set("core", Combat.CONFIG_SETTING, {
@@ -3025,7 +3047,7 @@ export function registerCombatTrackerFixValidationTests(quench) {
                         await waitUntil(() => combatant.getFlag(game.system.id, "knownSpd") !== undefined);
 
                         const before = snapshotMessages();
-                        await setChar(changer, "SPD", 6);
+                        await updateCharacteristicPropertiesOnActor(changer, "SPD", { value: 6 });
                         await combat.nextTurn();
                         const deferred = await waitUntil(() => !!combatant.getFlag(game.system.id, "pendingSpd"));
                         expect(deferred, "voluntary change deferred").to.be.true;
@@ -3045,10 +3067,10 @@ export function registerCombatTrackerFixValidationTests(quench) {
                     const automationSetting = await getAndSetGameSetting("automation", "all");
                     try {
                         const thug = await makeActor("_Quench P12 Thug", { dex: 10, spd: 2, type: "npc" });
-                        const rec = charValue(thug, "REC");
-                        await setChars(thug, {
-                            STUN: charMax(thug, "STUN") - rec - 3,
-                            END: charMax(thug, "END") - rec - 3,
+                        const rec = getCharacteristicValueFromActor(thug, "REC");
+                        await updateMultipleCharacteristicsOnActor(thug, {
+                            STUN: { value: getCharacteristicMaxFromActor(thug, "STUN") - rec - 3 },
+                            END: { value: getCharacteristicMaxFromActor(thug, "END") - rec - 3 },
                         });
 
                         const combat = await makeCombat([thug]);

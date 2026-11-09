@@ -2,7 +2,14 @@ import { HeroSystem6eItem } from "../item/item.mjs";
 import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
 import { performAdjustment } from "../actor/actor-adjustment.mjs";
 import { setQuenchTimeout } from "./quench-helper.mjs";
-import { charMax, charNode, charSourceNode, charValue, hasChar, setChar } from "./characteristic-assertions.mjs";
+import {
+    actorHasCharacteristic,
+    getCharacteristicFromActor,
+    getCharacteristicMaxFromActor,
+    getCharacteristicValueFromActor,
+    getStoredCharacteristicFromActor,
+    updateCharacteristicPropertiesOnActor,
+} from "./characteristic-assertions.mjs";
 
 const { Actor } = foundry.documents;
 
@@ -66,7 +73,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                  */
                 const addAdjustmentEffect = async (actor, effectData) => {
                     await createAdjustmentEffect(actor, effectData);
-                    return (name) => charNode(actor, name);
+                    return (name) => getCharacteristicFromActor(actor, name);
                 };
 
                 // Real adjustment items driven through performAdjustment (the production attack/fade flow),
@@ -146,7 +153,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             assert.ok(!!qActor, `[${targetType}] Failed to fetch instantiated actor record.`);
 
                             // 3. Absence vs Boundary Node Inspection (Safety check for intangibles)
-                            if (!hasChar(qActor, "ocv")) {
+                            if (!actorHasCharacteristic(qActor, "ocv")) {
                                 assert.isFalse(
                                     targetType === "pc" || targetType === "npc",
                                     `[${targetType}] Missing OCV characteristic node.`,
@@ -158,8 +165,8 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
 
                             // Step 1: Verify Initial 5e Baseline Starting Values
                             for (const key of ["ocv", "spd", "rec", "stun"]) {
-                                if (hasChar(qActor, key)) {
-                                    const liveNode = charNode(qActor, key);
+                                if (actorHasCharacteristic(qActor, key)) {
+                                    const liveNode = getCharacteristicFromActor(qActor, key);
                                     const isPurePhysicalTrait = ["rec", "stun"].includes(key);
 
                                     if (isIntangibleType && isPurePhysicalTrait) {
@@ -204,7 +211,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             // createEmbeddedDocuments already reset and re-prepared the actor. Do NOT
                             // call prepareData() here: without a reset() it re-applies active effects
                             // on top of already-applied data (dex.max 10 -> 20 -> 30).
-                            const buffedChars = (name) => charNode(qActor, name);
+                            const buffedChars = (name) => getCharacteristicFromActor(qActor, name);
 
                             assert.isAbove(
                                 buffedChars("dex").max,
@@ -234,7 +241,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                                 `[${targetType}] Figured PD calculation ratio mismatch.`,
                             );
 
-                            if (hasChar(qActor, "spd")) {
+                            if (actorHasCharacteristic(qActor, "spd")) {
                                 const expectedSpd = Math.floor(
                                     1 +
                                         Number((dexSourceValue / 10).toFixed(1)) +
@@ -253,7 +260,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                                 );
                             }
 
-                            if (hasChar(qActor, "rec")) {
+                            if (actorHasCharacteristic(qActor, "rec")) {
                                 const conSourceValue = effectiveSourceValue("con");
                                 const expectedRec =
                                     roundFavorPlayerAwayFromZero(strSourceValue / 5) +
@@ -293,7 +300,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             ]);
 
                             // See above: no manual prepareData() — the embedded create already re-prepared.
-                            const drainedChars = (name) => charNode(qActor, name);
+                            const drainedChars = (name) => getCharacteristicFromActor(qActor, name);
 
                             // 1. Primary Characteristics Verification
                             // Primary stats (like DEX) MUST drop below zero cleanly to map adjustment decay fading values.
@@ -315,7 +322,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                                 `[${targetType}] Calculated OCV should follow DEX lowered below 1 down to the 0 floor.`,
                             );
 
-                            if (hasChar(qActor, "pd")) {
+                            if (actorHasCharacteristic(qActor, "pd")) {
                                 const expectedFlooredPd =
                                     qActor.getCharacteristic("str").baseSumFiguredCharacteristicsFromItems(5) +
                                     (qActor.system.PD?.LEVELS ?? 0);
@@ -333,7 +340,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                     it("AID DEX raises calculated CV but never figured SPD", async function () {
                         const sourceActor = await create5eActor("_Quench_5e_AID_DEX_Source");
                         const targetActor = await create5eActor("_Quench_5e_AID_DEX_Target");
-                        const baselineSpd = charMax(targetActor, "SPD");
+                        const baselineSpd = getCharacteristicMaxFromActor(targetActor, "SPD");
 
                         const chars = await addAdjustmentEffect(targetActor, {
                             name: "AID DEX",
@@ -359,7 +366,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
 
                     it("combined primary and dependent ActiveEffects both apply in one pass", async function () {
                         const actor = await create5eActor("_Quench_5e_Combined_Primary_Dependent_Target");
-                        const baselineSpd = charMax(actor, "SPD");
+                        const baselineSpd = getCharacteristicMaxFromActor(actor, "SPD");
 
                         const chars = await addAdjustmentEffect(actor, {
                             name: "Combined DEX and DCV adjustment",
@@ -400,9 +407,9 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                     it("AID STR does not cascade into STR figured dependents", async function () {
                         const actor = await create5eActor("_Quench_5e_AID_STR_Target");
                         const baseline = {
-                            pd: charMax(actor, "PD"),
-                            rec: charMax(actor, "REC"),
-                            stun: charMax(actor, "STUN"),
+                            pd: getCharacteristicMaxFromActor(actor, "PD"),
+                            rec: getCharacteristicMaxFromActor(actor, "REC"),
+                            stun: getCharacteristicMaxFromActor(actor, "STUN"),
                         };
 
                         const chars = await addAdjustmentEffect(actor, {
@@ -441,17 +448,25 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                         });
 
                         // The attack flow raises the current value along with the AID'd max.
-                        await setChar(actor, "STR", 30);
-                        assert.equal(charValue(actor, "STR"), 30, "AID STR raised the current value.");
+                        await updateCharacteristicPropertiesOnActor(actor, "STR", { value: 30 });
+                        assert.equal(
+                            getCharacteristicValueFromActor(actor, "STR"),
+                            30,
+                            "AID STR raised the current value.",
+                        );
 
                         // The clamp commits in a follow-up actor update after the deletion.
                         const valueClampHook = waitForHook("updateActor");
                         await effect.delete();
                         await valueClampHook;
 
-                        assert.equal(charMax(actor, "STR"), 10, "Deleted AID should restore STR max.");
                         assert.equal(
-                            charValue(actor, "STR"),
+                            getCharacteristicMaxFromActor(actor, "STR"),
+                            10,
+                            "Deleted AID should restore STR max.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(actor, "STR"),
                             10,
                             "Deleted AID should clamp the current value back to max.",
                         );
@@ -459,7 +474,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
 
                     it("actor-owned adjustment updates and deletes recompute derived values", async function () {
                         const actor = await create5eActor("_Quench_5e_Adjustment_Update_Target");
-                        const baselineSpd = charMax(actor, "SPD");
+                        const baselineSpd = getCharacteristicMaxFromActor(actor, "SPD");
 
                         const effect = await createAdjustmentEffect(actor, {
                             name: "Scaling AID DEX",
@@ -473,10 +488,14 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             ],
                         });
 
-                        assert.equal(charMax(actor, "DEX"), 20, "Initial AID should raise DEX.");
-                        assert.equal(charMax(actor, "OCV"), expectedOcvFromDex(20), "Initial AID should raise OCV.");
+                        assert.equal(getCharacteristicMaxFromActor(actor, "DEX"), 20, "Initial AID should raise DEX.");
                         assert.equal(
-                            charMax(actor, "SPD"),
+                            getCharacteristicMaxFromActor(actor, "OCV"),
+                            expectedOcvFromDex(20),
+                            "Initial AID should raise OCV.",
+                        );
+                        assert.equal(
+                            getCharacteristicMaxFromActor(actor, "SPD"),
                             baselineSpd,
                             "Adjustment to DEX should not touch figured SPD (5ER p. 105).",
                         );
@@ -493,24 +512,36 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             },
                         });
 
-                        assert.equal(charMax(actor, "DEX"), 15, "Updated AID should reduce DEX bonus.");
                         assert.equal(
-                            charMax(actor, "OCV"),
+                            getCharacteristicMaxFromActor(actor, "DEX"),
+                            15,
+                            "Updated AID should reduce DEX bonus.",
+                        );
+                        assert.equal(
+                            getCharacteristicMaxFromActor(actor, "OCV"),
                             expectedOcvFromDex(15),
                             "Updated AID should recompute OCV.",
                         );
                         assert.equal(
-                            charMax(actor, "SPD"),
+                            getCharacteristicMaxFromActor(actor, "SPD"),
                             baselineSpd,
                             "Updated adjustment should still not touch figured SPD.",
                         );
 
                         await effect.delete();
 
-                        assert.equal(charMax(actor, "DEX"), 10, "Deleted AID should restore DEX max.");
-                        assert.equal(charMax(actor, "OCV"), expectedOcvFromDex(10), "Deleted AID should restore OCV.");
                         assert.equal(
-                            charMax(actor, "SPD"),
+                            getCharacteristicMaxFromActor(actor, "DEX"),
+                            10,
+                            "Deleted AID should restore DEX max.",
+                        );
+                        assert.equal(
+                            getCharacteristicMaxFromActor(actor, "OCV"),
+                            expectedOcvFromDex(10),
+                            "Deleted AID should restore OCV.",
+                        );
+                        assert.equal(
+                            getCharacteristicMaxFromActor(actor, "SPD"),
                             baselineSpd,
                             "Deleted adjustment should leave figured SPD at baseline.",
                         );
@@ -519,8 +550,8 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                     it("DRAIN DEX and STR lowers calculated CV but never figured dependents", async function () {
                         const actor = await create5eActor("_Quench_5e_DRAIN_Primaries_Target");
                         const baseline = {
-                            spd: charMax(actor, "SPD"),
-                            pd: charMax(actor, "PD"),
+                            spd: getCharacteristicMaxFromActor(actor, "SPD"),
+                            pd: getCharacteristicMaxFromActor(actor, "PD"),
                         };
 
                         const chars = await addAdjustmentEffect(actor, {
@@ -555,11 +586,11 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                         const drainedActor = await create5eActor("_Quench_5e_TRANSFER_Drained");
                         const aidedActor = await create5eActor("_Quench_5e_TRANSFER_Aided");
                         const drainedBaseline = {
-                            ocv: charMax(drainedActor, "OCV"),
-                            pd: charMax(drainedActor, "PD"),
+                            ocv: getCharacteristicMaxFromActor(drainedActor, "OCV"),
+                            pd: getCharacteristicMaxFromActor(drainedActor, "PD"),
                         };
-                        const aidedBaselinePd = charMax(aidedActor, "PD");
-                        const aidedBaselineSpd = charMax(aidedActor, "SPD");
+                        const aidedBaselinePd = getCharacteristicMaxFromActor(aidedActor, "PD");
+                        const aidedBaselineSpd = getCharacteristicMaxFromActor(aidedActor, "SPD");
 
                         const drainedChars = await addAdjustmentEffect(drainedActor, {
                             name: "TRANSFER drain side",
@@ -624,7 +655,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                     it("item-origin actor effects still drive 5e dependents", async function () {
                         const sourceActor = await create5eActor("_Quench_5e_Item_Origin_Source");
                         const targetActor = await create5eActor("_Quench_5e_Item_Origin_Target");
-                        const baselineSpd = charMax(targetActor, "SPD");
+                        const baselineSpd = getCharacteristicMaxFromActor(targetActor, "SPD");
                         const dexContents = `
                             <DEX XMLID="DEX" ID="1766170024718" BASECOST="0.0" LEVELS="10" ALIAS="DEX" POSITION="0" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Source DEX Aid" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes" ADD_MODIFIERS_TO_BASE="No">
                             <NOTES />
@@ -666,10 +697,10 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                     it("disabled primary ActiveEffects do not drive dependent formulas", async function () {
                         const actor = await create5eActor("_Quench_5e_Disabled_Primary_AE_Target");
                         const baseline = {
-                            str: charMax(actor, "STR"),
-                            pd: charMax(actor, "PD"),
-                            rec: charMax(actor, "REC"),
-                            stun: charMax(actor, "STUN"),
+                            str: getCharacteristicMaxFromActor(actor, "STR"),
+                            pd: getCharacteristicMaxFromActor(actor, "PD"),
+                            rec: getCharacteristicMaxFromActor(actor, "REC"),
+                            stun: getCharacteristicMaxFromActor(actor, "STUN"),
                         };
 
                         const chars = await addAdjustmentEffect(actor, {
@@ -710,14 +741,18 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                         // No manual prepareData(): without a reset() it re-applies active effects on
                         // top of already-applied data; fullHealth's update already re-prepared.
 
-                        assert.equal(charValue(actor, "DEX"), 20, "Active DEX item should raise DEX.");
                         assert.equal(
-                            charNode(actor, "OCV").base,
+                            getCharacteristicValueFromActor(actor, "DEX"),
+                            20,
+                            "Active DEX item should raise DEX.",
+                        );
+                        assert.equal(
+                            getCharacteristicFromActor(actor, "OCV").base,
                             7,
                             "Active DEX item should raise OCV through the item path.",
                         );
                         assert.equal(
-                            charValue(actor, "SPD"),
+                            getCharacteristicValueFromActor(actor, "SPD"),
                             3,
                             "Active DEX item should not double-propagate into SPD.",
                         );
@@ -755,7 +790,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
 
                     it("halved conditions do not stack and cap the current value", async function () {
                         const actor = await create5eActor("_Quench_5e_Halving_Target");
-                        const baselineDcv = charMax(actor, "DCV"); // DEX 10/3 -> 3
+                        const baselineDcv = getCharacteristicMaxFromActor(actor, "DCV"); // DEX 10/3 -> 3
 
                         // Prone and Stunned each halve DCV; a character who is both is at 1/2 DCV,
                         // not 1/4. Rounding favors the character (1.5 -> 2).
@@ -786,12 +821,12 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
 
                         const halvedDcv = roundFavorPlayerAwayFromZero(baselineDcv / 2);
                         assert.equal(
-                            charMax(actor, "DCV"),
+                            getCharacteristicMaxFromActor(actor, "DCV"),
                             halvedDcv,
                             "Two halved conditions should apply a single halving.",
                         );
                         assert.equal(
-                            charValue(actor, "DCV"),
+                            getCharacteristicValueFromActor(actor, "DCV"),
                             halvedDcv,
                             "The lowered max should cap the current value.",
                         );
@@ -823,7 +858,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             },
                         ]);
 
-                        const chars = (name) => charNode(actor, name);
+                        const chars = (name) => getCharacteristicFromActor(actor, name);
                         assert.equal(chars("pd").max, 0, "PD floors at 0 (negative STR adds zero).");
                         assert.equal(chars("ed").max, 0, "ED floors at 0 (negative CON adds zero).");
                         assert.equal(chars("rec").max, 0, "REC floors at 0.");
@@ -836,7 +871,7 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                     it("EGO adjustments move OMCV/DMCV in both directions", async function () {
                         const aidedActor = await create5eActor("_Quench_5e_AID_EGO_Target");
                         const drainedActor = await create5eActor("_Quench_5e_DRAIN_EGO_Target");
-                        const baselineOmcv = charMax(aidedActor, "OMCV"); // EGO 10/3 -> 3
+                        const baselineOmcv = getCharacteristicMaxFromActor(aidedActor, "OMCV"); // EGO 10/3 -> 3
 
                         const aidedChars = await addAdjustmentEffect(aidedActor, {
                             name: "AID EGO",
@@ -878,10 +913,10 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                         const aidedActor = await create5eActor("_Quench_5e_AID_STR_Leaping_Target");
                         const drainedActor = await create5eActor("_Quench_5e_DRAIN_STR_Leaping_Target");
                         const baseline = {
-                            leaping: charMax(aidedActor, "LEAPING"), // floor(10/2.5)/2 = 2
-                            running: charMax(aidedActor, "RUNNING"),
-                            swimming: charMax(aidedActor, "SWIMMING"),
-                            pd: charMax(aidedActor, "PD"),
+                            leaping: getCharacteristicMaxFromActor(aidedActor, "LEAPING"), // floor(10/2.5)/2 = 2
+                            running: getCharacteristicMaxFromActor(aidedActor, "RUNNING"),
+                            swimming: getCharacteristicMaxFromActor(aidedActor, "SWIMMING"),
+                            pd: getCharacteristicMaxFromActor(aidedActor, "PD"),
                         };
 
                         // Leaping is a Strength Table ability, not a Figured Characteristic (the 5ER
@@ -932,8 +967,16 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
 
                         // Buy +6" of Leaping: floor(10/2.5)/2 = 2 base + 6 = 8/8.
                         await actor.update({ system: { LEAPING: { LEVELS: 6 } } });
-                        assert.equal(charMax(actor, "LEAPING"), 8, "Bought Leaping raises the max.");
-                        assert.equal(charValue(actor, "LEAPING"), 8, "Bought Leaping raises the value.");
+                        assert.equal(
+                            getCharacteristicMaxFromActor(actor, "LEAPING"),
+                            8,
+                            "Bought Leaping raises the max.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(actor, "LEAPING"),
+                            8,
+                            "Bought Leaping raises the value.",
+                        );
 
                         // +8 STR: 3.5 STR-derived + 6 bought = 9.5, player-favorable rounding -> 10 —
                         // and the current value follows (regression: max previously rose while the
@@ -964,13 +1007,17 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             levels: 3,
                         });
 
-                        const baselinePd = charMax(target, "PD"); // STR 10/5 = 2
+                        const baselinePd = getCharacteristicMaxFromActor(target, "PD"); // STR 10/5 = 2
 
                         // 5ER p. 110: adjustment of a defense is halved: 12 AP -> 6 points of PD.
                         await applyAdjustment(aidItem, "PD", 12, target);
-                        assert.equal(charMax(target, "PD"), baselinePd + 6, "AID PD should add half AP.");
                         assert.equal(
-                            charValue(target, "PD"),
+                            getCharacteristicMaxFromActor(target, "PD"),
+                            baselinePd + 6,
+                            "AID PD should add half AP.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(target, "PD"),
                             baselinePd + 6,
                             "AID PD should raise the current value with the max.",
                         );
@@ -980,9 +1027,13 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                         let effect = findAdjustmentEffect(target);
                         assert.ok(effect, "AID PD adjustment effect exists.");
                         await fadeAdjustment(aidItem, "PD", effect);
-                        assert.equal(charMax(target, "PD"), baselinePd + 1, "First fade leaves +1 PD.");
                         assert.equal(
-                            charValue(target, "PD"),
+                            getCharacteristicMaxFromActor(target, "PD"),
+                            baselinePd + 1,
+                            "First fade leaves +1 PD.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(target, "PD"),
                             baselinePd + 1,
                             "Current value follows the fading max down.",
                         );
@@ -991,8 +1042,16 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                         effect = findAdjustmentEffect(target);
                         await fadeAdjustment(aidItem, "PD", effect);
                         assert.notOk(findAdjustmentEffect(target), "Fully faded adjustment effect is deleted.");
-                        assert.equal(charMax(target, "PD"), baselinePd, "Faded AID restores PD max.");
-                        assert.equal(charValue(target, "PD"), baselinePd, "Faded AID restores PD current value.");
+                        assert.equal(
+                            getCharacteristicMaxFromActor(target, "PD"),
+                            baselinePd,
+                            "Faded AID restores PD max.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(target, "PD"),
+                            baselinePd,
+                            "Faded AID restores PD current value.",
+                        );
                     });
 
                     it("knocking out an actor preserves an AID'd primary's current value", async function () {
@@ -1006,22 +1065,26 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
 
                         // DEX costs 3 CP per point in 5e: 12 AP -> +4 DEX (14/14, value raised by the flow).
                         await applyAdjustment(aidItem, "DEX", 12, target);
-                        assert.equal(charMax(target, "DEX"), 14, "AID DEX raises max.");
-                        assert.equal(charValue(target, "DEX"), 14, "AID DEX raises the current value.");
+                        assert.equal(getCharacteristicMaxFromActor(target, "DEX"), 14, "AID DEX raises max.");
+                        assert.equal(
+                            getCharacteristicValueFromActor(target, "DEX"),
+                            14,
+                            "AID DEX raises the current value.",
+                        );
 
                         // Drop STUN below zero: rule B toggles knockedOut + prone. The KO status
                         // overrides the CV maxima but must not disturb the AID'd primary.
-                        await setChar(target, "STUN", -1);
+                        await updateCharacteristicPropertiesOnActor(target, "STUN", { value: -1 });
                         assert.ok(target.statuses.has("knockedOut"), "Actor is knocked out.");
 
-                        assert.equal(charMax(target, "DEX"), 14, "KO keeps the AID'd DEX max.");
+                        assert.equal(getCharacteristicMaxFromActor(target, "DEX"), 14, "KO keeps the AID'd DEX max.");
                         assert.equal(
-                            charValue(target, "DEX"),
+                            getCharacteristicValueFromActor(target, "DEX"),
                             14,
                             "KO must not reset the AID'd DEX current value to base.",
                         );
                         assert.equal(
-                            charSourceNode(target, "DEX").value,
+                            getStoredCharacteristicFromActor(target, "DEX").value,
                             14,
                             "The stored DEX current value survives the knockout.",
                         );
@@ -1036,25 +1099,35 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             levels: 3,
                         });
 
-                        const baselineStun = charMax(target, "STUN"); // BODY 10 + STR/2 + CON/2 = 20
+                        const baselineStun = getCharacteristicMaxFromActor(target, "STUN"); // BODY 10 + STR/2 + CON/2 = 20
 
                         await applyAdjustment(aidItem, "STUN", 18, target);
-                        assert.equal(charMax(target, "STUN"), baselineStun + 18, "AID STUN adds 18.");
                         assert.equal(
-                            charValue(target, "STUN"),
+                            getCharacteristicMaxFromActor(target, "STUN"),
+                            baselineStun + 18,
+                            "AID STUN adds 18.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(target, "STUN"),
                             baselineStun + 18,
                             "AID STUN raises the current value.",
                         );
 
                         // Take 14 STUN of damage while boosted.
-                        await setChar(target, "STUN", charValue(target, "STUN") - 14);
+                        const stunToKo = getCharacteristicValueFromActor(target, "STUN") - 14;
+
+                        await updateCharacteristicPropertiesOnActor(target, "STUN", { value: stunToKo });
 
                         // First fade tick: the max drops but the (damaged) current value is untouched —
                         // subtracting the fade delta as well would charge the damage twice.
                         await fadeAdjustment(aidItem, "STUN", findAdjustmentEffect(target));
-                        assert.equal(charMax(target, "STUN"), baselineStun + 13, "Fade tick 1 max.");
                         assert.equal(
-                            charValue(target, "STUN"),
+                            getCharacteristicMaxFromActor(target, "STUN"),
+                            baselineStun + 13,
+                            "Fade tick 1 max.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(target, "STUN"),
                             baselineStun + 4,
                             "Damaged current value is preserved through the fade tick.",
                         );
@@ -1067,9 +1140,13 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             await fadeAdjustment(aidItem, "STUN", effect);
                         }
                         assert.notOk(findAdjustmentEffect(target), "Fully faded adjustment effect is deleted.");
-                        assert.equal(charMax(target, "STUN"), baselineStun, "Faded AID restores STUN max.");
                         assert.equal(
-                            charValue(target, "STUN"),
+                            getCharacteristicMaxFromActor(target, "STUN"),
+                            baselineStun,
+                            "Faded AID restores STUN max.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(target, "STUN"),
                             baselineStun,
                             "Damage taken while boosted came out of the boost, not the character's own STUN.",
                         );
@@ -1084,12 +1161,16 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             levels: 2,
                         });
 
-                        const baselineStr = charMax(target, "STR"); // 10
+                        const baselineStr = getCharacteristicMaxFromActor(target, "STR"); // 10
 
                         await applyAdjustment(drainItem, "STR", -12, target);
-                        assert.equal(charMax(target, "STR"), baselineStr - 12, "DRAIN lowers STR max.");
                         assert.equal(
-                            charValue(target, "STR"),
+                            getCharacteristicMaxFromActor(target, "STR"),
+                            baselineStr - 12,
+                            "DRAIN lowers STR max.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(target, "STR"),
                             baselineStr - 12,
                             "DRAIN lowers the current value with the max.",
                         );
@@ -1101,9 +1182,13 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                         await effect.delete();
                         await valueRestoreHook;
 
-                        assert.equal(charMax(target, "STR"), baselineStr, "Deleted DRAIN restores max.");
                         assert.equal(
-                            charValue(target, "STR"),
+                            getCharacteristicMaxFromActor(target, "STR"),
+                            baselineStr,
+                            "Deleted DRAIN restores max.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(target, "STR"),
                             baselineStr,
                             "Deleted DRAIN restores the current value.",
                         );
@@ -1116,16 +1201,20 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                         const aidA = await createAdjustmentItem(attackerA, { xmlid: "AID", input: "STR", levels: 1 });
                         const aidB = await createAdjustmentItem(attackerB, { xmlid: "AID", input: "STR", levels: 1 });
 
-                        const baselineStr = charMax(target, "STR"); // 10
+                        const baselineStr = getCharacteristicMaxFromActor(target, "STR"); // 10
 
                         // Each AID 1d6 has a maximum effect of 6 AP. Two casters cannot stack past the
                         // largest single maximum: the second AID adds nothing.
                         await applyAdjustment(aidA, "STR", 6, target);
-                        assert.equal(charMax(target, "STR"), baselineStr + 6, "First AID adds 6 STR.");
+                        assert.equal(
+                            getCharacteristicMaxFromActor(target, "STR"),
+                            baselineStr + 6,
+                            "First AID adds 6 STR.",
+                        );
 
                         await applyAdjustment(aidB, "STR", 6, target);
                         assert.equal(
-                            charMax(target, "STR"),
+                            getCharacteristicMaxFromActor(target, "STR"),
                             baselineStr + 6,
                             "Second caster's AID cannot exceed the shared largest maximum.",
                         );

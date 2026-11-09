@@ -1,14 +1,19 @@
 /**
  * Shared assertion helpers for characteristic tests.
  *
- * Tests read characteristics through one path: `charNode`, which calls
+ * Tests read characteristics through one path: `getCharacteristicFromActor`, which calls
  * `HeroSystem6eActor.getCharacteristic()`. Tests never touch
  * `actor.system.characteristics` directly. That keeps the storage shape in one place,
  * so the shape can change without a rewrite of 600-plus assertions.
  *
- * Movement modes go through `assertHasMovementMode` and `assertLacksMovementMode`, which call
- * `actor.hasMovementCharacteristic`. Characteristic labels go through `assertHasChar` and
- * `assertLacksChar`, which call `actor.hasCharacteristic`. Movement modes leave characteristic storage
+ * A write takes a property object, so one call writes several properties of one name, the way
+ * `HeroSystem6eActor.updateCharacteristics` does. Every property is named in the call. No helper
+ * supplies one.
+ *
+ * Movement modes go through `assertHasMovementMode` and `assertDoesNotHaveMovementMode`, which call
+ * `actor.hasMovementCharacteristic`. Characteristics go through `assertHasCharacteristic` and
+ * `assertDoesNotHaveCharacteristic`, which call `actor.hasCharacteristic`. Movement modes leave
+ * characteristic storage
  * later. Route them through the movement helpers now, so a test does not change then.
  *
  * Cost totals go through `assertActorTotal`. A total sums every characteristic at once, so it names
@@ -18,15 +23,17 @@
  * and a failure names the characteristic label or movement mode that answered wrong.
  *
  * Quench hands each batch its own `assert`. Bind it once per batch with
- * `createCharacteristicAssertions(assert)`, then call the returned helpers.
+ * `createCharacteristicAssertions(assert)`, then call the returned helpers. The bound set carries
+ * every helper in this file, so a bound suite needs no second import.
  *
  *   const { describe, it, assert } = context;
- *   const chars = createCharacteristicAssertions(assert);
- *   chars.assertCharField(actor, "str", "max", 11);
+ *   const characteristicAssertions = createCharacteristicAssertions(assert);
+ *   characteristicAssertions.assertCharacteristicProperty(actor, "str", "max", 11);
+ *   await characteristicAssertions.updateCharacteristicPropertiesOnActor(actor, "dex", { max: 15 });
  *
  * A "name" is a characteristic label or a movement mode. A helper that reads or writes a node takes
- * either. `assertHasChar` and `assertLacksChar` take a characteristic label, and
- * `assertHasMovementMode` and `assertLacksMovementMode` take a movement mode.
+ * either. `assertHasCharacteristic` and `assertDoesNotHaveCharacteristic` take a characteristic label,
+ * and `assertHasMovementMode` and `assertDoesNotHaveMovementMode` take a movement mode.
  *
  * A name must be a string. Case does not matter: `hasCharacteristic` uppercases and
  * `getCharacteristic` lowercases. This module keeps no name helper, so a non-string fails loudly.
@@ -44,8 +51,8 @@ const MOVEMENT_MODE_NAME = "movement mode";
 /** Words for a parameter that accepts either kind. Used in thrown messages. */
 const EITHER_NAME = "characteristic label or movement mode";
 
-/** Fields a test may assert on a characteristic node. */
-const ASSERTABLE_FIELDS = new FrozenSet([
+/** Properties a test may assert on a characteristic node. */
+const ASSERTABLE_CHARACTERISTIC_PROPERTIES = new FrozenSet([
     "value",
     "max",
     "base",
@@ -57,10 +64,10 @@ const ASSERTABLE_FIELDS = new FrozenSet([
 ]);
 
 /** Actor-level cost totals a test may assert. These sums carry no characteristic label. */
-const ASSERTABLE_TOTAL_FIELDS = new FrozenSet(["realCost", "activePoints"]);
+const ASSERTABLE_ACTOR_TOTAL_PROPERTIES = new FrozenSet(["realCost", "activePoints"]);
 
 /**
- * Read the actor's characteristic node. Use to get `max`, `value`, and the other fields.
+ * Read the actor's characteristic node. Use to get `max`, `value`, and the other properties.
  *
  * A movement mode whose node the schema builds, such as RUNNING, reads through here too.
  *
@@ -69,36 +76,36 @@ const ASSERTABLE_TOTAL_FIELDS = new FrozenSet(["realCost", "activePoints"]);
  *
  * @returns {object|undefined} The node, or undefined when absent.
  */
-export function charNode(actor, name) {
-    requireName(name, "charNode", EITHER_NAME);
+export function getCharacteristicFromActor(actor, name) {
+    requireName(name, "getCharacteristicFromActor", EITHER_NAME);
 
     if (!actor) {
-        throw new Error(`charNode: missing actor for "${name}"`);
+        throw new Error(`getCharacteristicFromActor: missing actor for "${name}"`);
     }
 
-    requireKnownName(actor.system?.characteristics, "charNode", name);
+    requireKnownName(actor.system?.characteristics, "getCharacteristicFromActor", name);
     return actor.getCharacteristic(name);
 }
 
 /**
  * Read the node as the database stores it, with no active effects applied.
  *
- * Use this only to check what a write persisted. Every other read goes through `charNode`, which
- * answers with the value the app plays.
+ * Use this only to check what a write persisted. Every other read goes through
+ * `getCharacteristicFromActor`, which answers with the value the app plays.
  *
  * @param {HeroSystem6eActor} actor Actor to read from.
  * @param {string} name Characteristic label or movement mode. Any case.
  *
  * @returns {object|undefined} The stored node, or undefined when absent.
  */
-export function charSourceNode(actor, name) {
-    requireName(name, "charSourceNode", EITHER_NAME);
+export function getStoredCharacteristicFromActor(actor, name) {
+    requireName(name, "getStoredCharacteristicFromActor", EITHER_NAME);
 
     if (!actor) {
-        throw new Error(`charSourceNode: missing actor for "${name}"`);
+        throw new Error(`getStoredCharacteristicFromActor: missing actor for "${name}"`);
     }
 
-    requireKnownName(actor.system?.characteristics, "charSourceNode", name);
+    requireKnownName(actor.system?.characteristics, "getStoredCharacteristicFromActor", name);
     return actor._source?.system?.characteristics?.[name.toLowerCase()];
 }
 
@@ -110,8 +117,8 @@ export function charSourceNode(actor, name) {
  *
  * @returns {number|undefined} The value, or undefined when the node is absent.
  */
-export function charValue(actor, name) {
-    return charNode(actor, name)?.value;
+export function getCharacteristicValueFromActor(actor, name) {
+    return getCharacteristicFromActor(actor, name)?.value;
 }
 
 /**
@@ -122,45 +129,47 @@ export function charValue(actor, name) {
  *
  * @returns {number|undefined} The max, or undefined when the node is absent.
  */
-export function charMax(actor, name) {
-    return charNode(actor, name)?.max;
+export function getCharacteristicMaxFromActor(actor, name) {
+    return getCharacteristicFromActor(actor, name)?.max;
 }
 
 /**
- * Write one characteristic field on an unsaved actor, in place.
+ * Write characteristic properties on an unsaved actor, in place.
  *
  * A fixture built with `new HeroSystem6eActor()` has no id, so `actor.update()` cannot persist to
- * it. Seed the value before the fixture adds items, then read it back with `charNode`. Pass a saved
- * actor and this helper refuses: use `setChar`, which runs the update funnel.
+ * it. Seed the properties before the fixture adds items, then read them back with
+ * `getCharacteristicFromActor`. Pass a saved actor and this helper refuses: use
+ * `updateCharacteristicPropertiesOnActor`, which runs the update funnel.
  *
  * @param {HeroSystem6eActor} actor Unsaved actor to seed.
  * @param {string} name Characteristic label or movement mode. Any case.
- * @param {number} value Value to write.
- * @param {object} [options]
- * @param {string} [options.field] Field to write. Defaults to `value`.
+ * @param {Object<string, number>} properties Property name mapped to the value to write, for
+ *                    example `{ max: 15 }`. Name every property. At least one is required.
  */
-export function seedChar(actor, name, value, { field = "value" } = {}) {
-    requireName(name, "seedChar", EITHER_NAME);
-
-    if (!ASSERTABLE_FIELDS.has(field)) {
-        throw new Error(`seedChar: unknown field "${field}" for ${name}`);
-    }
+export function setCharacteristicPropertiesOnUnsavedActor(actor, name, properties) {
+    requireName(name, "setCharacteristicPropertiesOnUnsavedActor", EITHER_NAME);
+    requireProperties("setCharacteristicPropertiesOnUnsavedActor", name, properties);
 
     if (!actor) {
-        throw new Error(`seedChar: missing actor for ${name}`);
+        throw new Error(`setCharacteristicPropertiesOnUnsavedActor: missing actor for ${name}`);
     }
 
     if (actor.id) {
-        throw new Error(`seedChar: ${actor.name} is saved. Use setChar, which runs the update funnel.`);
+        throw new Error(
+            `setCharacteristicPropertiesOnUnsavedActor: ${actor.name} is saved. ` +
+                "Use updateCharacteristicPropertiesOnActor, which runs the update funnel.",
+        );
     }
 
     const node = actor.system?.characteristics?.[name.toLowerCase()];
 
     if (!node) {
-        throw new Error(`seedChar: ${actor.name} has no "${name}" node to seed`);
+        throw new Error(`setCharacteristicPropertiesOnUnsavedActor: ${actor.name} has no "${name}" node to seed`);
     }
 
-    node[field] = value;
+    for (const [property, value] of Object.entries(properties)) {
+        node[property] = value;
+    }
 }
 
 /**
@@ -176,97 +185,97 @@ export function seedChar(actor, name, value, { field = "value" } = {}) {
  *
  * @returns {string[]} Uppercase names.
  */
-export function usableNames(actor) {
+export function getUsableNamesFromActor(actor) {
     if (!actor) {
-        throw new Error("usableNames: missing actor");
+        throw new Error("getUsableNamesFromActor: missing actor");
     }
 
     return getCharacteristicInfoArrayForActor(actor).map((info) => info.key.toUpperCase());
 }
 
 /**
- * Ask whether this actor type may hold a characteristic or move that way.
+ * Ask whether this actor has a characteristic or may move that way.
  *
  * The one door to `Actor#hasCharacteristic`. Keep the question here, so a semantics change lands in
  * one place. A "yes" answers permission, not purchase: every actor type stores a node for every
- * label, so a stored node proves nothing. Read a value with `charValue` to learn what the actor bought.
+ * label, so a stored node proves nothing. Read a value with `getCharacteristicValueFromActor` to
+ * learn what the actor bought.
  *
  * @param {HeroSystem6eActor} actor Actor to ask.
  * @param {string} name Characteristic label or movement mode. Any case.
  *
- * @returns {boolean} True when the actor type may hold the name.
+ * @returns {boolean} True when the actor has the name.
  */
-export function hasChar(actor, name) {
-    requireName(name, "hasChar", EITHER_NAME);
+export function actorHasCharacteristic(actor, name) {
+    requireName(name, "actorHasCharacteristic", EITHER_NAME);
 
     if (!actor) {
-        throw new Error(`hasChar: missing actor for ${name}`);
+        throw new Error(`actorHasCharacteristic: missing actor for ${name}`);
     }
 
     return actor.hasCharacteristic(name);
 }
 
 /**
- * Write one characteristic field through the update funnel.
+ * Write characteristic properties through the update funnel.
  *
  * Never assigns to the model. A direct write skips `_preUpdate`, so a test can
  * reach a state the app cannot produce.
  *
  * @param {HeroSystem6eActor} actor
  * @param {string} name Characteristic label or movement mode. Any case.
- * @param {number} value Value to write.
- * @param {object} [options]
- * @param {string} [options.field] Field to write. Defaults to `value`.
- * @param {object} [options.updateOptions] Options forwarded to `actor.update`.
+ * @param {Object<string, number>} properties Property name mapped to the value to write, for
+ *                    example `{ max: 15 }`. Name every property. At least one is required.
+ * @param {object} [updateOptions] Options forwarded to `actor.update`. Omit it for the Foundry
+ *                    defaults.
  *
  * @returns {Promise<HeroSystem6eActor>} The updated actor.
  */
-export async function setChar(actor, name, value, { field = "value", updateOptions = {} } = {}) {
-    requireName(name, "setChar", EITHER_NAME);
-
-    if (!ASSERTABLE_FIELDS.has(field)) {
-        throw new Error(`setChar: unknown field "${field}" for ${name}`);
-    }
+export async function updateCharacteristicPropertiesOnActor(actor, name, properties, updateOptions) {
+    requireName(name, "updateCharacteristicPropertiesOnActor", EITHER_NAME);
+    requireProperties("updateCharacteristicPropertiesOnActor", name, properties);
 
     if (!actor) {
-        throw new Error(`setChar: missing actor for ${name}`);
+        throw new Error(`updateCharacteristicPropertiesOnActor: missing actor for ${name}`);
     }
 
-    requireKnownName(actor.system?.characteristics, "setChar", name);
-    return actor.updateCharacteristics([[name.toLowerCase(), { [field]: value }]], updateOptions);
+    requireKnownName(actor.system?.characteristics, "updateCharacteristicPropertiesOnActor", name);
+
+    return actor.updateCharacteristics([[name.toLowerCase(), properties]], updateOptions);
 }
 
 /**
- * Write several characteristic values in one update.
+ * Write several characteristics in one update.
  *
- *   await chars.setChars(actor, { stun: -5, end: 10 });
+ * Each entry names one characteristic and the properties to write on it, so one call can move the
+ * max of one name and the value of another.
+ *
+ *   await updateMultipleCharacteristicsOnActor(actor, { stun: { value: -5 }, end: { value: 10 } });
  *
  * @param {HeroSystem6eActor} actor
- * @param {Object<string, number>} values Maps a characteristic label or movement mode to its value.
- * @param {object} [options]
- * @param {string} [options.field] Field to write for every name. Defaults to `value`.
- * @param {object} [options.updateOptions] Options forwarded to `actor.update`.
+ * @param {Object<string, Object<string, number>>} characteristics Characteristic label or movement
+ *                    mode mapped to the properties to write on it. Name every property. At least one
+ *                    characteristic with at least one property is required.
+ * @param {object} [updateOptions] Options forwarded to `actor.update`. Omit it for the Foundry
+ *                    defaults.
  *
  * @returns {Promise<HeroSystem6eActor>} The updated actor.
  */
-export async function setChars(actor, values, { field = "value", updateOptions = {} } = {}) {
-    if (!ASSERTABLE_FIELDS.has(field)) {
-        throw new Error(`setChars: unknown field "${field}". Assertable fields: ${[...ASSERTABLE_FIELDS].join(", ")}.`);
-    }
-
+export async function updateMultipleCharacteristicsOnActor(actor, characteristics, updateOptions) {
     if (!actor) {
-        throw new Error("setChars: missing actor");
+        throw new Error("updateMultipleCharacteristicsOnActor: missing actor");
     }
 
-    for (const name of Object.keys(values)) {
-        requireName(name, "setChars", EITHER_NAME);
-        requireKnownName(actor.system?.characteristics, "setChars", name);
-    }
+    const tuplets = Object.entries(characteristics).map(([name, properties]) => {
+        requireName(name, "updateMultipleCharacteristicsOnActor", EITHER_NAME);
+        requireProperties("updateMultipleCharacteristicsOnActor", name, properties);
+        requireKnownName(actor.system?.characteristics, "updateMultipleCharacteristicsOnActor", name);
 
-    const tuplets = Object.entries(values).map(([name, value]) => [name.toLowerCase(), { [field]: value }]);
+        return [name.toLowerCase(), properties];
+    });
 
     if (tuplets.length === 0) {
-        throw new Error("setChars: pass at least one characteristic");
+        throw new Error("updateMultipleCharacteristicsOnActor: pass at least one characteristic");
     }
 
     return actor.updateCharacteristics(tuplets, updateOptions);
@@ -288,15 +297,15 @@ export function createCharacteristicAssertions(assert) {
      * Assert the actor has this characteristic.
      *
      * @param {HeroSystem6eActor} actor
-     * @param {string} label Characteristic label. Any case.
+     * @param {string} characteristic Characteristic label. Any case.
      * @param {string} [message] Overrides the generated failure message.
      */
-    function assertHasChar(actor, label, message) {
-        requireName(label, "assertHasChar", CHARACTERISTIC_NAME);
-        const has = actor.hasCharacteristic(label);
+    function assertHasCharacteristic(actor, characteristic, message) {
+        requireName(characteristic, "assertHasCharacteristic", CHARACTERISTIC_NAME);
+        const has = actor.hasCharacteristic(characteristic);
         assert.isTrue(
             has,
-            message ?? `${actor.detailedName()} ${label}: expected the actor to have this characteristic`,
+            message ?? `${actor.detailedName()} ${characteristic}: expected the actor to have this characteristic`,
         );
     }
 
@@ -304,15 +313,15 @@ export function createCharacteristicAssertions(assert) {
      * Assert the actor does not have this characteristic.
      *
      * @param {HeroSystem6eActor} actor
-     * @param {string} label Characteristic label. Any case.
+     * @param {string} characteristic Characteristic label. Any case.
      * @param {string} [message] Overrides the generated failure message.
      */
-    function assertLacksChar(actor, label, message) {
-        requireName(label, "assertLacksChar", CHARACTERISTIC_NAME);
-        const has = actor.hasCharacteristic(label);
+    function assertDoesNotHaveCharacteristic(actor, characteristic, message) {
+        requireName(characteristic, "assertDoesNotHaveCharacteristic", CHARACTERISTIC_NAME);
+        const has = actor.hasCharacteristic(characteristic);
         assert.isFalse(
             has,
-            message ?? `${actor.detailedName()} ${label}: expected the actor to lack this characteristic`,
+            message ?? `${actor.detailedName()} ${characteristic}: expected the actor not to have this characteristic`,
         );
     }
 
@@ -336,17 +345,17 @@ export function createCharacteristicAssertions(assert) {
      * @param {string} mode Movement mode. Any case.
      * @param {string} [message] Overrides the generated failure message.
      */
-    function assertLacksMovementMode(actor, mode, message) {
-        requireName(mode, "assertLacksMovementMode", MOVEMENT_MODE_NAME);
+    function assertDoesNotHaveMovementMode(actor, mode, message) {
+        requireName(mode, "assertDoesNotHaveMovementMode", MOVEMENT_MODE_NAME);
         const has = actor.hasMovementCharacteristic(mode);
         assert.isFalse(
             has,
-            message ?? `${actor.detailedName()} ${mode}: expected the actor to lack this movement mode`,
+            message ?? `${actor.detailedName()} ${mode}: expected the actor not to have this movement mode`,
         );
     }
 
     /**
-     * Assert one field on one characteristic node.
+     * Assert one property on one characteristic node.
      *
      * Pass a movement mode for a mode the schema builds a node for, such as LEAPING. Assert
      * possession through a movement helper. This helper reads the node, and every actor type stores a
@@ -354,25 +363,25 @@ export function createCharacteristicAssertions(assert) {
      *
      * @param {HeroSystem6eActor} actor
      * @param {string} name Characteristic label or movement mode. Any case.
-     * @param {string} field Field name. Must be in ASSERTABLE_FIELDS.
+     * @param {string} property Property name. Must be in ASSERTABLE_CHARACTERISTIC_PROPERTIES.
      * @param {number|null} expected Expected value.
      * @param {string} [message] Overrides the generated failure message.
      */
-    function assertCharField(actor, name, field, expected, message) {
-        if (!ASSERTABLE_FIELDS.has(field)) {
+    function assertCharacteristicProperty(actor, name, property, expected, message) {
+        if (!ASSERTABLE_CHARACTERISTIC_PROPERTIES.has(property)) {
             throw new Error(
-                `assertCharField: unknown field "${field}" for ${name}. ` +
-                    `Assertable fields: ${[...ASSERTABLE_FIELDS].join(", ")}.`,
+                `assertCharacteristicProperty: unknown property "${property}" for ${name}. ` +
+                    `Assertable properties: ${[...ASSERTABLE_CHARACTERISTIC_PROPERTIES].join(", ")}.`,
             );
         }
-        const node = charNode(actor, name);
+        const node = getCharacteristicFromActor(actor, name);
 
         if (node === undefined || node === null) {
             assert.fail(`${actor.detailedName()} ${name}: no characteristic node. Assert possession first.`);
             return; // Chai throws above. The guard keeps the read safe if a caller swaps in a non-throwing assert.
         }
 
-        assert.equal(node[field], expected, message ?? `${actor.detailedName()} ${name}.${field}`);
+        assert.equal(node[property], expected, message ?? `${actor.detailedName()} ${name}.${property}`);
     }
 
     /**
@@ -382,22 +391,22 @@ export function createCharacteristicAssertions(assert) {
      * per-name claims, so a cost change reports both the name that moved and the sum it changed.
      *
      * @param {HeroSystem6eActor} actor
-     * @param {string} field Total name. Must be in ASSERTABLE_TOTAL_FIELDS.
+     * @param {string} property Total name. Must be in ASSERTABLE_ACTOR_TOTAL_PROPERTIES.
      * @param {number} expected Expected value.
      * @param {string} [message] Overrides the generated failure message.
      */
-    function assertActorTotal(actor, field, expected, message) {
-        if (!ASSERTABLE_TOTAL_FIELDS.has(field)) {
+    function assertActorTotal(actor, property, expected, message) {
+        if (!ASSERTABLE_ACTOR_TOTAL_PROPERTIES.has(property)) {
             throw new Error(
-                `assertActorTotal: unknown total "${field}". Assertable totals: ${[...ASSERTABLE_TOTAL_FIELDS].join(", ")}.`,
+                `assertActorTotal: unknown total "${property}". Assertable totals: ${[...ASSERTABLE_ACTOR_TOTAL_PROPERTIES].join(", ")}.`,
             );
         }
 
         if (!actor) {
-            throw new Error(`assertActorTotal: missing actor for "${field}"`);
+            throw new Error(`assertActorTotal: missing actor for "${property}"`);
         }
 
-        assert.equal(actor[field], expected, message ?? `${actor.name}: expected ${field} ${expected}`);
+        assert.equal(actor[property], expected, message ?? `${actor.name}: expected ${property} ${expected}`);
     }
 
     /**
@@ -411,7 +420,7 @@ export function createCharacteristicAssertions(assert) {
      */
     function assertExactUsableSet(actor, expectedNames) {
         const expected = [...new Set(expectedNames.map((one) => one.toUpperCase()))].sort();
-        const actual = [...new Set(usableNames(actor))].sort();
+        const actual = [...new Set(getUsableNamesFromActor(actor))].sort();
 
         const missing = expected.filter((name) => !actual.includes(name));
         const extra = actual.filter((name) => !expected.includes(name));
@@ -434,21 +443,22 @@ export function createCharacteristicAssertions(assert) {
     }
 
     return {
-        charNode,
-        charSourceNode,
-        charValue,
-        charMax,
-        seedChar,
-        usableNames,
-        assertHasChar,
-        assertLacksChar,
-        assertCharField,
+        getCharacteristicFromActor,
+        getStoredCharacteristicFromActor,
+        getCharacteristicValueFromActor,
+        getCharacteristicMaxFromActor,
+        setCharacteristicPropertiesOnUnsavedActor,
+        getUsableNamesFromActor,
+        actorHasCharacteristic,
+        assertHasCharacteristic,
+        assertDoesNotHaveCharacteristic,
+        assertCharacteristicProperty,
         assertActorTotal,
         assertHasMovementMode,
-        assertLacksMovementMode,
+        assertDoesNotHaveMovementMode,
         assertExactUsableSet,
-        setChar,
-        setChars,
+        updateCharacteristicPropertiesOnActor,
+        updateMultipleCharacteristicsOnActor,
     };
 }
 
@@ -466,10 +476,37 @@ function requireName(name, caller, kind) {
 }
 
 /**
+ * Reject a property object that holds nothing, or holds a property no test may assert.
+ *
+ * @param {string} caller Name shown in the thrown message.
+ * @param {string} name Characteristic label or movement mode the properties belong to.
+ * @param {object} properties Property name mapped to its value.
+ */
+function requireProperties(caller, name, properties) {
+    const keys = Object.keys(properties ?? {});
+
+    if (keys.length === 0) {
+        throw new Error(
+            `${caller}: ${name} needs at least one property, such as { value: 15 }. ` +
+                `Assertable properties: ${[...ASSERTABLE_CHARACTERISTIC_PROPERTIES].join(", ")}.`,
+        );
+    }
+
+    const unknown = keys.filter((property) => !ASSERTABLE_CHARACTERISTIC_PROPERTIES.has(property));
+
+    if (unknown.length > 0) {
+        throw new Error(
+            `${caller}: unknown properties ${unknown.join(", ")} for ${name}. ` +
+                `Assertable properties: ${[...ASSERTABLE_CHARACTERISTIC_PROPERTIES].join(", ")}.`,
+        );
+    }
+}
+
+/**
  * Refuse a name the model has no node for.
  *
  * Every actor type and both editions store a node for the same 30 names, so a miss means a typo, not a
- * characteristic the actor lacks. Ask `hasChar` the ownership question.
+ * characteristic the actor lacks. Ask `actorHasCharacteristic` the ownership question.
  *
  * @param {object|undefined} nodes Characteristic map, from `actor.system.characteristics`.
  * @param {string} caller Name shown in the thrown message.

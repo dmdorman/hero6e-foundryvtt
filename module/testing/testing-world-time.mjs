@@ -1,6 +1,10 @@
 import { HEROSYS } from "../herosystem6e.mjs";
 import { setQuenchTimeout } from "./quench-helper.mjs";
-import { charMax, charValue, setChars } from "./characteristic-assertions.mjs";
+import {
+    getCharacteristicMaxFromActor,
+    getCharacteristicValueFromActor,
+    updateMultipleCharacteristicsOnActor,
+} from "./characteristic-assertions.mjs";
 
 const { Actor } = foundry.documents;
 
@@ -64,15 +68,15 @@ export function registerWorldTimeRecoveryAndExpiryTests(quench) {
                 });
 
                 it("Should recover STUN/END every 12 seconds out of combat, banking remainder seconds", async function () {
-                    const rec = parseInt(charValue(testActor, "REC"));
+                    const rec = parseInt(getCharacteristicValueFromActor(testActor, "REC"));
                     assert.isAbove(rec, 0, "Test actor needs positive REC.");
 
-                    const stunMax = parseInt(charMax(testActor, "STUN"));
-                    const endMax = parseInt(charMax(testActor, "END"));
+                    const stunMax = parseInt(getCharacteristicMaxFromActor(testActor, "STUN"));
+                    const endMax = parseInt(getCharacteristicMaxFromActor(testActor, "END"));
                     assert.isAtLeast(stunMax, 3 * rec + 2, "Test actor needs STUN headroom for 3 recoveries.");
                     assert.isAtLeast(endMax, 3 * rec + 2, "Test actor needs END headroom for 3 recoveries.");
 
-                    await setChars(testActor, { STUN: 2, END: 2 });
+                    await updateMultipleCharacteristicsOnActor(testActor, { STUN: { value: 2 }, END: { value: 2 } });
 
                     // The recovery accumulator is module-level state with an unknown remainder
                     // banked from prior time advances. Step one second at a time until a recovery
@@ -80,22 +84,24 @@ export function registerWorldTimeRecoveryAndExpiryTests(quench) {
                     let calibrated = false;
                     for (let i = 0; i < 13 && !calibrated; i++) {
                         await game.time.advance(1);
-                        calibrated = await settle(() => charValue(testActor, "STUN") > 2, 400);
+                        calibrated = await settle(() => getCharacteristicValueFromActor(testActor, "STUN") > 2, 400);
                     }
                     assert.isTrue(calibrated, "Expected an out-of-combat recovery within 13 one-second advances.");
 
-                    const stunAfterCalibration = parseInt(charValue(testActor, "STUN"));
-                    const endAfterCalibration = parseInt(charValue(testActor, "END"));
+                    const stunAfterCalibration = parseInt(getCharacteristicValueFromActor(testActor, "STUN"));
+                    const endAfterCalibration = parseInt(getCharacteristicValueFromActor(testActor, "END"));
 
                     // A single 25 second advance is two 12 second recoveries with 1 second banked.
                     await game.time.advance(25);
                     assert.isTrue(
-                        await settle(() => charValue(testActor, "STUN") === stunAfterCalibration + 2 * rec),
+                        await settle(
+                            () => getCharacteristicValueFromActor(testActor, "STUN") === stunAfterCalibration + 2 * rec,
+                        ),
                         `Expected exactly two recoveries (+${2 * rec} STUN) from a 25 second advance. ` +
-                            `STUN=${charValue(testActor, "STUN")} expected=${stunAfterCalibration + 2 * rec}`,
+                            `STUN=${getCharacteristicValueFromActor(testActor, "STUN")} expected=${stunAfterCalibration + 2 * rec}`,
                     );
                     assert.equal(
-                        parseInt(charValue(testActor, "END")),
+                        parseInt(getCharacteristicValueFromActor(testActor, "END")),
                         endAfterCalibration + 2 * rec,
                         "Expected exactly two recoveries of END from a 25 second advance.",
                     );
@@ -103,7 +109,9 @@ export function registerWorldTimeRecoveryAndExpiryTests(quench) {
                     // The banked second plus 11 more crosses the next 12 second boundary.
                     await game.time.advance(11);
                     assert.isTrue(
-                        await settle(() => charValue(testActor, "STUN") === stunAfterCalibration + 3 * rec),
+                        await settle(
+                            () => getCharacteristicValueFromActor(testActor, "STUN") === stunAfterCalibration + 3 * rec,
+                        ),
                         "Expected the banked remainder second to count toward the next recovery (1 banked + 11 = 12).",
                     );
                 });

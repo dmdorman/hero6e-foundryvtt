@@ -3,7 +3,13 @@ import { expireEffects, getPowerInfo } from "../utility/util.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { _onApplyAdjustmentToSpecificToken } from "../item/item-attack.mjs";
 import { setQuenchTimeout } from "./quench-helper.mjs";
-import { charMax, charNode, charValue, setChar, setChars } from "./characteristic-assertions.mjs";
+import {
+    getCharacteristicMaxFromActor,
+    getCharacteristicFromActor,
+    getCharacteristicValueFromActor,
+    updateCharacteristicPropertiesOnActor,
+    updateMultipleCharacteristicsOnActor,
+} from "./characteristic-assertions.mjs";
 
 const { Actor } = foundry.documents;
 
@@ -317,7 +323,8 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                      */
                     const awaitCharacteristicSettle = async (targetActor, characteristicKey, expectedValue) => {
                         for (let i = 0; i < 20; i++) {
-                            if (charNode(targetActor, characteristicKey).value === expectedValue) return;
+                            if (getCharacteristicFromActor(targetActor, characteristicKey).value === expectedValue)
+                                return;
                             await new Promise((resolve) => setTimeout(resolve, 50));
                             targetActor.reset();
                         }
@@ -385,7 +392,7 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         if (finalActor) {
                             finalActor.reset();
                             assert.equal(
-                                charNode(finalActor, characteristicKey).value,
+                                getCharacteristicFromActor(finalActor, characteristicKey).value,
                                 baselineValue,
                                 "Return to base check.",
                             );
@@ -402,8 +409,16 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         actor.reset();
 
                         // Baseline Verification: Both current value and maximum bounds must start at standard baseline (10)
-                        assert.equal(charValue(actor, "STR"), 10, "Initial current 6e STR value must be 10.");
-                        assert.equal(charMax(actor, "STR"), 10, "Initial maximum 6e STR boundary must be 10.");
+                        assert.equal(
+                            getCharacteristicValueFromActor(actor, "STR"),
+                            10,
+                            "Initial current 6e STR value must be 10.",
+                        );
+                        assert.equal(
+                            getCharacteristicMaxFromActor(actor, "STR"),
+                            10,
+                            "Initial maximum 6e STR boundary must be 10.",
+                        );
 
                         // ─── SECOND 0: DOSE 1 INJECTION ───
                         const ae1 = await applyMockAidValue(8);
@@ -412,11 +427,15 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
 
                         assert.equal(ae1.changes[0].value, 8, "Dose 1 internal change value should start at 8.");
                         console.log(
-                            `[HERO-DEBUG-6E-LINEAR] Sec 0 | Added Dose 1 (8 AP) | Sheet STR: ${charValue(actor, "STR")} / Max: ${charMax(actor, "STR")}`,
+                            `[HERO-DEBUG-6E-LINEAR] Sec 0 | Added Dose 1 (8 AP) | Sheet STR: ${getCharacteristicValueFromActor(actor, "STR")} / Max: ${getCharacteristicMaxFromActor(actor, "STR")}`,
                         );
-                        assert.equal(charValue(actor, "STR"), 18, "Sec 0 Value Check: Expected STR to be 18.");
                         assert.equal(
-                            charMax(actor, "STR"),
+                            getCharacteristicValueFromActor(actor, "STR"),
+                            18,
+                            "Sec 0 Value Check: Expected STR to be 18.",
+                        );
+                        assert.equal(
+                            getCharacteristicMaxFromActor(actor, "STR"),
                             18,
                             "Sec 0 Max Boundary Check: Expected STR max to scale to 18.",
                         );
@@ -429,15 +448,15 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
 
                         assert.equal(ae2.changes[0].value, 9, "Dose 2 internal change value should start at 9.");
                         console.log(
-                            `[HERO-DEBUG-6E-LINEAR] Sec 1 | Added Dose 2 (9 AP) | Sheet STR: ${charValue(actor, "STR")} / Max: ${charMax(actor, "STR")}`,
+                            `[HERO-DEBUG-6E-LINEAR] Sec 1 | Added Dose 2 (9 AP) | Sheet STR: ${getCharacteristicValueFromActor(actor, "STR")} / Max: ${getCharacteristicMaxFromActor(actor, "STR")}`,
                         );
                         assert.equal(
-                            charValue(actor, "STR"),
+                            getCharacteristicValueFromActor(actor, "STR"),
                             27,
                             "Sec 1 Value Check: Expected STR to accumulate to 27.",
                         );
                         assert.equal(
-                            charMax(actor, "STR"),
+                            getCharacteristicMaxFromActor(actor, "STR"),
                             27,
                             "Sec 1 Max Boundary Check: Expected STR max to accumulate to 27.",
                         );
@@ -450,15 +469,15 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
 
                         assert.equal(ae3.changes[0].value, 7, "Dose 3 internal change value should be truncated to 7.");
                         console.log(
-                            `[HERO-DEBUG-6E-LINEAR] Sec 2 | Added Dose 3 (Truncated to 7 AP) | Sheet STR: ${charValue(actor, "STR")} / Max: ${charMax(actor, "STR")}`,
+                            `[HERO-DEBUG-6E-LINEAR] Sec 2 | Added Dose 3 (Truncated to 7 AP) | Sheet STR: ${getCharacteristicValueFromActor(actor, "STR")} / Max: ${getCharacteristicMaxFromActor(actor, "STR")}`,
                         );
                         assert.equal(
-                            charValue(actor, "STR"),
+                            getCharacteristicValueFromActor(actor, "STR"),
                             34,
                             "Sec 2 Value Check: Expected STR to hit maximum effect at 34.",
                         );
                         assert.equal(
-                            charMax(actor, "STR"),
+                            getCharacteristicMaxFromActor(actor, "STR"),
                             34,
                             "Sec 2 Max Boundary Check: Expected STR max to hit maximum effect at 34.",
                         );
@@ -467,8 +486,16 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         for (let sec = 3; sec <= 11; sec++) {
                             await stepTimeOneSecond(1);
                             actor.reset();
-                            assert.equal(charValue(actor, "STR"), 34, `Sec ${sec} Value Hold Check failed.`);
-                            assert.equal(charMax(actor, "STR"), 34, `Sec ${sec} Max Boundary Hold Check failed.`);
+                            assert.equal(
+                                getCharacteristicValueFromActor(actor, "STR"),
+                                34,
+                                `Sec ${sec} Value Hold Check failed.`,
+                            );
+                            assert.equal(
+                                getCharacteristicMaxFromActor(actor, "STR"),
+                                34,
+                                `Sec ${sec} Max Boundary Hold Check failed.`,
+                            );
                         }
 
                         // ─── SECOND 12: DOSE 1 CHRONOLOGICAL DECAY ───
@@ -492,17 +519,17 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         );
                         await awaitCharacteristicSettle(actor, "str", 29);
                         console.log(
-                            `[HERO-DEBUG-6E-LINEAR] Sec 12 | Dose 1 Decay (Pool: 19 AP) | Sheet STR: ${charValue(actor, "STR")} / Max: ${charMax(actor, "STR")}`,
+                            `[HERO-DEBUG-6E-LINEAR] Sec 12 | Dose 1 Decay (Pool: 19 AP) | Sheet STR: ${getCharacteristicValueFromActor(actor, "STR")} / Max: ${getCharacteristicMaxFromActor(actor, "STR")}`,
                         );
 
                         // Double-Check Node Verification: Symmetrical decay evaluation
                         assert.equal(
-                            charMax(actor, "STR"),
+                            getCharacteristicMaxFromActor(actor, "STR"),
                             29,
                             "Sec 12 Max Check: Expected STR max to drop symmetrically to 29.",
                         );
                         assert.equal(
-                            charValue(actor, "STR"),
+                            getCharacteristicValueFromActor(actor, "STR"),
                             29,
                             "Sec 12 Value Check: Expected current STR value to drop symmetrically to 29.",
                         );
@@ -528,12 +555,16 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         );
                         await awaitCharacteristicSettle(actor, "str", 24);
                         console.log(
-                            `[HERO-DEBUG-6E-LINEAR] Sec 13 | Dose 2 Decay (Pool: 14 AP) | Sheet STR: ${charValue(actor, "STR")} / Max: ${charMax(actor, "STR")}`,
+                            `[HERO-DEBUG-6E-LINEAR] Sec 13 | Dose 2 Decay (Pool: 14 AP) | Sheet STR: ${getCharacteristicValueFromActor(actor, "STR")} / Max: ${getCharacteristicMaxFromActor(actor, "STR")}`,
                         );
 
-                        assert.equal(charMax(actor, "STR"), 24, "Sec 13 Max Check: Expected STR max to drop to 24.");
                         assert.equal(
-                            charValue(actor, "STR"),
+                            getCharacteristicMaxFromActor(actor, "STR"),
+                            24,
+                            "Sec 13 Max Check: Expected STR max to drop to 24.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(actor, "STR"),
                             24,
                             "Sec 13 Value Check: Expected current STR value to drop to 24.",
                         );
@@ -559,12 +590,16 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         );
                         await awaitCharacteristicSettle(actor, "str", 19);
                         console.log(
-                            `[HERO-DEBUG-6E-LINEAR] Sec 14 | Dose 3 Decay (Pool: 9 AP) | Sheet STR: ${charValue(actor, "STR")} / Max: ${charMax(actor, "STR")}`,
+                            `[HERO-DEBUG-6E-LINEAR] Sec 14 | Dose 3 Decay (Pool: 9 AP) | Sheet STR: ${getCharacteristicValueFromActor(actor, "STR")} / Max: ${getCharacteristicMaxFromActor(actor, "STR")}`,
                         );
 
-                        assert.equal(charMax(actor, "STR"), 19, "Sec 14 Max Check: Expected STR max to hold at 19.");
                         assert.equal(
-                            charValue(actor, "STR"),
+                            getCharacteristicMaxFromActor(actor, "STR"),
+                            19,
+                            "Sec 14 Max Check: Expected STR max to hold at 19.",
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(actor, "STR"),
                             19,
                             "Sec 14 Value Check: Expected current STR value to hold at 19.",
                         );
@@ -585,7 +620,7 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                             "Dose 1 failed to prune itself completely from the database collection after fading to 0.",
                         );
                         console.log(
-                            `[HERO-DEBUG-6E-LINEAR] Sec 24 | Dose 1 Pruned | Sheet STR: ${charValue(actor, "STR")} / Max: ${charMax(actor, "STR")}`,
+                            `[HERO-DEBUG-6E-LINEAR] Sec 24 | Dose 1 Pruned | Sheet STR: ${getCharacteristicValueFromActor(actor, "STR")} / Max: ${getCharacteristicMaxFromActor(actor, "STR")}`,
                         );
                     });
 
@@ -595,7 +630,7 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         // Explicitly force the target configuration back to STR
                         await createdItem.update({ "system.INPUT": "STR" });
 
-                        const strBefore = charValue(testActor, "STR");
+                        const strBefore = getCharacteristicValueFromActor(testActor, "STR");
                         let currentActor = await initializeTestTokenAndDoses();
 
                         let totalElapsedSeconds = 3;
@@ -611,7 +646,7 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         }
 
                         assert.equal(
-                            charValue(currentActor, "STR"),
+                            getCharacteristicValueFromActor(currentActor, "STR"),
                             strBefore + 19,
                             "Sec 13 initial fade check failed.",
                         );
@@ -638,7 +673,7 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         currentActor.reset();
 
                         assert.equal(
-                            charValue(currentActor, "STR"),
+                            getCharacteristicValueFromActor(currentActor, "STR"),
                             strBefore + 19,
                             "System failed to maintain adjustment stability during clock rewind.",
                         );
@@ -664,12 +699,12 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         await createdItem.update({ "system.INPUT": "SPD", "system.is5e": false });
 
                         console.log(
-                            `[HERO-DEBUG-SPD] Parent Actor Raw baseline SPD before token creation: ${charValue(testActor, "SPD")}`,
+                            `[HERO-DEBUG-SPD] Parent Actor Raw baseline SPD before token creation: ${getCharacteristicValueFromActor(testActor, "SPD")}`,
                         );
 
                         let currentActor = await initializeTestTokenAndDoses();
-                        const spdBefore = charValue(testActor, "SPD");
-                        const rawCurrentSpd = charValue(currentActor, "SPD");
+                        const spdBefore = getCharacteristicValueFromActor(testActor, "SPD");
+                        const rawCurrentSpd = getCharacteristicValueFromActor(currentActor, "SPD");
 
                         console.log(`[HERO-DEBUG-SPD] Computed spdBefore Base: ${spdBefore}`);
                         console.log(`[HERO-DEBUG-SPD] Live Token Sheet Total SPD at Sec 3: ${rawCurrentSpd}`);
@@ -693,7 +728,7 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                             liveActor.reset();
                             currentActor = liveActor;
 
-                            const currentSpd = charValue(currentActor, "SPD");
+                            const currentSpd = getCharacteristicValueFromActor(currentActor, "SPD");
                             console.log(
                                 `[HERO-DEBUG-SPD] Sec ${totalElapsedSeconds} | Current Sheet SPD: ${currentSpd}`,
                             );
@@ -713,18 +748,30 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                                 case 13:
                                     // Dose 1 fades. Pool drops to 19 AP -> trunc(19/10) = +1 SPD bonus (2 + 1 = 3 SPD)
                                     await awaitCharacteristicSettle(currentActor, "spd", 3);
-                                    assert.equal(charValue(currentActor, "SPD"), 3, "Sec 13 Fade Check");
+                                    assert.equal(
+                                        getCharacteristicValueFromActor(currentActor, "SPD"),
+                                        3,
+                                        "Sec 13 Fade Check",
+                                    );
                                     break;
                                 case 14:
                                     // Dose 2 fades. Pool drops to 14 AP -> trunc(14/10) still grants +1 once the
                                     // cumulative recalc settles (per-effect truncation briefly shows less).
                                     await awaitCharacteristicSettle(currentActor, "spd", 3);
-                                    assert.equal(charValue(currentActor, "SPD"), 3, "Sec 14 Fade Check");
+                                    assert.equal(
+                                        getCharacteristicValueFromActor(currentActor, "SPD"),
+                                        3,
+                                        "Sec 14 Fade Check",
+                                    );
                                     break;
                                 case 15:
                                     // Dose 3 fades. Pool drops to 9 AP -> trunc(9/10) = +0, back to base 2 SPD.
                                     await awaitCharacteristicSettle(currentActor, "spd", 2);
-                                    assert.equal(charValue(currentActor, "SPD"), 2, "Sec 15 Fade Check");
+                                    assert.equal(
+                                        getCharacteristicValueFromActor(currentActor, "SPD"),
+                                        2,
+                                        "Sec 15 Fade Check",
+                                    );
                                     break;
                                 default:
                                     break;
@@ -742,12 +789,12 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         await createdItem.update({ "system.INPUT": "SPD", "system.is5e": false });
 
                         console.log(
-                            `[HERO-DEBUG-SPD-REWIND] Parent Actor Raw baseline SPD before token creation: ${charValue(testActor, "SPD")}`,
+                            `[HERO-DEBUG-SPD-REWIND] Parent Actor Raw baseline SPD before token creation: ${getCharacteristicValueFromActor(testActor, "SPD")}`,
                         );
 
                         let currentActor = await initializeTestTokenAndDoses();
-                        const spdBefore = charValue(testActor, "SPD");
-                        const rawCurrentSpd = charValue(currentActor, "SPD");
+                        const spdBefore = getCharacteristicValueFromActor(testActor, "SPD");
+                        const rawCurrentSpd = getCharacteristicValueFromActor(currentActor, "SPD");
 
                         console.log(`[HERO-DEBUG-SPD-REWIND] Computed spdBefore Base: ${spdBefore}`);
                         console.log(`[HERO-DEBUG-SPD-REWIND] Live Token Sheet Total SPD at Sec 3: ${rawCurrentSpd}`);
@@ -772,12 +819,12 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                             currentActor = liveActor;
 
                             console.log(
-                                `[HERO-DEBUG-SPD-REWIND] Forward | Sec ${totalElapsedSeconds} | Sheet SPD: ${charValue(currentActor, "SPD")}`,
+                                `[HERO-DEBUG-SPD-REWIND] Forward | Sec ${totalElapsedSeconds} | Sheet SPD: ${getCharacteristicValueFromActor(currentActor, "SPD")}`,
                             );
                         }
 
                         // At Sec 13, Dose 1 fades. Pool drops to 19 AP -> Truncates to +1 SPD bonus (2 + 1 = 3 SPD)
-                        const midSpd = charValue(currentActor, "SPD");
+                        const midSpd = getCharacteristicValueFromActor(currentActor, "SPD");
                         assert.equal(midSpd, 3, "Sec 13 Forward Check failed to truncate to 3 SPD.");
 
                         // ─── PHASE 2: EXECUTE CHRONOLOGICAL REWIND BOUNDARY ───
@@ -795,16 +842,16 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                             currentActor = liveActor;
 
                             console.log(
-                                `[HERO-DEBUG-SPD-REWIND] Rewind | Sec ${totalElapsedSeconds} | Sheet SPD: ${charValue(currentActor, "SPD")}`,
+                                `[HERO-DEBUG-SPD-REWIND] Rewind | Sec ${totalElapsedSeconds} | Sheet SPD: ${getCharacteristicValueFromActor(currentActor, "SPD")}`,
                             );
                         }
 
                         // Enforce the strict non-resurrection constraint: value must remain locked at its current faded value
                         console.log(
-                            `[HERO-DEBUG-SPD-REWIND] Post-Rewind Stability Check at Sec 3 | Sheet SPD: ${charValue(currentActor, "SPD")}`,
+                            `[HERO-DEBUG-SPD-REWIND] Post-Rewind Stability Check at Sec 3 | Sheet SPD: ${getCharacteristicValueFromActor(currentActor, "SPD")}`,
                         );
                         assert.equal(
-                            charValue(currentActor, "SPD"),
+                            getCharacteristicValueFromActor(currentActor, "SPD"),
                             3,
                             "Chronological rule violation: System modified or gave back SPD points during a timeline rewind loop.",
                         );
@@ -820,7 +867,7 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                             currentActor = liveActor;
 
                             console.log(
-                                `[HERO-DEBUG-SPD-REWIND] Re-March | Sec ${totalElapsedSeconds} | Sheet SPD: ${charValue(currentActor, "SPD")}`,
+                                `[HERO-DEBUG-SPD-REWIND] Re-March | Sec ${totalElapsedSeconds} | Sheet SPD: ${getCharacteristicValueFromActor(currentActor, "SPD")}`,
                             );
                         }
 
@@ -829,7 +876,7 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         // so SPD settles back to its base of 2.
                         await awaitCharacteristicSettle(currentActor, "spd", 2);
                         assert.equal(
-                            charValue(currentActor, "SPD"),
+                            getCharacteristicValueFromActor(currentActor, "SPD"),
                             2,
                             "Timeline forward re-march failed: Aligned matrix calculation drifted after rewind operations.",
                         );
@@ -845,13 +892,13 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         await createdItem.update({ "system.INPUT": "SPD", "system.is5e": true });
 
                         console.log(
-                            `[HERO-DEBUG-5E-SPD] Parent Actor Raw baseline SPD before token creation: ${charValue(testActor, "SPD")}`,
+                            `[HERO-DEBUG-5E-SPD] Parent Actor Raw baseline SPD before token creation: ${getCharacteristicValueFromActor(testActor, "SPD")}`,
                         );
 
                         // Initialize and isolate the live token proxy instance
                         let currentActor = await initializeTestTokenAndDoses();
-                        const spdBefore = charValue(testActor, "SPD");
-                        const rawCurrentSpd = charValue(currentActor, "SPD");
+                        const spdBefore = getCharacteristicValueFromActor(testActor, "SPD");
+                        const rawCurrentSpd = getCharacteristicValueFromActor(currentActor, "SPD");
 
                         console.log(`[HERO-DEBUG-5E-SPD] Computed spdBefore Base: ${spdBefore}`);
                         console.log(`[HERO-DEBUG-5E-SPD] Live Token Sheet Total 5e SPD at Sec 3: ${rawCurrentSpd}`);
@@ -883,7 +930,7 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                             liveActor.reset();
                             currentActor = liveActor;
 
-                            const currentSpd = charValue(currentActor, "SPD");
+                            const currentSpd = getCharacteristicValueFromActor(currentActor, "SPD");
                             console.log(
                                 `[HERO-DEBUG-5E-SPD] Sec ${totalElapsedSeconds} | Current 5e Sheet SPD: ${currentSpd}`,
                             );
@@ -931,18 +978,24 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         actor.reset();
 
                         // Baseline Verification: Confirm base 5e SPD starts at 2
-                        console.log(`[HERO-DEBUG-5E-LINEAR] Baseline SPD: ${charValue(actor, "SPD")}`);
-                        assert.equal(charValue(actor, "SPD"), 2, "Initial baseline 5e SPD must be 2.");
+                        console.log(
+                            `[HERO-DEBUG-5E-LINEAR] Baseline SPD: ${getCharacteristicValueFromActor(actor, "SPD")}`,
+                        );
+                        assert.equal(
+                            getCharacteristicValueFromActor(actor, "SPD"),
+                            2,
+                            "Initial baseline 5e SPD must be 2.",
+                        );
 
                         // ─── SECOND 0 ───
                         // Inject Dose 1: +8 Active Points. 5e Pools fractionally: +0.8 SPD. (2 + 0.8 = 2.8) -> Math.floor rounds to 2 SPD.
                         await applyMockAidValue(8);
                         actor.reset();
                         console.log(
-                            `[HERO-DEBUG-5E-LINEAR] Sec 0 | Added Dose 1 (8 AP) | Sheet SPD: ${charValue(actor, "SPD")}`,
+                            `[HERO-DEBUG-5E-LINEAR] Sec 0 | Added Dose 1 (8 AP) | Sheet SPD: ${getCharacteristicValueFromActor(actor, "SPD")}`,
                         );
                         assert.equal(
-                            Math.floor(charValue(actor, "SPD")),
+                            Math.floor(getCharacteristicValueFromActor(actor, "SPD")),
                             2,
                             "Sec 0 Check: Expected pooled total floor to be 2.",
                         );
@@ -951,10 +1004,10 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         await stepTimeOneSecond(1);
                         actor.reset();
                         console.log(
-                            `[HERO-DEBUG-5E-LINEAR] Sec 1 | Ticked Forward | Sheet SPD: ${charValue(actor, "SPD")}`,
+                            `[HERO-DEBUG-5E-LINEAR] Sec 1 | Ticked Forward | Sheet SPD: ${getCharacteristicValueFromActor(actor, "SPD")}`,
                         );
                         assert.equal(
-                            Math.floor(charValue(actor, "SPD")),
+                            Math.floor(getCharacteristicValueFromActor(actor, "SPD")),
                             2,
                             "Sec 1 Check: Expected pooled total floor to be 2.",
                         );
@@ -963,10 +1016,10 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         await applyMockAidValue(9);
                         actor.reset();
                         console.log(
-                            `[HERO-DEBUG-5E-LINEAR] Sec 1 | Added Dose 2 (9 AP) | Sheet SPD: ${charValue(actor, "SPD")}`,
+                            `[HERO-DEBUG-5E-LINEAR] Sec 1 | Added Dose 2 (9 AP) | Sheet SPD: ${getCharacteristicValueFromActor(actor, "SPD")}`,
                         );
                         assert.equal(
-                            Math.floor(charValue(actor, "SPD")),
+                            Math.floor(getCharacteristicValueFromActor(actor, "SPD")),
                             3,
                             "Sec 1 Post-Dose Check: Expected pooled total floor to be 3.",
                         );
@@ -975,10 +1028,10 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         await stepTimeOneSecond(1);
                         actor.reset();
                         console.log(
-                            `[HERO-DEBUG-5E-LINEAR] Sec 2 | Ticked Forward | Sheet SPD: ${charValue(actor, "SPD")}`,
+                            `[HERO-DEBUG-5E-LINEAR] Sec 2 | Ticked Forward | Sheet SPD: ${getCharacteristicValueFromActor(actor, "SPD")}`,
                         );
                         assert.equal(
-                            Math.floor(charValue(actor, "SPD")),
+                            Math.floor(getCharacteristicValueFromActor(actor, "SPD")),
                             3,
                             "Sec 2 Check: Expected pooled total floor to be 3.",
                         );
@@ -987,10 +1040,10 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         await applyMockAidValue(10);
                         actor.reset();
                         console.log(
-                            `[HERO-DEBUG-5E-LINEAR] Sec 2 | Added Dose 3 (10 AP) | Sheet SPD: ${charValue(actor, "SPD")}`,
+                            `[HERO-DEBUG-5E-LINEAR] Sec 2 | Added Dose 3 (10 AP) | Sheet SPD: ${getCharacteristicValueFromActor(actor, "SPD")}`,
                         );
                         assert.equal(
-                            Math.floor(charValue(actor, "SPD")),
+                            Math.floor(getCharacteristicValueFromActor(actor, "SPD")),
                             4,
                             "Sec 2 Post-Dose Check: Expected pooled total floor to be 4.",
                         );
@@ -1001,9 +1054,13 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                             await stepTimeOneSecond(1);
                             actor.reset();
                             console.log(
-                                `[HERO-DEBUG-5E-LINEAR] Sec ${sec} | Hold Matrix Loop | Sheet SPD: ${charValue(actor, "SPD")}`,
+                                `[HERO-DEBUG-5E-LINEAR] Sec ${sec} | Hold Matrix Loop | Sheet SPD: ${getCharacteristicValueFromActor(actor, "SPD")}`,
                             );
-                            assert.equal(Math.floor(charValue(actor, "SPD")), 4, `Sec ${sec} Hold Check failed.`);
+                            assert.equal(
+                                Math.floor(getCharacteristicValueFromActor(actor, "SPD")),
+                                4,
+                                `Sec ${sec} Hold Check failed.`,
+                            );
                         }
 
                         // ─── SECOND 12: DOSE 1 FADE STEP ───
@@ -1013,10 +1070,10 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         await stepTimeOneSecond(1);
                         await awaitCharacteristicSettle(actor, "spd", 3);
                         console.log(
-                            `[HERO-DEBUG-5E-LINEAR] Sec 12 | First Decay Tick (Pool: 19 AP) | Sheet SPD: ${charValue(actor, "SPD")}`,
+                            `[HERO-DEBUG-5E-LINEAR] Sec 12 | First Decay Tick (Pool: 19 AP) | Sheet SPD: ${getCharacteristicValueFromActor(actor, "SPD")}`,
                         );
                         assert.equal(
-                            Math.floor(charValue(actor, "SPD")),
+                            Math.floor(getCharacteristicValueFromActor(actor, "SPD")),
                             3,
                             "Sec 12 Check: Expected capped pool (19 AP) floor to drop to 3 SPD.",
                         );
@@ -1026,10 +1083,10 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         await stepTimeOneSecond(1);
                         await awaitCharacteristicSettle(actor, "spd", 3);
                         console.log(
-                            `[HERO-DEBUG-5E-LINEAR] Sec 13 | Second Decay Tick (Pool: 14 AP) | Sheet SPD: ${charValue(actor, "SPD")}`,
+                            `[HERO-DEBUG-5E-LINEAR] Sec 13 | Second Decay Tick (Pool: 14 AP) | Sheet SPD: ${getCharacteristicValueFromActor(actor, "SPD")}`,
                         );
                         assert.equal(
-                            Math.floor(charValue(actor, "SPD")),
+                            Math.floor(getCharacteristicValueFromActor(actor, "SPD")),
                             3,
                             "Sec 13 Check: Expected 5e fractional pool floor to hold at 3 SPD.",
                         );
@@ -1039,10 +1096,10 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                         await stepTimeOneSecond(1);
                         await awaitCharacteristicSettle(actor, "spd", 2);
                         console.log(
-                            `[HERO-DEBUG-5E-LINEAR] Sec 14 | Third Decay Tick (Pool: 9 AP) | Sheet SPD: ${charValue(actor, "SPD")}`,
+                            `[HERO-DEBUG-5E-LINEAR] Sec 14 | Third Decay Tick (Pool: 9 AP) | Sheet SPD: ${getCharacteristicValueFromActor(actor, "SPD")}`,
                         );
                         assert.equal(
-                            Math.floor(charValue(actor, "SPD")),
+                            Math.floor(getCharacteristicValueFromActor(actor, "SPD")),
                             2,
                             "Sec 14 Check: Expected 5e fractional pool floor to drop to 2 SPD.",
                         );
@@ -1103,7 +1160,7 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                     });
 
                     it("7 AP BODY drain fades back 5 AP per turn without suppression", async function () {
-                        const body = () => charNode(drainActor, "BODY");
+                        const body = () => getCharacteristicFromActor(drainActor, "BODY");
 
                         // 5e BODY costs 2 CP/point: 7 AP drain removes trunc(7/2) = 3 BODY.
                         await performAdjustment(drainItem, "BODY", -7, "", "", false, drainActor, null);
@@ -1280,13 +1337,13 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                     }
 
                     it("HEALING applies and repeat-heals only above previous total", async function () {
-                        const body = () => charNode(healActor, "BODY");
+                        const body = () => getCharacteristicFromActor(healActor, "BODY");
                         const findHealingEffect = () =>
                             healActor.effects.find((e) => e.flags[game.system.id]?.XMLID === "HEALING");
 
                         const healItem = await makeHealItem();
 
-                        await setChar(healActor, "BODY", 5);
+                        await updateCharacteristicPropertiesOnActor(healActor, "BODY", { value: 5 });
 
                         // 5e BODY costs 2 CP/point: 7 AP heals trunc(7/2) = 3 BODY.
                         await performAdjustment(healItem, "BODY", 7, "", "", false, healActor, null);
@@ -1331,14 +1388,17 @@ export function registerAdjustmentPowerFadeMatrixTests(quench) {
                     // exceeds-previous rule through the reused effect's recorded change; without
                     // reuse the enforcement rests solely on the max clamp.
                     it("HEALING applies same-instant applications per target key", async function () {
-                        const body = () => charNode(healActor, "BODY");
-                        const stun = () => charNode(healActor, "STUN");
+                        const body = () => getCharacteristicFromActor(healActor, "BODY");
+                        const stun = () => getCharacteristicFromActor(healActor, "STUN");
                         const healEffects = () =>
                             healActor.effects.filter((e) => e.flags[game.system.id]?.XMLID === "HEALING");
 
                         const healItem = await makeHealItem();
 
-                        await setChars(healActor, { BODY: 5, STUN: stun().max - 5 });
+                        await updateMultipleCharacteristicsOnActor(healActor, {
+                            BODY: { value: 5 },
+                            STUN: { value: stun().max - 5 },
+                        });
                         const stunBefore = stun().value;
 
                         // 5e BODY costs 2 CP/point: 7 AP heals trunc(7/2) = 3 BODY

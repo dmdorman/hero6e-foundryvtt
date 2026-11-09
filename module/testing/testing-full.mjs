@@ -14,7 +14,7 @@ export function registerFullCharacterTests(quench) {
         `${game.system.id}.utils.full`,
         (context) => {
             const { after, afterEach, assert, before, beforeEach, describe, expect, it } = context;
-            const chars = createCharacteristicAssertions(assert);
+            const characteristicAssertions = createCharacteristicAssertions(assert);
 
             describe("Full Character Tests", function () {
                 // Mocha's 2000ms default is too short when several actors are created at the same time.
@@ -330,150 +330,150 @@ export function registerFullCharacterTests(quench) {
                     });
 
                     it("str.max", async function () {
-                        chars.assertCharField(actor, "STR", "max", 55);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STR", "max", 55);
                     });
                     it("str.realCost", async function () {
-                        chars.assertCharField(actor, "STR", "realCost", 45);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STR", "realCost", 45);
                     });
 
                     it("dex.max", async function () {
-                        chars.assertCharField(actor, "DEX", "max", 20);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DEX", "max", 20);
                     });
                     it("dex.realCost", async function () {
-                        chars.assertCharField(actor, "DEX", "realCost", 30);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DEX", "realCost", 30);
                     });
 
                     it("con.max", async function () {
-                        chars.assertCharField(actor, "CON", "max", 35);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "CON", "max", 35);
                     });
                     it("con.realCost", async function () {
-                        chars.assertCharField(actor, "CON", "realCost", 50);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "CON", "realCost", 50);
                     });
 
                     it("body.max", async function () {
-                        chars.assertCharField(actor, "BODY", "max", 25);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "BODY", "max", 25);
                     });
                     it("body.realCost", async function () {
-                        chars.assertCharField(actor, "BODY", "realCost", 30);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "BODY", "realCost", 30);
                     });
 
                     it("int.max", async function () {
-                        chars.assertCharField(actor, "INT", "max", 15);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "INT", "max", 15);
                     });
                     it("int.realCost", async function () {
-                        chars.assertCharField(actor, "INT", "realCost", 5);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "INT", "realCost", 5);
                     });
 
                     it("ego.max", async function () {
-                        chars.assertCharField(actor, "EGO", "max", 14);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "EGO", "max", 14);
                     });
                     it("ego.realCost", async function () {
-                        chars.assertCharField(actor, "EGO", "realCost", 8);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "EGO", "realCost", 8);
                     });
 
                     it("pre.max", async function () {
-                        chars.assertCharField(actor, "PRE", "max", 22);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PRE", "max", 22);
                     });
                     it("pre.realCost", async function () {
-                        chars.assertCharField(actor, "PRE", "realCost", 12);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PRE", "realCost", 12);
                     });
 
                     it("com.max", async function () {
-                        chars.assertCharField(actor, "COM", "max", 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "COM", "max", 10);
                     });
                     it("com.realCost", async function () {
-                        chars.assertCharField(actor, "COM", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "COM", "realCost", 0);
                     });
 
                     it("pd.max", async function () {
-                        chars.assertCharField(actor, "PD", "max", 25);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PD", "max", 25);
                     });
                     it("pd.realCost", async function () {
-                        chars.assertCharField(actor, "PD", "realCost", 14);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PD", "realCost", 14);
                     });
 
                     it("ed.max", async function () {
-                        chars.assertCharField(actor, "ED", "max", 20);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "ED", "max", 20);
                     });
                     it("ed.realCost", async function () {
-                        chars.assertCharField(actor, "ED", "realCost", 13);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "ED", "realCost", 13);
                     });
 
                     it("spd.max", async function () {
-                        chars.assertCharField(actor, "SPD", "max", 5);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SPD", "max", 5);
                     });
                     it("spd.realCost", async function () {
-                        chars.assertCharField(actor, "SPD", "realCost", 20);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SPD", "realCost", 20);
                     });
 
                     it("rec.max", async function () {
-                        chars.assertCharField(actor, "REC", "max", 21);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "REC", "max", 21);
                     });
                     it("rec.realCost", async function () {
-                        chars.assertCharField(actor, "REC", "realCost", 6);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "REC", "realCost", 6);
                     });
 
                     it("end.max", async function () {
-                        chars.assertCharField(actor, "END", "max", 85);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "END", "max", 85);
                     });
                     it("end.realCost", async function () {
-                        chars.assertCharField(actor, "END", "realCost", 8);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "END", "realCost", 8);
                     });
 
                     it("stun.max", async function () {
-                        chars.assertCharField(actor, "STUN", "max", 125);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STUN", "max", 125);
                     });
                     it("stun.realCost", async function () {
-                        chars.assertCharField(actor, "STUN", "realCost", 54);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STUN", "realCost", 54);
                     });
 
                     it("ocv.max", async function () {
-                        chars.assertCharField(actor, "OCV", "max", 7);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OCV", "max", 7);
                     });
                     it("ocv.realCost", async function () {
-                        chars.assertCharField(actor, "OCV", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OCV", "realCost", 0);
                     });
 
                     it("dcv.max", async function () {
-                        chars.assertCharField(actor, "DCV", "max", 7);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DCV", "max", 7);
                     });
                     it("dcv.realCost", async function () {
-                        chars.assertCharField(actor, "DCV", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DCV", "realCost", 0);
                     });
 
                     it("omcv.max", async function () {
-                        chars.assertCharField(actor, "OMCV", "max", 5);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OMCV", "max", 5);
                     });
                     it("omcv.realCost", async function () {
-                        chars.assertCharField(actor, "OMCV", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OMCV", "realCost", 0);
                     });
 
                     it("dmcv.max", async function () {
-                        chars.assertCharField(actor, "DMCV", "max", 5);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DMCV", "max", 5);
                     });
                     it("dmcv.realCost", async function () {
-                        chars.assertCharField(actor, "DMCV", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DMCV", "realCost", 0);
                     });
 
                     it("running.max", async function () {
-                        chars.assertCharField(actor, "RUNNING", "max", 13); //8 + 5 (Active Effect)
+                        characteristicAssertions.assertCharacteristicProperty(actor, "RUNNING", "max", 13); //8 + 5 (Active Effect)
                     });
                     it("running.realCost", async function () {
-                        chars.assertCharField(actor, "RUNNING", "realCost", 4);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "RUNNING", "realCost", 4);
                     });
 
                     it("swimming.max", async function () {
-                        chars.assertCharField(actor, "SWIMMING", "max", 2);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SWIMMING", "max", 2);
                     });
                     it("swimming.realCost", async function () {
-                        chars.assertCharField(actor, "SWIMMING", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SWIMMING", "realCost", 0);
                     });
 
                     it("leaping.max", async function () {
-                        chars.assertCharField(actor, "LEAPING", "max", 11);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "LEAPING", "max", 11);
                     });
                     it("leaping.realCost", async function () {
-                        chars.assertCharField(actor, "LEAPING", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "LEAPING", "realCost", 0);
                     });
 
                     it("total points spent", async function () {
@@ -587,143 +587,143 @@ export function registerFullCharacterTests(quench) {
                     });
 
                     it("str.max", async function () {
-                        chars.assertCharField(actor, "STR", "max", 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STR", "max", 10);
                     });
                     it("str.realCost", async function () {
-                        chars.assertCharField(actor, "STR", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STR", "realCost", 0);
                     });
 
                     it("dex.max", async function () {
-                        chars.assertCharField(actor, "DEX", "max", 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DEX", "max", 10);
                     });
                     it("dex.realCost", async function () {
-                        chars.assertCharField(actor, "DEX", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DEX", "realCost", 0);
                     });
 
                     it("con.max", async function () {
-                        chars.assertCharField(actor, "CON", "max", 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "CON", "max", 10);
                     });
                     it("con.realCost", async function () {
-                        chars.assertCharField(actor, "CON", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "CON", "realCost", 0);
                     });
 
                     it("body.max", async function () {
-                        chars.assertCharField(actor, "BODY", "max", 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "BODY", "max", 10);
                     });
                     it("body.realCost", async function () {
-                        chars.assertCharField(actor, "BODY", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "BODY", "realCost", 0);
                     });
 
                     it("int.max", async function () {
-                        chars.assertCharField(actor, "INT", "max", 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "INT", "max", 10);
                     });
                     it("int.realCost", async function () {
-                        chars.assertCharField(actor, "INT", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "INT", "realCost", 0);
                     });
 
                     it("ego.max", async function () {
-                        chars.assertCharField(actor, "EGO", "max", 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "EGO", "max", 10);
                     });
                     it("ego.realCost", async function () {
-                        chars.assertCharField(actor, "EGO", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "EGO", "realCost", 0);
                     });
 
                     it("pre.max", async function () {
-                        chars.assertCharField(actor, "PRE", "max", 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PRE", "max", 10);
                     });
                     it("pre.realCost", async function () {
-                        chars.assertCharField(actor, "PRE", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PRE", "realCost", 0);
                     });
 
                     it("pd.max", async function () {
-                        chars.assertCharField(actor, "PD", "max", 2);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PD", "max", 2);
                     });
                     it("pd.realCost", async function () {
-                        chars.assertCharField(actor, "PD", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PD", "realCost", 0);
                     });
 
                     it("ed.max", async function () {
-                        chars.assertCharField(actor, "ED", "max", 2);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "ED", "max", 2);
                     });
                     it("ed.realCost", async function () {
-                        chars.assertCharField(actor, "ED", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "ED", "realCost", 0);
                     });
 
                     it("spd.max", async function () {
-                        chars.assertCharField(actor, "SPD", "max", 2);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SPD", "max", 2);
                     });
                     it("spd.realCost", async function () {
-                        chars.assertCharField(actor, "SPD", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SPD", "realCost", 0);
                     });
 
                     it("rec.max", async function () {
-                        chars.assertCharField(actor, "REC", "max", 4);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "REC", "max", 4);
                     });
                     it("rec.realCost", async function () {
-                        chars.assertCharField(actor, "REC", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "REC", "realCost", 0);
                     });
 
                     it("end.max", async function () {
-                        chars.assertCharField(actor, "END", "max", 20);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "END", "max", 20);
                     });
                     it("end.realCost", async function () {
-                        chars.assertCharField(actor, "END", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "END", "realCost", 0);
                     });
 
                     it("stun.max", async function () {
-                        chars.assertCharField(actor, "STUN", "max", 20);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STUN", "max", 20);
                     });
                     it("stun.realCost", async function () {
-                        chars.assertCharField(actor, "STUN", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STUN", "realCost", 0);
                     });
 
                     it("ocv.max", async function () {
-                        chars.assertCharField(actor, "OCV", "max", 3);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OCV", "max", 3);
                     });
                     it("ocv.realCost", async function () {
-                        chars.assertCharField(actor, "OCV", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OCV", "realCost", 0);
                     });
 
                     it("dcv.max", async function () {
-                        chars.assertCharField(actor, "DCV", "max", 3);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DCV", "max", 3);
                     });
                     it("dcv.realCost", async function () {
-                        chars.assertCharField(actor, "DCV", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DCV", "realCost", 0);
                     });
 
                     it("omcv.max", async function () {
-                        chars.assertCharField(actor, "OMCV", "max", 3);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OMCV", "max", 3);
                     });
                     it("omcv.realCost", async function () {
-                        chars.assertCharField(actor, "OMCV", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OMCV", "realCost", 0);
                     });
 
                     it("dmcv.max", async function () {
-                        chars.assertCharField(actor, "DMCV", "max", 3);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DMCV", "max", 3);
                     });
                     it("dmcv.realCost", async function () {
-                        chars.assertCharField(actor, "DMCV", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DMCV", "realCost", 0);
                     });
 
                     it("running.max", async function () {
-                        chars.assertCharField(actor, "RUNNING", "max", 12);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "RUNNING", "max", 12);
                     });
                     it("running.realCost", async function () {
-                        chars.assertCharField(actor, "RUNNING", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "RUNNING", "realCost", 0);
                     });
 
                     it("swimming.max", async function () {
-                        chars.assertCharField(actor, "SWIMMING", "max", 4);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SWIMMING", "max", 4);
                     });
                     it("swimming.realCost", async function () {
-                        chars.assertCharField(actor, "SWIMMING", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SWIMMING", "realCost", 0);
                     });
 
                     it("leaping.max", async function () {
-                        chars.assertCharField(actor, "LEAPING", "max", 4);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "LEAPING", "max", 4);
                     });
                     it("leaping.realCost", async function () {
-                        chars.assertCharField(actor, "LEAPING", "realCost", 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "LEAPING", "realCost", 0);
                     });
 
                     it("realCost", async function () {
