@@ -111,19 +111,6 @@ const AI_6E_ZERO_POINT_XML = `
                         </CHARACTER>
                     `;
 
-/**
- * Every AI export under test, and what each one must answer.
- *
- * - `hasCharacteristics`, `doesNotHaveCharacteristics`: characteristics. `hasCharacteristic` answers both.
- * - `hasMovementModes`, `doesNotHaveMovementModes`: movement modes. `hasMovementCharacteristic` answers both.
- * - `values`: the numbers the export must read, one test per name and property.
- * - `totals`: the actor level sums of `realCost` and `activePoints`.
- * - No row claims an exact usable set. Gap 4 of `characteristics_coverage_gaps.md` explains why.
- *
- * CUSTOM1 to CUSTOM10 are reserved, and nothing builds them, so no export can hold one. A row
- * states that in `doesNotHaveCharacteristics`, beside every other name the export lacks. Give one
- * of them a builder, and each row that lists it fails until a real export holds it.
- */
 const FIXTURES = freezeDeep([
     {
         title: "5e zero point ai",
@@ -131,6 +118,7 @@ const FIXTURES = freezeDeep([
         contents: AI_5E_ZERO_POINT_XML,
         hasCharacteristics: ["DEX", "INT", "EGO", "SPD", "OCV", "DCV"],
         doesNotHaveCharacteristics: [
+            "DEF",
             "BODY",
             "STUN",
             "STR",
@@ -160,6 +148,7 @@ const FIXTURES = freezeDeep([
         contents: AI_6E_ZERO_POINT_XML,
         hasCharacteristics: ["DEX", "INT", "EGO", "SPD", "OCV", "DCV"],
         doesNotHaveCharacteristics: [
+            "DEF",
             "BODY",
             "STUN",
             "STR",

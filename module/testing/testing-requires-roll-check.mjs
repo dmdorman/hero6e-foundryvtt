@@ -2874,7 +2874,14 @@ export function registerRequiresRollCheckTests(quench) {
                         let invalidDrainMissingLuckPower;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            // The export is a `builtIn.Vehicle.hdt` sheet, so the actor type must be
+                            // vehicle. A pc ignores the export's DEF line.
+                            actor = await createQuenchActor({
+                                quench: this,
+                                contents,
+                                is5e: true,
+                                actorType: "vehicle",
+                            });
 
                             invalidDrainMissingEgoCharacteristic = actor.items.find(
                                 (item) => item.name === "Drain Invalid RSR EGO with -1 per 10 AP",

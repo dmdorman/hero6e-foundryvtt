@@ -1,21 +1,3 @@
-/**
- * The base characteristic suite. The actor type key is `base2`.
- *
- * Every test reads an uploaded Hero Designer export. `before` uploads one export per describe, and
- * `after` deletes that actor, so no test reads an actor another test changed. No test reads a bare
- * actor: the export is the subject.
- *
- * A base holds BODY, its armour, and BASESIZE, and nothing else. It moves nowhere, so every movement
- * claim is a `doesNotHaveMovementModes` claim. The two template rows also claim the exact usable name set, because
- * "a base has nothing else" is the point of a base export.
- *
- * 5e armour is DEF. 6e armour is PD and ED. A 6e actor has no DEF name at all, so no 6e row claims one:
- * a missing name would pass whatever the code did.
- *
- * The `FIXTURES` table holds every expectation. Read a row to know what the suite checks. To cover a
- * new export, add a row.
- */
-
 import { freezeDeep } from "../utility/freeze-helpers.mjs";
 import { createCharacteristicAssertions } from "./characteristic-assertions.mjs";
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
@@ -178,28 +160,13 @@ const BASE_6E_ZERO_POINT_XML = `
                         </CHARACTER>
                     `;
 
-/**
- * Every base export under test, and what each one must answer.
- *
- * - `hasCharacteristics`, `doesNotHaveCharacteristics`: characteristics. `hasCharacteristic` answers both.
- * - `hasMovementModes`, `doesNotHaveMovementModes`: movement modes. `hasMovementCharacteristic` answers both.
- * - `values`: the numbers the export must read, one test per name and property.
- * - `totals`: the actor level sums of `realCost` and `activePoints`.
- * - `usableSet`: the exact usable name set. Only a row that claims a set carries the key.
- *
- * CUSTOM1 to CUSTOM10 are reserved, and nothing builds them, so no export can hold one. A row
- * states that in `doesNotHaveCharacteristics`, beside every other name the export lacks. Give one
- * of them a builder, and each row that lists it fails until a real export holds it.
- *
- * A 0 point export buys no characteristics, so its `values` state the template default. A base starts
- * with a smaller BODY than a character, and it keeps that value in both editions.
- */
 const FIXTURES = freezeDeep([
     {
         title: "5e base template",
         is5e: true,
         contents: BASE_5E_XML,
-        hasCharacteristics: ["BODY", "DEF", "BASESIZE"],
+        // This export buys DEF and no PD or ED, so no row claims a PD or ED value.
+        hasCharacteristics: ["BODY", "DEF", "BASESIZE", "PD", "ED"],
         doesNotHaveCharacteristics: [
             "STUN",
             "STR",
@@ -223,7 +190,7 @@ const FIXTURES = freezeDeep([
             BASESIZE: { value: 20 },
         },
         totals: {},
-        usableSet: ["BASESIZE", "BODY", "DEF"],
+        usableSet: ["BASESIZE", "BODY", "DEF", "ED", "PD"],
     },
     {
         title: "6e base template",
@@ -232,6 +199,7 @@ const FIXTURES = freezeDeep([
         hasCharacteristics: ["BODY", "PD", "ED", "BASESIZE"],
         doesNotHaveCharacteristics: [
             "STUN",
+            "DEF",
             "STR",
             "END",
             "CUSTOM1",
@@ -272,7 +240,7 @@ const FIXTURES = freezeDeep([
         is5e: false,
         contents: BASE_6E_ZERO_POINT_XML,
         hasCharacteristics: ["BODY"],
-        doesNotHaveCharacteristics: ["STUN"],
+        doesNotHaveCharacteristics: ["STUN", "DEF"],
         hasMovementModes: [],
         doesNotHaveMovementModes: ["RUNNING", "SWIMMING", "LEAPING"],
         values: { BODY: { value: 2 } },

@@ -1,19 +1,3 @@
-/**
- * The computer characteristic suite.
- *
- * Every test reads an uploaded Hero Designer export. `before` uploads one export per describe, and
- * `after` deletes that actor, so no test reads an actor another test changed. No test reads a bare
- * actor: the export is the subject.
- *
- * A computer has mental characteristics and nothing else: no BODY, no END, no movement. OCV and DCV read
- * 3, and that claim carries a bug. `characteristics_bugs.md` bug 7: a computer read DCV 3 when created
- * and DCV 2 when uploaded, because encumbrance ran on one path only. The upload path is the one users
- * take, so these tests state 3 and state that no encumbrance effect appears.
- *
- * The `FIXTURES` table holds every expectation. Read a row to know what the suite checks. To cover a
- * new export, add a row.
- */
-
 import { freezeDeep } from "../utility/freeze-helpers.mjs";
 import { createCharacteristicAssertions } from "./characteristic-assertions.mjs";
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
@@ -106,19 +90,6 @@ const COMPUTER_6E_ZERO_POINT_XML = `
                         </CHARACTER>
                     `;
 
-/**
- * Every computer export under test, and what each one must answer.
- *
- * - `hasCharacteristics`, `doesNotHaveCharacteristics`: characteristics. `hasCharacteristic` answers both.
- * - `hasMovementModes`, `doesNotHaveMovementModes`: movement modes. `hasMovementCharacteristic` answers both.
- * - `values`: the numbers the export must read, one test per name and property.
- * - `totals`: the actor level sums of `realCost` and `activePoints`.
- * - No row claims an exact usable set. Gap 4 of `characteristics_coverage_gaps.md` explains why.
- *
- * CUSTOM1 to CUSTOM10 are reserved, and nothing builds them, so no export can hold one. A row
- * states that in `doesNotHaveCharacteristics`, beside every other name the export lacks. Give one
- * of them a builder, and each row that lists it fails until a real export holds it.
- */
 const FIXTURES = freezeDeep([
     {
         title: "5e zero point computer",
@@ -126,6 +97,7 @@ const FIXTURES = freezeDeep([
         contents: COMPUTER_5E_ZERO_POINT_XML,
         hasCharacteristics: ["DEX", "INT", "SPD", "OCV", "DCV"],
         doesNotHaveCharacteristics: [
+            "DEF",
             "BODY",
             "STUN",
             "STR",
@@ -155,6 +127,7 @@ const FIXTURES = freezeDeep([
         contents: COMPUTER_6E_ZERO_POINT_XML,
         hasCharacteristics: ["DEX", "INT", "SPD", "OCV", "DCV"],
         doesNotHaveCharacteristics: [
+            "DEF",
             "BODY",
             "STUN",
             "STR",

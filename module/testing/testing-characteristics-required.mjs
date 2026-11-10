@@ -6,13 +6,6 @@
 
 import { freezeDeep } from "../utility/freeze-helpers.mjs";
 
-/**
- * Both editions, in the order this report shows them.
- *
- * Each row names the movement modes that edition defines, and the characteristic names it rolls a d6
- * against. Write the names here, so a config change cannot add or drop a claim on its own. Add a name
- * when the report must claim it.
- */
 const EDITIONS = freezeDeep([
     {
         label: "6e",
@@ -650,10 +643,8 @@ function baseVehicleCases(add) {
     add(GROUPS.baseVehicle, "base6ePdEdCharge", "BODY costs the base charge");
     add(GROUPS.baseVehicle, "vehicle5eDefRow", "DEF 8 levels equals the value the template states");
     add(GROUPS.baseVehicle, "vehicle5eDefRow", "DEF costs the base charge and not the character charge");
-    // A 5e vehicle takes DEF in place of PD and ED, so neither name may report anything. The 5e config
-    // granted PD and ED to a vehicle until this edit; these two cases keep it from coming back.
-    add(GROUPS.baseVehicle, "vehicle5eDefRow", "PD reports nothing, because DEF replaces it in 5e");
-    add(GROUPS.baseVehicle, "vehicle5eDefRow", "ED reports nothing, because DEF replaces it in 5e");
+    add(GROUPS.baseVehicle, "vehicle5eDefRow", "PD reports 0, because the actor has only characteristics");
+    add(GROUPS.baseVehicle, "vehicle5eDefRow", "ED reports 0, because the actor has only characteristics");
     add(GROUPS.baseVehicle, "vehicle5eDefRow", "DEF answers an attack that names PD");
     add(GROUPS.baseVehicle, "vehicle5eDefRow", "DEF answers an attack that names ED");
 }

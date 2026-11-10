@@ -1479,7 +1479,6 @@ function labelsWithType(powerList, type) {
         {
             base: fixedValueFunction(0),
             behaviors: ["defense", "figured", "figuredSTR"],
-            ignoreForActor: staticIgnoreForActorFunction(["ai", "base2", "computer"]),
             figured5eCharacteristic: function (actor) {
                 // 5ER p. 33: a negative Primary Characteristic adds zero to Figured
                 // Characteristics (STR -20/CON 10 gives PD 0, not -4).
@@ -1528,7 +1527,6 @@ function labelsWithType(powerList, type) {
         {
             base: fixedValueFunction(0),
             behaviors: ["defense", "figured", "figuredCON"],
-            ignoreForActor: staticIgnoreForActorFunction(["ai", "base2", "computer"]),
             figured5eCharacteristic: function (actor) {
                 // 5ER p. 33: a negative Primary Characteristic adds zero to Figured Characteristics.
                 return (

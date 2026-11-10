@@ -1,21 +1,3 @@
-/**
- * The vehicle characteristic suite.
- *
- * Every test reads an uploaded Hero Designer export. `before` uploads one export per describe, and
- * `after` deletes that actor, so no test reads an actor another test changed. No test reads a bare
- * actor: the export is the subject.
- *
- * A vehicle buys movement, so movement modes are the interesting claims. A vehicle owns no STUN, and
- * 5e vehicles armour with DEF while 6e vehicles armour with PD and ED. The rows below state that per
- * export, because the 5e and 6e templates are not the same character.
- *
- * The `FIXTURES` table holds every expectation. Read a row to know what the suite checks. To cover a
- * new export, add a row.
- *
- * `testing-vehicles.mjs` carries its own vehicle template for manoeuvre tests. That duplication is
- * deliberate: one suite must never be able to break another by editing its fixture.
- */
-
 import { freezeDeep } from "../utility/freeze-helpers.mjs";
 import { createCharacteristicAssertions } from "./characteristic-assertions.mjs";
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
@@ -384,36 +366,16 @@ const VEHICLE_6E_ZERO_POINT_XML = `
                         </CHARACTER>
                     `;
 
-/**
- * Every vehicle export under test, and what each one must answer.
- *
- * - `hasCharacteristics`, `doesNotHaveCharacteristics`: characteristics. `hasCharacteristic` answers both.
- * - `hasMovementModes`, `doesNotHaveMovementModes`: movement modes. `hasMovementCharacteristic` answers both.
- * - `values`: the numbers the export must read, one test per name and property.
- * - `totals`: the actor level sums of `realCost` and `activePoints`.
- * - No row claims an exact usable set. Gap 4 of `characteristics_coverage_gaps.md` explains why.
- *
- * CUSTOM1 to CUSTOM10 are reserved, and nothing builds them, so no export can hold one. A row
- * states that in `doesNotHaveCharacteristics`, beside every other name the export lacks. Give one
- * of them a builder, and each row that lists it fails until a real export holds it.
- *
- * A movement mode with no uppercase node answers through the power the export bought, so FLIGHT and FTL
- * appear only where the export holds that power. GLIDING, SWINGING, TELEPORTATION and TUNNELING have no
- * node and no power in these exports, so the rows state the answer too. Give one of them a node, and the
- * test fails until someone moves the name to `hasMovementModes`.
- *
- * A vehicle must buy LEAPING, so the 0 point vehicle reads LEAPING 0 while a character gets it free.
- */
 const FIXTURES = freezeDeep([
     {
         title: "5e vehicle template",
         is5e: true,
         contents: VEHICLE_5E_XML,
-        hasCharacteristics: ["STR", "BODY", "SIZE", "DEF"],
+        // A 5e vehicle armours with DEF. It still owns PD and ED, because a power can grant them, but
+        // this export buys neither, so no row claims a PD or ED value.
+        hasCharacteristics: ["STR", "BODY", "SIZE", "DEF", "PD", "ED"],
         doesNotHaveCharacteristics: [
             "STUN",
-            "PD",
-            "ED",
             "CUSTOM1",
             "CUSTOM2",
             "CUSTOM3",
@@ -444,7 +406,7 @@ const FIXTURES = freezeDeep([
         is5e: false,
         contents: VEHICLE_6E_XML,
         hasCharacteristics: ["STR", "BODY", "SIZE", "PD", "ED"],
-        doesNotHaveCharacteristics: ["STUN"],
+        doesNotHaveCharacteristics: ["STUN", "DEF"],
         hasMovementModes: ["RUNNING", "SWIMMING", "LEAPING", "FLIGHT"],
         doesNotHaveMovementModes: ["FTL", "GLIDING", "SWINGING", "TELEPORTATION", "TUNNELING"],
         values: {
@@ -484,6 +446,7 @@ const FIXTURES = freezeDeep([
         hasCharacteristics: ["BODY", "PD", "ED"],
         doesNotHaveCharacteristics: [
             "STUN",
+            "DEF",
             "CUSTOM1",
             "CUSTOM2",
             "CUSTOM3",
