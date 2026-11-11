@@ -256,6 +256,35 @@ export async function deleteQuenchFixtures() {
     return counts;
 }
 
+// Role floor for a Quench run. Foundry gates Actor, Scene, and Combat deletion on ASSISTANT and checks the
+// role on the server, so a lower role cannot remove what a run creates.
+const QUENCH_ROLE_FLOOR = CONST.USER_ROLES.ASSISTANT;
+
+/**
+ * Tell the operator when the signed-in user cannot clean up after a Quench run.
+ *
+ * Foundry deletes an Actor, Scene, or Combat only for role ASSISTANT or higher. Ownership does not
+ * count, and the check runs on the server, so no system hook exempts a test run.
+ *
+ * Nothing throws. A low-role run still runs, so its suites keep reporting real failures rather than
+ * one blocked entry point.
+ *
+ * @param {"warn"|"error"} level `warn` before the run, `error` after it.
+ * @returns {boolean} True when the notification fired.
+ */
+function notifyQuenchRoleShortfall(level) {
+    if (game.user.role >= QUENCH_ROLE_FLOOR) {
+        return false;
+    }
+
+    ui.notifications[level](
+        `Quench needs role ${QUENCH_ROLE_FLOOR} (ASSISTANT) or higher. ` +
+            `${game.user.name} holds role ${game.user.role}. ` +
+            "Scene and combat suites fail, and every _Quench fixture stays in this world.",
+    );
+    return true;
+}
+
 /**
  * Register one batch that deletes every `_Quench` fixture.
  *
@@ -272,8 +301,9 @@ export async function deleteQuenchFixtures() {
  * @param {string} identity.suiteKey Suite name without the system prefix.
  * @param {string} identity.displayName Batch name shown in the Quench UI.
  * @param {{title: string, run: Function}} identity.chatStep The chat sweep this batch runs first.
+ * @param {{title: string, level: ("warn"|"error")}} identity.roleNotice The role check and the level it notifies at.
  */
-function registerFixtureCleanupBatch(quench, { suiteKey, displayName, chatStep }) {
+function registerFixtureCleanupBatch(quench, { suiteKey, displayName, chatStep, roleNotice }) {
     quench.registerBatch(
         `${game.system.id}.${suiteKey}`,
         (context) => {
@@ -282,6 +312,12 @@ function registerFixtureCleanupBatch(quench, { suiteKey, displayName, chatStep }
             describe(displayName, function () {
                 // Mocha's 2000ms default is too short when several actors are created at the same time.
                 setQuenchTimeout(this, 20000);
+
+                // The role step runs first. Every sweep below needs the role, so state the shortfall
+                // before this batch reports delete failures against it.
+                it(roleNotice.title, () => {
+                    notifyQuenchRoleShortfall(roleNotice.level);
+                });
 
                 // The chat step runs first in both batches. Global setup records the log the run must
                 // not touch. Global teardown clears the log the run produced.
@@ -312,6 +348,7 @@ export function registerGlobalSetup(quench) {
     registerFixtureCleanupBatch(quench, {
         suiteKey: GLOBAL_SETUP_SUITE,
         displayName: "HERO: Global Setup",
+        roleNotice: { title: "Check the signed-in user's role", level: "warn" },
         chatStep: { title: "Record the chat baseline", run: captureChatBaseline },
     });
 }
@@ -320,6 +357,7 @@ export function registerGlobalTeardown(quench) {
     registerFixtureCleanupBatch(quench, {
         suiteKey: GLOBAL_TEARDOWN_SUITE,
         displayName: "HERO: Global Teardown",
+        roleNotice: { title: "Check the signed-in user's role", level: "error" },
         chatStep: { title: "Delete chat messages the run created", run: deleteRunChatMessages },
     });
 }
