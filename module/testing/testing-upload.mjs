@@ -1327,7 +1327,7 @@ export function registerUploadTests(quench) {
 
                     let actor;
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, is5e: false });
+                        actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                         item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
                         });
@@ -1382,7 +1382,7 @@ export function registerUploadTests(quench) {
                     let item;
                     let actor;
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, is5e: false });
+                        actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                         item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
                         });
@@ -1678,7 +1678,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: true });
+                                actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -2296,7 +2296,7 @@ export function registerUploadTests(quench) {
 
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -2661,7 +2661,7 @@ export function registerUploadTests(quench) {
                         let item;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -2701,7 +2701,7 @@ export function registerUploadTests(quench) {
                         let actor;
                         let item;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -4105,7 +4105,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                             mpItem = await HeroSystem6eItem.create(
                                 HeroSystem6eItem.itemDataFromXml(mpContents, actor),
                                 {
@@ -4787,7 +4787,7 @@ export function registerUploadTests(quench) {
                     let item;
                     let actor;
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, is5e: true });
+                        actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                         item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
                         });
@@ -5012,7 +5012,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -5060,7 +5060,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -5111,7 +5111,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -5187,7 +5187,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -5245,7 +5245,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -5385,7 +5385,7 @@ export function registerUploadTests(quench) {
                     let item;
                     let actor;
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, is5e: false });
+                        actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                         item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                             parent: actor,
                         });
@@ -5665,7 +5665,7 @@ export function registerUploadTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, is5e: false });
+                        actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                         skillEnhancerItem = await HeroSystem6eItem.create(
                             HeroSystem6eItem.itemDataFromXml(skillEnhancerContents, actor),
                             {
@@ -6387,7 +6387,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -6597,7 +6597,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -7054,7 +7054,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -7163,7 +7163,7 @@ export function registerUploadTests(quench) {
                         before(async function () {
                             previousDoubleDamageLimitSetting = await getAndSetGameSetting("DoubleDamageLimit", true);
 
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             await updateCharacteristicPropertiesOnActor(actor, "DEX", { max: 15 });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
@@ -7695,7 +7695,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -8136,7 +8136,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             await updateCharacteristicPropertiesOnActor(actor, "EGO", { max: 38 });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
@@ -8764,7 +8764,7 @@ export function registerUploadTests(quench) {
                             let item, actor;
 
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: true });
+                                actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -8846,7 +8846,7 @@ export function registerUploadTests(quench) {
                             let item, actor;
 
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: true });
+                                actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -8908,7 +8908,7 @@ export function registerUploadTests(quench) {
                             let item, actor;
 
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: true });
+                                actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -8981,7 +8981,7 @@ export function registerUploadTests(quench) {
                             let item, actor;
 
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: true });
+                                actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -9054,7 +9054,7 @@ export function registerUploadTests(quench) {
                             let item, actor;
 
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: true });
+                                actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -9126,7 +9126,7 @@ export function registerUploadTests(quench) {
                             let item, actor;
 
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -9208,7 +9208,7 @@ export function registerUploadTests(quench) {
                             let item, actor;
 
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -9270,7 +9270,7 @@ export function registerUploadTests(quench) {
                             let item, actor;
 
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -9343,7 +9343,7 @@ export function registerUploadTests(quench) {
                             let item, actor;
 
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -9416,7 +9416,7 @@ export function registerUploadTests(quench) {
                             let item, actor;
 
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -9530,7 +9530,7 @@ export function registerUploadTests(quench) {
                     let compoundPowerItem;
                     let actor;
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                         await actor.fullHealth();
 
                         compoundPowerItem = actor.items.find((item) => item.system.XMLID === "COMPOUNDPOWER");
@@ -9629,7 +9629,7 @@ export function registerUploadTests(quench) {
                     let pooledCompound;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                         vpp = actor.items.find((item) => item.system.XMLID === "VPP");
                         listedCompound = actor.items.find((item) => item.name === "Listed Compound");
                         pooledCompound = actor.items.find((item) => item.name === "Pooled Compound");
@@ -9703,7 +9703,7 @@ export function registerUploadTests(quench) {
                         let acrobatics;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             const createItem = (contents) =>
                                 HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                     parent: actor,
@@ -9781,7 +9781,7 @@ export function registerUploadTests(quench) {
                         let plainRka;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                             continuousRka = actor.items.find((item) => item.name === "Continuous RKA");
                             plainRka = actor.items.find((item) => item.name === "Plain RKA");
                         });
@@ -9915,7 +9915,7 @@ export function registerUploadTests(quench) {
 
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -9958,7 +9958,7 @@ export function registerUploadTests(quench) {
 
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -10000,7 +10000,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -10177,7 +10177,7 @@ export function registerUploadTests(quench) {
 
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -10218,7 +10218,7 @@ export function registerUploadTests(quench) {
 
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -10265,7 +10265,7 @@ export function registerUploadTests(quench) {
                         let actor;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                             item = new HeroSystem6eItem(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -10307,7 +10307,7 @@ export function registerUploadTests(quench) {
 
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -10347,7 +10347,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -10400,7 +10400,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -10459,7 +10459,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -10518,7 +10518,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -10577,7 +10577,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -10636,7 +10636,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -10697,7 +10697,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -10758,7 +10758,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -10819,7 +10819,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -10882,7 +10882,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -10943,7 +10943,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -11006,7 +11006,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -11064,7 +11064,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -11129,7 +11129,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -11191,7 +11191,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: false });
+                                actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -11251,7 +11251,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: true });
+                                actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -11309,7 +11309,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: true });
+                                actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -11367,7 +11367,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: true });
+                                actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -11427,7 +11427,7 @@ export function registerUploadTests(quench) {
                             let item;
                             let actor;
                             before(async function () {
-                                actor = await createQuenchActor({ quench: this, is5e: true });
+                                actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                                 item = await HeroSystem6eItem.create(
                                     HeroSystem6eItem.itemDataFromXml(contents, actor),
                                     {
@@ -11490,7 +11490,7 @@ export function registerUploadTests(quench) {
                         let item;
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -11620,7 +11620,7 @@ export function registerUploadTests(quench) {
                     describe("baseline", async function () {
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                             await actor.fullHealth();
                         });
 
@@ -11657,7 +11657,7 @@ export function registerUploadTests(quench) {
                         let egoItem;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                             dexItem = await HeroSystem6eItem.create(
                                 HeroSystem6eItem.itemDataFromXml(dexContents, actor),
                                 {
@@ -12303,7 +12303,7 @@ export function registerUploadTests(quench) {
 
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -12353,7 +12353,7 @@ export function registerUploadTests(quench) {
 
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -12403,7 +12403,7 @@ export function registerUploadTests(quench) {
 
                         let actor;
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
                                 parent: actor,
                             });
@@ -12524,6 +12524,7 @@ export function registerUploadTests(quench) {
                             quench: this,
                             contents: characterXml("TEST Name Upload"),
                             is5e: false,
+                            actorType: "pc",
                         });
                         // createQuenchActor writes its own unique name into CHARACTER_NAME before uploading
                         hdcName = actor.name;

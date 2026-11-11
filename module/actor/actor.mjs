@@ -663,7 +663,6 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
      * NOTE: A missing uppercase node, a missing baseInfo, or a missing ignoreForActor all mean "does not have".
      * FLIGHT, FTL, GLIDING, SWINGING, TELEPORTATION, TUNNELING, EXTRADIMENSIONALMOVEMENT, and
      * CUSTOM1-CUSTOM10 have no uppercase node. Use hasMovementCharacteristic for movement labels.
-     * COM and DEF have no 6e config entry. Callers must not use this method for those labels; use getCharacteristic.
      *
      * @param {String} characteristic - doesn't matter what case it is as it's always converted to upper case.
      *

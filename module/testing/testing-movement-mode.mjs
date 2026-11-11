@@ -279,11 +279,13 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: false,
                             name: "Runner 6e",
+                            actorType: "pc",
                         });
                         flyer5e = await createQuenchActor({
                             quench: this,
                             is5e: true,
                             name: "Glider 5e",
+                            actorType: "pc",
                         });
                         await flyer5e.updateCharacteristics([["gliding", { value: 10 }]]);
 
@@ -374,6 +376,7 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: true,
                             name: "Mode Resolve 5e",
+                            actorType: "pc",
                         });
                         await actor.updateCharacteristics([
                             ["flight", { value: 20 }],
@@ -421,6 +424,7 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: false,
                             name: "Actor Mode 6e",
+                            actorType: "pc",
                         });
                         await actor.updateCharacteristics([["flight", { value: 20 }]]);
                         movementValues = movementCharacteristicSnapshot(actor);
@@ -479,6 +483,7 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: false,
                             name: "Unwrap Token",
+                            actorType: "pc",
                         });
                         [tokenDoc] = await scene.createEmbeddedDocuments("Token", [
                             {
@@ -525,6 +530,7 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: false,
                             name: "Token Mode 6e",
+                            actorType: "pc",
                         });
                         await actor.updateCharacteristics([["flight", { value: 20 }]]);
                         [tokenDoc] = await scene.createEmbeddedDocuments("Token", [
@@ -575,6 +581,7 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: false,
                             name: "Fanout 6e",
+                            actorType: "pc",
                         });
                         await actor.updateCharacteristics([["flight", { value: 20 }]]);
                         movementValues = movementCharacteristicSnapshot(actor);
@@ -788,7 +795,12 @@ export function registerMovementModeTests(quench) {
                     before(async function () {
                         await waitForNotificationQueueToClear();
                         scene = await createQuenchScene({ quench: this });
-                        baseActor = await createQuenchActor({ quench: this, is5e: false, name: "Fanout Mook 6e" });
+                        baseActor = await createQuenchActor({
+                            quench: this,
+                            is5e: false,
+                            name: "Fanout Mook 6e",
+                            actorType: "pc",
+                        });
                         await baseActor.updateCharacteristics([["flight", { value: 20 }]]);
                         movementValues = movementCharacteristicSnapshot(baseActor);
                         // Foundry returns created embedded documents in its own order, so match each token by
@@ -1002,7 +1014,12 @@ export function registerMovementModeTests(quench) {
 
                         scene = await createQuenchScene({ quench: this });
                         await viewSceneAndWait(scene);
-                        runner = await createQuenchActor({ quench: this, is5e: false, name: "Seeded Runner" });
+                        runner = await createQuenchActor({
+                            quench: this,
+                            is5e: false,
+                            name: "Seeded Runner",
+                            actorType: "pc",
+                        });
                         await runner.updateCharacteristics([["flight", { value: 20 }]]);
                         immobile = await createQuenchActor({
                             quench: this,
@@ -1080,7 +1097,12 @@ export function registerMovementModeTests(quench) {
                     before(async function () {
                         await waitForNotificationQueueToClear();
                         scene = await createQuenchScene({ quench: this });
-                        actor = await createQuenchActor({ quench: this, is5e: false, name: "Drained Movement" });
+                        actor = await createQuenchActor({
+                            quench: this,
+                            is5e: false,
+                            name: "Drained Movement",
+                            actorType: "pc",
+                        });
                         await actor.updateCharacteristics([["flight", { value: 20 }]]);
                         [tokenDoc] = await scene.createEmbeddedDocuments("Token", [
                             {
@@ -1159,7 +1181,12 @@ export function registerMovementModeTests(quench) {
                     before(async function () {
                         await waitForNotificationQueueToClear();
                         scene = await createQuenchScene({ quench: this });
-                        actor = await createQuenchActor({ quench: this, is5e: false, name: "Legacy Flight 6e" });
+                        actor = await createQuenchActor({
+                            quench: this,
+                            is5e: false,
+                            name: "Legacy Flight 6e",
+                            actorType: "pc",
+                        });
                         await actor.updateCharacteristics([["flight", { value: 20 }]]);
                         movementValues = movementCharacteristicSnapshot(actor);
 
@@ -1238,6 +1265,7 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: true,
                             name: "HUD Click 5e",
+                            actorType: "pc",
                         });
                         await actor.fullHealth();
                         await actor.updateCharacteristics([
@@ -1249,6 +1277,7 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: true,
                             name: "HUD Click Attacker 5e",
+                            actorType: "pc",
                         });
                         [attackItem] = await HeroSystem6eItem.createDocuments(
                             [HeroSystem6eItem.itemDataFromXml(ENERGY_BLAST_XML, attacker)],
@@ -1392,6 +1421,7 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: false,
                             name: "Velocity 6e",
+                            actorType: "pc",
                         });
                         await actor.updateCharacteristics([
                             ["running", { value: 12 }],
@@ -1458,11 +1488,13 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: false,
                             name: "KB Attacker",
+                            actorType: "pc",
                         });
                         target = await createQuenchActor({
                             quench: this,
                             is5e: false,
                             name: "KB Target",
+                            actorType: "pc",
                         });
                         await target.updateCharacteristics([["flight", { value: 20 }]]);
                         movementValues = movementCharacteristicSnapshot(target);
@@ -1615,11 +1647,13 @@ export function registerMovementModeTests(quench) {
                             quench: this,
                             is5e: true,
                             name: "Glide Attacker 5e",
+                            actorType: "pc",
                         });
                         target = await createQuenchActor({
                             quench: this,
                             is5e: true,
                             name: "Glider Target 5e",
+                            actorType: "pc",
                         });
                         await target.updateCharacteristics([["gliding", { value: 10 }]]);
                         [attackItem] = await HeroSystem6eItem.createDocuments(

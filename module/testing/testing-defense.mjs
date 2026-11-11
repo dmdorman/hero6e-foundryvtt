@@ -21,7 +21,7 @@ export function registerDefenseTests(quench) {
                 describe("Resistant Protection", function () {
                     let actor;
                     beforeEach(async function () {
-                        actor = await createQuenchActor({ quench: this, is5e: true });
+                        actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                     });
 
                     afterEach(async function () {
@@ -168,7 +168,7 @@ export function registerDefenseTests(quench) {
                     `;
 
                     beforeEach(async function () {
-                        actor = await createQuenchActor({ quench: this, is5e: true });
+                        actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                     });
 
                     afterEach(async function () {
@@ -349,7 +349,7 @@ export function registerDefenseTests(quench) {
                         }
 
                         beforeEach(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             lifeSupport = await HeroSystem6eItem.create(
                                 HeroSystem6eItem.itemDataFromXml(lifeSupportBreathingXml, actor),
                                 { parent: actor },
@@ -445,7 +445,7 @@ export function registerDefenseTests(quench) {
                         }
 
                         beforeEach(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                             lifeSupport = await HeroSystem6eItem.create(
                                 HeroSystem6eItem.itemDataFromXml(lifeSupportBreathingXml, actor),
                                 { parent: actor },

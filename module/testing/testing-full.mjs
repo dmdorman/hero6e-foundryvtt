@@ -322,7 +322,7 @@ export function registerFullCharacterTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -575,7 +575,7 @@ export function registerFullCharacterTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -997,7 +997,7 @@ export function registerFullCharacterTests(quench) {
                     before(async function () {
                         previousDoubleDamageLimitSetting = await getAndSetGameSetting("DoubleDamageLimit", false);
 
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -1391,7 +1391,7 @@ export function registerFullCharacterTests(quench) {
                     });
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         hka5DcItem = actor.items.find(
                             (item) => item.system.XMLID === "HKA" && item.system.NAME === "2d6-1",
@@ -1840,7 +1840,7 @@ export function registerFullCharacterTests(quench) {
                     before(async function () {
                         previousSetting = await getAndSetGameSetting("DoubleDamageLimit", true);
 
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         hthAttack14d6NoStrMinimum = actor.items.find(
                             (item) =>
@@ -2451,7 +2451,7 @@ export function registerFullCharacterTests(quench) {
                     let eightDcTransform;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         threeDcEnergyBlast = actor.items.find(
                             (item) => item.system.XMLID === "ENERGYBLAST" && item.name === "Little",
@@ -2778,7 +2778,7 @@ export function registerFullCharacterTests(quench) {
                     let customMartialFourDcManeuverItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                         rkaItem = actor.items.find((item) => item.system.XMLID === "RKA");
                         hkaItem = actor.items.find((item) => item.system.XMLID === "HKA");
 
@@ -3271,7 +3271,7 @@ export function registerFullCharacterTests(quench) {
                     let flightItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         energyBlastItem = actor.items.find((o) => o.system.XMLID === "ENERGYBLAST");
                         entangleItem = actor.items.find((o) => o.isEntangle);
@@ -3458,7 +3458,7 @@ export function registerFullCharacterTests(quench) {
                     let rkaPlusHalfItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         ebPlusOneItem = actor.items.find(
                             (item) => item.system.XMLID === "ENERGYBLAST" && item.name === "EB+1",
@@ -3843,7 +3843,7 @@ export function registerFullCharacterTests(quench) {
                     let rkaPlusHalfItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                         ebPlusOneItem = actor.items.find(
                             (item) => item.system.XMLID === "ENERGYBLAST" && item.name === "EB+1",
                         );
@@ -4212,7 +4212,7 @@ export function registerFullCharacterTests(quench) {
 
                     before(async function () {
                         previousSetting = await getAndSetGameSetting("DoubleDamageLimit", false);
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                         bigSwordItem = actor.items.find(
                             (item) => item.system.XMLID === "HKA" && item.name === "Big Sword",
                         );
@@ -4562,7 +4562,7 @@ export function registerFullCharacterTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -5245,7 +5245,7 @@ export function registerFullCharacterTests(quench) {
                         let actor;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                         });
 
                         after(async function () {
@@ -5720,7 +5720,7 @@ export function registerFullCharacterTests(quench) {
                         let actor;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                         });
 
                         after(async function () {
@@ -5924,7 +5924,7 @@ export function registerFullCharacterTests(quench) {
                     let infraredPerceptionItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         lifeSupportItem = actor.items.find((item) => item.system.XMLID === "LIFESUPPORT");
                         infraredPerceptionItem = actor.items.find((item) => item.system.XMLID === "INFRAREDPERCEPTION");
@@ -6476,7 +6476,7 @@ export function registerFullCharacterTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -6681,7 +6681,7 @@ export function registerFullCharacterTests(quench) {
                         let constantToInstantItem;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                             instantItem = actor.items.find((item) => item.name === "Instant");
                             instantToConstantItemViaContinuous = actor.items.find(
@@ -7015,7 +7015,7 @@ export function registerFullCharacterTests(quench) {
                         let constantToInstantItem;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
 
                             instantItem = actor.items.find((item) => item.name === "Instant");
                             instantToConstantItemViaContinuous = actor.items.find(

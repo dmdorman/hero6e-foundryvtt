@@ -340,7 +340,7 @@ export function registerItemActiveEffectSyncTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
 
                         // Re-uploading the same file updates existing items instead of creating them —
                         // the path where the per-item sync overlaps the upload's own sweep

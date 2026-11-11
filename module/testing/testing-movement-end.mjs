@@ -133,6 +133,7 @@ export function registerMovementEndTests(quench) {
                             quench: this,
                             contents: `<POWER XMLID="FTL" ID="1712026014674" BASECOST="10.0" LEVELS="2" ALIAS="Faster-Than-Light Travel" POSITION="43" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes"></POWER>`,
                             is5e: false,
+                            actorType: "pc",
                         });
                         for (const flightXml of flightXmls) {
                             await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(flightXml, actor), {
@@ -184,8 +185,18 @@ export function registerMovementEndTests(quench) {
                     before(async function () {
                         await waitForNotificationQueueToClear();
                         quenchScene = await createQuenchScene({ quench: this });
-                        actor6e = await createQuenchActor({ quench: this, is5e: false, name: "Runner 6e" });
-                        actor5e = await createQuenchActor({ quench: this, is5e: true, name: "Runner 5e" });
+                        actor6e = await createQuenchActor({
+                            quench: this,
+                            is5e: false,
+                            name: "Runner 6e",
+                            actorType: "pc",
+                        });
+                        actor5e = await createQuenchActor({
+                            quench: this,
+                            is5e: true,
+                            name: "Runner 5e",
+                            actorType: "pc",
+                        });
                         [token6e, token5e] = await quenchScene.createEmbeddedDocuments("Token", [
                             { name: actor6e.name, actorId: actor6e.id, actorLink: true, x: 0, y: 0 },
                             { name: actor5e.name, actorId: actor5e.id, actorLink: true, x: 200, y: 0 },

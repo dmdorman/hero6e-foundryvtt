@@ -1255,7 +1255,7 @@ export function registerDamageFunctionsTests(quench) {
                     let actor;
                     before(async function () {
                         //TODO: previousDoubleDamageLimitSetting?
-                        actor = await createQuenchActor({ quench: this, actor, is5e: false });
+                        actor = await createQuenchActor({ quench: this, actor, is5e: false, actorType: "pc" });
                         actor.system.is5e = false;
 
                         item = await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), {
@@ -1956,7 +1956,12 @@ export function registerDamageFunctionsTests(quench) {
                     let hkaItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents: hkaContents, is5e: false });
+                        actor = await createQuenchActor({
+                            quench: this,
+                            contents: hkaContents,
+                            is5e: false,
+                            actorType: "pc",
+                        });
                         hkaItem = actor.items.find((item) => item.system.XMLID === "HKA");
                     });
 
