@@ -661,8 +661,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
      * NOTE: We should remove movement types from characteristics in the future as, while they're on the character sheet, they're not characteristics and they're not in the schema as such either..
      *
      * NOTE: A missing uppercase node, a missing baseInfo, or a missing ignoreForActor all mean "does not have".
-     * FLIGHT, FTL, GLIDING, SWINGING, TELEPORTATION, TUNNELING, and CUSTOM1-CUSTOM10 have no uppercase node.
-     * COM and DEF have no 6e config entry. Callers must not use this method for those labels; use getCharacteristic.
+     * FLIGHT, FTL, GLIDING, SWINGING, TELEPORTATION, TUNNELING, EXTRADIMENSIONALMOVEMENT, and
+     * CUSTOM1-CUSTOM10 have no uppercase node. Use hasMovementCharacteristic for movement labels.
      *
      * @param {String} characteristic - doesn't matter what case it is as it's always converted to upper case.
      *
@@ -673,6 +673,31 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const doesNotHaveCharacteristic =
             this.system[characteristic.toUpperCase()]?.baseInfo?.ignoreForActor?.(this) ?? true;
         return !doesNotHaveCharacteristic;
+    }
+
+    /**
+     * Reports whether the actor has a movement power: FLIGHT, RUNNING, TELEPORTATION, and the rest.
+     *
+     * Movement modes are not characteristics in the schema yet, so this method answers two ways. It
+     * asks hasCharacteristic first, then looks for an active item with the label as its XMLID. When
+     * movement leaves characteristic storage, this method keeps its answer and no caller changes.
+     *
+     * The item check matters because FLIGHT, FTL, GLIDING, SWINGING, TELEPORTATION, TUNNELING, and
+     * EXTRADIMENSIONALMOVEMENT have no uppercase node. An actor who bought the power has the movement
+     * mode even though no node reports it.
+     *
+     * @param {String} movement - Movement power label. Case does not matter, as it becomes upper case.
+     *
+     * @returns {Boolean} True when the actor has the characteristic node or owns the movement power.
+     */
+    hasMovementCharacteristic(movement) {
+        const label = movement.toUpperCase();
+
+        if (this.hasCharacteristic(label)) {
+            return true;
+        }
+
+        return this.items.some((item) => item.system?.XMLID === label && item.isActive);
     }
 
     /**
@@ -3560,6 +3585,15 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         }
 
         return this.system.is5e;
+    }
+
+    /**
+     * Identify this actor in a string: name, type, and edition.
+     *
+     * @returns {string} For example `TEST 5e Base [base2 5e]`.
+     */
+    detailedName() {
+        return `${this.name} [${this.type} ${this.is5e ? "5e" : "6e"}]`;
     }
 
     get _characterPoints() {

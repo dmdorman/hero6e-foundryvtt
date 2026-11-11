@@ -590,7 +590,7 @@ function withTokenToActorMovementCopySuppressed_5_0_4() {
 }
 
 /**
- * 6E movement characteristic keys, as 5.0.4 defines them in `CONFIG.HERO.movementPowers`. 5E actors add
+ * 6E movement characteristic keys, as 5.0.4 defined them in `CONFIG.HERO.movementPowers6e`. 5E actors add
  * gliding.
  *
  * Hard coded on purpose. A migration must keep the meaning it had the day it shipped, so it must not read

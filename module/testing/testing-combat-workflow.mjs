@@ -8,6 +8,7 @@ import {
     deleteQuenchActor,
 } from "./quench-helper.mjs";
 import { getPowerInfo } from "../utility/util.mjs";
+import { getCharacteristicValueFromActor } from "./characteristic-assertions.mjs";
 import { getAndSetGameSetting, getAndSetGameSettingCore } from "../settings/settings-helpers.mjs";
 
 const { Actor } = foundry.documents;
@@ -237,7 +238,7 @@ export function registerEndToEndCombatExecutionTests(quench) {
 
                         // 1. Establish canvas target layer
                         await targetToken(defenderTokenDoc, defenderActor);
-                        const baselineStun = defenderActor.system.characteristics?.stun?.value;
+                        const baselineStun = getCharacteristicValueFromActor(defenderActor, "STUN");
 
                         // 2. Open Attacker Sheet and capture form context
                         const { appInstance, sheet } = await launchAttackForm(attackerTokenDoc.actor, attackStrike);
@@ -270,7 +271,7 @@ export function registerEndToEndCombatExecutionTests(quench) {
 
                         // Unlinked token: damage lands on the token's synthetic actor
                         const updatedDefender = defenderTokenDoc.actor;
-                        const finalStun = updatedDefender.system.characteristics?.stun?.value;
+                        const finalStun = getCharacteristicValueFromActor(updatedDefender, "STUN");
                         const stunDamageApplied = baselineStun - finalStun;
 
                         const defenseText =
@@ -298,7 +299,7 @@ export function registerEndToEndCombatExecutionTests(quench) {
 
                         // 1. Establish canvas target layer
                         await targetToken(defenderTokenDoc, defenderActor);
-                        const baselineStr = defenderActor.system.characteristics?.str?.value;
+                        const baselineStr = getCharacteristicValueFromActor(defenderActor, "STR");
 
                         // 2. Open Attacker Sheet and capture form context
                         const { appInstance, sheet } = await launchAttackForm(attackerTokenDoc.actor, attackAid);
@@ -314,7 +315,7 @@ export function registerEndToEndCombatExecutionTests(quench) {
 
                         // 4. Verification calculations against live document database state
                         const updatedDefender = defenderTokenDoc.actor;
-                        const finalStr = updatedDefender.system.characteristics?.str?.value;
+                        const finalStr = getCharacteristicValueFromActor(updatedDefender, "STR");
 
                         const strAidAmount = Number(adjustmentSummaryDiv.innerHTML.match(/(\d+) STR/)[1]);
                         const expectedStrAfterAid = baselineStr + strAidAmount;
@@ -339,7 +340,7 @@ export function registerEndToEndCombatExecutionTests(quench) {
 
                         // 1. Establish canvas target layer
                         await targetToken(defenderTokenDoc, defenderActor);
-                        const baselineStr = defenderActor.system.characteristics?.str?.value;
+                        const baselineStr = getCharacteristicValueFromActor(defenderActor, "STR");
 
                         // 2. Open Attacker Sheet and capture form context
                         const { appInstance, sheet } = await launchAttackForm(attackerTokenDoc.actor, attackItem);
@@ -355,7 +356,7 @@ export function registerEndToEndCombatExecutionTests(quench) {
 
                         // 4. Verification calculations against live document database state
                         const updatedDefender = defenderTokenDoc.actor;
-                        const finalStr = updatedDefender.system.characteristics?.str?.value;
+                        const finalStr = getCharacteristicValueFromActor(updatedDefender, "STR");
 
                         const strDrainAmount = Number(adjustmentSummaryDiv.innerHTML.match(/(\d+) STR/)[1]);
                         const expectedStrAfterDrain = baselineStr - strDrainAmount;
@@ -380,7 +381,7 @@ export function registerEndToEndCombatExecutionTests(quench) {
 
                         // 1. Establish canvas target layer
                         await targetToken(defenderTokenDoc, defenderActor);
-                        const baselineStun = defenderActor.system.characteristics?.stun?.value;
+                        const baselineStun = getCharacteristicValueFromActor(defenderActor, "STUN");
 
                         // 2. Open Attacker Sheet and capture form context
                         const { appInstance, sheet } = await launchAttackForm(attackerTokenDoc.actor, attackItem);
@@ -413,13 +414,13 @@ export function registerEndToEndCombatExecutionTests(quench) {
 
                         // 4. Verification calculations against live document database state
                         const updatedDefender = defenderTokenDoc.actor;
-                        const finalStun = updatedDefender.system.characteristics?.stun?.value;
+                        const finalStun = getCharacteristicValueFromActor(updatedDefender, "STUN");
 
                         // Verification: Confirm state change matches automation calculations
                         const stunRawDamage = damageSpan.innerHTML.match(/(\d+) STUN/)[1];
                         const expectedStunDamage = Math.max(
                             0,
-                            stunRawDamage - updatedDefender.system.characteristics.ed.value,
+                            stunRawDamage - getCharacteristicValueFromActor(updatedDefender, "ED"),
                         );
                         const stunDamageApplied = baselineStun - finalStun;
                         assert.strictEqual(
@@ -617,7 +618,7 @@ export function registerEndToEndCombatExecutionTests(quench) {
 
                         // 1. Establish canvas target layer
                         await targetToken(defenderTokenDoc, defenderActor);
-                        const baselineStun = defenderActor.system.characteristics?.stun?.value;
+                        const baselineStun = getCharacteristicValueFromActor(defenderActor, "STUN");
 
                         // 2. Open Attacker Sheet and capture form context
                         const { appInstance, sheet } = await launchAttackForm(attackerTokenDoc.actor, attackItem);
@@ -633,7 +634,7 @@ export function registerEndToEndCombatExecutionTests(quench) {
 
                         // 4. Verification calculations against live document database state
                         const updatedDefender = defenderTokenDoc.actor;
-                        const finalStun = updatedDefender.system.characteristics?.stun?.value;
+                        const finalStun = getCharacteristicValueFromActor(updatedDefender, "STUN");
 
                         // Verification: Confirm state change matches automation calculations
                         const stunRawDamage = damageSpan.innerHTML.match(/(\d+) STUN/)[1];

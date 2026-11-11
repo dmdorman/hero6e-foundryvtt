@@ -6,11 +6,12 @@ import {
     setQuenchTimeout,
     waitForNotificationQueueToClear,
 } from "./quench-helper.mjs";
+import { createCharacteristicAssertions } from "./characteristic-assertions.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { movementEndCost } from "../token/actor-token.mjs";
 
 /**
- * Movement history waypoints only need the fields the END calculation reads.
+ * Movement history waypoints only need the properties the END calculation reads.
  * @param {string} action
  * @param {number[]} costs
  */
@@ -34,6 +35,7 @@ export function registerMovementEndTests(quench) {
         `${game.system.id}.movementEnd`,
         (context) => {
             const { describe, it, assert, before, after } = context;
+            const characteristicAssertions = createCharacteristicAssertions(assert);
 
             describe("Movement END", function () {
                 // The default timeout tends to be insufficient with multiple actors being created at the same time.
@@ -131,6 +133,7 @@ export function registerMovementEndTests(quench) {
                             quench: this,
                             contents: `<POWER XMLID="FTL" ID="1712026014674" BASECOST="10.0" LEVELS="2" ALIAS="Faster-Than-Light Travel" POSITION="43" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes"></POWER>`,
                             is5e: false,
+                            actorType: "pc",
                         });
                         for (const flightXml of flightXmls) {
                             await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(flightXml, actor), {
@@ -182,8 +185,18 @@ export function registerMovementEndTests(quench) {
                     before(async function () {
                         await waitForNotificationQueueToClear();
                         quenchScene = await createQuenchScene({ quench: this });
-                        actor6e = await createQuenchActor({ quench: this, is5e: false, name: "Runner 6e" });
-                        actor5e = await createQuenchActor({ quench: this, is5e: true, name: "Runner 5e" });
+                        actor6e = await createQuenchActor({
+                            quench: this,
+                            is5e: false,
+                            name: "Runner 6e",
+                            actorType: "pc",
+                        });
+                        actor5e = await createQuenchActor({
+                            quench: this,
+                            is5e: true,
+                            name: "Runner 5e",
+                            actorType: "pc",
+                        });
                         [token6e, token5e] = await quenchScene.createEmbeddedDocuments("Token", [
                             { name: actor6e.name, actorId: actor6e.id, actorLink: true, x: 0, y: 0 },
                             { name: actor5e.name, actorId: actor5e.id, actorLink: true, x: 200, y: 0 },
@@ -197,7 +210,7 @@ export function registerMovementEndTests(quench) {
                     });
 
                     it("6e Running 12m moving 12m costs 2 END", function () {
-                        assert.equal(actor6e.system.characteristics.running.max, 12);
+                        characteristicAssertions.assertCharacteristicProperty(actor6e, "RUNNING", "max", 12);
                         stubMovementHistory(token6e, [12]);
                         assert.equal(token6e._movementHistoryEndCost, 2);
                     });
@@ -208,7 +221,7 @@ export function registerMovementEndTests(quench) {
                     });
 
                     it('5e Running 6" moving 30m costs 3 END', function () {
-                        assert.equal(actor5e.system.characteristics.running.max, 6);
+                        characteristicAssertions.assertCharacteristicProperty(actor5e, "RUNNING", "max", 6);
                         stubMovementHistory(token5e, [30]);
                         assert.equal(token5e._movementHistoryEndCost, 3);
                     });

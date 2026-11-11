@@ -1,4 +1,5 @@
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
+import { createCharacteristicAssertions, getCharacteristicValueFromActor } from "./characteristic-assertions.mjs";
 
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { performAdjustment } from "../actor/actor-adjustment.mjs";
@@ -11,6 +12,7 @@ export function registerDefenseTests(quench) {
         `${game.system.id}.utils.defense`,
         (context) => {
             const { afterEach, assert, before, beforeEach, describe, it } = context;
+            const characteristicAssertions = createCharacteristicAssertions(assert);
 
             describe("Defense Tests", function () {
                 // Mocha's 2000ms default is too short when several actors are created at the same time.
@@ -19,7 +21,7 @@ export function registerDefenseTests(quench) {
                 describe("Resistant Protection", function () {
                     let actor;
                     beforeEach(async function () {
-                        actor = await createQuenchActor({ quench: this, is5e: true });
+                        actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                     });
 
                     afterEach(async function () {
@@ -166,7 +168,7 @@ export function registerDefenseTests(quench) {
                     `;
 
                     beforeEach(async function () {
-                        actor = await createQuenchActor({ quench: this, is5e: true });
+                        actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                     });
 
                     afterEach(async function () {
@@ -205,7 +207,7 @@ export function registerDefenseTests(quench) {
                         });
 
                         it("undrained: all 30 ED is resistant", async function () {
-                            assert.equal(actor.system.characteristics.ed.value, 30);
+                            characteristicAssertions.assertCharacteristicProperty(actor, "ED", "value", 30);
 
                             const defense = getActorDefensesVsAttack(actor, edAttackItem());
                             assert.equal(defense.resistantValue, 30);
@@ -215,7 +217,7 @@ export function registerDefenseTests(quench) {
 
                         it("drained by 4: 26 resistant, no negative normal defense", async function () {
                             await drainEd(4);
-                            assert.equal(actor.system.characteristics.ed.value, 26);
+                            characteristicAssertions.assertCharacteristicProperty(actor, "ED", "value", 26);
 
                             const defense = getActorDefensesVsAttack(actor, edAttackItem());
                             assert.equal(
@@ -233,7 +235,7 @@ export function registerDefenseTests(quench) {
 
                         it("drained by 29: 1 resistant", async function () {
                             await drainEd(29);
-                            assert.equal(actor.system.characteristics.ed.value, 1);
+                            characteristicAssertions.assertCharacteristicProperty(actor, "ED", "value", 1);
 
                             const defense = getActorDefensesVsAttack(actor, edAttackItem());
                             assert.equal(defense.defenseValue, 0);
@@ -243,7 +245,7 @@ export function registerDefenseTests(quench) {
 
                         it("drained by 30: no defense remains", async function () {
                             await drainEd(30);
-                            assert.isAtMost(actor.system.characteristics.ed.value, 0);
+                            assert.isAtMost(getCharacteristicValueFromActor(actor, "ED"), 0);
 
                             const defense = getActorDefensesVsAttack(actor, edAttackItem());
                             assert.equal(
@@ -255,7 +257,7 @@ export function registerDefenseTests(quench) {
 
                         it("drained by 40: overdrain still leaves 0, not full defense", async function () {
                             await drainEd(40);
-                            assert.isAtMost(actor.system.characteristics.ed.value, 0);
+                            assert.isAtMost(getCharacteristicValueFromActor(actor, "ED"), 0);
 
                             const defense = getActorDefensesVsAttack(actor, edAttackItem());
                             assert.equal(
@@ -275,7 +277,7 @@ export function registerDefenseTests(quench) {
 
                         it("drained by 1: remaining natural ED stacks with the power", async function () {
                             await drainEd(1);
-                            assert.equal(actor.system.characteristics.ed.value, 1);
+                            characteristicAssertions.assertCharacteristicProperty(actor, "ED", "value", 1);
 
                             const defense = getActorDefensesVsAttack(actor, edAttackItem());
                             assert.equal(defense.defenseValue, 1);
@@ -285,7 +287,7 @@ export function registerDefenseTests(quench) {
 
                         it("drained by 4: natural ED clamps at 0, the power is untouched", async function () {
                             await drainEd(4);
-                            assert.isAtMost(actor.system.characteristics.ed.value, 0);
+                            assert.isAtMost(getCharacteristicValueFromActor(actor, "ED"), 0);
 
                             const defense = getActorDefensesVsAttack(actor, edAttackItem());
                             assert.equal(
@@ -347,7 +349,7 @@ export function registerDefenseTests(quench) {
                         }
 
                         beforeEach(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: false });
+                            actor = await createQuenchActor({ quench: this, is5e: false, actorType: "pc" });
                             lifeSupport = await HeroSystem6eItem.create(
                                 HeroSystem6eItem.itemDataFromXml(lifeSupportBreathingXml, actor),
                                 { parent: actor },
@@ -374,7 +376,7 @@ export function registerDefenseTests(quench) {
 
                             const defense = getActorDefensesVsAttack(actor, attack);
                             assert.notExists(lifeSupportTag(defense, lifeSupport));
-                            assert.equal(defense.defenseTotalValue, actor.system.characteristics.pd.value);
+                            assert.equal(defense.defenseTotalValue, getCharacteristicValueFromActor(actor, "PD"));
                         });
 
                         it("AVAD vs Life Support counts Life Support", async function () {
@@ -443,7 +445,7 @@ export function registerDefenseTests(quench) {
                         }
 
                         beforeEach(async function () {
-                            actor = await createQuenchActor({ quench: this, is5e: true });
+                            actor = await createQuenchActor({ quench: this, is5e: true, actorType: "pc" });
                             lifeSupport = await HeroSystem6eItem.create(
                                 HeroSystem6eItem.itemDataFromXml(lifeSupportBreathingXml, actor),
                                 { parent: actor },

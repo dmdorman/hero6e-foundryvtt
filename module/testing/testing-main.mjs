@@ -58,6 +58,7 @@ Hooks.on("quenchReady", async (quench) => {
      */
     async function importTestSuites() {
         const [
+            chatCleanup,
             {
                 registerGlobalSetup,
                 registerGlobalTeardown,
@@ -65,18 +66,23 @@ Hooks.on("quenchReady", async (quench) => {
                 GLOBAL_TEARDOWN_SUITE,
                 deleteQuenchFixtures,
             },
-            chatCleanup,
             { register5eCalculatedCombatAndFiguredValuesTests },
             { registerItemActiveEffectSyncTests },
+            { registerAdjustmentCharacteristicsRequiredTests },
             { registerAdjustmentPowerFadeMatrixTests },
             { registerAutomatonTests },
-            { registerBaseTests },
+            { registerCharacteristicsAiTests },
+            { registerCharacteristicsAutomatonTests },
+            { registerCharacteristicsBaseTests },
+            { registerCharacteristicsComputerTests },
+            { registerCharacteristicsPcTests },
+            { registerCharacteristicsRequiredTests },
+            { registerCharacteristicsVehicleTests },
             { registerSpeedChartCombatValidationTests, registerCombatTrackerFixValidationTests },
             { registerEndToEndCombatExecutionTests },
             { registerConfigTests },
             { registerCombatSkillLevelsTests },
             { registerDamageFunctionsTests },
-            { registerDefaultCharacteristicsForEachActorTypeTests },
             { registerDefenseTests },
             { registerDiceTests },
             { registerDropTests },
@@ -95,19 +101,25 @@ Hooks.on("quenchReady", async (quench) => {
             { registerVisionTests },
             { registerWorldTimeRecoveryAndExpiryTests },
         ] = await Promise.all([
-            import("./quench-helper.mjs"),
             import("./quench-chat.mjs"),
+            import("./quench-helper.mjs"),
             import("./testing-5e-calculated-active-effect.mjs"),
             import("./testing-active-effects.mjs"),
+            import("./testing-adjustment-characteristics-required.mjs"),
             import("./testing-adjustment-fade.mjs"),
             import("./testing-automaton.mjs"),
-            import("./testing-base.mjs"),
+            import("./testing-characteristics-ai.mjs"),
+            import("./testing-characteristics-automaton.mjs"),
+            import("./testing-characteristics-base.mjs"),
+            import("./testing-characteristics-computer.mjs"),
+            import("./testing-characteristics-pc.mjs"),
+            import("./testing-characteristics-required.mjs"),
+            import("./testing-characteristics-vehicle.mjs"),
             import("./testing-combat-tracker.mjs"),
             import("./testing-combat-workflow.mjs"),
             import("./testing-config.mjs"),
             import("./testing-csl.mjs"),
             import("./testing-damage-functions.mjs"),
-            import("./testing-default-characteristics.mjs"),
             import("./testing-defense.mjs"),
             import("./testing-dice.mjs"),
             import("./testing-drag-and-drop.mjs"),
@@ -132,19 +144,27 @@ Hooks.on("quenchReady", async (quench) => {
             teardownSuite: GLOBAL_TEARDOWN_SUITE,
             deleteQuenchFixtures,
             chatCleanup,
-            // Run order. Global setup goes first, global teardown goes last, and the suites between
-            // them are alphabetical by the Quench display name.
+            // Run order equals list order: Quench runs and lists batches in registration order, and
+            // it never re-sorts them. Global setup goes first, global teardown goes last, and the
+            // suites between them go alphabetical by display name, so the Quench dialog reads in
+            // order. `registerTestSuites` checks that order, so a bad rename fails at start-up.
             testSuiteRegistrars: [
                 registerGlobalSetup,
                 register5eCalculatedCombatAndFiguredValuesTests,
                 registerAdjustmentPowerFadeMatrixTests,
                 registerAutomatonTests,
-                registerBaseTests,
+                registerCharacteristicsAiTests,
+                registerCharacteristicsAutomatonTests,
+                registerCharacteristicsBaseTests,
+                registerCharacteristicsComputerTests,
+                registerCharacteristicsPcTests,
+                registerCharacteristicsVehicleTests,
+                registerAdjustmentCharacteristicsRequiredTests,
+                registerCharacteristicsRequiredTests,
                 registerCombatSkillLevelsTests,
                 registerCombatTrackerFixValidationTests,
                 registerConfigTests,
                 registerDamageFunctionsTests,
-                registerDefaultCharacteristicsForEachActorTypeTests,
                 registerDefenseTests,
                 registerDiceTests,
                 registerDropTests,
@@ -171,9 +191,12 @@ Hooks.on("quenchReady", async (quench) => {
     }
 
     /**
-     * Register every suite in array order. Quench runs batches in registration order, so the array
-     * keeps global setup first and global teardown last. A non-function entry throws here, so a bad
-     * registration fails at start-up instead of going missing.
+     * Register every suite in array order, then check the order Quench shows.
+     *
+     * Quench runs batches in registration order, and its dialog lists them in that same order. The
+     * array order is therefore the display order. Global setup goes first, global teardown goes last,
+     * and the suites between them go alphabetical by display name. A missing import, or a rename that
+     * breaks that order, throws here, so no suite goes missing and the list stays readable.
      *
      * @param {object} quench The Quench instance.
      * @param {Function[]} testSuiteRegistrars One registration function per suite, in run order.

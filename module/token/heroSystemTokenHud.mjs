@@ -1,4 +1,4 @@
-import { MOVEMENT_NONE_ACTION } from "../utility/movement.mjs";
+import { MOVEMENT_NONE_ACTION, movementDisplayName } from "../utility/movement.mjs";
 import { convertSystemUnitsToMetres, lightYearInMetres, turnsPerGregorianYear } from "../utility/units.mjs";
 import { ftlLevelsToLightYearsPerYear } from "../item/item.mjs";
 
@@ -210,6 +210,11 @@ function getMovementCostFunctionForGravityAffectedMovementType(/*token, options*
 export class HeroSystemTokenHud extends TokenHUD {
     /**
      * Return initialize movement actions
+     *
+     * Each movement label comes from the movement power table, so the HUD, the ruler, and a
+     * knock-back title show one name per mode. The `none` and `displace` actions are Foundry state,
+     * not powers, so they keep their own labels.
+     *
      * @param {string} module
      * @return {Object} movementActions
      */
@@ -232,7 +237,7 @@ export class HeroSystemTokenHud extends TokenHUD {
                 maxNonCombatDistanceMeters: () => 0,
             },
             RUNNING: {
-                label: "Running",
+                label: movementDisplayName("running"),
                 icon: "fa-solid fa-person-running",
                 img: "icons/svg/walk.svg",
                 isActive: false,
@@ -244,7 +249,7 @@ export class HeroSystemTokenHud extends TokenHUD {
                 getCostFunction: getMovementCostFunctionForGravityAffectedMovementType,
             },
             SWIMMING: {
-                label: "Swimming",
+                label: movementDisplayName("swimming"),
                 icon: "fa-solid fa-person-swimming",
                 img: "icons/svg/whale.svg",
                 isActive: false,
@@ -256,7 +261,7 @@ export class HeroSystemTokenHud extends TokenHUD {
                 getCostFunction: getMovementCostFunctionForGravityAffectedMovementType,
             },
             LEAPING: {
-                label: "Leaping",
+                label: movementDisplayName("leaping"),
                 icon: "fa-solid fa-person-running-fast",
                 img: "icons/svg/jump.svg",
                 isActive: false,
@@ -269,7 +274,7 @@ export class HeroSystemTokenHud extends TokenHUD {
             },
 
             EXTRADIMENSIONALMOVEMENT: {
-                label: "Dimensional Travel",
+                label: movementDisplayName("extradimensionalmovement"),
                 icon: "fa-solid fa-transporter",
                 img: `systems/${module}/icons/movement/star-gate.svg`,
                 isActive: false,
@@ -281,7 +286,7 @@ export class HeroSystemTokenHud extends TokenHUD {
                 getCostFunction: getMovementCostFunctionForNonGravityAffectedMovementType,
             },
             FLIGHT: {
-                label: "Flight",
+                label: movementDisplayName("flight"),
                 icon: "fa-solid fa-person-fairy",
                 img: "icons/svg/wing.svg",
                 isActive: false,
@@ -293,7 +298,7 @@ export class HeroSystemTokenHud extends TokenHUD {
                 getCostFunction: getMovementCostFunctionForGravityAffectedMovementType,
             },
             FTL: {
-                label: "Faster Than Light",
+                label: movementDisplayName("ftl"),
                 icon: "fa-solid fa-lightbulb",
                 img: `systems/${module}/icons/movement/rocket.svg`,
                 isActive: false,
@@ -305,7 +310,7 @@ export class HeroSystemTokenHud extends TokenHUD {
                 getCostFunction: getMovementCostFunctionForNonGravityAffectedMovementType,
             },
             GLIDING: {
-                label: "Gliding",
+                label: movementDisplayName("gliding"),
                 icon: "fa-solid fa-person-from-portal",
                 img: `systems/${module}/icons/movement/hang-glider.svg`,
                 isActive: false,
@@ -317,7 +322,7 @@ export class HeroSystemTokenHud extends TokenHUD {
                 getCostFunction: getMovementCostFunctionForGravityAffectedMovementType,
             },
             SWINGING: {
-                label: "Swinging",
+                label: movementDisplayName("swinging"),
                 icon: "fa-solid fa-lasso",
                 img: `systems/${module}/icons/movement/grapple-hook.svg`,
                 isActive: false,
@@ -329,7 +334,7 @@ export class HeroSystemTokenHud extends TokenHUD {
                 getCostFunction: getMovementCostFunctionForGravityAffectedMovementType,
             },
             TELEPORTATION: {
-                label: "Teleportation",
+                label: movementDisplayName("teleportation"),
                 icon: "fa-solid fa-person-from-portal",
                 img: "icons/svg/teleport.svg",
                 isActive: false,
@@ -341,7 +346,7 @@ export class HeroSystemTokenHud extends TokenHUD {
                 getCostFunction: getMovementCostFunctionForNonGravityAffectedMovementType,
             },
             TUNNELING: {
-                label: "Tunneling",
+                label: movementDisplayName("tunneling"),
                 icon: "fa-solid fa-person-digging",
                 img: "icons/svg/burrow.svg",
                 isActive: false,

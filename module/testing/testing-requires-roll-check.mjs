@@ -137,7 +137,7 @@ export function registerRequiresRollCheckTests(quench) {
                         let sectionalActivationRollModifier;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                             sectionalSecurityArmor = actor.items.find((item) => item.name === "Level I Security Armor");
                             sectionalActivationRollModifier = sectionalSecurityArmor.system.MODIFIER.find(
@@ -583,7 +583,7 @@ export function registerRequiresRollCheckTests(quench) {
                         let sectionalArmorInvalidDeclarationInvalidProbability;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                             acrobaticsActivation8Less = actor.items.find(
                                 (item) => item.name === "Acrobatics Activation 8-",
@@ -1812,7 +1812,7 @@ export function registerRequiresRollCheckTests(quench) {
                         after(async function () {});
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                             defaultHitLocationsEnabled = await getAndSetGameSetting(
                                 "hit locations",
@@ -2287,7 +2287,7 @@ export function registerRequiresRollCheckTests(quench) {
                         let luckPower;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                             aidRequiresBreakfallStrangeCapitalizationWithNoApPenalty = actor.items.find(
                                 (item) => item.name === "Requires BrEaKfAlL with no penalty based on AP",
@@ -2874,7 +2874,14 @@ export function registerRequiresRollCheckTests(quench) {
                         let invalidDrainMissingLuckPower;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            // The export is a `builtIn.Vehicle.hdt` sheet, so the actor type must be
+                            // vehicle. A pc ignores the export's DEF line.
+                            actor = await createQuenchActor({
+                                quench: this,
+                                contents,
+                                is5e: true,
+                                actorType: "vehicle",
+                            });
 
                             invalidDrainMissingEgoCharacteristic = actor.items.find(
                                 (item) => item.name === "Drain Invalid RSR EGO with -1 per 10 AP",
@@ -3565,7 +3572,7 @@ export function registerRequiresRollCheckTests(quench) {
                         let darknessRequiresSsXenobotanyOrBreakfallEachUseWith1Per5ApPenaltyButBreakfallIsNotABackgroundSkill;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
 
                             ebRequiresActivationRoll14LessEveryPhase = actor.items.find(
                                 (item) => item.name === "Requires A Roll 14- Every Use",
@@ -4568,7 +4575,7 @@ export function registerRequiresRollCheckTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                     });
 
                     after(async function () {

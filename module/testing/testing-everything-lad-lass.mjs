@@ -1987,7 +1987,7 @@ export function registerEverythingCharacterTests(quench) {
 
                     let actor;
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -2007,7 +2007,7 @@ export function registerEverythingCharacterTests(quench) {
 
                     let actor;
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                     });
 
                     after(async function () {

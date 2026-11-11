@@ -1,4 +1,5 @@
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
+import { createCharacteristicAssertions } from "./characteristic-assertions.mjs";
 
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { getAndSetGameSetting } from "../settings/settings-helpers.mjs";
@@ -13,732 +14,12 @@ export function registerFullCharacterTests(quench) {
         `${game.system.id}.utils.full`,
         (context) => {
             const { after, afterEach, assert, before, beforeEach, describe, expect, it } = context;
+            const characteristicAssertions = createCharacteristicAssertions(assert);
 
             describe("Full Character Tests", function () {
                 // Mocha's 2000ms default is too short when several actors are created at the same time.
                 setQuenchTimeout(this, 20000);
 
-                describe("Characteristics 5e simple", function () {
-                    const contents = `
-                        <?xml version="1.0" encoding="UTF-16"?>
-                        <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic.hdt">
-                        <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" RULES="Default" />
-                        <CHARACTER_INFO CHARACTER_NAME="5e superhero simple" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.46224760379584" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
-                            <BACKGROUND />
-                            <PERSONALITY />
-                            <QUOTE />
-                            <TACTICS />
-                            <CAMPAIGN_USE />
-                            <APPEARANCE />
-                            <NOTES1 />
-                            <NOTES2 />
-                            <NOTES3 />
-                            <NOTES4 />
-                            <NOTES5 />
-                        </CHARACTER_INFO>
-                        <CHARACTERISTICS>
-                            <STR XMLID="STR" ID="1683328673465" BASECOST="0.0" LEVELS="1" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </STR>
-                            <DEX XMLID="DEX" ID="1683328012642" BASECOST="0.0" LEVELS="2" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </DEX>
-                            <CON XMLID="CON" ID="1683331008620" BASECOST="0.0" LEVELS="3" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </CON>
-                            <BODY XMLID="BODY" ID="1683328674200" BASECOST="0.0" LEVELS="4" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </BODY>
-                            <INT XMLID="INT" ID="1683331009492" BASECOST="0.0" LEVELS="5" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </INT>
-                            <EGO XMLID="EGO" ID="1683331009412" BASECOST="0.0" LEVELS="6" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </EGO>
-                            <PRE XMLID="PRE" ID="1683331008889" BASECOST="0.0" LEVELS="7" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </PRE>
-                            <COM XMLID="COM" ID="1683331009574" BASECOST="0.0" LEVELS="8" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </COM>
-                            <PD XMLID="PD" ID="1683331009505" BASECOST="0.0" LEVELS="0" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </PD>
-                            <ED XMLID="ED" ID="1683331009320" BASECOST="0.0" LEVELS="0" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </ED>
-                            <SPD XMLID="SPD" ID="1683328013371" BASECOST="0.0" LEVELS="2" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </SPD>
-                            <REC XMLID="REC" ID="1683331009019" BASECOST="0.0" LEVELS="0" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </REC>
-                            <END XMLID="END" ID="1683331008978" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </END>
-                            <STUN XMLID="STUN" ID="1683331009203" BASECOST="0.0" LEVELS="0" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </STUN>
-                            <RUNNING XMLID="RUNNING" ID="1683328673592" BASECOST="0.0" LEVELS="21" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </RUNNING>
-                            <SWIMMING XMLID="SWIMMING" ID="1683328673922" BASECOST="0.0" LEVELS="26" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </SWIMMING>
-                            <LEAPING XMLID="LEAPING" ID="1683328674010" BASECOST="0.0" LEVELS="27" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </LEAPING>
-                        </CHARACTERISTICS>
-                        <SKILLS />
-                        <PERKS />
-                        <TALENTS />
-                        <MARTIALARTS />
-                        <POWERS />
-                        <DISADVANTAGES />
-                        <EQUIPMENT />
-                        </CHARACTER>
-                    `;
-
-                    let actor;
-
-                    before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
-                    });
-
-                    after(async function () {
-                        await deleteQuenchActor({ quench: this, actor });
-                    });
-
-                    it("str.max", async function () {
-                        assert.equal(actor.system.characteristics.str.max, 11);
-                    });
-                    it("str.realCost", async function () {
-                        assert.equal(actor.system.characteristics.str.realCost, 1);
-                    });
-
-                    it("dex.max", async function () {
-                        assert.equal(actor.system.characteristics.dex.max, 12);
-                    });
-                    it("dex.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dex.realCost, 6);
-                    });
-
-                    it("con.max", async function () {
-                        assert.equal(actor.system.characteristics.con.max, 13);
-                    });
-                    it("con.realCost", async function () {
-                        assert.equal(actor.system.characteristics.con.realCost, 6);
-                    });
-
-                    it("body.max", async function () {
-                        assert.equal(actor.system.characteristics.body.max, 14);
-                    });
-                    it("body.realCost", async function () {
-                        assert.equal(actor.system.characteristics.body.realCost, 8);
-                    });
-
-                    it("int.max", async function () {
-                        assert.equal(actor.system.characteristics.int.max, 15);
-                    });
-                    it("int.realCost", async function () {
-                        assert.equal(actor.system.characteristics.int.realCost, 5);
-                    });
-
-                    it("ego.max", async function () {
-                        assert.equal(actor.system.characteristics.ego.max, 16);
-                    });
-                    it("ego.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ego.realCost, 12);
-                    });
-
-                    it("pre.max", async function () {
-                        assert.equal(actor.system.characteristics.pre.max, 17);
-                    });
-                    it("pre.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pre.realCost, 7);
-                    });
-
-                    it("com.max", async function () {
-                        assert.equal(actor.system.characteristics.com.max, 18);
-                    });
-                    it("com.realCost", async function () {
-                        assert.equal(actor.system.characteristics.com.realCost, 4);
-                    });
-
-                    it("pd.max", async function () {
-                        assert.equal(actor.system.characteristics.pd.max, 2);
-                    });
-                    it("pd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pd.realCost, 0);
-                    });
-
-                    it("ed.max", async function () {
-                        assert.equal(actor.system.characteristics.ed.max, 3);
-                    });
-                    it("ed.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ed.realCost, 0);
-                    });
-
-                    it("spd.max", async function () {
-                        assert.equal(actor.system.characteristics.spd.max, 4);
-                    });
-                    it("spd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.spd.realCost, 18);
-                    });
-
-                    it("rec.max", async function () {
-                        assert.equal(actor.system.characteristics.rec.max, 5);
-                    });
-                    it("rec.realCost", async function () {
-                        assert.equal(actor.system.characteristics.rec.realCost, 0);
-                    });
-
-                    it("end.max", async function () {
-                        assert.equal(actor.system.characteristics.end.max, 26);
-                    });
-                    it("end.realCost", async function () {
-                        assert.equal(actor.system.characteristics.end.realCost, 0);
-                    });
-
-                    it("stun.max", async function () {
-                        assert.equal(actor.system.characteristics.stun.max, 27);
-                    });
-                    it("stun.realCost", async function () {
-                        assert.equal(actor.system.characteristics.stun.realCost, 0);
-                    });
-
-                    it("ocv.max", async function () {
-                        assert.equal(actor.system.characteristics.ocv.max, 4);
-                    });
-                    it("ocv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ocv.realCost, 0);
-                    });
-
-                    it("dcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dcv.max, 4);
-                    });
-                    it("dcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dcv.realCost, 0);
-                    });
-
-                    it("omcv.max", async function () {
-                        assert.equal(actor.system.characteristics.omcv.max, 5);
-                    });
-                    it("omcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.omcv.realCost, 0);
-                    });
-
-                    it("dmcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.max, 5);
-                    });
-                    it("dmcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.realCost, 0);
-                    });
-
-                    it("running.max", async function () {
-                        assert.equal(actor.system.characteristics.running.max, 27);
-                    });
-                    it("running.realCost", async function () {
-                        assert.equal(actor.system.characteristics.running.realCost, 42);
-                    });
-
-                    it("swimming.max", async function () {
-                        assert.equal(actor.system.characteristics.swimming.max, 28);
-                    });
-                    it("swimming.realCost", async function () {
-                        assert.equal(actor.system.characteristics.swimming.realCost, 26);
-                    });
-
-                    it("leaping.max", async function () {
-                        assert.equal(actor.system.characteristics.leaping.max, 29);
-                    });
-                    it("leaping.realCost", async function () {
-                        assert.equal(actor.system.characteristics.leaping.realCost, 27);
-                    });
-
-                    it("tunneling.max", async function () {
-                        assert.equal(actor.system.characteristics.tunneling.max, 0);
-                    });
-                    it("tunneling.realCost", async function () {
-                        assert.equal(actor.system.characteristics.tunneling.realCost, 0);
-                    });
-
-                    it("flight.max", async function () {
-                        assert.equal(actor.system.characteristics.flight.max, 0);
-                    });
-                    it("flight.realCost", async function () {
-                        assert.equal(actor.system.characteristics.flight.realCost, 0);
-                    });
-
-                    it("gliding.max", async function () {
-                        assert.equal(actor.system.characteristics.gliding.max, 0);
-                    });
-                    it("gliding.realCost", async function () {
-                        assert.equal(actor.system.characteristics.gliding.realCost, 0);
-                    });
-
-                    it("realCost", async function () {
-                        assert.equal(actor.realCost, 162);
-                    });
-
-                    it("activePoints", async function () {
-                        assert.equal(actor.activePoints, 162);
-                    });
-                });
-
-                describe("Characteristics 5e buyback", function () {
-                    const contents = `
-                        <?xml version="1.0" encoding="UTF-16"?>
-                        <CHARACTER version="6.0" TEMPLATE="builtIn.Superheroic.hdt">
-                        <BASIC_CONFIGURATION BASE_POINTS="200" DISAD_POINTS="150" EXPERIENCE="0" RULES="Default" />
-                        <CHARACTER_INFO CHARACTER_NAME="5e superhero" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.46224760379584" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
-                            <BACKGROUND />
-                            <PERSONALITY />
-                            <QUOTE />
-                            <TACTICS />
-                            <CAMPAIGN_USE />
-                            <APPEARANCE />
-                            <NOTES1 />
-                            <NOTES2 />
-                            <NOTES3 />
-                            <NOTES4 />
-                            <NOTES5 />
-                        </CHARACTER_INFO>
-                        <CHARACTERISTICS>
-                            <STR XMLID="STR" ID="1683328673465" BASECOST="0.0" LEVELS="-5" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </STR>
-                            <DEX XMLID="DEX" ID="1683328012642" BASECOST="0.0" LEVELS="-5" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </DEX>
-                            <CON XMLID="CON" ID="1683331008620" BASECOST="0.0" LEVELS="-5" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </CON>
-                            <BODY XMLID="BODY" ID="1683328674200" BASECOST="0.0" LEVELS="-5" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </BODY>
-                            <INT XMLID="INT" ID="1683331009492" BASECOST="0.0" LEVELS="-5" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </INT>
-                            <EGO XMLID="EGO" ID="1683331009412" BASECOST="0.0" LEVELS="-5" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </EGO>
-                            <PRE XMLID="PRE" ID="1683331008889" BASECOST="0.0" LEVELS="-5" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </PRE>
-                            <COM XMLID="COM" ID="1683331009574" BASECOST="0.0" LEVELS="-5" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </COM>
-                            <PD XMLID="PD" ID="1683331009505" BASECOST="0.0" LEVELS="0" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </PD>
-                            <ED XMLID="ED" ID="1683331009320" BASECOST="0.0" LEVELS="-1" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </ED>
-                            <SPD XMLID="SPD" ID="1683328013371" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </SPD>
-                            <REC XMLID="REC" ID="1683331009019" BASECOST="0.0" LEVELS="0" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </REC>
-                            <END XMLID="END" ID="1683331008978" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </END>
-                            <STUN XMLID="STUN" ID="1683331009203" BASECOST="0.0" LEVELS="0" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </STUN>
-                            <RUNNING XMLID="RUNNING" ID="1683328673592" BASECOST="0.0" LEVELS="0" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </RUNNING>
-                            <SWIMMING XMLID="SWIMMING" ID="1683328673922" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </SWIMMING>
-                            <LEAPING XMLID="LEAPING" ID="1683328674010" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                            <NOTES />
-                            </LEAPING>
-                        </CHARACTERISTICS>
-                        <SKILLS />
-                        <PERKS />
-                        <TALENTS />
-                        <MARTIALARTS />
-                        <POWERS />
-                        <DISADVANTAGES />
-                        <EQUIPMENT />
-                        </CHARACTER>
-                    `;
-
-                    let actor;
-                    before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
-                    });
-
-                    after(async function () {
-                        await deleteQuenchActor({ quench: this, actor });
-                    });
-
-                    // it("name", async function () {
-                    //     assert.equal(actor.name, "5e superhero");
-                    // });
-
-                    it("str.max", async function () {
-                        assert.equal(actor.system.characteristics.str.max, 5);
-                    });
-                    it("str.realCost", async function () {
-                        assert.equal(actor.system.characteristics.str.realCost, -5);
-                    });
-
-                    it("dex.max", async function () {
-                        assert.equal(actor.system.characteristics.dex.max, 5);
-                    });
-                    it("dex.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dex.realCost, -15);
-                    });
-
-                    it("con.max", async function () {
-                        assert.equal(actor.system.characteristics.con.max, 5);
-                    });
-                    it("con.realCost", async function () {
-                        assert.equal(actor.system.characteristics.con.realCost, -10);
-                    });
-
-                    it("body.max", async function () {
-                        assert.equal(actor.system.characteristics.body.max, 5);
-                    });
-                    it("body.realCost", async function () {
-                        assert.equal(actor.system.characteristics.body.realCost, -10);
-                    });
-
-                    it("int.max", async function () {
-                        assert.equal(actor.system.characteristics.int.max, 5);
-                    });
-                    it("int.realCost", async function () {
-                        assert.equal(actor.system.characteristics.int.realCost, -5);
-                    });
-
-                    it("ego.max", async function () {
-                        assert.equal(actor.system.characteristics.ego.max, 5);
-                    });
-                    it("ego.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ego.realCost, -10);
-                    });
-
-                    it("pre.max", async function () {
-                        assert.equal(actor.system.characteristics.pre.max, 5);
-                    });
-                    it("pre.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pre.realCost, -5);
-                    });
-
-                    it("com.max", async function () {
-                        assert.equal(actor.system.characteristics.com.max, 5);
-                    });
-                    it("com.realCost", async function () {
-                        assert.equal(actor.system.characteristics.com.realCost, -2);
-                    });
-
-                    it("pd.max", async function () {
-                        assert.equal(actor.system.characteristics.pd.max, 1);
-                    });
-                    it("pd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pd.realCost, 0);
-                    });
-
-                    it("ed.max", async function () {
-                        assert.equal(actor.system.characteristics.ed.max, 0);
-                    });
-                    it("ed.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ed.realCost, -1);
-                    });
-
-                    it("spd.max", async function () {
-                        assert.equal(actor.system.characteristics.spd.max, 1);
-                    });
-                    it("spd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.spd.realCost, 0);
-                    });
-
-                    it("rec.max", async function () {
-                        assert.equal(actor.system.characteristics.rec.max, 2);
-                    });
-                    it("rec.realCost", async function () {
-                        assert.equal(actor.system.characteristics.rec.realCost, 0);
-                    });
-
-                    it("end.max", async function () {
-                        assert.equal(actor.system.characteristics.end.max, 10);
-                    });
-                    it("end.realCost", async function () {
-                        assert.equal(actor.system.characteristics.end.realCost, 0);
-                    });
-
-                    it("stun.max", async function () {
-                        assert.equal(actor.system.characteristics.stun.max, 11);
-                    });
-                    it("stun.realCost", async function () {
-                        assert.equal(actor.system.characteristics.stun.realCost, 0);
-                    });
-
-                    it("ocv.max", async function () {
-                        assert.equal(actor.system.characteristics.ocv.max, 2);
-                    });
-                    it("ocv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ocv.realCost, 0);
-                    });
-
-                    it("dcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dcv.max, 2);
-                    });
-                    it("dcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dcv.realCost, 0);
-                    });
-
-                    it("omcv.max", async function () {
-                        assert.equal(actor.system.characteristics.omcv.max, 2);
-                    });
-                    it("omcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.omcv.realCost, 0);
-                    });
-
-                    it("dmcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.max, 2);
-                    });
-                    it("dmcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.realCost, 0);
-                    });
-
-                    it("running.max", async function () {
-                        assert.equal(actor.system.characteristics.running.max, 6);
-                    });
-                    it("running.realCost", async function () {
-                        assert.equal(actor.system.characteristics.running.realCost, 0);
-                    });
-
-                    it("swimming.max", async function () {
-                        assert.equal(actor.system.characteristics.swimming.max, 2);
-                    });
-                    it("swimming.realCost", async function () {
-                        assert.equal(actor.system.characteristics.swimming.realCost, 0);
-                    });
-
-                    it("leaping.max", async function () {
-                        assert.equal(actor.system.characteristics.leaping.max, 1);
-                    });
-                    it("leaping.realCost", async function () {
-                        assert.equal(actor.system.characteristics.leaping.realCost, 0);
-                    });
-
-                    it("realCost", async function () {
-                        assert.equal(actor.realCost, -63);
-                    });
-
-                    it("activePoints", async function () {
-                        assert.equal(actor.activePoints, -63);
-                    });
-                });
-
-                describe("Characteristics 5e negative COM", function () {
-                    describe("-10 COM", function () {
-                        const contents = `
-                            <?xml version="1.0" encoding="UTF-16"?>
-                            <CHARACTER version="6.0" TEMPLATE="builtIn.Normal.hdt">
-                            <BASIC_CONFIGURATION BASE_POINTS="100" DISAD_POINTS="40" EXPERIENCE="0" RULES="Default" />
-                            <CHARACTER_INFO CHARACTER_NAME="Demon" ALTERNATE_IDENTITIES="Minor Gluttony Demon" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
-                                <BACKGROUND />
-                                <PERSONALITY>Eat</PERSONALITY>
-                                <QUOTE />
-                                <TACTICS />
-                                <CAMPAIGN_USE />
-                                <APPEARANCE />
-                                <NOTES1 />
-                                <NOTES2 />
-                                <NOTES3 />
-                                <NOTES4 />
-                                <NOTES5 />
-                            </CHARACTER_INFO>
-                            <CHARACTERISTICS>
-                                <STR XMLID="STR" ID="1761270254938" BASECOST="0.0" LEVELS="10" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </STR>
-                                <DEX XMLID="DEX" ID="1761270254623" BASECOST="0.0" LEVELS="2" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </DEX>
-                                <CON XMLID="CON" ID="1761270254608" BASECOST="0.0" LEVELS="10" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </CON>
-                                <BODY XMLID="BODY" ID="1761270254723" BASECOST="0.0" LEVELS="4" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </BODY>
-                                <INT XMLID="INT" ID="1761270254461" BASECOST="0.0" LEVELS="-2" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </INT>
-                                <EGO XMLID="EGO" ID="1761270255394" BASECOST="0.0" LEVELS="3" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </EGO>
-                                <PRE XMLID="PRE" ID="1761270255027" BASECOST="0.0" LEVELS="8" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </PRE>
-                                <COM XMLID="COM" ID="1761270254639" BASECOST="0.0" LEVELS="-20" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </COM>
-                                <PD XMLID="PD" ID="1761270254491" BASECOST="0.0" LEVELS="4" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </PD>
-                                <ED XMLID="ED" ID="1761270254624" BASECOST="0.0" LEVELS="4" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </ED>
-                                <SPD XMLID="SPD" ID="1761270255411" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </SPD>
-                                <REC XMLID="REC" ID="1761270254879" BASECOST="0.0" LEVELS="2" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </REC>
-                                <END XMLID="END" ID="1761270255229" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </END>
-                                <STUN XMLID="STUN" ID="1761270255222" BASECOST="0.0" LEVELS="2" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </STUN>
-                                <RUNNING XMLID="RUNNING" ID="1761270255315" BASECOST="0.0" LEVELS="1" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </RUNNING>
-                                <SWIMMING XMLID="SWIMMING" ID="1761270254726" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </SWIMMING>
-                                <LEAPING XMLID="LEAPING" ID="1761270255321" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </LEAPING>
-                            </CHARACTERISTICS>
-                            <SKILLS>
-                            </SKILLS>
-                            <PERKS />
-                            <TALENTS />
-                            <MARTIALARTS />
-                            <POWERS>
-                            </POWERS>
-                            <DISADVANTAGES />
-                            <EQUIPMENT />
-                            </CHARACTER>
-                        `;
-
-                        let actor;
-
-                        before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
-                        });
-
-                        after(async function () {
-                            await deleteQuenchActor({ quench: this, actor });
-                        });
-
-                        it("com.max", async function () {
-                            assert.equal(actor.system.characteristics.com.max, -10);
-                        });
-                        it("com.realCost", async function () {
-                            assert.equal(actor.system.characteristics.com.realCost, 0);
-                        });
-                    });
-
-                    describe("-30 COM", function () {
-                        const contents = `
-                            <?xml version="1.0" encoding="UTF-16"?>
-                            <CHARACTER version="6.0" TEMPLATE="builtIn.Normal.hdt">
-                            <BASIC_CONFIGURATION BASE_POINTS="100" DISAD_POINTS="40" EXPERIENCE="0" RULES="Default" />
-                            <CHARACTER_INFO CHARACTER_NAME="Demon" ALTERNATE_IDENTITIES="Minor Gluttony Demon" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
-                                <BACKGROUND />
-                                <PERSONALITY>Eat</PERSONALITY>
-                                <QUOTE />
-                                <TACTICS />
-                                <CAMPAIGN_USE />
-                                <APPEARANCE />
-                                <NOTES1 />
-                                <NOTES2 />
-                                <NOTES3 />
-                                <NOTES4 />
-                                <NOTES5 />
-                            </CHARACTER_INFO>
-                            <CHARACTERISTICS>
-                                <STR XMLID="STR" ID="1761270254938" BASECOST="0.0" LEVELS="10" ALIAS="STR" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </STR>
-                                <DEX XMLID="DEX" ID="1761270254623" BASECOST="0.0" LEVELS="2" ALIAS="DEX" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </DEX>
-                                <CON XMLID="CON" ID="1761270254608" BASECOST="0.0" LEVELS="10" ALIAS="CON" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </CON>
-                                <BODY XMLID="BODY" ID="1761270254723" BASECOST="0.0" LEVELS="4" ALIAS="BODY" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </BODY>
-                                <INT XMLID="INT" ID="1761270254461" BASECOST="0.0" LEVELS="-2" ALIAS="INT" POSITION="5" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </INT>
-                                <EGO XMLID="EGO" ID="1761270255394" BASECOST="0.0" LEVELS="3" ALIAS="EGO" POSITION="6" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </EGO>
-                                <PRE XMLID="PRE" ID="1761270255027" BASECOST="0.0" LEVELS="8" ALIAS="PRE" POSITION="7" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </PRE>
-                                <COM XMLID="COM" ID="1761270254639" BASECOST="0.0" LEVELS="-40" ALIAS="COM" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </COM>
-                                <PD XMLID="PD" ID="1761270254491" BASECOST="0.0" LEVELS="4" ALIAS="PD" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </PD>
-                                <ED XMLID="ED" ID="1761270254624" BASECOST="0.0" LEVELS="4" ALIAS="ED" POSITION="10" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </ED>
-                                <SPD XMLID="SPD" ID="1761270255411" BASECOST="0.0" LEVELS="0" ALIAS="SPD" POSITION="11" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </SPD>
-                                <REC XMLID="REC" ID="1761270254879" BASECOST="0.0" LEVELS="2" ALIAS="REC" POSITION="12" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </REC>
-                                <END XMLID="END" ID="1761270255229" BASECOST="0.0" LEVELS="0" ALIAS="END" POSITION="13" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </END>
-                                <STUN XMLID="STUN" ID="1761270255222" BASECOST="0.0" LEVELS="2" ALIAS="STUN" POSITION="14" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </STUN>
-                                <RUNNING XMLID="RUNNING" ID="1761270255315" BASECOST="0.0" LEVELS="1" ALIAS="Running" POSITION="15" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </RUNNING>
-                                <SWIMMING XMLID="SWIMMING" ID="1761270254726" BASECOST="0.0" LEVELS="0" ALIAS="Swimming" POSITION="16" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </SWIMMING>
-                                <LEAPING XMLID="LEAPING" ID="1761270255321" BASECOST="0.0" LEVELS="0" ALIAS="Leaping" POSITION="17" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
-                                <NOTES />
-                                </LEAPING>
-                            </CHARACTERISTICS>
-                            <SKILLS>
-                            </SKILLS>
-                            <PERKS />
-                            <TALENTS />
-                            <MARTIALARTS />
-                            <POWERS>
-                            </POWERS>
-                            <DISADVANTAGES />
-                            <EQUIPMENT />
-                            </CHARACTER>
-                        `;
-
-                        let actor;
-
-                        before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
-                        });
-
-                        after(async function () {
-                            await deleteQuenchActor({ quench: this, actor });
-                        });
-
-                        it("com.max", async function () {
-                            assert.equal(actor.system.characteristics.com.max, -30);
-                        });
-                        it("com.realCost", async function () {
-                            assert.equal(actor.system.characteristics.com.realCost, 10);
-                        });
-                    });
-                });
                 describe("Enforcer", function () {
                     const contents = `
                         <?xml version="1.0" encoding="UTF-16"?>
@@ -1041,7 +322,7 @@ export function registerFullCharacterTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -1049,150 +330,150 @@ export function registerFullCharacterTests(quench) {
                     });
 
                     it("str.max", async function () {
-                        assert.equal(actor.system.characteristics.str.max, 55);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STR", "max", 55);
                     });
                     it("str.realCost", async function () {
-                        assert.equal(actor.system.characteristics.str.realCost, 45);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STR", "realCost", 45);
                     });
 
                     it("dex.max", async function () {
-                        assert.equal(actor.system.characteristics.dex.max, 20);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DEX", "max", 20);
                     });
                     it("dex.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dex.realCost, 30);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DEX", "realCost", 30);
                     });
 
                     it("con.max", async function () {
-                        assert.equal(actor.system.characteristics.con.max, 35);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "CON", "max", 35);
                     });
                     it("con.realCost", async function () {
-                        assert.equal(actor.system.characteristics.con.realCost, 50);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "CON", "realCost", 50);
                     });
 
                     it("body.max", async function () {
-                        assert.equal(actor.system.characteristics.body.max, 25);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "BODY", "max", 25);
                     });
                     it("body.realCost", async function () {
-                        assert.equal(actor.system.characteristics.body.realCost, 30);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "BODY", "realCost", 30);
                     });
 
                     it("int.max", async function () {
-                        assert.equal(actor.system.characteristics.int.max, 15);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "INT", "max", 15);
                     });
                     it("int.realCost", async function () {
-                        assert.equal(actor.system.characteristics.int.realCost, 5);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "INT", "realCost", 5);
                     });
 
                     it("ego.max", async function () {
-                        assert.equal(actor.system.characteristics.ego.max, 14);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "EGO", "max", 14);
                     });
                     it("ego.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ego.realCost, 8);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "EGO", "realCost", 8);
                     });
 
                     it("pre.max", async function () {
-                        assert.equal(actor.system.characteristics.pre.max, 22);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PRE", "max", 22);
                     });
                     it("pre.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pre.realCost, 12);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PRE", "realCost", 12);
                     });
 
                     it("com.max", async function () {
-                        assert.equal(actor.system.characteristics.com.max, 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "COM", "max", 10);
                     });
                     it("com.realCost", async function () {
-                        assert.equal(actor.system.characteristics.com.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "COM", "realCost", 0);
                     });
 
                     it("pd.max", async function () {
-                        assert.equal(actor.system.characteristics.pd.max, 25);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PD", "max", 25);
                     });
                     it("pd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pd.realCost, 14);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PD", "realCost", 14);
                     });
 
                     it("ed.max", async function () {
-                        assert.equal(actor.system.characteristics.ed.max, 20);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "ED", "max", 20);
                     });
                     it("ed.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ed.realCost, 13);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "ED", "realCost", 13);
                     });
 
                     it("spd.max", async function () {
-                        assert.equal(actor.system.characteristics.spd.max, 5);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SPD", "max", 5);
                     });
                     it("spd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.spd.realCost, 20);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SPD", "realCost", 20);
                     });
 
                     it("rec.max", async function () {
-                        assert.equal(actor.system.characteristics.rec.max, 21);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "REC", "max", 21);
                     });
                     it("rec.realCost", async function () {
-                        assert.equal(actor.system.characteristics.rec.realCost, 6);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "REC", "realCost", 6);
                     });
 
                     it("end.max", async function () {
-                        assert.equal(actor.system.characteristics.end.max, 85);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "END", "max", 85);
                     });
                     it("end.realCost", async function () {
-                        assert.equal(actor.system.characteristics.end.realCost, 8);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "END", "realCost", 8);
                     });
 
                     it("stun.max", async function () {
-                        assert.equal(actor.system.characteristics.stun.max, 125);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STUN", "max", 125);
                     });
                     it("stun.realCost", async function () {
-                        assert.equal(actor.system.characteristics.stun.realCost, 54);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STUN", "realCost", 54);
                     });
 
                     it("ocv.max", async function () {
-                        assert.equal(actor.system.characteristics.ocv.max, 7);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OCV", "max", 7);
                     });
                     it("ocv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ocv.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OCV", "realCost", 0);
                     });
 
                     it("dcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dcv.max, 7);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DCV", "max", 7);
                     });
                     it("dcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dcv.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DCV", "realCost", 0);
                     });
 
                     it("omcv.max", async function () {
-                        assert.equal(actor.system.characteristics.omcv.max, 5);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OMCV", "max", 5);
                     });
                     it("omcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.omcv.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OMCV", "realCost", 0);
                     });
 
                     it("dmcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.max, 5);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DMCV", "max", 5);
                     });
                     it("dmcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DMCV", "realCost", 0);
                     });
 
                     it("running.max", async function () {
-                        assert.equal(actor.system.characteristics.running.max, 13); //8 + 5 (Active Effect)
+                        characteristicAssertions.assertCharacteristicProperty(actor, "RUNNING", "max", 13); //8 + 5 (Active Effect)
                     });
                     it("running.realCost", async function () {
-                        assert.equal(actor.system.characteristics.running.realCost, 4);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "RUNNING", "realCost", 4);
                     });
 
                     it("swimming.max", async function () {
-                        assert.equal(actor.system.characteristics.swimming.max, 2);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SWIMMING", "max", 2);
                     });
                     it("swimming.realCost", async function () {
-                        assert.equal(actor.system.characteristics.swimming.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SWIMMING", "realCost", 0);
                     });
 
                     it("leaping.max", async function () {
-                        assert.equal(actor.system.characteristics.leaping.max, 11);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "LEAPING", "max", 11);
                     });
                     it("leaping.realCost", async function () {
-                        assert.equal(actor.system.characteristics.leaping.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "LEAPING", "realCost", 0);
                     });
 
                     it("total points spent", async function () {
@@ -1294,7 +575,7 @@ export function registerFullCharacterTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -1306,143 +587,143 @@ export function registerFullCharacterTests(quench) {
                     });
 
                     it("str.max", async function () {
-                        assert.equal(actor.system.characteristics.str.max, 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STR", "max", 10);
                     });
                     it("str.realCost", async function () {
-                        assert.equal(actor.system.characteristics.str.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STR", "realCost", 0);
                     });
 
                     it("dex.max", async function () {
-                        assert.equal(actor.system.characteristics.dex.max, 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DEX", "max", 10);
                     });
                     it("dex.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dex.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DEX", "realCost", 0);
                     });
 
                     it("con.max", async function () {
-                        assert.equal(actor.system.characteristics.con.max, 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "CON", "max", 10);
                     });
                     it("con.realCost", async function () {
-                        assert.equal(actor.system.characteristics.con.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "CON", "realCost", 0);
                     });
 
                     it("body.max", async function () {
-                        assert.equal(actor.system.characteristics.body.max, 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "BODY", "max", 10);
                     });
                     it("body.realCost", async function () {
-                        assert.equal(actor.system.characteristics.body.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "BODY", "realCost", 0);
                     });
 
                     it("int.max", async function () {
-                        assert.equal(actor.system.characteristics.int.max, 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "INT", "max", 10);
                     });
                     it("int.realCost", async function () {
-                        assert.equal(actor.system.characteristics.int.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "INT", "realCost", 0);
                     });
 
                     it("ego.max", async function () {
-                        assert.equal(actor.system.characteristics.ego.max, 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "EGO", "max", 10);
                     });
                     it("ego.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ego.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "EGO", "realCost", 0);
                     });
 
                     it("pre.max", async function () {
-                        assert.equal(actor.system.characteristics.pre.max, 10);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PRE", "max", 10);
                     });
                     it("pre.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pre.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PRE", "realCost", 0);
                     });
 
                     it("pd.max", async function () {
-                        assert.equal(actor.system.characteristics.pd.max, 2);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PD", "max", 2);
                     });
                     it("pd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.pd.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "PD", "realCost", 0);
                     });
 
                     it("ed.max", async function () {
-                        assert.equal(actor.system.characteristics.ed.max, 2);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "ED", "max", 2);
                     });
                     it("ed.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ed.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "ED", "realCost", 0);
                     });
 
                     it("spd.max", async function () {
-                        assert.equal(actor.system.characteristics.spd.max, 2);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SPD", "max", 2);
                     });
                     it("spd.realCost", async function () {
-                        assert.equal(actor.system.characteristics.spd.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SPD", "realCost", 0);
                     });
 
                     it("rec.max", async function () {
-                        assert.equal(actor.system.characteristics.rec.max, 4);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "REC", "max", 4);
                     });
                     it("rec.realCost", async function () {
-                        assert.equal(actor.system.characteristics.rec.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "REC", "realCost", 0);
                     });
 
                     it("end.max", async function () {
-                        assert.equal(actor.system.characteristics.end.max, 20);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "END", "max", 20);
                     });
                     it("end.realCost", async function () {
-                        assert.equal(actor.system.characteristics.end.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "END", "realCost", 0);
                     });
 
                     it("stun.max", async function () {
-                        assert.equal(actor.system.characteristics.stun.max, 20);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STUN", "max", 20);
                     });
                     it("stun.realCost", async function () {
-                        assert.equal(actor.system.characteristics.stun.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "STUN", "realCost", 0);
                     });
 
                     it("ocv.max", async function () {
-                        assert.equal(actor.system.characteristics.ocv.max, 3);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OCV", "max", 3);
                     });
                     it("ocv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.ocv.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OCV", "realCost", 0);
                     });
 
                     it("dcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dcv.max, 3);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DCV", "max", 3);
                     });
                     it("dcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dcv.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DCV", "realCost", 0);
                     });
 
                     it("omcv.max", async function () {
-                        assert.equal(actor.system.characteristics.omcv.max, 3);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OMCV", "max", 3);
                     });
                     it("omcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.omcv.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "OMCV", "realCost", 0);
                     });
 
                     it("dmcv.max", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.max, 3);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DMCV", "max", 3);
                     });
                     it("dmcv.realCost", async function () {
-                        assert.equal(actor.system.characteristics.dmcv.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "DMCV", "realCost", 0);
                     });
 
                     it("running.max", async function () {
-                        assert.equal(actor.system.characteristics.running.max, 12);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "RUNNING", "max", 12);
                     });
                     it("running.realCost", async function () {
-                        assert.equal(actor.system.characteristics.running.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "RUNNING", "realCost", 0);
                     });
 
                     it("swimming.max", async function () {
-                        assert.equal(actor.system.characteristics.swimming.max, 4);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SWIMMING", "max", 4);
                     });
                     it("swimming.realCost", async function () {
-                        assert.equal(actor.system.characteristics.swimming.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "SWIMMING", "realCost", 0);
                     });
 
                     it("leaping.max", async function () {
-                        assert.equal(actor.system.characteristics.leaping.max, 4);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "LEAPING", "max", 4);
                     });
                     it("leaping.realCost", async function () {
-                        assert.equal(actor.system.characteristics.leaping.realCost, 0);
+                        characteristicAssertions.assertCharacteristicProperty(actor, "LEAPING", "realCost", 0);
                     });
 
                     it("realCost", async function () {
@@ -1716,7 +997,7 @@ export function registerFullCharacterTests(quench) {
                     before(async function () {
                         previousDoubleDamageLimitSetting = await getAndSetGameSetting("DoubleDamageLimit", false);
 
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -2110,7 +1391,7 @@ export function registerFullCharacterTests(quench) {
                     });
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         hka5DcItem = actor.items.find(
                             (item) => item.system.XMLID === "HKA" && item.system.NAME === "2d6-1",
@@ -2559,7 +1840,7 @@ export function registerFullCharacterTests(quench) {
                     before(async function () {
                         previousSetting = await getAndSetGameSetting("DoubleDamageLimit", true);
 
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         hthAttack14d6NoStrMinimum = actor.items.find(
                             (item) =>
@@ -3170,7 +2451,7 @@ export function registerFullCharacterTests(quench) {
                     let eightDcTransform;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         threeDcEnergyBlast = actor.items.find(
                             (item) => item.system.XMLID === "ENERGYBLAST" && item.name === "Little",
@@ -3497,7 +2778,7 @@ export function registerFullCharacterTests(quench) {
                     let customMartialFourDcManeuverItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                         rkaItem = actor.items.find((item) => item.system.XMLID === "RKA");
                         hkaItem = actor.items.find((item) => item.system.XMLID === "HKA");
 
@@ -3990,7 +3271,7 @@ export function registerFullCharacterTests(quench) {
                     let flightItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         energyBlastItem = actor.items.find((o) => o.system.XMLID === "ENERGYBLAST");
                         entangleItem = actor.items.find((o) => o.isEntangle);
@@ -4177,7 +3458,7 @@ export function registerFullCharacterTests(quench) {
                     let rkaPlusHalfItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         ebPlusOneItem = actor.items.find(
                             (item) => item.system.XMLID === "ENERGYBLAST" && item.name === "EB+1",
@@ -4562,7 +3843,7 @@ export function registerFullCharacterTests(quench) {
                     let rkaPlusHalfItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                         ebPlusOneItem = actor.items.find(
                             (item) => item.system.XMLID === "ENERGYBLAST" && item.name === "EB+1",
                         );
@@ -4931,7 +4212,7 @@ export function registerFullCharacterTests(quench) {
 
                     before(async function () {
                         previousSetting = await getAndSetGameSetting("DoubleDamageLimit", false);
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                         bigSwordItem = actor.items.find(
                             (item) => item.system.XMLID === "HKA" && item.name === "Big Sword",
                         );
@@ -5281,7 +4562,7 @@ export function registerFullCharacterTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -5964,7 +5245,7 @@ export function registerFullCharacterTests(quench) {
                         let actor;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                         });
 
                         after(async function () {
@@ -6439,7 +5720,7 @@ export function registerFullCharacterTests(quench) {
                         let actor;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                         });
 
                         after(async function () {
@@ -6643,7 +5924,7 @@ export function registerFullCharacterTests(quench) {
                     let infraredPerceptionItem;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                         lifeSupportItem = actor.items.find((item) => item.system.XMLID === "LIFESUPPORT");
                         infraredPerceptionItem = actor.items.find((item) => item.system.XMLID === "INFRAREDPERCEPTION");
@@ -7195,7 +6476,7 @@ export function registerFullCharacterTests(quench) {
                     let actor;
 
                     before(async function () {
-                        actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                        actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
                     });
 
                     after(async function () {
@@ -7400,7 +6681,7 @@ export function registerFullCharacterTests(quench) {
                         let constantToInstantItem;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: true });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: true, actorType: "pc" });
 
                             instantItem = actor.items.find((item) => item.name === "Instant");
                             instantToConstantItemViaContinuous = actor.items.find(
@@ -7734,7 +7015,7 @@ export function registerFullCharacterTests(quench) {
                         let constantToInstantItem;
 
                         before(async function () {
-                            actor = await createQuenchActor({ quench: this, contents, is5e: false });
+                            actor = await createQuenchActor({ quench: this, contents, is5e: false, actorType: "pc" });
 
                             instantItem = actor.items.find((item) => item.name === "Instant");
                             instantToConstantItemViaContinuous = actor.items.find(

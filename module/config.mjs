@@ -34,7 +34,7 @@ import {
 } from "./utility/damage.mjs";
 import { createDefenseProfile } from "./utility/defense.mjs";
 import * as heroEncounter from "./utility/encounter/encounter.mjs";
-import { FrozenSet } from "./utility/frozen-set.mjs";
+import { FrozenSet, freezeDeep } from "./utility/freeze-helpers.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "./utility/round.mjs";
 import {
     convertHexesToSystemUnits,
@@ -552,24 +552,6 @@ HERO.CSL_WEAPON_MASTER_WEAPON_TYPES = Object.freeze({
     explicit: "explicit",
 });
 
-// TODO: This could be created from powers.
-HERO.movementPowers = Object.freeze({
-    extradimensionalmovement: "Extra Dimensional Movement",
-    flight: "Flight",
-    ftl: "Faster Than Light",
-    leaping: "Leaping",
-    running: "Running",
-    swimming: "Swimming",
-    swinging: "Swinging",
-    teleportation: "Teleportation",
-    tunneling: "Tunneling",
-});
-
-HERO.movementPowers5e = Object.freeze({
-    ...HERO.movementPowers,
-    gliding: "Gliding",
-});
-
 function validatePowers() {
     let numViolations = 0;
 
@@ -863,9 +845,17 @@ function noDamageBaseEffectDicePartsBundle(item /* , _options */) {
 }
 
 function staticIgnoreForActorFunction(alwaysIgnore) {
-    return function (actor) {
-        return alwaysIgnore.includes(actor.type);
+    const ignoreForTypes = freezeDeep([...alwaysIgnore]);
+
+    const ignoreForActor = function (actor) {
+        return ignoreForTypes.includes(actor.type);
     };
+
+    // The declared scope. Tests and tooling read which actor types ignore a power without calling
+    // the function, so `CONFIG.HERO.characteristicHasTypes6e` and `...5e` can be built from it.
+    Object.defineProperty(ignoreForActor, "ignoreForTypes", { value: ignoreForTypes });
+
+    return ignoreForActor;
 }
 
 function pdEdCostPerLevel(itemOrActor) {
@@ -996,6 +986,47 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
             HERO.powers5eDict.set(powerDescription5e.key, [powerDescriptionClone]);
         }
     }
+}
+
+/**
+ * Yield every power of one type from one edition's descriptions, each power once.
+ *
+ * A power description marks its kind with `type`, for example `type: ["characteristic"]`. Every
+ * derived list and table walks this generator, so the mark is read in one place.
+ *
+ * @param {object[]} powerList Power descriptions of one edition.
+ * @param {string} type        Type mark to select, for example `movement`.
+ *
+ * @yields {{label: string, power: object}} The uppercase key and its description.
+ */
+function* powersOfType(powerList, type) {
+    const seen = new Set();
+
+    for (const power of powerList) {
+        if (power.key === undefined || !power.type?.includes(type)) {
+            continue;
+        }
+
+        const label = String(power.key).toUpperCase();
+
+        if (seen.has(label)) {
+            continue;
+        }
+        seen.add(label);
+        yield { label, power };
+    }
+}
+
+/**
+ * Collect the sorted labels of one power type for one edition.
+ *
+ * @param {object[]} powerList Power descriptions of one edition.
+ * @param {string} type        Type mark to select, for example `characteristic`.
+ *
+ * @returns {string[]} Uppercase labels, sorted and frozen.
+ */
+function labelsWithType(powerList, type) {
+    return freezeDeep([...powersOfType(powerList, type)].map(({ label }) => label).sort());
 }
 
 (function addCharacteristicsToPowerList() {
@@ -1448,7 +1479,6 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         {
             base: fixedValueFunction(0),
             behaviors: ["defense", "figured", "figuredSTR"],
-            ignoreForActor: staticIgnoreForActorFunction(["ai", "base2", "computer"]),
             figured5eCharacteristic: function (actor) {
                 // 5ER p. 33: a negative Primary Characteristic adds zero to Figured
                 // Characteristics (STR -20/CON 10 gives PD 0, not -4).
@@ -1497,7 +1527,6 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         {
             base: fixedValueFunction(0),
             behaviors: ["defense", "figured", "figuredCON"],
-            ignoreForActor: staticIgnoreForActorFunction(["ai", "base2", "computer"]),
             figured5eCharacteristic: function (actor) {
                 // 5ER p. 33: a negative Primary Characteristic adds zero to Figured Characteristics.
                 return (
@@ -1987,6 +2016,8 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         {},
     );
 })();
+HERO.characteristicPowers6e = labelsWithType(HERO.powers6e, "characteristic");
+HERO.characteristicPowers5e = labelsWithType(HERO.powers5e, "characteristic");
 
 (function addManeuversToPowerList() {
     addPower(undefined, {
@@ -3186,6 +3217,107 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
         },
     );
 })();
+
+/**
+ * Movement keys that carry the movement mark but are not modes an actor moves by.
+ *
+ * Hero Designer models both as options on Teleportation. This system stores them as powers, so they
+ * carry `type: ["movement"]`, yet no actor owns a value for either and the actor schema has no node
+ * for them. Build them as adders on TELEPORTATION and this list can go away.
+ */
+const MOVEMENT_KEYS_WITHOUT_VALUE = freezeDeep(["FIXEDLOCATION", "FLOATINGLOCATION"]);
+
+/**
+ * Build the movement table of one edition from the movement section above.
+ *
+ * The table maps the lowercase characteristic key to the power name, for example
+ * `{ running: "Running" }`. Callers read it as the set of movement modes and as the label source.
+ *
+ * @param {object[]} powerList Power descriptions of one edition.
+ *
+ * @returns {object} Frozen map of lowercase movement key to power name.
+ */
+function movementTable(powerList) {
+    const table = {};
+
+    for (const { label, power } of powersOfType(powerList, "movement")) {
+        if (MOVEMENT_KEYS_WITHOUT_VALUE.includes(label)) {
+            continue;
+        }
+
+        table[label.toLowerCase()] = power.name;
+    }
+
+    return freezeDeep(table);
+}
+
+// No other section adds `type: ["movement"]`, so the two tables are complete here.
+HERO.movementPowers6e = movementTable(HERO.powers6e);
+HERO.movementPowers5e = movementTable(HERO.powers5e);
+
+/**
+ * Actor types a bare `Actor.create()` accepts.
+ *
+ * The legacy `base` type is absent on purpose. It builds no characteristics, and creating one throws
+ * inside `_preparePreCreateCharacteristics`.
+ */
+HERO.creatableActorTypes = freezeDeep(["pc", "npc", "vehicle", "base2", "computer", "automaton", "ai"]);
+
+/**
+ * Characteristic labels the config reserves and nothing builds yet.
+ *
+ * Each one takes a slot in uploaded XML and an entry in the power list. No builder exists, so no
+ * actor can hold one. Give a label a builder, remove it here, and it joins the scope tables below.
+ */
+HERO.customCharacteristicLabels = freezeDeep([
+    "CUSTOM1",
+    "CUSTOM2",
+    "CUSTOM3",
+    "CUSTOM4",
+    "CUSTOM5",
+    "CUSTOM6",
+    "CUSTOM7",
+    "CUSTOM8",
+    "CUSTOM9",
+    "CUSTOM10",
+]);
+
+/**
+ * Build the actor scope of every label one edition defines.
+ *
+ * A characteristic or movement description states which actor types ignore it, through
+ * `staticIgnoreForActorFunction`. Subtracting that list from `HERO.creatableActorTypes` gives the
+ * types that have the label. A description with a dynamic `ignoreForActor` declares no scope, so its
+ * entry is `null` and callers decide by actor. STUN is the one case: an automaton built with
+ * "cannot be stunned" has no STUN, and the flag lives on the actor, not in the description.
+ *
+ * @param {object[]} powerList Power descriptions of one edition.
+ *
+ * @returns {object} Frozen map of uppercase label to the sorted actor types that have it, or `null`.
+ */
+function hasTypesByLabel(powerList) {
+    const scopes = {};
+
+    for (const type of ["characteristic", "movement"]) {
+        for (const { label, power } of powersOfType(powerList, type)) {
+            if (HERO.customCharacteristicLabels.includes(label)) {
+                continue;
+            }
+
+            const ignoreForTypes = power.ignoreForActor?.ignoreForTypes;
+
+            scopes[label] =
+                ignoreForTypes === undefined
+                    ? null
+                    : freezeDeep(HERO.creatableActorTypes.filter((actorType) => !ignoreForTypes.includes(actorType)));
+        }
+    }
+
+    return freezeDeep(scopes);
+}
+
+HERO.characteristicHasTypes6e = hasTypesByLabel(HERO.powers6e);
+HERO.characteristicHasTypes5e = hasTypesByLabel(HERO.powers5e);
 
 (function addSkillsToPowerList() {
     addPower(
@@ -19849,7 +19981,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 const usableAs = modifier;
                 let foundMatch = false;
 
-                for (const movementKey of Object.keys(CONFIG.HERO.movementPowers)) {
+                for (const movementKey of Object.keys(CONFIG.HERO.movementPowers6e)) {
                     if (
                         usableAs.ALIAS?.match(new RegExp(movementKey, "i")) ||
                         usableAs.COMMENTS?.match(new RegExp(movementKey, "i"))
@@ -19861,7 +19993,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
                 if (!foundMatch) {
                     validations.push({
                         property: "ALIAS",
-                        message: `Unable to determine USABLEAS movement type. Expecting ${Object.keys(CONFIG.HERO.movementPowers).join(", ")}.`,
+                        message: `Unable to determine USABLEAS movement type. Expecting ${Object.keys(CONFIG.HERO.movementPowers6e).join(", ")}.`,
                         example: `Usable as swimming`,
                         severity: HERO.VALIDATION_SEVERITY.WARNING,
                         modifierID: modifier.ID,

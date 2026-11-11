@@ -1,7 +1,6 @@
+import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
 import { captureChatBaseline, deleteRunChatMessages } from "./quench-chat.mjs";
-
-const { Actor } = foundry.documents;
 
 // Quench runs batches in key order, so the `a.` and `z.` prefixes keep global setup
 // first and global teardown last. These names exclude the `${game.system.id}.` prefix.
@@ -9,7 +8,29 @@ const { Actor } = foundry.documents;
 export const GLOBAL_SETUP_SUITE = "a.global-setup";
 export const GLOBAL_TEARDOWN_SUITE = "z.global-teardown";
 
-export async function createQuenchActor({ quench, contents, is5e, actorType: type = "pc", name, img }) {
+/**
+ * Create one Quench actor, upload its export, and restore its health.
+ *
+ * `actorType` is required. `Actor.create` returns nothing when the type is missing or unregistered,
+ * so a caller that leaves it out gets no actor and no Foundry error.
+ *
+ * A full actor export can change the type. `uploadFromXml` reads the export `TEMPLATE` attribute and
+ * updates `actor.type` to match (`module/actor/actor-upload.mjs:371`). This helper rejects a finished
+ * actor of another type, so a row cannot claim one type and test another. The retype never produces
+ * npc. The upload treats pc and npc as one bucket, so an npc actor keeps its type and matches.
+ *
+ * @param {object} options Creation options.
+ * @param {object} options.quench The Quench context. Names the actor after the running suite.
+ * @param {string} [options.contents] Hero Designer XML: a full actor export, or one item.
+ * @param {boolean} options.is5e Edition for the created document.
+ * @param {string} options.actorType One of `CONFIG.HERO.creatableActorTypes`.
+ * @param {string} [options.name] Fixture name. Defaults to the XML `CHARACTER_NAME`.
+ * @param {string} [options.img] Actor image.
+ * @returns {Promise<HeroSystem6eActor>} The created actor, with the export uploaded.
+ * @throws {Error} When `is5e` or `actorType` is missing, when no document was created, when the
+ *                 upload states another edition, or when the finished actor is another type.
+ */
+export async function createQuenchActor({ quench, contents, is5e, actorType: type, name, img }) {
     const CHARACTER_NAME = contents?.match(/CHARACTER_NAME=".*?"/)?.[0];
     name ??= CHARACTER_NAME?.match(/CHARACTER_NAME="(.*?)"/)?.[1] || "";
 
@@ -31,8 +52,12 @@ export async function createQuenchActor({ quench, contents, is5e, actorType: typ
         throw new Error("missing is5e");
     }
 
+    if (type === undefined) {
+        throw new Error("missing actorType");
+    }
+
     // Create new actor for this test
-    const actor = await Actor.create(
+    const actor = await HeroSystem6eActor.create(
         {
             name: quenchName,
             type,
@@ -40,6 +65,10 @@ export async function createQuenchActor({ quench, contents, is5e, actorType: typ
         },
         { is5e, quenchCreate: true },
     );
+
+    if (!actor) {
+        throw new Error(`createQuenchActor: Foundry created no actor for actorType "${type}"`);
+    }
 
     if (contents) {
         // Is this a full actor
@@ -55,6 +84,13 @@ export async function createQuenchActor({ quench, contents, is5e, actorType: typ
             // Add item
             await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), { parent: actor });
         }
+    }
+
+    if (actor.type !== type) {
+        throw new Error(
+            `createQuenchActor: asked for actorType "${type}" but the actor reads "${actor.type}" ` +
+                `(template ${actor.system.CHARACTER.TEMPLATE?.name ?? "none"})`,
+        );
     }
 
     // PH: FIXME: This is done as a part of the uploadFromXml... why do we need to do it here? Is it needed only for
@@ -148,7 +184,7 @@ export async function deleteQuenchTokensAndActors() {
 
     if (actorIds.length > 0) {
         try {
-            await Actor.deleteDocuments(actorIds);
+            await HeroSystem6eActor.deleteDocuments(actorIds);
             deleted.actorIds = actorIds;
         } catch (err) {
             failures.push(`actors: ${err?.message ?? err}`);
@@ -220,6 +256,35 @@ export async function deleteQuenchFixtures() {
     return counts;
 }
 
+// Role floor for a Quench run. Foundry gates Actor, Scene, and Combat deletion on ASSISTANT and checks the
+// role on the server, so a lower role cannot remove what a run creates.
+const QUENCH_ROLE_FLOOR = CONST.USER_ROLES.ASSISTANT;
+
+/**
+ * Tell the operator when the signed-in user cannot clean up after a Quench run.
+ *
+ * Foundry deletes an Actor, Scene, or Combat only for role ASSISTANT or higher. Ownership does not
+ * count, and the check runs on the server, so no system hook exempts a test run.
+ *
+ * Nothing throws. A low-role run still runs, so its suites keep reporting real failures rather than
+ * one blocked entry point.
+ *
+ * @param {"warn"|"error"} level `warn` before the run, `error` after it.
+ * @returns {boolean} True when the notification fired.
+ */
+function notifyQuenchRoleShortfall(level) {
+    if (game.user.role >= QUENCH_ROLE_FLOOR) {
+        return false;
+    }
+
+    ui.notifications[level](
+        `Quench needs role ${QUENCH_ROLE_FLOOR} (ASSISTANT) or higher. ` +
+            `${game.user.name} holds role ${game.user.role}. ` +
+            "Scene and combat suites fail, and every _Quench fixture stays in this world.",
+    );
+    return true;
+}
+
 /**
  * Register one batch that deletes every `_Quench` fixture.
  *
@@ -236,8 +301,9 @@ export async function deleteQuenchFixtures() {
  * @param {string} identity.suiteKey Suite name without the system prefix.
  * @param {string} identity.displayName Batch name shown in the Quench UI.
  * @param {{title: string, run: Function}} identity.chatStep The chat sweep this batch runs first.
+ * @param {{title: string, level: ("warn"|"error")}} identity.roleNotice The role check and the level it notifies at.
  */
-function registerFixtureCleanupBatch(quench, { suiteKey, displayName, chatStep }) {
+function registerFixtureCleanupBatch(quench, { suiteKey, displayName, chatStep, roleNotice }) {
     quench.registerBatch(
         `${game.system.id}.${suiteKey}`,
         (context) => {
@@ -246,6 +312,12 @@ function registerFixtureCleanupBatch(quench, { suiteKey, displayName, chatStep }
             describe(displayName, function () {
                 // Mocha's 2000ms default is too short when several actors are created at the same time.
                 setQuenchTimeout(this, 20000);
+
+                // The role step runs first. Every sweep below needs the role, so state the shortfall
+                // before this batch reports delete failures against it.
+                it(roleNotice.title, () => {
+                    notifyQuenchRoleShortfall(roleNotice.level);
+                });
 
                 // The chat step runs first in both batches. Global setup records the log the run must
                 // not touch. Global teardown clears the log the run produced.
@@ -276,6 +348,7 @@ export function registerGlobalSetup(quench) {
     registerFixtureCleanupBatch(quench, {
         suiteKey: GLOBAL_SETUP_SUITE,
         displayName: "HERO: Global Setup",
+        roleNotice: { title: "Check the signed-in user's role", level: "warn" },
         chatStep: { title: "Record the chat baseline", run: captureChatBaseline },
     });
 }
@@ -284,6 +357,7 @@ export function registerGlobalTeardown(quench) {
     registerFixtureCleanupBatch(quench, {
         suiteKey: GLOBAL_TEARDOWN_SUITE,
         displayName: "HERO: Global Teardown",
+        roleNotice: { title: "Check the signed-in user's role", level: "error" },
         chatStep: { title: "Delete chat messages the run created", run: deleteRunChatMessages },
     });
 }

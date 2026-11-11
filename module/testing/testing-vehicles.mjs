@@ -1,4 +1,9 @@
+/**
+ * Vehicle specific behaviour testing.
+ */
+
 import { createQuenchActor, deleteQuenchActor, setQuenchTimeout } from "./quench-helper.mjs";
+import { getCharacteristicMaxFromActor, updateCharacteristicPropertiesOnActor } from "./characteristic-assertions.mjs";
 
 export function registerVehicleTests(quench) {
     quench.registerBatch(
@@ -89,127 +94,9 @@ export function registerVehicleTests(quench) {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("should have the SIZE characteristic", function () {
-                        expect(actor.hasCharacteristic("SIZE")).to.be.true;
-                    });
-
-                    it("should have the correct SIZE characteristic value", function () {
-                        expect(actor.system.characteristics.size.value).to.equal(8);
-                    });
-
-                    it("should have the correct SIZE cost", function () {
-                        expect(actor.system.characteristics.size.realCost).to.equal(40);
-                    });
-
-                    it("should have the STR characteristic", function () {
-                        expect(actor.hasCharacteristic("STR")).to.be.true;
-                    });
-
-                    it("should have the correct STR characteristic value", function () {
-                        expect(actor.system.characteristics.str.value).to.equal(55);
-                    });
-
-                    it("should have the correct STR cost", function () {
-                        expect(actor.system.characteristics.str.realCost).to.equal(5);
-                    });
-
-                    it("should have the DEX characteristic", function () {
-                        expect(actor.hasCharacteristic("DEX")).to.be.true;
-                    });
-
-                    it("should have the correct DEX characteristic value", function () {
-                        expect(actor.system.characteristics.dex.value).to.equal(0);
-                    });
-
-                    it("should have the correct DEX cost", function () {
-                        expect(actor.system.characteristics.dex.realCost).to.equal(-20);
-                    });
-
-                    it("should have the BODY characteristic", function () {
-                        expect(actor.hasCharacteristic("BODY")).to.be.true;
-                    });
-
-                    it("should have the correct BODY characteristic value", function () {
-                        expect(actor.system.characteristics.body.value).to.equal(18);
-                    });
-
-                    it("should have the correct BODY cost", function () {
-                        expect(actor.system.characteristics.body.realCost).to.equal(0);
-                    });
-
-                    it("should have the SPD characteristic", function () {
-                        expect(actor.hasCharacteristic("SPD")).to.be.true;
-                    });
-
-                    it("should have the correct SPD characteristic value", function () {
-                        expect(actor.system.characteristics.spd.value).to.equal(5);
-                    });
-
-                    it("should have the correct SPD cost", function () {
-                        expect(actor.system.characteristics.spd.realCost).to.equal(30);
-                    });
-
-                    it("should have the OCV characteristic", function () {
-                        expect(actor.hasCharacteristic("OCV")).to.be.true;
-                    });
-
-                    it("should have the correct OCV characteristic value", function () {
-                        expect(actor.system.characteristics.ocv.value).to.equal(5);
-                    });
-
-                    it("should have the correct OCV cost", function () {
-                        expect(actor.system.characteristics.ocv.realCost).to.equal(10);
-                    });
-
-                    it("should have the DCV characteristic", function () {
-                        expect(actor.hasCharacteristic("DCV")).to.be.true;
-                    });
-
-                    it("should have the correct DCV characteristic value", function () {
-                        // NOTE: Different from HD because we make size a DCV penalty to the big vehicle
-                        //       rather than an OCV bonus to the attacker.
-                        expect(actor.system.characteristics.dcv.value).to.equal(2);
-                    });
-
-                    it("should have the correct DCV cost", function () {
-                        expect(actor.system.characteristics.dcv.realCost).to.equal(20);
-                    });
-
-                    it("should have the PD characteristic", function () {
-                        expect(actor.hasCharacteristic("PD")).to.be.true;
-                    });
-
-                    it("should have the correct PD characteristic value", function () {
-                        expect(actor.system.characteristics.pd.value).to.equal(4);
-                    });
-
-                    it("should have the correct PD cost", function () {
-                        expect(actor.system.characteristics.pd.realCost).to.equal(3);
-                    });
-
-                    it("should have the ED characteristic", function () {
-                        expect(actor.hasCharacteristic("ED")).to.be.true;
-                    });
-
-                    it("should have the correct ED characteristic value", function () {
-                        expect(actor.system.characteristics.ed.value).to.equal(4);
-                    });
-
-                    it("should have the correct ED cost", function () {
-                        expect(actor.system.characteristics.ed.realCost).to.equal(3);
-                    });
-
-                    it("should NOT have the STUN characteristic", function () {
-                        expect(actor.hasCharacteristic("STUN")).to.be.false;
-                    });
-
                     it("should not be knocked out by upload (stun automation)", function () {
                         expect(actor.statuses.has("knockedOut")).to.be.false;
                         expect(actor.statuses.has("prone")).to.be.false;
-                    });
-
-                    it("should have 0m of leaping", function () {
-                        expect(actor.system.characteristics.leaping.value).to.equal(0);
                     });
 
                     it("should have Flight power", function () {
@@ -410,101 +297,9 @@ export function registerVehicleTests(quench) {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("should have the SIZE characteristic", function () {
-                        expect(actor.hasCharacteristic("SIZE")).to.be.true;
-                    });
-
-                    it("should have the correct SIZE characteristic value", function () {
-                        expect(actor.system.characteristics.size.value).to.equal(12);
-                    });
-
-                    it("should have the correct SIZE cost", function () {
-                        expect(actor.system.characteristics.size.realCost).to.equal(60);
-                    });
-
-                    it("should have the STR characteristic", function () {
-                        expect(actor.hasCharacteristic("STR")).to.be.true;
-                    });
-
-                    it("should have the correct STR characteristic value", function () {
-                        expect(actor.system.characteristics.str.value).to.equal(20);
-                    });
-
-                    it("should have the correct STR cost", function () {
-                        expect(actor.system.characteristics.str.realCost).to.equal(-50);
-                    });
-
-                    it("should have the DEX characteristic", function () {
-                        expect(actor.hasCharacteristic("DEX")).to.be.true;
-                    });
-
-                    it("should have the correct DEX characteristic value", function () {
-                        expect(actor.system.characteristics.dex.value).to.equal(32);
-                    });
-
-                    it("should have the correct DEX cost", function () {
-                        expect(actor.system.characteristics.dex.realCost).to.equal(66);
-                    });
-
-                    it("should have the BODY characteristic", function () {
-                        expect(actor.hasCharacteristic("BODY")).to.be.true;
-                    });
-
-                    it("should have the correct BODY characteristic value", function () {
-                        expect(actor.system.characteristics.body.value).to.equal(22);
-                    });
-
-                    it("should have the correct BODY cost", function () {
-                        expect(actor.system.characteristics.body.realCost).to.equal(0);
-                    });
-
-                    it("should have the SPD characteristic", function () {
-                        expect(actor.hasCharacteristic("SPD")).to.be.true;
-                    });
-
-                    it("should have the correct SPD characteristic value", function () {
-                        expect(actor.system.characteristics.spd.value).to.equal(5);
-                    });
-
-                    it("should have the correct SPD cost", function () {
-                        expect(actor.system.characteristics.spd.realCost).to.equal(8);
-                    });
-
-                    it("should have the OCV characteristic", function () {
-                        expect(actor.hasCharacteristic("OCV")).to.be.true;
-                    });
-
-                    it("should have the correct OCV characteristic value", function () {
-                        expect(actor.system.characteristics.ocv.value).to.equal(11);
-                    });
-
-                    it("should have the correct OCV cost", function () {
-                        expect(actor.system.characteristics.ocv.realCost).to.equal(0);
-                    });
-
-                    it("should have the DCV characteristic", function () {
-                        expect(actor.hasCharacteristic("DCV")).to.be.true;
-                    });
-
-                    it("should have the correct DCV characteristic value", function () {
-                        expect(actor.system.characteristics.dcv.value).to.equal(3);
-                    });
-
-                    it("should have the correct DCV cost", function () {
-                        expect(actor.system.characteristics.dcv.realCost).to.equal(0);
-                    });
-
-                    it("should NOT have the STUN characteristic", function () {
-                        expect(actor.hasCharacteristic("STUN")).to.be.false;
-                    });
-
                     it("should not be knocked out by upload (stun automation)", function () {
                         expect(actor.statuses.has("knockedOut")).to.be.false;
                         expect(actor.statuses.has("prone")).to.be.false;
-                    });
-
-                    it('should have 0" of leaping', function () {
-                        expect(actor.system.characteristics.leaping.value).to.equal(0);
                     });
 
                     it("should have Flight power", function () {
@@ -589,24 +384,24 @@ export function registerVehicleTests(quench) {
                     it("should start with a size 1 effect", function () {
                         expect(sizeEffect()?.name).to.equal("size1");
                         expect(strChangeValue()).to.equal(5);
-                        expect(actor.system.characteristics.str.max).to.equal(15);
-                        expect(actor.system.characteristics.body.max).to.equal(11);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(15);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(11);
                     });
 
                     it("should apply derived changes immediately when SIZE is increased", async function () {
-                        await actor.update({ "system.characteristics.size.value": 2 });
+                        await updateCharacteristicPropertiesOnActor(actor, "SIZE", { value: 2 });
                         expect(sizeEffect()?.name).to.equal("size2");
                         expect(strChangeValue()).to.equal(10);
-                        expect(actor.system.characteristics.str.max).to.equal(20);
-                        expect(actor.system.characteristics.body.max).to.equal(12);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(20);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(12);
                     });
 
                     it("should apply derived changes immediately when SIZE is decreased back", async function () {
-                        await actor.update({ "system.characteristics.size.value": 1 });
+                        await updateCharacteristicPropertiesOnActor(actor, "SIZE", { value: 1 });
                         expect(sizeEffect()?.name).to.equal("size1");
                         expect(strChangeValue()).to.equal(5);
-                        expect(actor.system.characteristics.str.max).to.equal(15);
-                        expect(actor.system.characteristics.body.max).to.equal(11);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(15);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(11);
                     });
                 });
 
@@ -673,24 +468,24 @@ export function registerVehicleTests(quench) {
                     it("should start with a size 1 effect", function () {
                         expect(sizeEffect()?.name).to.equal("size1");
                         expect(strChangeValue()).to.equal(5);
-                        expect(actor.system.characteristics.str.max).to.equal(15);
-                        expect(actor.system.characteristics.body.max).to.equal(11);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(15);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(11);
                     });
 
                     it("should apply derived changes immediately when SIZE is increased", async function () {
-                        await actor.update({ "system.characteristics.size.value": 2 });
+                        await updateCharacteristicPropertiesOnActor(actor, "SIZE", { value: 2 });
                         expect(sizeEffect()?.name).to.equal("size2");
                         expect(strChangeValue()).to.equal(10);
-                        expect(actor.system.characteristics.str.max).to.equal(20);
-                        expect(actor.system.characteristics.body.max).to.equal(12);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(20);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(12);
                     });
 
                     it("should apply derived changes immediately when SIZE is decreased back", async function () {
-                        await actor.update({ "system.characteristics.size.value": 1 });
+                        await updateCharacteristicPropertiesOnActor(actor, "SIZE", { value: 1 });
                         expect(sizeEffect()?.name).to.equal("size1");
                         expect(strChangeValue()).to.equal(5);
-                        expect(actor.system.characteristics.str.max).to.equal(15);
-                        expect(actor.system.characteristics.body.max).to.equal(11);
+                        expect(getCharacteristicMaxFromActor(actor, "STR")).to.equal(15);
+                        expect(getCharacteristicMaxFromActor(actor, "BODY")).to.equal(11);
                     });
                 });
             });
