@@ -116,7 +116,7 @@ const FIXTURES = freezeDeep([
         title: "5e zero point ai",
         is5e: true,
         contents: AI_5E_ZERO_POINT_XML,
-        hasCharacteristics: ["DEX", "INT", "EGO", "SPD", "OCV", "DCV"],
+        hasCharacteristics: ["DEX", "INT", "EGO", "SPD", "OCV", "DCV", "OMCV", "DMCV"],
         doesNotHaveCharacteristics: [
             "DEF",
             "BODY",
@@ -154,7 +154,7 @@ const FIXTURES = freezeDeep([
         title: "6e zero point ai",
         is5e: false,
         contents: AI_6E_ZERO_POINT_XML,
-        hasCharacteristics: ["DEX", "INT", "EGO", "SPD", "OCV", "DCV"],
+        hasCharacteristics: ["DEX", "INT", "EGO", "SPD", "OCV", "DCV", "OMCV", "DMCV"],
         doesNotHaveCharacteristics: [
             "DEF",
             "BODY",
