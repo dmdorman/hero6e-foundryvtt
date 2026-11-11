@@ -8,7 +8,29 @@ import { captureChatBaseline, deleteRunChatMessages } from "./quench-chat.mjs";
 export const GLOBAL_SETUP_SUITE = "a.global-setup";
 export const GLOBAL_TEARDOWN_SUITE = "z.global-teardown";
 
-export async function createQuenchActor({ quench, contents, is5e, actorType: type = "pc", name, img }) {
+/**
+ * Create one Quench actor, upload its export, and restore its health.
+ *
+ * `actorType` is required. `Actor.create` returns nothing when the type is missing or unregistered,
+ * so a caller that leaves it out gets no actor and no Foundry error.
+ *
+ * A full actor export can change the type. `uploadFromXml` reads the export `TEMPLATE` attribute and
+ * updates `actor.type` to match (`module/actor/actor-upload.mjs:371`). This helper rejects a finished
+ * actor of another type, so a row cannot claim one type and test another. The retype never produces
+ * npc. The upload treats pc and npc as one bucket, so an npc actor keeps its type and matches.
+ *
+ * @param {object} options Creation options.
+ * @param {object} options.quench The Quench context. Names the actor after the running suite.
+ * @param {string} [options.contents] Hero Designer XML: a full actor export, or one item.
+ * @param {boolean} options.is5e Edition for the created document.
+ * @param {string} options.actorType One of `CONFIG.HERO.creatableActorTypes`.
+ * @param {string} [options.name] Fixture name. Defaults to the XML `CHARACTER_NAME`.
+ * @param {string} [options.img] Actor image.
+ * @returns {Promise<HeroSystem6eActor>} The created actor, with the export uploaded.
+ * @throws {Error} When `is5e` or `actorType` is missing, when no document was created, when the
+ *                 upload states another edition, or when the finished actor is another type.
+ */
+export async function createQuenchActor({ quench, contents, is5e, actorType: type, name, img }) {
     const CHARACTER_NAME = contents?.match(/CHARACTER_NAME=".*?"/)?.[0];
     name ??= CHARACTER_NAME?.match(/CHARACTER_NAME="(.*?)"/)?.[1] || "";
 
@@ -30,6 +52,10 @@ export async function createQuenchActor({ quench, contents, is5e, actorType: typ
         throw new Error("missing is5e");
     }
 
+    if (type === undefined) {
+        throw new Error("missing actorType");
+    }
+
     // Create new actor for this test
     const actor = await HeroSystem6eActor.create(
         {
@@ -39,6 +65,10 @@ export async function createQuenchActor({ quench, contents, is5e, actorType: typ
         },
         { is5e, quenchCreate: true },
     );
+
+    if (!actor) {
+        throw new Error(`createQuenchActor: Foundry created no actor for actorType "${type}"`);
+    }
 
     if (contents) {
         // Is this a full actor
@@ -54,6 +84,13 @@ export async function createQuenchActor({ quench, contents, is5e, actorType: typ
             // Add item
             await HeroSystem6eItem.create(HeroSystem6eItem.itemDataFromXml(contents, actor), { parent: actor });
         }
+    }
+
+    if (actor.type !== type) {
+        throw new Error(
+            `createQuenchActor: asked for actorType "${type}" but the actor reads "${actor.type}" ` +
+                `(template ${actor.system.CHARACTER.TEMPLATE?.name ?? "none"})`,
+        );
     }
 
     // PH: FIXME: This is done as a part of the uploadFromXml... why do we need to do it here? Is it needed only for
