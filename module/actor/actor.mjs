@@ -1183,7 +1183,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         if (changed?.system?.characteristics?.body?.value !== undefined && this.getCharacteristic("body")) {
             const nextBody = changed.system.characteristics.body.value ?? this.getCharacteristic("body").value ?? 0;
             const nextBodyMax = changed.system.characteristics.body.max ?? this.getCharacteristic("body").max ?? 0;
-            const isAutomaton = this.type === "automaton" || this.getAutomatonItems().length > 0;
+            const isAutomaton = this.isAutomaton();
 
             if (isAutomaton || ["pc", "npc"].includes(this.type)) {
                 const deathThreshold = isAutomaton ? 0 : -nextBodyMax;
@@ -2641,7 +2641,9 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const powerInfo = getPowerInfo({ xmlid: key.toUpperCase(), actor: this, xmlTag: key.toUpperCase() });
         const base = powerInfo?.base(this) || 0;
 
-        if (!this.system.is5e) return base;
+        if (!this.system.is5e) {
+            return base;
+        }
 
         // TODO: Can this be combined with getCharacteristicInfoArrayForActor? See also actor-sheet.mjs changes
         const specialAutomatonPowers = this.getAutomatonSpecialPowers();

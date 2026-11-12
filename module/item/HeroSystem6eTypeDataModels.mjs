@@ -1833,15 +1833,18 @@ export class HeroActorCharacteristic extends foundry.abstract.DataModel {
         if (this.baseInfo?.behaviors.includes("success")) {
             // Override for automaton/EGO
             // An automaton cannot make EGO Rolls
-            if (this.baseInfo.key === "EGO" && this.actor?.type === "automaton") {
+            if (this.baseInfo.key === "EGO" && this.actor?.isAutomaton()) {
                 return null;
             }
+
             const newRoll = Math.round(9 + this.value * 0.2);
             if (!this.actor.is5e && this.value < 0) {
                 return 9;
             }
+
             return newRoll;
         }
+
         return null;
     }
 
