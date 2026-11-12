@@ -739,6 +739,10 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
      *
      * Update the characteristic structure with the provided tuplets.
      *
+     * Normalizes every name to lower case before building the update payload. Storage keys are lower case.
+     * `getCharacteristic` lowercases too, so read and write agree. Pass the label as-is.
+     * Two entries that normalize to one name resolve to the last entry.
+     *
      * @param {Array<[String, {String: Number}]>} characteristicNamesPropertiesAndValues
      * @param {Object} options - options to pass into update
      *
@@ -751,8 +755,8 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
 
         const characteristicNamePropertyAndValues = {};
         for (const [characteristicName, propertyNewValueObject] of characteristicNamesPropertiesAndValues) {
-            characteristicNamePropertyAndValues[`system.characteristics.${characteristicName}`] =
-                propertyNewValueObject;
+            const keyLower = characteristicName.toLowerCase();
+            characteristicNamePropertyAndValues[`system.characteristics.${keyLower}`] = propertyNewValueObject;
         }
 
         return this.update(characteristicNamePropertyAndValues, options);
