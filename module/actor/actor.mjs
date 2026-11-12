@@ -1364,7 +1364,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         for (const charPowerInfo of getCharacteristicInfoArrayForActor(actor).filter((o) =>
             o.behaviors.includes(`figured${changedCharKey.toUpperCase()}`),
         )) {
-            const key = charPowerInfo.key.toLocaleLowerCase();
+            const key = charPowerInfo.key.toLowerCase();
 
             if (charPowerInfo.figured5eCharacteristic) {
                 const levels = actor.system[charPowerInfo.key]?.LEVELS;
