@@ -165,8 +165,6 @@ const FIXTURES = freezeDeep([
         title: "5e base template",
         is5e: true,
         contents: BASE_5E_XML,
-        // This export buys DEF and no PD or ED, so no row claims a PD or ED value.
-        // These two lists name all 31 labels, so the row answers for every one of them.
         hasCharacteristics: ["BODY", "DEF", "BASESIZE", "PD", "ED"],
         doesNotHaveCharacteristics: [
             "STUN",
@@ -202,6 +200,8 @@ const FIXTURES = freezeDeep([
             BODY: { value: 4 },
             DEF: { value: 15 },
             BASESIZE: { value: 20 },
+            PD: { base: 0, basePlusLevels: 0, value: 0 },
+            ED: { base: 0, basePlusLevels: 0, value: 0 },
         },
         totals: {},
         usableSet: ["BASESIZE", "BODY", "DEF", "ED", "PD"],
