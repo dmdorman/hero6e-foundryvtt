@@ -1480,6 +1480,16 @@ function labelsWithType(powerList, type) {
             base: fixedValueFunction(0),
             behaviors: ["defense", "figured", "figuredSTR"],
             figured5eCharacteristic: function (actor) {
+                // Base2, vehicles, computers, and ai have PD and ED but do not have them as base characteristics hence do not get figured characteristic "bonuses".
+                if (
+                    actor.type === "base2" ||
+                    actor.type === "vehicle" ||
+                    actor.type === "computer" ||
+                    actor.type === "ai"
+                ) {
+                    return actor.getCharacteristic("str").baseSumFiguredCharacteristicsFromItems(5);
+                }
+
                 // 5ER p. 33: a negative Primary Characteristic adds zero to Figured
                 // Characteristics (STR -20/CON 10 gives PD 0, not -4).
                 return (
@@ -1528,6 +1538,16 @@ function labelsWithType(powerList, type) {
             base: fixedValueFunction(0),
             behaviors: ["defense", "figured", "figuredCON"],
             figured5eCharacteristic: function (actor) {
+                // Base2, vehicles, computers, and ai have PD and ED but do not have them as base characteristics hence do not get figured characteristic "bonuses".
+                if (
+                    actor.type === "base2" ||
+                    actor.type === "vehicle" ||
+                    actor.type === "computer" ||
+                    actor.type === "ai"
+                ) {
+                    return actor.getCharacteristic("con").baseSumFiguredCharacteristicsFromItems(5);
+                }
+
                 // 5ER p. 33: a negative Primary Characteristic adds zero to Figured Characteristics.
                 return (
                     roundFavorPlayerAwayFromZero(Math.max(0, actor.getCharacteristic("con").basePlusLevels) / 5) +

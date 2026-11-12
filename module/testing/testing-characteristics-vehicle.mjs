@@ -396,6 +396,8 @@ const FIXTURES = freezeDeep([
             SPD: { value: 5, realCost: 8 },
             OCV: { value: 11, realCost: 0 },
             DCV: { value: 3, realCost: 0 },
+            PD: { base: 0, basePlusLevels: 0, value: 0 },
+            ED: { base: 0, basePlusLevels: 0, value: 0 },
             LEAPING: { value: 0 },
         },
         totals: {},
