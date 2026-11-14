@@ -4,6 +4,7 @@
 
 - All tokens with linked data share an active movement state. Actors without any movement types now show in the token movement HUD as having "no movement".
 - Knockback modifier correctly calculated for airbourne (flying, gliding, leaping, swinging) actors. [#4793](https://github.com/dmdorman/hero6e-foundryvtt/issues/4793)
+- PCs with Automaton powers can no longer make EGO rolls.
 
 ### Version 5.0.3 20261010
 

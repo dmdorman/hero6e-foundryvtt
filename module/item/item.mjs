@@ -1189,7 +1189,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         const severityMax = Math.max(0, ...this.heroValidation.map((m) => m.severity ?? 0));
 
         if (severityMax > 0) {
-            return `validation validation-${getKeyByValue(CONFIG.HERO.VALIDATION_SEVERITY, severityMax).toLocaleLowerCase()}`;
+            return `validation validation-${getKeyByValue(CONFIG.HERO.VALIDATION_SEVERITY, severityMax).toLowerCase()}`;
         }
 
         return "";

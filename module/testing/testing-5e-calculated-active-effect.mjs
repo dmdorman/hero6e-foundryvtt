@@ -225,8 +225,12 @@ export function register5eCalculatedCombatAndFiguredValuesTests(quench) {
                             const strSourceValue = effectiveSourceValue("str");
 
                             const expectedOcv = roundFavorPlayerAwayFromZero(Math.max(0, dexSourceValue) / 3);
+
+                            // A base2, vehicle, computer, or ai holds PD but not as a base characteristic.
+                            // It figures no PD from STR. See the PD `figured5eCharacteristic` in `config.mjs`.
+                            const figuresPdFromStr = !["base2", "vehicle", "computer", "ai"].includes(targetType);
                             const expectedPd =
-                                roundFavorPlayerAwayFromZero(strSourceValue / 5) +
+                                (figuresPdFromStr ? roundFavorPlayerAwayFromZero(strSourceValue / 5) : 0) +
                                 qActor.getCharacteristic("str").baseSumFiguredCharacteristicsFromItems(5) +
                                 (qActor.system.PD?.LEVELS ?? 0);
 

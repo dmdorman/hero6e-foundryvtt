@@ -192,7 +192,7 @@ function actorItemHeroValidationCss(item) {
     const severityMax = Math.max(0, ...item.heroValidation.map((m) => m.severity ?? 0));
 
     if (severityMax > 0) {
-        return `validation validation-${getKeyByValue(CONFIG.HERO.VALIDATION_SEVERITY, severityMax).toLocaleLowerCase()}`;
+        return `validation validation-${getKeyByValue(CONFIG.HERO.VALIDATION_SEVERITY, severityMax).toLowerCase()}`;
     }
 
     return "";
@@ -215,7 +215,7 @@ function actorHeroValidationCssByItemType(actor, itemType) {
     const severityMax = Math.max(0, ...validationsOfType.map((m) => m.severity ?? 0));
 
     if (severityMax > 0) {
-        return `validation validation-${getKeyByValue(CONFIG.HERO.VALIDATION_SEVERITY, severityMax).toLocaleLowerCase()}`;
+        return `validation validation-${getKeyByValue(CONFIG.HERO.VALIDATION_SEVERITY, severityMax).toLowerCase()}`;
     }
 
     return "";
