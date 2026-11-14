@@ -857,12 +857,6 @@ async function saveCoreChanges(ctx) {
         }
     }
 
-    // Kluge to ensure everything has a SPD.
-    // For example a BASE has an implied SPD of three
-    actor.system.characteristics.spd ??= {
-        core: 3,
-    };
-
     uploadProgressBar.advance(`${actor.name}: Saved core changes`);
 }
 
