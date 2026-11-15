@@ -165,6 +165,7 @@ const FIXTURES = freezeDeep([
         title: "5e base template",
         is5e: true,
         contents: BASE_5E_XML,
+        noStrPenaltyEffects: true,
         hasCharacteristics: ["BODY", "DEF", "BASESIZE", "PD", "ED"],
         doesNotHaveCharacteristics: [
             "STUN",
@@ -210,6 +211,7 @@ const FIXTURES = freezeDeep([
         title: "6e base template",
         is5e: false,
         contents: BASE_6E_XML,
+        noStrPenaltyEffects: true,
         // These two lists name all 31 labels, so the row answers for every one of them.
         hasCharacteristics: ["BODY", "PD", "ED", "BASESIZE"],
         doesNotHaveCharacteristics: [
@@ -256,6 +258,7 @@ const FIXTURES = freezeDeep([
         title: "5e zero point base",
         is5e: true,
         contents: BASE_5E_ZERO_POINT_XML,
+        noStrPenaltyEffects: true,
         hasCharacteristics: ["BODY"],
         doesNotHaveCharacteristics: ["STUN", "COM", "CON"],
         hasMovementModes: [],
@@ -267,6 +270,7 @@ const FIXTURES = freezeDeep([
         title: "6e zero point base",
         is5e: false,
         contents: BASE_6E_ZERO_POINT_XML,
+        noStrPenaltyEffects: true,
         hasCharacteristics: ["BODY"],
         doesNotHaveCharacteristics: ["STUN", "DEF", "COM", "CON"],
         hasMovementModes: [],
@@ -332,6 +336,12 @@ export function registerCharacteristicsBaseTests(quench) {
                         for (const mode of fixture.doesNotHaveMovementModes) {
                             it(`does not move by ${mode}`, async function () {
                                 characteristicAssertions.assertDoesNotHaveMovementMode(actor, mode);
+                            });
+                        }
+
+                        if (fixture.noStrPenaltyEffects) {
+                            it("holds no STR penalty effect", async function () {
+                                characteristicAssertions.assertDoesNotHaveStrPenaltyEffect(actor);
                             });
                         }
 
