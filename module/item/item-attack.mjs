@@ -2257,14 +2257,27 @@ export async function _onSpendHaps(event) {
 
     // 2. Validate HAP currency locally on the client
     const hapsToSpend = parseInt(button.dataset.by || "1");
-    const currentHaps = attackerActor.system.hap.value ?? 0;
+    const currentHaps = attackerActor.system.hap.value;
 
     if (currentHaps < hapsToSpend) {
         return ui.notifications.warn(`${attackerToken?.name ?? attackerActor.name} does not have enough HAPs.`);
     }
 
+    const remainingHaps = currentHaps - hapsToSpend;
+
+    // A negative result means the reading above was stale, because HAP floors at 0. Refuse the write.
+    if (remainingHaps < 0) {
+        console.error(`HAP spend denied: the result would be negative`, {
+            actor: attackerActor.name,
+            currentHaps: currentHaps,
+            hapsToSpend: hapsToSpend,
+        });
+
+        return ui.notifications.error(`${attackerToken?.name ?? attackerActor.name} cannot spend that many HAPs.`);
+    }
+
     await attackerActor.update({
-        "system.hap.value": currentHaps - hapsToSpend,
+        "system.hap.value": remainingHaps,
     });
 
     // 7. Prepare the uniform payload packet

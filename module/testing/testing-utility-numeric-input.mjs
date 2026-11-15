@@ -659,11 +659,13 @@ export function registerNumericInputTests(quench) {
                                 is5e: false,
                                 name: "floor HAP",
                             });
+                            expect(actor.system.hap.value).to.equal(0);
                             await actor.sheet.render({ force: true });
 
                             const input = actor.sheet.element.querySelector(`input[name="system.hap.value"]`);
                             const contract = readNumericSchema(input);
 
+                            expect(input.value).to.equal("0");
                             expect(contract.min).to.equal(0);
                             expect(contract.decimals).to.equal(0);
                             expect(withinDeclaredBounds(-1, contract)).to.equal(false);
