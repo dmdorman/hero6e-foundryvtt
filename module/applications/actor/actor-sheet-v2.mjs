@@ -113,12 +113,26 @@ export class HeroSystemActorSheetV2 extends HeroAppMixin(HandlebarsApplicationMi
             dragDropHandler.callbacks = {
                 dragstart: this._onDragStart.bind(this),
                 dragover: this._onDragOver.bind(this),
-                drop: this._onDrop.bind(this),
+                drop: this.#onTabDrop.bind(this),
                 dragenter: this._onDragEnter.bind(this),
                 dragleave: this._onDragLeave.bind(this),
             };
             return new DragDrop(dragDropHandler);
         });
+    }
+
+    /**
+     * Handle a drop on a tab, then stop the event from bubbling so the event doesn't bubble the ActorSheetV2's drop target
+     * that covers the whole sheet.
+     *
+     * @param {DragEvent} event The drop event.
+     * @returns {*} Whatever `_onDrop` returns.
+     */
+    #onTabDrop(event) {
+        // A DragDrop callback always receives a native DragEvent, so stopPropagation exists.
+        // Do not guard it: a silent skip here would restore the double import this method prevents.
+        event.stopPropagation();
+        return this._onDrop(event);
     }
 
     // REF: foundry.applications.api.DocumentSheetV2
