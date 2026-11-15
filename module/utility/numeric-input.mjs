@@ -19,7 +19,8 @@
  *
  * Add `max` to cap the top of a range.
  *
- * A typed `-0` becomes `0` here, before any comparison runs, so no field can store negative zero.
+ * A typed `-0` becomes `0` here, before any comparison runs, so no field can store negative zero. The
+ * same normalising drops leading zeros, so `010` reads as `10` and `-010` reads as `-10`.
  *
  * The browser enforces what it can during typing. This module is the backstop, because a cleared
  * `input type="number"` still reports an empty string and a browser still accepts an exponent such as
@@ -144,6 +145,40 @@ export function parseNumericInput(value, contract) {
     }
 
     return parsed;
+}
+
+/**
+ * Rewrite accepted text in its shortest form, so a field cannot keep leading zeros.
+ *
+ * `010` becomes `10`, `-010` becomes `-10`, `+010` becomes `10`, and any zero becomes `0`. A zero that
+ * carries a decimal place keeps the digit before the point, so `0.5` stays `0.5`.
+ *
+ * @param {string} value Raw `input.value`.
+ * @param {{decimals: number, min: number|null, max: number|null}} contract The resolved contract.
+ *
+ * @returns {string|null} The canonical text, or null when the text breaks the contract.
+ */
+export function canonicalNumericText(value, contract) {
+    if (parseNumericInput(value, contract) === null) {
+        return null;
+    }
+
+    const text = value.trim();
+    const negative = text.startsWith("-");
+    const [whole, fraction] = text.replace(/^[+-]/, "").split(".");
+    const trimmed = whole.replace(/^0+(?=\d)/, "");
+
+    if (Number(trimmed) === 0 && (fraction === undefined || Number(fraction) === 0)) {
+        return "0";
+    }
+
+    const sign = negative ? "-" : "";
+
+    if (fraction === undefined) {
+        return `${sign}${trimmed}`;
+    }
+
+    return `${sign}${trimmed}.${fraction}`;
 }
 
 /**

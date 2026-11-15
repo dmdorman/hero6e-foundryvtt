@@ -8,6 +8,7 @@ import {
 } from "../../utility/util.mjs";
 import {
     InputElementNumberSchemaError,
+    canonicalNumericText,
     parseNumericInput,
     readNumericSchema,
     restoreNumericInput,
@@ -101,6 +102,12 @@ async function commitValidatedNumber(input, write, documentFor, path) {
         restoreNumericInput(input, documentFor(), path, contract);
         return;
     }
+
+    const text = canonicalNumericText(input.value, contract);
+    if (text !== null && text !== input.value) {
+        input.value = text;
+    }
+
     await write(parsed);
 }
 

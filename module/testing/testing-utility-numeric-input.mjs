@@ -1,5 +1,6 @@
 import { createQuenchActor, deleteQuenchActor } from "./quench-helper.mjs";
 import {
+    canonicalNumericText,
     describeNumericSchema,
     InputElementNumberSchemaError,
     parseNumericInput,
@@ -332,6 +333,92 @@ export function registerNumericInputTests(quench) {
                         expect(Object.is(parseNumericInput("-0", floored), -0)).to.equal(false);
                         expect(Object.is(parseNumericInput("-0", open), -0)).to.equal(false);
                         expect(withinDeclaredBounds(parseNumericInput("-0", floored), floored)).to.equal(true);
+                    });
+                });
+
+                describe("canonicalNumericText", async function () {
+                    it("truncates the leading zero of 010 to 10", function () {
+                        const contract = readNumericSchema(makeInput({ step: 1 }));
+
+                        expect(canonicalNumericText("010", contract)).to.equal("10");
+                    });
+
+                    it("truncates the leading zeros of 0010 to 10", function () {
+                        const contract = readNumericSchema(makeInput({ step: 1 }));
+
+                        expect(canonicalNumericText("0010", contract)).to.equal("10");
+                    });
+
+                    it("truncates -010 to -10", function () {
+                        const contract = readNumericSchema(makeInput({ step: 1 }));
+
+                        expect(canonicalNumericText("-010", contract)).to.equal("-10");
+                    });
+
+                    it("drops the leading plus of +010 and answers 10", function () {
+                        const contract = readNumericSchema(makeInput({ step: 1 }));
+
+                        expect(canonicalNumericText("+010", contract)).to.equal("10");
+                    });
+
+                    it("turns 000 into 0", function () {
+                        const contract = readNumericSchema(makeInput({ step: 1 }));
+
+                        expect(canonicalNumericText("000", contract)).to.equal("0");
+                    });
+
+                    it("turns -0 into 0", function () {
+                        const contract = readNumericSchema(makeInput({ step: 1 }));
+
+                        expect(canonicalNumericText("-0", contract)).to.equal("0");
+                    });
+
+                    it("keeps the leading zero of 0.5", function () {
+                        const contract = readNumericSchema(makeInput({ step: "0.1" }));
+
+                        expect(canonicalNumericText("0.5", contract)).to.equal("0.5");
+                    });
+
+                    it("truncates 00.25 to 0.25", function () {
+                        const contract = readNumericSchema(makeInput({ step: "0.01" }));
+
+                        expect(canonicalNumericText("00.25", contract)).to.equal("0.25");
+                    });
+
+                    it("turns 0.00 into 0", function () {
+                        const contract = readNumericSchema(makeInput({ step: "0.01" }));
+
+                        expect(canonicalNumericText("0.00", contract)).to.equal("0");
+                    });
+
+                    it("keeps the decimal place of 10.0", function () {
+                        const contract = readNumericSchema(makeInput({ step: "0.1" }));
+
+                        expect(canonicalNumericText("10.0", contract)).to.equal("10.0");
+                    });
+
+                    it("truncates -0.5 written as -00.5 to -0.5", function () {
+                        const contract = readNumericSchema(makeInput({ step: "0.1" }));
+
+                        expect(canonicalNumericText("-00.5", contract)).to.equal("-0.5");
+                    });
+
+                    it("refuses abc", function () {
+                        const contract = readNumericSchema(makeInput({ step: 1 }));
+
+                        expect(canonicalNumericText("abc", contract)).to.equal(null);
+                    });
+
+                    it("refuses an empty string", function () {
+                        const contract = readNumericSchema(makeInput({ step: 1 }));
+
+                        expect(canonicalNumericText("", contract)).to.equal(null);
+                    });
+
+                    it("refuses the exponent 1e5", function () {
+                        const contract = readNumericSchema(makeInput({ step: 1 }));
+
+                        expect(canonicalNumericText("1e5", contract)).to.equal(null);
                     });
                 });
 
