@@ -201,20 +201,116 @@ export async function deleteQuenchTokensAndActors() {
     return deleted;
 }
 
+// A pack this system generated for a test carries two marks that real content lacks. The label keeps
+// the `_Quench` fixture prefix, because `uploadFromXml` names the pack after the export's
+// CHARACTER_NAME, and the metadata carries the creation flag that same upload writes
+// (`module/compendium/compendiumDirectory.mjs:214-222`).
+const QUENCH_PACK_PREFIX = "_Quench";
+const QUENCH_PACK_FLAG = "versionHeroSystem6eCreated";
+
 /**
- * Delete every `_Quench` fixture from the world: chat messages, combats, tokens, actors, then scenes.
+ * Answer whether this pack is a `_Quench` leftover this system generated.
+ *
+ * Both marks must hold, so no authored pack qualifies. A world holds real uploads under the same
+ * system flag, for example `Dismantlers` and `The Armoury - Defensive Items 5e`, and their labels keep
+ * the Hero Designer character name rather than the fixture prefix. A world pack a GM named `_Quench`
+ * by hand keeps no flag. A module or system pack is read-only, and no test creates one.
+ *
+ * The flag is read in two shapes. `uploadFromXml` writes one dotted key
+ * (`"<systemId>.versionHeroSystem6eCreated"`) and Foundry rewrites that key into a nested scope
+ * (`flags[<systemId>][<key>]`) when the world file saves, so a pack can arrive either way.
+ *
+ * @param {CompendiumCollection} pack The pack to test.
+ * @returns {boolean} True only when this system generated the pack for a `_Quench` fixture.
+ */
+function isQuenchGeneratedPack(pack) {
+    const metadata = pack?.metadata;
+
+    if (metadata?.packageType !== "world") {
+        return false;
+    }
+
+    if (!metadata.label?.startsWith(QUENCH_PACK_PREFIX)) {
+        return false;
+    }
+
+    const flags = metadata.flags ?? {};
+    const systemFlags = flags[game.system.id];
+
+    return (
+        flags[`${game.system.id}.${QUENCH_PACK_FLAG}`] !== undefined || systemFlags?.[QUENCH_PACK_FLAG] !== undefined
+    );
+}
+
+/**
+ * Delete the `_Quench` compendium packs this system generated during testing.
+ *
+ * A leaked pack blocks the next run rather than merely cluttering the sidebar. A fresh upload meets
+ * its own generated name and answers with an `Overwrite Compendium Entry` confirm
+ * (`module/compendium/compendiumDirectory.mjs:249-263`). No player sits at the screen to answer it, so
+ * the next suite's `before` hook waits on a dialog and every test in that suite fails.
+ *
+ * The sweep deletes only packs `isQuenchGeneratedPack` proves. It never deletes a world pack the
+ * system did not generate for a fixture, because a world pack holds authored content.
+ *
+ * Foundry gates a pack delete on `game.user.isGM` and the unlock on pack ownership, both stricter than
+ * the ASSISTANT floor this cleanup otherwise needs (`compendium-collection.mjs:936`). A GM who lacks the
+ * pack fails here, and the error names that pack.
+ *
+ * @returns {Promise<string[]>} The pack labels deleted.
+ * @throws {Error} When a pack survives. Names each failure and reports what went first.
+ */
+export async function deleteQuenchCompendiums() {
+    const candidates = game.packs.filter(isQuenchGeneratedPack);
+
+    const deleted = [];
+    const failures = [];
+
+    // One pack at a time. Each delete dispatches its own `manageCompendium` socket request, so two
+    // deletes in flight race on the world pack list.
+    for (const pack of candidates) {
+        const label = pack.metadata.label;
+        try {
+            // Clear the lock first. Foundry refuses to delete a locked pack
+            // (`compendium-collection.mjs:936`). An unlock failure reports that pack and leaves it for
+            // the next run, which is the outcome the unlock itself prevents.
+            if (pack.config?.locked) {
+                await pack.configure({ locked: false });
+            }
+
+            await pack.deleteCompendium();
+            deleted.push(label);
+            console.log(`deleteQuenchCompendiums deleted pack ${label} (${pack.collection})`);
+        } catch (err) {
+            failures.push(`${label}: ${err?.message ?? err}`);
+        }
+    }
+
+    if (failures.length > 0) {
+        throw new Error(
+            `Incomplete _Quench compendium cleanup - ${failures.join("; ")}. Deleted ` +
+                `${deleted.length} of ${candidates.length} packs before the failures.`,
+        );
+    }
+
+    return deleted;
+}
+
+/**
+ * Delete every `_Quench` fixture from the world: chat messages, combats, tokens, actors, scenes, then
+ * compendium packs.
  *
  * Both global batches call this through Mocha. `abortAndRunGlobalTeardown` also calls it directly
  * when Mocha cannot run the batch, so the cleanup does not depend on the runner. Each sweep runs
  * even when an earlier one fails, so no failure strands a later fixture type.
  *
- * @returns {Promise<{messages: number, combats: number, tokens: number, actors: number, scenes: number}>}
+ * @returns {Promise<{messages: number, combats: number, tokens: number, actors: number, scenes: number, compendiums: number}>}
  *                    How many of each fixture type were deleted.
  * @throws {Error} When a sweep fails. Names each failure and reports the partial counts.
  */
 export async function deleteQuenchFixtures() {
     const failures = [];
-    const counts = { messages: 0, combats: 0, tokens: 0, actors: 0, scenes: 0 };
+    const counts = { messages: 0, combats: 0, tokens: 0, actors: 0, scenes: 0, compendiums: 0 };
 
     // Chat first. A short log makes everything after it cheaper to render.
     try {
@@ -245,11 +341,20 @@ export async function deleteQuenchFixtures() {
         failures.push(`scenes: ${err?.message ?? err}`);
     }
 
+    // Packs last, and only the ones this system generated for a `_Quench` fixture. A delete closes
+    // that pack's open sidebar application, so it reads better after the document sweeps that may have
+    // rendered one.
+    try {
+        counts.compendiums = (await deleteQuenchCompendiums()).length;
+    } catch (err) {
+        failures.push(String(err?.message ?? err));
+    }
+
     if (failures.length > 0) {
         throw new Error(
             `Incomplete _Quench fixture cleanup - ${failures.join("; ")}. Deleted ` +
                 `${counts.messages} chat messages, ${counts.combats} combats, ${counts.tokens} tokens, ` +
-                `${counts.actors} actors, ${counts.scenes} scenes.`,
+                `${counts.actors} actors, ${counts.scenes} scenes, ${counts.compendiums} compendium packs.`,
         );
     }
 
@@ -337,6 +442,13 @@ function registerFixtureCleanupBatch(quench, { suiteKey, displayName, chatStep, 
 
                 it("Delete '_Quench' scenes", async () => {
                     await deleteQuenchScenes();
+                });
+
+                // A leaked pack blocks the next run at an `Overwrite Compendium Entry` confirm, so
+                // global setup sweeps leftovers from an aborted run as well as global teardown. Only
+                // packs this system generated for a `_Quench` fixture are eligible.
+                it("Delete '_Quench' compendium packs this system created", async () => {
+                    await deleteQuenchCompendiums();
                 });
             });
         },
