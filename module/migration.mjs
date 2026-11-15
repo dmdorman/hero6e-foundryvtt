@@ -424,6 +424,15 @@ export async function migrateWorld() {
         async (token) => await migrateTokenMovementAction_5_0_4(token),
     );
 
+    // 5.0.4 stops giving encumbrance and STR0 penalties to actor types that have no STR.
+    await migrateToVersion(
+        "5.0.4",
+        lastMigration,
+        getAllActorsInGame(),
+        "STR penalty on actors without STR",
+        async (actor) => await removeStrPenaltiesFromTypesWithoutStr_5_0_4(actor),
+    );
+
     // Placeholder for notifying GM of items missing XMLID
     // await migrateToVersion(
     //     game.system.version,
@@ -725,6 +734,37 @@ function ownedMovementKeys_5_0_4(actor) {
     return Object.keys(characteristics)
         .filter((key) => movementKeys.includes(key))
         .filter((key) => (parseInt(actor.getMovementCharacteristic(key)?.value) || 0) > 0);
+}
+
+/**
+ * Actor types with no STR characteristic, as 5.0.4 defined them.
+ */
+const TYPES_WITHOUT_STR_5_0_4 = Object.freeze(["base2", "computer", "ai"]);
+
+/**
+ * ActiveEffect flags the STR penalties carry, as 5.0.4 defined them.
+ */
+const STR_PENALTY_FLAGS_5_0_4 = Object.freeze(["encumbrance", "str0"]);
+
+/**
+ * Delete the encumbrance and STR 0 ActiveEffects from an actor whose type has no STR.
+ *
+ * A type without STR can carries nothing, so 5.0.4 gives it no penalty. Before that is was the same as a STR of 0.
+ *
+ * @param {HeroSystem6eActor} actor Actor to clean. An unlinked token actor works the same way.
+ */
+async function removeStrPenaltiesFromTypesWithoutStr_5_0_4(actor) {
+    if (!actor || !TYPES_WITHOUT_STR_5_0_4.includes(actor.type)) {
+        return;
+    }
+
+    const penaltyIds = actor.effects
+        .filter((effect) => STR_PENALTY_FLAGS_5_0_4.some((flag) => effect.flags?.[game.system.id]?.[flag]))
+        .map((effect) => effect.id);
+
+    if (penaltyIds.length !== 0) {
+        return actor.deleteEmbeddedDocuments("ActiveEffect", penaltyIds, { render: false });
+    }
 }
 
 /**

@@ -1060,6 +1060,14 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             },
             { recursive: false },
         );
+
+        // A type change may result in the the STR characteristic being added or deleted.
+        // PH: FIXME: Might it just be better to delete all active effects and rebuild them?
+        const stalePenaltyIds = this.getStrPenaltyEffects().map((effect) => effect.id);
+        if (stalePenaltyIds.length > 0) {
+            await this.deleteEmbeddedDocuments("ActiveEffect", stalePenaltyIds);
+        }
+        await this.applyEncumbrancePenalty();
     }
 
     /* -------------------------------------------- */
@@ -2127,9 +2135,28 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         }
     }
 
+    /**
+     * Get the penalty ActiveEffects related to STR: encumbrance and STR0.
+     *
+     * @returns {ActiveEffect[]} The penalty effects this actor holds. Empty when it holds neither kind.
+     */
+    getStrPenaltyEffects() {
+        return this.effects.filter(
+            (effect) => effect.flags?.[game.system.id]?.encumbrance || effect.flags?.[game.system.id]?.str0,
+        );
+    }
+
     async applyEncumbrancePenalty(changed) {
         // Only 1 GM should do this
-        if (!game.users.activeGM?.isSelf) return;
+        if (!game.users.activeGM?.isSelf) {
+            return;
+        }
+
+        // An actor without STR (e.g. computer, AI) cannot lift anything, so it cannot be encumbered otherwise it'd always be encumbered.
+        // Also, if it had a STR it would be well below -25 in 5e.
+        if (!this.hasCharacteristic("STR")) {
+            return;
+        }
 
         // During _preUpdate this.system still holds the pre-update value; prefer the pending one.
         const strValue = Number(

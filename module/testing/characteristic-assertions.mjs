@@ -282,6 +282,26 @@ export async function updateMultipleCharacteristicsOnActor(actor, characteristic
 }
 
 /**
+ * List the STR penalty effects an actor holds.
+ *
+ * An actor with no STR characteristic lifts nothing, so it must hold no strength related active effects.
+ *
+ * @param {HeroSystem6eActor} actor Actor to read.
+ *
+ * @returns {string[]} Effect names, sorted. Empty when the actor holds neither kind.
+ */
+export function getStrPenaltyEffectNamesFromActor(actor) {
+    if (!actor) {
+        throw new Error("getStrPenaltyEffectNamesFromActor: missing actor");
+    }
+
+    return actor
+        .getStrPenaltyEffects()
+        .map((effect) => effect.name)
+        .sort();
+}
+
+/**
  * Bind every assertion helper to a Quench `assert`.
  *
  * @param {object} assert The `assert` from the Quench batch context.
@@ -351,6 +371,34 @@ export function createCharacteristicAssertions(assert) {
         assert.isFalse(
             has,
             message ?? `${actor.detailedName()} ${mode}: expected the actor not to have this movement mode`,
+        );
+    }
+
+    /**
+     * Assert the actor holds at least one STR penalty effect.
+     *
+     * @param {HeroSystem6eActor} actor
+     * @param {string} [message] Overrides the generated failure message.
+     */
+    function assertHasStrPenaltyEffect(actor, message) {
+        const names = getStrPenaltyEffectNamesFromActor(actor);
+        assert.isTrue(
+            names.length > 0,
+            message ?? `${actor.detailedName()}: expected an encumbrance or STR 0 effect, found none`,
+        );
+    }
+
+    /**
+     * Assert the actor holds neither STR penalty effect.
+     *
+     * @param {HeroSystem6eActor} actor
+     * @param {string} [message] Overrides the generated failure message.
+     */
+    function assertDoesNotHaveStrPenaltyEffect(actor, message) {
+        const names = getStrPenaltyEffectNamesFromActor(actor);
+        assert.isTrue(
+            names.length === 0,
+            message ?? `${actor.detailedName()}: expected no encumbrance or STR 0 effect, found [${names.join(", ")}]`,
         );
     }
 
@@ -456,6 +504,9 @@ export function createCharacteristicAssertions(assert) {
         assertActorTotal,
         assertHasMovementMode,
         assertDoesNotHaveMovementMode,
+        assertHasStrPenaltyEffect,
+        assertDoesNotHaveStrPenaltyEffect,
+        getStrPenaltyEffectNamesFromActor,
         assertExactUsableSet,
         updateCharacteristicPropertiesOnActor,
         updateMultipleCharacteristicsOnActor,

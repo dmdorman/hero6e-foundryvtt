@@ -95,6 +95,7 @@ const FIXTURES = freezeDeep([
         title: "5e zero point computer",
         is5e: true,
         contents: COMPUTER_5E_ZERO_POINT_XML,
+        noStrPenaltyEffects: true,
         hasCharacteristics: ["DEX", "INT", "SPD", "OCV", "DCV"],
         doesNotHaveCharacteristics: [
             "DEF",
@@ -134,6 +135,7 @@ const FIXTURES = freezeDeep([
         title: "6e zero point computer",
         is5e: false,
         contents: COMPUTER_6E_ZERO_POINT_XML,
+        noStrPenaltyEffects: true,
         hasCharacteristics: ["DEX", "INT", "SPD", "OCV", "DCV"],
         doesNotHaveCharacteristics: [
             "DEF",
@@ -227,6 +229,12 @@ export function registerCharacteristicsComputerTests(quench) {
                         for (const mode of fixture.doesNotHaveMovementModes) {
                             it(`does not move by ${mode}`, async function () {
                                 characteristicAssertions.assertDoesNotHaveMovementMode(actor, mode);
+                            });
+                        }
+
+                        if (fixture.noStrPenaltyEffects) {
+                            it("holds no STR penalty effect", async function () {
+                                characteristicAssertions.assertDoesNotHaveStrPenaltyEffect(actor);
                             });
                         }
 

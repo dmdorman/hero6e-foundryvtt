@@ -1,4 +1,5 @@
 import { forceReplaceFields } from "../utility/util.mjs";
+import { createCharacteristicAssertions } from "./characteristic-assertions.mjs";
 import { setQuenchTimeout } from "./quench-helper.mjs";
 
 const { Actor, Item } = foundry.documents;
@@ -8,6 +9,7 @@ export function registerUpdatesWithTypeForceReplaceTests(quench) {
         `${game.system.id}.testing.typeForceReplace`,
         (context) => {
             const { describe, it, before, after, assert } = context;
+            const characteristicAssertions = createCharacteristicAssertions(assert);
 
             describe("Actor/Item Type Change", function () {
                 // Mocha's 2000ms default is too short when several actors are created at the same time.
@@ -61,6 +63,76 @@ export function registerUpdatesWithTypeForceReplaceTests(quench) {
                     },
                     { displayName: "HERO: Actor Type Tests" },
                 );
+
+                describe("STR penalty follows an actor type change", function () {
+                    // A type with no STR lifts nothing, so 5.0.4 gives it no encumbrance and no STR 0 penalty.
+                    // `_preUpdate` judges that penalty against the type held before the write, so `_changeType`
+                    // drops the penalties the old type earned, then runs one pass for the new type. A pc at
+                    // STR 0 carries a penalty to lose, so the fixture starts there.
+
+                    let quenchActor = null;
+
+                    before(async function () {
+                        quenchActor = await Actor.create({
+                            name: "_Quench_StrPenalty",
+                            type: "pc",
+                            img: "icons/svg/sword.svg",
+                        });
+                        await characteristicAssertions.updateCharacteristicPropertiesOnActor(quenchActor, "STR", {
+                            value: 0,
+                        });
+                    });
+
+                    after(async function () {
+                        if (quenchActor) {
+                            await quenchActor.delete();
+                        }
+                    });
+
+                    it("pc at STR 0 holds the STR 0 penalty", function () {
+                        characteristicAssertions.assertHasStrPenaltyEffect(quenchActor);
+                    });
+
+                    it("pc at STR 0 answers DCV 2", function () {
+                        characteristicAssertions.assertCharacteristicProperty(quenchActor, "DCV", "value", 2);
+                    });
+
+                    describe("After the pc becomes a computer", function () {
+                        before(async function () {
+                            await quenchActor._changeType("computer");
+                        });
+
+                        it("has no STR characteristic", function () {
+                            characteristicAssertions.assertDoesNotHaveCharacteristic(quenchActor, "STR");
+                        });
+
+                        it("drops the STR 0 penalty the pc earned", function () {
+                            characteristicAssertions.assertDoesNotHaveStrPenaltyEffect(quenchActor);
+                        });
+
+                        it("answers DCV 3", function () {
+                            characteristicAssertions.assertCharacteristicProperty(quenchActor, "DCV", "value", 3);
+                        });
+                    });
+
+                    describe("After that computer becomes a pc again", function () {
+                        before(async function () {
+                            await quenchActor._changeType("pc");
+                        });
+
+                        it("has the STR characteristic", function () {
+                            characteristicAssertions.assertHasCharacteristic(quenchActor, "STR");
+                        });
+
+                        it("builds the STR 0 penalty the new type earns", function () {
+                            characteristicAssertions.assertHasStrPenaltyEffect(quenchActor);
+                        });
+
+                        it("answers DCV 2", function () {
+                            characteristicAssertions.assertCharacteristicProperty(quenchActor, "DCV", "value", 2);
+                        });
+                    });
+                });
 
                 describe("Item Type Mutation Matrix", function () {
                     let quenchItem = null;

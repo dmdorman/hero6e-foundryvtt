@@ -6,6 +6,7 @@
 - Knockback modifier correctly calculated for airbourne (flying, gliding, leaping, swinging) actors. [#4793](https://github.com/dmdorman/hero6e-foundryvtt/issues/4793)
 - PCs with Automaton powers can no longer make EGO rolls.
 - Dragging an item from a compendium onto an actor sheet tab no longer creates two copies of the item. [#4806](https://github.com/dmdorman/hero6e-foundryvtt/issues/4806)
+- Actor types without STR (e.g. computers) can't carry anything so shouldn't be encumbered. [#4807](https://github.com/dmdorman/hero6e-foundryvtt/issues/4807)
 
 ### Version 5.0.3 20261010
 

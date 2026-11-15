@@ -116,6 +116,7 @@ const FIXTURES = freezeDeep([
         title: "5e zero point ai",
         is5e: true,
         contents: AI_5E_ZERO_POINT_XML,
+        noStrPenaltyEffects: true,
         hasCharacteristics: ["DEX", "INT", "EGO", "SPD", "OCV", "DCV", "OMCV", "DMCV"],
         doesNotHaveCharacteristics: [
             "DEF",
@@ -154,6 +155,7 @@ const FIXTURES = freezeDeep([
         title: "6e zero point ai",
         is5e: false,
         contents: AI_6E_ZERO_POINT_XML,
+        noStrPenaltyEffects: true,
         hasCharacteristics: ["DEX", "INT", "EGO", "SPD", "OCV", "DCV", "OMCV", "DMCV"],
         doesNotHaveCharacteristics: [
             "DEF",
@@ -246,6 +248,12 @@ export function registerCharacteristicsAiTests(quench) {
                         for (const mode of fixture.doesNotHaveMovementModes) {
                             it(`does not move by ${mode}`, async function () {
                                 characteristicAssertions.assertDoesNotHaveMovementMode(actor, mode);
+                            });
+                        }
+
+                        if (fixture.noStrPenaltyEffects) {
+                            it("holds no STR penalty effect", async function () {
+                                characteristicAssertions.assertDoesNotHaveStrPenaltyEffect(actor);
                             });
                         }
 
