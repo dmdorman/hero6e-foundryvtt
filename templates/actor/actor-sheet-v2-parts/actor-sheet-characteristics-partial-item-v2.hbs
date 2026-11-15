@@ -5,7 +5,7 @@
             {{#if this.valueTooltip}}data-tooltip="{{{this.valueTooltip}}}"{{/if}}
         >
             <input name="system.characteristics.{{this.key}}.value" type="number"
-                value="{{this.value}}" data-dtype="Number"
+                value="{{this.value}}" data-dtype="Number" step="1"
                 class="{{this.valueCssClass}}"
                 {{#if this.valueTitle}}disabled{{/if}}
             >
@@ -17,7 +17,7 @@
         >
             <input type="number"
                 class="{{this.maxCssClass}}"
-                value="{{this.max}}" data-dtype="Number" disabled
+                value="{{this.max}}" data-dtype="Number" step="1" disabled
             >
         </div>
 
@@ -30,7 +30,7 @@
         <div class="item-column item-levels">
             {{#unless (eq characteristic.base null)}}
                 <input name="system.{{this.KEY}}.LEVELS" type="number"
-                value="{{this.levels}}" data-dtype="Number"
+                value="{{this.levels}}" data-dtype="Number" step="1"
                 {{#if this.levelsLocked}}disabled{{/if}}
                 >
             {{/unless}}
@@ -43,7 +43,6 @@
         <div class="item-column item-base2">
             {{#if (and (eq @root/actor.is5e true) (includes this.baseInfo.behaviors "calculated"))}}
                 {{ calculated5eCharacteristic actor this}}
-                
             {{else}}
                 {{#if (and (eq @root/actor.is5e true) (includes this.baseInfo.behaviors "figured"))}}
                     {{ figured5eCharacteristic actor this}}
