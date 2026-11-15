@@ -4163,6 +4163,19 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
     }
 
     /**
+     * Reports whether this actor counts as an automaton.
+     *
+     * HDC builds automatons two ways. One is the `automaton` actor type, from a template. The other is
+     * any other actor type that owns the AUTOMATON power. Both answer true here.
+     *
+     * @returns {Boolean} True when the actor type is `automaton` or when the actor owns an AUTOMATON
+     *                    power.
+     */
+    isAutomaton() {
+        return this.type === "automaton" || this.getAutomatonItems().automaton.length > 0;
+    }
+
+    /**
      * Get all items relating to special automaton powers for this actor.
      *
      * @returns
