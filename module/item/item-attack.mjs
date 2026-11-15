@@ -2251,7 +2251,9 @@ export async function _onSpendHaps(event) {
         attackerActor = attackerActorUuid ? await foundry.utils.fromUuid(attackerActorUuid) : null;
     }
 
-    if (!attackerActor) throw new Error("Attacker actor not found.");
+    if (!attackerActor) {
+        throw new Error("Attacker actor not found.");
+    }
 
     // 2. Validate HAP currency locally on the client
     const hapsToSpend = parseInt(button.dataset.by || "1");

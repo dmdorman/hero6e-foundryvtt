@@ -2196,7 +2196,7 @@ export class HeroActorModel extends HeroObjectCacheMixin(foundry.abstract.TypeDa
             DEF: new EmbeddedDataField(HeroItemCharacteristic), // 5e Base and Vehicle
             SIZE: new EmbeddedDataField(HeroItemCharacteristic), // vehicle
             hap: new SchemaField({
-                value: new HeroNumberField({ integer: true, nullable: true }),
+                value: new HeroNumberField({ integer: true, initial: 0, min: 0, nullable: false }),
             }),
 
             characteristics: new EmbeddedDataField(HeroCharacteristicsModel),
