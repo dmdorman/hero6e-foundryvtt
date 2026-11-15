@@ -4150,8 +4150,30 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         // SEE: migration.mjs:commitActorAndItemMigrateDataChangesByActor
 
         this.migrateData_XmlidCharacteristics(source);
+        this.migrateData_v5_0_4_HapInitialValue(source);
 
         return super.migrateData(source);
+    }
+
+    /**
+     * Give every actor a HAP value of 0 when the stored value is missing or unusable.
+     *
+     * The previous model default was null. The model now floors HAP at 0 and starts it at 0, so a
+     * null, blank, non-numeric, or negative value becomes 0.
+     */
+    static migrateData_v5_0_4_HapInitialValue(source) {
+        const hap = source?.system?.hap;
+
+        if (hap === null || hap === undefined) {
+            return;
+        }
+
+        const value = Number(hap.value);
+
+        if (hap.value === null || hap.value === undefined || hap.value === "" || !Number.isFinite(value) || value < 0) {
+            hap.value = 0;
+            tagObjectForPersistence(source);
+        }
     }
 
     static migrateData_XmlidCharacteristics(source) {

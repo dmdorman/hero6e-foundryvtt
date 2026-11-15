@@ -6,17 +6,20 @@
 
     <div class="form-group">
         <label for="system.CHARACTER.BASIC_CONFIGURATION.EXPERIENCE"><b>EXPERIENCE</b></label>
-        <input name="system.CHARACTER.BASIC_CONFIGURATION.EXPERIENCE" value="{{actor.system.CHARACTER.BASIC_CONFIGURATION.EXPERIENCE}}" type="number">
+        <input name="system.CHARACTER.BASIC_CONFIGURATION.EXPERIENCE" value="{{actor.system.CHARACTER.BASIC_CONFIGURATION.EXPERIENCE}}" type="number"
+            min="0" step="1">
     </div>
 
     <div class="form-group">
         <label for="system.CHARACTER.CHARACTER_INFO.HEIGHT"><b>HEIGHT ({{#if metricUnits}}cm{{else}}inches{{/if}})</b></label>
-        <input name="system.CHARACTER.CHARACTER_INFO.HEIGHT" value="{{actor.system.CHARACTER.CHARACTER_INFO.height}}" type="number">
+        <input name="system.CHARACTER.CHARACTER_INFO.HEIGHT" value="{{actor.system.CHARACTER.CHARACTER_INFO.height}}" type="number"
+            min="0" step="0.01">
     </div>
 
     <div class="form-group">
         <label for="system.CHARACTER.CHARACTER_INFO.WEIGHT"><b>WEIGHT ({{#if metricUnits}}kg{{else}}lbs{{/if}})</b></label>
-        <input name="system.CHARACTER.CHARACTER_INFO.WEIGHT" value="{{actor.system.CHARACTER.CHARACTER_INFO.weight}}" type="number">
+        <input name="system.CHARACTER.CHARACTER_INFO.WEIGHT" value="{{actor.system.CHARACTER.CHARACTER_INFO.weight}}" type="number"
+            min="0" step="0.01">
     </div>
 
     <div class="form-group">

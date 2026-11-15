@@ -154,7 +154,7 @@ function captureRetainedValues(ctx) {
         body: numOffFromMax("body"),
         stun: numOffFromMax("stun"),
         end: numOffFromMax("end"),
-        hap: actor.system.hap?.value,
+        hap: actor.system.hap.value,
         heroicIdentity: actor.system.heroicIdentity ?? true,
         resources: actor.items
             .filter(

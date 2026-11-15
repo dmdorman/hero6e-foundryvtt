@@ -33,7 +33,7 @@
                             <legend class="attribute-name box-title">Endurance</legend>
                             <div class="attribute-value multiple characteristic">
                                 <input name="Xsystem.characteristics.end.value" type="text"
-                                    value="{{this.value}}" data-dtype="Number"
+                                    value="{{this.value}}" data-dtype="Number" step="1"
                                     class="{{#if (gt this.value this.max)}}over-max{{/if}}{{#if (lt this.value this.max)}} under-max{{/if}}">
                                 <span class="sep"> / </span>
                                 <span>
@@ -49,7 +49,7 @@
                         <legend title="{{endReserve.name}}">END Reserve</legend>
                         <div class="attribute-value multiple characteristic">
                             <input name="endReserve.{{endReserve.id}}.value" type="text"
-                                value="{{endReserve.system.value}}" data-dtype="Number"
+                                value="{{endReserve.system.value}}" data-dtype="Number" step="1"
                                 class="{{#if (gt endReserve.system.value endReserve.system.LEVELS)}}over-max{{/if}}
                                 {{#if (lt endReserve.system.value endReserve.system.LEVELS)}} under-max{{/if}}">
                             <span class="sep"> / </span>
@@ -66,7 +66,7 @@
                             <legend class="attribute-name box-title">Body</legend>
                             <div class="attribute-value multiple characteristic">
                                 <input name="Xsystem.characteristics.body.value" type="text"
-                                    value="{{this.value}}" data-dtype="Number"
+                                    value="{{this.value}}" data-dtype="Number" step="1"
                                     class="{{#if (gt this.value this.max)}}over-max{{/if}}{{#if (lt this.value this.max)}} under-max{{/if}}">
                                 <span class="sep"> / </span>
                                 <span>
@@ -83,7 +83,7 @@
                             <legend class="attribute-name box-title">Stun</legend>
                             <div class="attribute-value multiple characteristic">
                                 <input name="Xsystem.characteristics.stun.value" type="text"
-                                    value="{{this.value}}" data-dtype="Number"
+                                    value="{{this.value}}" data-dtype="Number" step="1"
                                     class="{{#if (gt this.value this.max)}}over-max{{/if}}{{#if (lt this.value this.max)}} under-max{{/if}}">
                                 <span class="sep"> / </span>
                                 <span>
@@ -99,7 +99,7 @@
                         <legend class="attribute-name box-title" title="Heroic Action Points">HAP</legend>
                         <div class="attribute-value multiple characteristic">
                             <input name="system.hap.value" type="text"
-                                value="{{actor.system.hap.value}}" data-dtype="Number"
+                                value="{{actor.system.hap.value}}" data-dtype="Number" step="1" min="0"
                                 >
                         </div>
                     </fieldset>
