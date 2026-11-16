@@ -1,5 +1,6 @@
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { HeroSystem6eItem } from "../item/item.mjs";
+import { HeroSystem6eCompendiumDirectory } from "../compendium/compendiumDirectory.mjs";
 import { captureChatBaseline, deleteRunChatMessages } from "./quench-chat.mjs";
 
 // Quench runs batches in key order, so the `a.` and `z.` prefixes keep global setup
@@ -7,6 +8,43 @@ import { captureChatBaseline, deleteRunChatMessages } from "./quench-chat.mjs";
 // Callers that select these suites must import them here rather than repeat the strings.
 export const GLOBAL_SETUP_SUITE = "a.global-setup";
 export const GLOBAL_TEARDOWN_SUITE = "z.global-teardown";
+
+/**
+ * Build the `_Quench` fixture name one document gets: the prefix, the epoch milliseconds, the label,
+ * then the sanitized ancestor path of the running suite.
+ *
+ * Every fixture sweep looks for the `_Quench` prefix. The stamp keeps two runs apart, and the suite path
+ * names the suite that made the fixture, so a name states who owns it and where it came from.
+ *
+ * Sanitising is not tidiness. The name goes into a Hero Designer export as CHARACTER_NAME, and a suite
+ * title holding `&` would break that XML.
+ *
+ * @param {object} options Name options.
+ * @param {object} options.quench The Quench or Mocha context.
+ * @param {string} options.label Short fixture label.
+ * @returns {string} The fixture name.
+ */
+function makeQuenchFixtureName({ quench, label }) {
+    const titlePath = quenchTitlePath(quench.currentTest || quench.test || quench);
+    const title = String(label ?? "").replace(/\W+/g, " ");
+
+    return `_Quench ${Date.now().toString()} ${title} ${titlePath}`;
+}
+
+/**
+ * Walk one context and its parents, joining sanitized titles with `/`. A path reads
+ * `__root/hero6efoundryvttv2.utils.defense_root/Resistant Protection/rPD 1`.
+ *
+ * @param {object} context One Quench or Mocha context.
+ * @returns {string} The ancestor path.
+ */
+function quenchTitlePath(context) {
+    if (!context.parent) {
+        return context.title.replace(/\W+/g, "");
+    }
+
+    return `${quenchTitlePath(context.parent)}/${context.title.replace(/\W+/g, "")}`;
+}
 
 /**
  * Create one Quench actor, upload its export, and restore its health.
@@ -34,19 +72,7 @@ export async function createQuenchActor({ quench, contents, is5e, actorType: typ
     const CHARACTER_NAME = contents?.match(/CHARACTER_NAME=".*?"/)?.[0];
     name ??= CHARACTER_NAME?.match(/CHARACTER_NAME="(.*?)"/)?.[1] || "";
 
-    function generateQuenchTitleRecursive(quench) {
-        // '__root/hero6efoundryvttv2.utils.defense_root/Resistant Protection/rPD 1'
-        if (!quench.parent) {
-            return quench.title.replace(/\W+/g, "");
-        }
-        return `${generateQuenchTitleRecursive(quench.parent)}/${quench.title.replace(/\W+/g, "")}`;
-    }
-
-    // Sanitized ancestor path of the current suite. The name and the sweep below share this value.
-    const titlePath = generateQuenchTitleRecursive(quench.currentTest || quench.test || quench);
-
-    // Need to be a bit careful as we can create invalid XML if name has special characters
-    const quenchName = `_Quench ${Date.now().toString()} ${name.replace(/\W+/g, " ")} ${titlePath}`;
+    const quenchName = makeQuenchFixtureName({ quench, label: name });
 
     if (is5e === undefined) {
         throw new Error("missing is5e");
@@ -124,6 +150,115 @@ export async function deleteQuenchActor({ quench, actor }) {
     }
 
     await actor.delete();
+}
+
+/**
+ * Create one Quench compendium from a Hero Designer prefab, and return the pack.
+ *
+ * `uploadFromXml` names the pack after the prefab's CHARACTER_NAME, and one flat namespace holds every
+ * world pack, so this helper stamps a fixture name into that attribute first. The name carries the
+ * `_Quench` prefix, the epoch milliseconds, the label, and the suite path, so two runs cannot claim the
+ * same pack and the upload never meets its own name. Meeting it would open an `Overwrite Compendium
+ * Entry` confirm that no player is present to answer, which stops the run.
+ *
+ * Rebuild, never reuse. The pack holds what the current importer made of the XML, so a pack left by an
+ * older build would let a suite pass against items this run never produced.
+ *
+ * Callers assign the result in a `before` hook, so a throw leaves their `after` hook nothing to delete.
+ * This helper therefore deletes any pack the upload built before it rethrows a validation failure.
+ *
+ * @param {object} options Creation options.
+ * @param {object} options.quench The Quench context. Names the pack after the running suite.
+ * @param {string} options.contents Hero Designer prefab XML.
+ * @param {string} options.label Short fixture label, for example `Test Compendium`.
+ * @returns {Promise<CompendiumCollection>} The pack this run built.
+ * @throws {Error} When the XML holds no CHARACTER_NAME to stamp, when a pack already carries the name,
+ *                 when the upload returns no pack, or when the pack label differs from the fixture
+ *                 name. The last two delete the pack this call built.
+ */
+export async function createQuenchCompendium({ quench, contents, label }) {
+    const fixtureName = makeQuenchFixtureName({ quench, label });
+    const stamped = contents.replace(/CHARACTER_NAME="[^"]*"/, `CHARACTER_NAME="${fixtureName}"`);
+
+    if (stamped === contents) {
+        throw new Error(`createQuenchCompendium: the fixture XML holds no CHARACTER_NAME to stamp (${label})`);
+    }
+
+    // A pack under this name already means two fixtures claimed one name. Overwriting would hide that.
+    const packName = `world.${fixtureName.slugify({ strict: true })}`;
+    if (game.packs.has(packName)) {
+        throw new Error(`createQuenchCompendium: ${packName} already exists`);
+    }
+
+    const pack = await HeroSystem6eCompendiumDirectory.uploadFromXml(stamped);
+
+    // `uploadFromXml` creates the pack before it imports items, and its own catch swallows import
+    // failures, so a null return can still mean a half-built pack exists under `packName`.
+    const created = pack ?? game.packs.get(packName);
+
+    if (!pack) {
+        await discardQuenchPack(created);
+        throw new Error(`createQuenchCompendium: uploadFromXml returned no pack (${packName})`);
+    }
+
+    // The fixture sweep finds this pack by its label alone, so a quiet change to how `uploadFromXml`
+    // names a pack must fail here.
+    if (pack.metadata.label !== fixtureName) {
+        const found = pack.metadata.label;
+        await discardQuenchPack(pack);
+        throw new Error(`createQuenchCompendium: ${packName} has label "${found}", expected "${fixtureName}"`);
+    }
+
+    return pack;
+}
+
+/**
+ * Delete the pack a failed `createQuenchCompendium` call left behind.
+ *
+ * A caller that gets no pack cannot clean it up, because the assignment in its `before` hook never
+ * ran. Leaving the pack would pollute the world until the fixture sweep runs, and that sweep never
+ * runs when a run aborts.
+ *
+ * A failed delete must not replace the validation failure, so this logs and resolves.
+ *
+ * @param {?CompendiumCollection} pack The pack to delete, or nothing when the upload built none.
+ * @returns {Promise<void>}
+ */
+async function discardQuenchPack(pack) {
+    if (pack == null) {
+        return;
+    }
+
+    try {
+        await deleteQuenchCompendium({ pack });
+    } catch (cleanupError) {
+        console.error(`createQuenchCompendium: leftover pack ${pack.collection} failed to delete`, cleanupError);
+    }
+}
+
+/**
+ * Delete one Quench compendium this run created.
+ *
+ * Unlike `deleteQuenchActor`, this deletes even when tests failed. The pack is derived from the XML in
+ * the suite source, so it holds no evidence a failed run needs, and a surviving pack only waits in the
+ * world for a sweep to clear it.
+ *
+ * @param {object} options Deletion options.
+ * @param {CompendiumCollection} options.pack The pack to delete.
+ * @returns {Promise<void>}
+ * @throws {Error} When no pack is given.
+ */
+export async function deleteQuenchCompendium({ pack }) {
+    if (pack == null) {
+        throw new Error("missing pack");
+    }
+
+    // Foundry refuses to delete a locked pack (`compendium-collection.mjs:936`).
+    if (pack.config?.locked) {
+        await pack.configure({ locked: false });
+    }
+
+    await pack.deleteCompendium();
 }
 
 /**
@@ -216,9 +351,11 @@ const QUENCH_PACK_FLAG = "versionHeroSystem6eCreated";
  * the Hero Designer character name rather than the fixture prefix. A world pack a GM named `_Quench`
  * by hand keeps no flag. A module or system pack is read-only, and no test creates one.
  *
- * The flag is read in two shapes. `uploadFromXml` writes one dotted key
- * (`"<systemId>.versionHeroSystem6eCreated"`) and Foundry rewrites that key into a nested scope
- * (`flags[<systemId>][<key>]`) when the world file saves, so a pack can arrive either way.
+ * The flag is read in two shapes, because both are in use. `uploadFromXml` sends one dotted key
+ * (`"<systemId>.versionHeroSystem6eCreated"`), and an older build wrote the nested scope
+ * (`flags[<systemId>][<key>]`), which is the shape the saved `Dismantlers` pack carries. The metadata
+ * schema types that field as a plain `ObjectField` (`base-package.mjs:53`), so no step rewrites either
+ * shape. Read both.
  *
  * @param {CompendiumCollection} pack The pack to test.
  * @returns {boolean} True only when this system generated the pack for a `_Quench` fixture.
