@@ -1,5 +1,11 @@
-import { createQuenchActor, deleteQuenchActor, setQuenchTimeout, waitUntil } from "./quench-helper.mjs";
-import { HeroSystem6eCompendiumDirectory } from "../compendium/compendiumDirectory.mjs";
+import {
+    createQuenchActor,
+    createQuenchCompendium,
+    deleteQuenchActor,
+    deleteQuenchCompendium,
+    setQuenchTimeout,
+    waitUntil,
+} from "./quench-helper.mjs";
 import { HeroSystemActorSheetV2 } from "../applications/actor/actor-sheet-v2.mjs";
 
 export function registerDropTests(quench) {
@@ -165,9 +171,10 @@ export function registerDropTests(quench) {
                 setQuenchTimeout(this, 20000);
 
                 describe("HDP Upload & Stacking", function () {
+                    const HDP_FIXTURE_LABEL = "Test Compendium Upload And Stacking";
                     const hdpContents = `<?xml version="1.0" encoding="UTF-16"?>
                         <PREFAB version="6.0" TEMPLATE="builtIn.Heroic6E.hdt">
-                        <CHARACTER_INFO CHARACTER_NAME="_Quench Test" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
+                        <CHARACTER_INFO CHARACTER_NAME="_Quench REPLACE ME" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
                             <BACKGROUND />
                             <PERSONALITY />
                             <QUOTE />
@@ -239,7 +246,12 @@ export function registerDropTests(quench) {
                     let actorSheet5e;
 
                     before(async () => {
-                        testCompendium = await HeroSystem6eCompendiumDirectory.uploadFromXml(hdpContents);
+                        testCompendium = await createQuenchCompendium({
+                            quench: this,
+                            contents: hdpContents,
+                            label: HDP_FIXTURE_LABEL,
+                        });
+
                         // Read the pack once. Every test below reads this array, so the suite pays one
                         // pack load instead of one per test.
                         documents = await testCompendium.getDocuments();
@@ -259,26 +271,19 @@ export function registerDropTests(quench) {
                     });
 
                     after(async () => {
-                        // Delete the compendium in a finally, so one failed step above cannot leak it.
-                        // The upload is keyed to the character name `_Quench Test`, and `uploadFromXml`
-                        // answers a name clash with an `Overwrite Compendium Entry` confirm. A leaked
-                        // pack therefore blocks the next run's `before` hook on a dialog, and no
-                        // teardown sweeps compendia.
-                        try {
-                            if (actorSheet6e?.rendered) {
-                                await actorSheet6e.close();
-                            }
-                        } finally {
-                            if (quenchActor6e) {
-                                await deleteQuenchActor({ quench: this, actor: quenchActor6e });
-                            }
-                            if (quenchActor5e) {
-                                await deleteQuenchActor({ quench: this, actor: quenchActor5e });
-                            }
+                        if (actorSheet6e?.rendered) {
+                            await actorSheet6e.close();
+                        }
 
-                            if (testCompendium) {
-                                await testCompendium.deleteCompendium();
-                            }
+                        if (quenchActor6e) {
+                            await deleteQuenchActor({ quench: this, actor: quenchActor6e });
+                        }
+                        if (quenchActor5e) {
+                            await deleteQuenchActor({ quench: this, actor: quenchActor5e });
+                        }
+
+                        if (testCompendium) {
+                            await deleteQuenchCompendium({ pack: testCompendium });
                         }
                     });
 
