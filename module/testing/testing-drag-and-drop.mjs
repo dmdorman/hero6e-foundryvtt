@@ -165,9 +165,13 @@ export function registerDropTests(quench) {
                 setQuenchTimeout(this, 20000);
 
                 describe("HDP Upload & Stacking", function () {
+                    // `uploadFromXml` labels the pack it creates from this CHARACTER_NAME, and one flat
+                    // namespace holds every world pack, so the name states who owns it: the `_Quench`
+                    // prefix that every fixture sweep looks for, then this suite.
+                    const HDP_FIXTURE_NAME = "_Quench Test Compendium Upload And Stacking";
                     const hdpContents = `<?xml version="1.0" encoding="UTF-16"?>
                         <PREFAB version="6.0" TEMPLATE="builtIn.Heroic6E.hdt">
-                        <CHARACTER_INFO CHARACTER_NAME="_Quench Test" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
+                        <CHARACTER_INFO CHARACTER_NAME="${HDP_FIXTURE_NAME}" ALTERNATE_IDENTITIES="" PLAYER_NAME="" HEIGHT="78.74015748031496" WEIGHT="220.4622476037958" HAIR_COLOR="Brown" EYE_COLOR="Brown" CAMPAIGN_NAME="" GENRE="" GM="">
                             <BACKGROUND />
                             <PERSONALITY />
                             <QUOTE />
@@ -239,7 +243,24 @@ export function registerDropTests(quench) {
                     let actorSheet5e;
 
                     before(async () => {
+                        // One pack, built here. A pack under this name already means an earlier run leaked
+                        // one. Fail on that rather than overwrite it: overwriting hides the leak, then tests
+                        // against a pack this run did not build. Global setup sweeps `_Quench` fixture packs
+                        // first, so the upload never reaches its `Overwrite Compendium Entry` confirm.
+                        const fixturePackName = `world.${HDP_FIXTURE_NAME.slugify({ strict: true })}`;
+                        expect(game.packs.has(fixturePackName), `${fixturePackName} must not already exist`).to.equal(
+                            false,
+                        );
+
                         testCompendium = await HeroSystem6eCompendiumDirectory.uploadFromXml(hdpContents);
+
+                        // The sweep finds the pack through this label alone, so a quiet change to how
+                        // `uploadFromXml` names a pack would strand it. Check the label here instead.
+                        expect(testCompendium, "uploadFromXml returned no pack").to.exist;
+                        expect(testCompendium.metadata.label, "pack label must be the fixture name").to.equal(
+                            HDP_FIXTURE_NAME,
+                        );
+
                         // Read the pack once. Every test below reads this array, so the suite pays one
                         // pack load instead of one per test.
                         documents = await testCompendium.getDocuments();
@@ -259,11 +280,10 @@ export function registerDropTests(quench) {
                     });
 
                     after(async () => {
-                        // Delete the compendium in a finally, so one failed step above cannot leak it.
-                        // The upload is keyed to the character name `_Quench Test`, and `uploadFromXml`
-                        // answers a name clash with an `Overwrite Compendium Entry` confirm. A leaked
-                        // pack therefore blocks the next run's `before` hook on a dialog, and no
-                        // teardown sweeps compendia.
+                        // Delete the compendium in a finally, so one failed step above cannot leak it. If
+                        // this pack survives, the next run fails in its `before` hook, and that is how a
+                        // leak reports itself. Global setup and global teardown sweep `_Quench` fixture
+                        // packs too, at the ends of a run.
                         try {
                             if (actorSheet6e?.rendered) {
                                 await actorSheet6e.close();
