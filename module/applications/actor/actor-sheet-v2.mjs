@@ -14,6 +14,7 @@ import {
     restoreNumericInput,
     withinDeclaredBounds,
 } from "../../utility/numeric-input.mjs";
+import { cmPerInch, kgPerLb, metricUnitsEnabled } from "../../utility/units.mjs";
 import { HeroAppMixin, HeroDialogV2 } from "../api/hero-app-mixin.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -1081,20 +1082,15 @@ export class HeroSystemActorSheetV2 extends HeroAppMixin(HandlebarsApplicationMi
                     input.addEventListener("change", async (e) => {
                         e.preventDefault();
                         e.stopImmediatePropagation();
-                        const metricUnits = game.settings.get(game.system.id, "metricUnits");
-                        await commitSheetInput(this.actor, e.currentTarget, attributeName, metricUnits ? 2.54 : 1);
+                        const heightDivisor = metricUnitsEnabled() ? cmPerInch : 1;
+                        await commitSheetInput(this.actor, e.currentTarget, attributeName, heightDivisor);
                     });
                 } else if (attributeName.endsWith("WEIGHT")) {
                     input.addEventListener("change", async (e) => {
                         e.preventDefault();
                         e.stopImmediatePropagation();
-                        const metricUnits = game.settings.get(game.system.id, "metricUnits");
-                        await commitSheetInput(
-                            this.actor,
-                            e.currentTarget,
-                            attributeName,
-                            metricUnits ? 0.45359237 : 1,
-                        );
+                        const weightDivisor = metricUnitsEnabled() ? kgPerLb : 1;
+                        await commitSheetInput(this.actor, e.currentTarget, attributeName, weightDivisor);
                     });
                 } else {
                     input.addEventListener("change", async (e) => {

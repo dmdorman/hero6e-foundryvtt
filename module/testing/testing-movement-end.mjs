@@ -21,7 +21,7 @@ function waypoints(action, costs) {
 
 /**
  * Fresh movement sources per call, as the token builds them once per action.
- * @param {Array<[number, number]>} sources - [metres, END per metre]
+ * @param {Array<[number, number]>} sources - [meters, END per meter]
  */
 function sourcesFor(sources) {
     return () =>
@@ -62,7 +62,7 @@ export function registerMovementEndTests(quench) {
                         assert.equal(movementEndCost(waypoints("RUNNING", shortMoves), 1, sourcesFor([[12, 0.1]])), 2);
                     });
 
-                    it("Grid units convert to metres before costing", function () {
+                    it("Grid units convert to meters before costing", function () {
                         assert.equal(movementEndCost(waypoints("RUNNING", [15]), 2, sourcesFor([[12, 0.1]])), 3);
                     });
 
@@ -70,7 +70,7 @@ export function registerMovementEndTests(quench) {
                         assert.equal(movementEndCost(waypoints("FLIGHT", [40]), 1, sourcesFor([[20, 0]])), 0);
                     });
 
-                    it("Distance past a mixed movement pool costs the pool's average END per metre", function () {
+                    it("Distance past a mixed movement pool costs the pool's average END per meter", function () {
                         // 12m @ 0.1 + 20m @ 0 = 1.2 END for 32m; the next 32m costs the same 1.2
                         assert.equal(
                             movementEndCost(
@@ -146,7 +146,7 @@ export function registerMovementEndTests(quench) {
                         await deleteQuenchActor({ quench: this, actor });
                     });
 
-                    it("FTL costs no END per metre", function () {
+                    it("FTL costs no END per meter", function () {
                         const ftl = actor.items.find((item) => item.system.XMLID === "FTL");
                         assert.equal(ftl.endPer1mMovement, 0);
                     });
@@ -161,7 +161,7 @@ export function registerMovementEndTests(quench) {
                         assert.closeTo(flight.endPer1mMovement, 0.05, 1e-9);
                     });
 
-                    it("0 END Flight costs no END per metre", function () {
+                    it("0 END Flight costs no END per meter", function () {
                         const flight = actor.items.find((item) => item.name === "Zero END Flight");
                         assert.equal(flight.endPer1mMovement, 0);
                     });

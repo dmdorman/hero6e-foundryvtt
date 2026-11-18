@@ -59,7 +59,7 @@ import {
     combatSkillLevelsForAttack,
 } from "../utility/damage.mjs";
 import { getActorDefensesVsAttack, getConditionalDefenses, getItemDefenseVsAttack } from "../utility/defense.mjs";
-import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMetres } from "../utility/range.mjs";
+import { calculateDistanceBetween, calculateRangePenaltyFromDistanceInMeters } from "../utility/range.mjs";
 import { movementDisplayName, tokenMovementKey } from "../utility/movement.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import {
@@ -618,7 +618,7 @@ export async function processActionToHit(item, formData, options = {}) {
  */
 export function addRangeIntoToHitRoll(distance, attackItem, actor, attackHeroRoller) {
     // PH: FIXME: This is different between AoE and single target. Can we combine?
-    const baseRangePenalty = -calculateRangePenaltyFromDistanceInMetres(distance, actor);
+    const baseRangePenalty = -calculateRangePenaltyFromDistanceInMeters(distance, actor);
     let remainingRangePenalty = baseRangePenalty;
 
     if (attackItem.effectiveAttackItem.system.range === CONFIG.HERO.RANGE_TYPES.SELF) {
@@ -1299,8 +1299,8 @@ async function doSingleTargetActionToHit(action, options) {
         if (aoeModifier) {
             // Distance from aoeTemplate origin to target/token center
             if (aoeTemplate && target.id) {
-                const distanceInMetres = calculateDistanceBetween(aoeTemplate, target).distance;
-                by += ` (${getRoundedDownDistanceInSystemUnits(distanceInMetres, item.actor.is5e)}${getSystemDisplayUnits(
+                const distanceInMeters = calculateDistanceBetween(aoeTemplate, target).distance;
+                by += ` (${getRoundedDownDistanceInSystemUnits(distanceInMeters, item.actor.is5e)}${getSystemDisplayUnits(
                     item.actor.is5e,
                 )} from template origin)`;
             }
