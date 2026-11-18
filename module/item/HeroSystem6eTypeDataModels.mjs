@@ -7,7 +7,14 @@ import {
     getManeuverEffectWithPlaceholdersReplaced,
 } from "../utility/damage.mjs";
 import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
-import { calculateVelocityInSystemUnits, kgsInOneLb } from "../utility/units.mjs";
+import {
+    calculateVelocityInSystemUnits,
+    convertCmToInches,
+    convertInchesToCm,
+    convertKgToLbs,
+    convertLbsToKg,
+    metricUnitsEnabled,
+} from "../utility/units.mjs";
 import { getPowerInfo, hdcTextNumberToNumeric, squelch } from "../utility/util.mjs";
 import { HeroSystem6eItem } from "./item.mjs";
 import { maneuverBlockBasis, maneuverFlashBasis } from "./maneuver.mjs";
@@ -2070,7 +2077,7 @@ export class HeroActorCharacterInfoModel extends foundry.abstract.DataModel {
             GENRE: new StringField(),
             GM: new StringField(),
             HAIR_COLOR: new StringField(),
-            HEIGHT: new HeroNumberField({ initial: 78.74015748031496 }), // internally as inches
+            HEIGHT: new HeroNumberField({ integer: false, min: 0.0, initial: convertCmToInches(200) }),
             NOTES1: new StringField(),
             NOTES2: new StringField(),
             NOTES3: new StringField(),
@@ -2080,7 +2087,7 @@ export class HeroActorCharacterInfoModel extends foundry.abstract.DataModel {
             PLAYER_NAME: new StringField(),
             QUOTE: new StringField(),
             TACTICS: new StringField(),
-            WEIGHT: new HeroNumberField({ integer: false, min: 0.0, initial: 220.46224760379584 }), // 100kg as lbs
+            WEIGHT: new HeroNumberField({ integer: false, min: 0.0, initial: convertKgToLbs(100) }),
             RULES: new ObjectField(),
             xmlTag: new StringField(),
             _hdcXml: new StringField(),
@@ -2088,24 +2095,12 @@ export class HeroActorCharacterInfoModel extends foundry.abstract.DataModel {
     }
 
     get height() {
-        // HEIGHT is stored in inches in the HDC XML, so we convert to cm if metric units is enabled.
-        const metricUnits = game.settings.get(game.system.id, "metricUnits");
-        return metricUnits ? this.HEIGHT * 2.54 : this.HEIGHT;
+        return metricUnitsEnabled() ? convertInchesToCm(this.HEIGHT) : this.HEIGHT;
     }
-    // set height(value) {
-    //     const metricUnits = game.settings.get(game.system.id, "metricUnits");
-    //     this.HEIGHT = metricUnits ? value / 2.54 : value;
-    // }
 
     get weight() {
-        // WEIGHT is stored in pounds in the HDC XML, so we convert to kg if metric units is enabled.
-        const metricUnits = game.settings.get(game.system.id, "metricUnits");
-        return metricUnits ? Math.round(this.WEIGHT * kgsInOneLb) : this.WEIGHT;
+        return metricUnitsEnabled() ? Math.round(convertLbsToKg(this.WEIGHT)) : this.WEIGHT;
     }
-    // set weight(value) {
-    //     const metricUnits = game.settings.get(game.system.id, "metricUnits");
-    //     this.WEIGHT = metricUnits ? value / 0.45359237 : value;
-    // }
 }
 
 export class HeroActorTemplateModel extends foundry.abstract.DataModel {

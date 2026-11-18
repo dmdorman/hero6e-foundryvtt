@@ -16,7 +16,7 @@ import {
     isRangedCombatManeuver,
 } from "../../utility/damage.mjs";
 import {
-    convertSystemUnitsToMetres,
+    convertSystemUnitsToMeters,
     currentSceneUsesHexGrid,
     getGridSizeInMeters,
     getSystemDisplayUnits,
@@ -713,7 +713,7 @@ export class ItemAttackFormApplicationV2 extends HeroAppMixin(HandlebarsApplicat
         }
 
         function systemUnitsToPixels(distanceInSystemUnits) {
-            return metersToPixels(convertSystemUnitsToMetres(distanceInSystemUnits, actor.is5e));
+            return metersToPixels(convertSystemUnitsToMeters(distanceInSystemUnits, actor.is5e));
         }
 
         const hexTemplates = game.settings.get(HEROSYS.module, "HexTemplates");
@@ -724,7 +724,7 @@ export class ItemAttackFormApplicationV2 extends HeroAppMixin(HandlebarsApplicat
         const hexTemplateAdjustmentInMeters = hexTemplates && hexGrid ? 1 : 0;
         function aoeSizeToPixels(distanceInSystemUnits) {
             return metersToPixels(
-                convertSystemUnitsToMetres(distanceInSystemUnits, actor.is5e) - hexTemplateAdjustmentInMeters,
+                convertSystemUnitsToMeters(distanceInSystemUnits, actor.is5e) - hexTemplateAdjustmentInMeters,
             );
         }
 

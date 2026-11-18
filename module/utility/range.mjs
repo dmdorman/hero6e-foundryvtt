@@ -3,19 +3,19 @@ import HeroSystem6eMeasuredTemplate from "../measuretemplate.mjs";
 import { roundFavorPlayerTowardsZero } from "./round.mjs";
 
 /**
- * Calculate range based on a provided distance in metres. Range penalties are essentially
+ * Calculate range based on a provided distance in meters. Range penalties are essentially
  * the same in 5e and 6e, but there is a difference in the rounding of the distance.
  *
- * @param {number} distanceInMetres
+ * @param {number} distanceInMeters
  * @param {object} actor
  *
  * @returns {number} rangePenalty
  */
-export function calculateRangePenaltyFromDistanceInMetres(distanceInMetres, actor) {
+export function calculateRangePenaltyFromDistanceInMeters(distanceInMeters, actor) {
     const is5e = actor?.system?.is5e;
-    const roundedDistanceInMetres =
-        getRoundedFavorPlayerTowardsZeroDistanceInSystemUnits(distanceInMetres, is5e) * (is5e ? 2 : 1);
-    const basicRangePenalty = Math.ceil(Math.log2(roundedDistanceInMetres / 8)) * 2;
+    const roundedDistanceInMeters =
+        getRoundedFavorPlayerTowardsZeroDistanceInSystemUnits(distanceInMeters, is5e) * (is5e ? 2 : 1);
+    const basicRangePenalty = Math.ceil(Math.log2(roundedDistanceInMeters / 8)) * 2;
     const rangePenalty = Math.max(0, basicRangePenalty);
 
     return rangePenalty;
@@ -27,7 +27,7 @@ export function calculateRangePenaltyFromDistanceInMetres(distanceInMetres, acto
  * @param {object} origin MeasuredTemplate or Token or {x: number, y: number, elevation?: number}
  * @param {object} target MeasuredTemplate or Token or {x: number, y: number, elevation?: number}
  *
- * @returns {number} distanceInMetres
+ * @returns {number} distanceInMeters
  */
 export function calculateDistanceBetween(origin, target) {
     if (!origin || !target) {

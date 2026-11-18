@@ -2,12 +2,41 @@ import { roundFavorPlayerTowardsZero } from "./round.mjs";
 import { actorMovementKey, asTokenDocument } from "./movement.mjs";
 import { squelch } from "./util.mjs";
 
-export const lbsInOneKg = 2.2046226218;
-export const kgsInOneLb = 1 / lbsInOneKg;
+/**
+ * Conversion factors for mass, length, and time.
+ *
+ * Imperial factors follow the 1959 international yard and pound agreement.
+ *
+ * Keep every conversion factor in this file, at its exact defined value. Derive a factor that has no
+ * literal of its own. A rounded factor hands its error to everything derived from it.
+ */
+
+export const kgPerLb = 0.45359237;
+
+export const cmPerInch = 2.54;
+
+export function convertLbsToKg(weightInLbs) {
+    return weightInLbs * kgPerLb;
+}
+
+export function convertKgToLbs(massInKg) {
+    return massInKg / kgPerLb;
+}
+
+export function convertInchesToCm(lengthInInches) {
+    return lengthInInches * cmPerInch;
+}
+
+export function convertCmToInches(lengthInCm) {
+    return lengthInCm / cmPerInch;
+}
+
+export function metricUnitsEnabled() {
+    return game.settings.get(game.system.id, "metricUnits");
+}
 
 export function getHeftUnits() {
-    const metricUnits = game.settings.get(game.system.id, "metricUnits");
-    return metricUnits ? "kg" : "lbs";
+    return metricUnitsEnabled() ? "kg" : "lbs";
 }
 
 export function getMonetaryUnits(/*actor*/) {
@@ -21,7 +50,7 @@ export function getMonetaryUnits(/*actor*/) {
  * Hero System and the FoundryVTT system force us to use a number of different units for measurements.
  *
  * Hero System 5e uses 2m hexes (1 hex = 1")
- * Hero System 6e uses metres (no hexes)
+ * Hero System 6e uses meters (no hexes)
  * Internally, we typically use system units (" or m) depending on the system of the actor/item.
  *
  * FoundryVTT uses grid units of any dimension (defined on a per scene basis) or pixels if we're dealing with canvas.
@@ -45,7 +74,7 @@ export function getSystemDisplayUnits(is5e) {
  * @param {boolean} is5e
  * @returns number
  */
-export function convertSystemUnitsToMetres(distanceInSystemUnits, is5e) {
+export function convertSystemUnitsToMeters(distanceInSystemUnits, is5e) {
     if (is5e !== false && is5e !== true) {
         if (!squelch("units5e")) {
             console.warn(`bad is5e parameter, using DefaultEdition`, is5e);
@@ -92,11 +121,11 @@ export function hexDistanceToSystemDisplayString(distanceInHexes, is5e) {
  * 8.9m is 8m in 6e and 4" in 5e.
  * 9.9m is 9m in 6e and 4" in 5e.
  *
- * @param {number} distanceInMetres
+ * @param {number} distanceInMeters
  * @param {boolean} is5e
  * @returns number
  */
-export function getRoundedDownDistanceInSystemUnits(distanceInMetres, is5e) {
+export function getRoundedDownDistanceInSystemUnits(distanceInMeters, is5e) {
     if (is5e !== false && is5e !== true) {
         if (!squelch("units5e")) {
             console.warn(`bad is5e parameter, using DefaultEdition`, is5e);
@@ -105,9 +134,9 @@ export function getRoundedDownDistanceInSystemUnits(distanceInMetres, is5e) {
         is5e = DefaultEdition;
     }
 
-    const roundedDistanceInMetres = is5e ? Math.floor(distanceInMetres / 2) : Math.floor(distanceInMetres);
+    const roundedDistanceInMeters = is5e ? Math.floor(distanceInMeters / 2) : Math.floor(distanceInMeters);
 
-    return roundedDistanceInMetres;
+    return roundedDistanceInMeters;
 }
 
 /**
@@ -119,11 +148,11 @@ export function getRoundedDownDistanceInSystemUnits(distanceInMetres, is5e) {
  * 9.5m is 10m in 6e and 5" in 5e.
  * 9.9m is 10m in 6e and 5" in 5e.
  *
- * @param {number} distanceInMetres
+ * @param {number} distanceInMeters
  * @param {boolean} is5e
  * @returns number
  */
-export function getRoundedFavorPlayerTowardsZeroDistanceInSystemUnits(distanceInMetres, is5e) {
+export function getRoundedFavorPlayerTowardsZeroDistanceInSystemUnits(distanceInMeters, is5e) {
     if (is5e !== false && is5e !== true) {
         if (!squelch("units5e")) {
             console.warn(`bad is5e parameter, using DefaultEdition`, is5e);
@@ -132,11 +161,11 @@ export function getRoundedFavorPlayerTowardsZeroDistanceInSystemUnits(distanceIn
         is5e = DefaultEdition;
     }
 
-    const roundedDistanceInMetres = is5e
-        ? roundFavorPlayerTowardsZero(distanceInMetres / 2)
-        : roundFavorPlayerTowardsZero(distanceInMetres);
+    const roundedDistanceInMeters = is5e
+        ? roundFavorPlayerTowardsZero(distanceInMeters / 2)
+        : roundFavorPlayerTowardsZero(distanceInMeters);
 
-    return roundedDistanceInMetres;
+    return roundedDistanceInMeters;
 }
 
 /**
@@ -146,11 +175,11 @@ export function getRoundedFavorPlayerTowardsZeroDistanceInSystemUnits(distanceIn
  *
  * NOTE: Only works for positive numbers
  *
- * @param {number} distanceInMetres
+ * @param {number} distanceInMeters
  * @param {boolean} is5e
  * @returns number
  */
-export function getRoundedUpDistanceInSystemUnits(distanceInMetres, is5e) {
+export function getRoundedUpDistanceInSystemUnits(distanceInMeters, is5e) {
     if (is5e !== false && is5e !== true) {
         if (!squelch("units5e")) {
             console.warn(`bad is5e parameter, using DefaultEdition`, is5e);
@@ -159,19 +188,29 @@ export function getRoundedUpDistanceInSystemUnits(distanceInMetres, is5e) {
         is5e = DefaultEdition;
     }
 
-    const roundedDistanceInMetres = is5e ? Math.ceil(distanceInMetres / 2) : Math.ceil(distanceInMetres);
+    const roundedDistanceInMeters = is5e ? Math.ceil(distanceInMeters / 2) : Math.ceil(distanceInMeters);
 
-    return roundedDistanceInMetres;
+    return roundedDistanceInMeters;
 }
 
 export const daysPerGregorianYear = 365.2425;
-export const secondsPerGregorianYear = 31556952;
-export const turnsPerGregorianYear = 31556952 / 12;
+export const secondsPerGregorianYear = daysPerGregorianYear * 60 * 60 * 24;
+export const turnsPerGregorianYear = secondsPerGregorianYear / 12;
 
-export const astronomicalUnitsInMetres = 1.496e11;
-export const lightYearInMetres = 9.461e15;
-export const parsecInLightYears = 3.26156;
-export const parsecInMetres = parsecInLightYears * lightYearInMetres;
+export const metersPerFoot = 0.3048;
+export const metersPerMile = 5280 * metersPerFoot;
+
+// Per IAU 2012 standard.
+export const metersPerAstronomicalUnit = 149597870700;
+
+// Per IAU standard: one Julian year (365.25 days) at 299792458 m/s. The Julian year fixes the unit; a
+// Gregorian year would put this light year 2.1e-5 relative below every published figure.
+export const metersPerLightYear = 9.4607304725808e15;
+
+const arcsecondsPerRadian = (180 / Math.PI) * 60 * 60;
+
+// Per IAU 2015. The `tan` form differs by 8e-12 relative, below any measurable need.
+export const metersPerParsec = arcsecondsPerRadian * metersPerAstronomicalUnit;
 
 /**
  * Converts scene grid units to meters with spam-safe parameters for loop paths.
@@ -195,15 +234,15 @@ export function gridUnitsToMeters(options = {}) {
     } else if (units === "km") {
         distanceMultiplier = 1000;
     } else if (units === "ft") {
-        distanceMultiplier = 0.3048;
+        distanceMultiplier = metersPerFoot;
     } else if (units === "miles") {
-        distanceMultiplier = 1609.34;
+        distanceMultiplier = metersPerMile;
     } else if (units === "au") {
-        distanceMultiplier = astronomicalUnitsInMetres;
+        distanceMultiplier = metersPerAstronomicalUnit;
     } else if (units === "ly") {
-        distanceMultiplier = lightYearInMetres;
+        distanceMultiplier = metersPerLightYear;
     } else if (units === "pc") {
-        distanceMultiplier = parsecInMetres;
+        distanceMultiplier = metersPerParsec;
     } else {
         // Only compile error toast messages if silent parameter is explicitly false
         if (!silent && !squelch(targetScene?.name || "scene")) {

@@ -6,7 +6,7 @@ import {
     queuePropagateMovementMode,
     queueInitializeTokenMovementAction,
 } from "../utility/movement.mjs";
-import { convertSystemUnitsToMetres, gridUnitsToMeters } from "../utility/units.mjs";
+import { convertSystemUnitsToMeters, gridUnitsToMeters } from "../utility/units.mjs";
 
 const { TokenDocument } = foundry.documents;
 const { Token } = foundry.canvas.placeables;
@@ -85,7 +85,7 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
                 name: ae.name,
                 ae,
                 action: action,
-                distanceUnused: convertSystemUnitsToMetres(aeDistance, is5e),
+                distanceUnused: convertSystemUnitsToMeters(aeDistance, is5e),
                 // Actor-embedded AEs (encumbrance, adjustments) have no owning item; charge as inherent movement
                 endPer1mMovement: Number.isFinite(ae.parent?.endPer1mMovement)
                     ? ae.parent.endPer1mMovement
@@ -99,7 +99,7 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
             possibleMovements.push({
                 name: "inherent",
                 action: action,
-                distanceUnused: convertSystemUnitsToMetres(inherentDistance, is5e),
+                distanceUnused: convertSystemUnitsToMeters(inherentDistance, is5e),
                 endPer1mMovement: BASE_END_PER_1M_MOVEMENT,
             });
         }
@@ -183,15 +183,16 @@ export class HeroSystem6eTokenDocument extends TokenDocument {
 /**
  * END spent by a movement history. Each action spends its cheapest movement sources first.
  * @param {Array<{action: string, cost: number}>} movementHistory
- * @param {number} metresPerCostUnit
- * @param {function(string): Array<{distanceUnused: number, endPer1mMovement: number}>} movementPossibilities - sources cheapest first, distances in metres
+ * @param {number} metersPerCostUnit
+ * @param {function(string): Array<{distanceUnused: number, endPer1mMovement: number}>} movementPossibilities - sources cheapest first, distances in meters
+ *
  * @returns {number} END, rounded up
  */
-export function movementEndCost(movementHistory, metresPerCostUnit, movementPossibilities) {
+export function movementEndCost(movementHistory, metersPerCostUnit, movementPossibilities) {
     let endCost = 0;
     const movementCapabilities = {};
     for (const waypoint of movementHistory) {
-        let costInMeters = waypoint.cost * metresPerCostUnit;
+        let costInMeters = waypoint.cost * metersPerCostUnit;
         if (!Number.isFinite(costInMeters) || costInMeters <= 0) {
             continue;
         }
@@ -214,7 +215,7 @@ export function movementEndCost(movementHistory, metresPerCostUnit, movementPoss
     return Math.ceil(Math.round(endCost * 1e6) / 1e6);
 }
 
-// Extra distance is a multiple of the same movement mix, so it costs the mix's average END per metre
+// Extra distance is a multiple of the same movement mix, so it costs the mix's average END per meter
 function withOverflowRate(capabilities) {
     let distance = 0;
     let end = 0;

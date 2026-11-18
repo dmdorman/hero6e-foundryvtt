@@ -1,5 +1,5 @@
 import { MOVEMENT_NONE_ACTION, movementDisplayName } from "../utility/movement.mjs";
-import { convertSystemUnitsToMetres, lightYearInMetres, turnsPerGregorianYear } from "../utility/units.mjs";
+import { convertSystemUnitsToMeters, metersPerLightYear, turnsPerGregorianYear } from "../utility/units.mjs";
 import { ftlLevelsToLightYearsPerYear } from "../item/item.mjs";
 
 // PH: FIXME: Need to get extra dimensional appearing. We have icon now.
@@ -83,7 +83,7 @@ function generateMovementCanSelectFunction(characteristic) {
  */
 function generateMovementMaxCombatDistanceMeters(characteristic) {
     return (token) => {
-        return convertSystemUnitsToMetres(combatMovementValueInSystemUnits(token, characteristic), token.actor?.is5e);
+        return convertSystemUnitsToMeters(combatMovementValueInSystemUnits(token, characteristic), token.actor?.is5e);
     };
 }
 
@@ -125,7 +125,7 @@ function generateMovementMaxNonCombatDistanceMeters(characteristic) {
             );
         }
 
-        return convertSystemUnitsToMetres(extraNonCombatMovement + combatMovementInSystemUnits, token.actor?.is5e);
+        return convertSystemUnitsToMeters(extraNonCombatMovement + combatMovementInSystemUnits, token.actor?.is5e);
     };
 }
 
@@ -143,10 +143,10 @@ function ftlMaxNonCombatDistanceMeters(token) {
 
     // FTL is given movement per year - not per phase. Convert to per phase based on speed.
     const lightYearsPerYear = ftlLevelsToLightYearsPerYear(ftlLevels);
-    const metresPerTurnPerLightYearPerYear = (lightYearInMetres * lightYearsPerYear) / turnsPerGregorianYear;
+    const metersPerTurn = (metersPerLightYear * lightYearsPerYear) / turnsPerGregorianYear;
     const speed = parseInt(token.actor?.getCharacteristic("spd")?.value || 0);
 
-    return metresPerTurnPerLightYearPerYear / speed;
+    return metersPerTurn / speed;
 }
 
 /**

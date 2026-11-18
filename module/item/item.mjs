@@ -27,11 +27,11 @@ import { getItemDefenseVsAttack } from "../utility/defense.mjs";
 import { roundFavorPlayerAwayFromZero, roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, generateSuccessChatCard } from "../utility/success-card.mjs";
 import {
+    convertLbsToKg,
     getHeftUnits,
     getMonetaryUnits,
     getRoundedUpDistanceInSystemUnits,
     getSystemDisplayUnits,
-    kgsInOneLb,
 } from "../utility/units.mjs";
 import {
     activeSingleTrackerCombatFor,
@@ -50,14 +50,14 @@ import {
     activateManeuver,
     maneuverAbortElement,
     maneuverBlockBasis,
+    maneuverExertBasis,
     maneuverFlashBasis,
     maneuverGrabBasis,
     maneuverGrabWeaponBasis,
-    maneuverKillingDamageElement,
     maneuverHasNoElements,
+    maneuverKillingDamageElement,
     maneuverNoNormalDefenseDamageElement,
     maneuverNormalDamageElement,
-    maneuverExertBasis,
     maneuverStrikeBasis,
     maneuverThrowBasis,
     maneuverVelocityElement,
@@ -5522,7 +5522,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
      */
     get unitHeft() {
         const weightInLbs = this.system.WEIGHT;
-        const massInKg = weightInLbs * kgsInOneLb;
+        const massInKg = convertLbsToKg(weightInLbs);
         return {
             weight: weightInLbs,
             mass: massInKg,
@@ -6393,7 +6393,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         const reducedEnd =
             this.findModsByXmlid("REDUCEDEND") || (this.parentItem && this.parentItem.findModsByXmlid("REDUCEDEND"));
         if (reducedEnd && reducedEnd.OPTION === "HALFEND") {
-            // A per-metre rate; the movement total is rounded once when charged
+            // A per-meter rate; the movement total is rounded once when charged
             end /= 2;
         } else if (reducedEnd && reducedEnd.OPTION === "ZERO") {
             end = 0;

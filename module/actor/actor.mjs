@@ -1,3 +1,4 @@
+import { HeroDialogV2 } from "../applications/api/hero-app-mixin.mjs";
 import { PresenceAttackApplication } from "../applications/apps/presence-attack.mjs";
 import { HeroRoller } from "../heroRoller/dice.mjs";
 import { HEROSYS } from "../herosystem6e.mjs";
@@ -35,7 +36,6 @@ import {
 } from "../utility/util.mjs";
 import { HeroSystem6eActorActiveEffects } from "./actor-active-effects.mjs";
 import { uploadActorFromXml } from "./actor-upload.mjs";
-import { HeroDialogV2 } from "../applications/api/hero-app-mixin.mjs";
 
 const { renderTemplate } = foundry.applications.handlebars;
 const { Actor } = foundry.documents;

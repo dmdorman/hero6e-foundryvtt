@@ -3181,8 +3181,8 @@ HERO.characteristicPowers5e = labelsWithType(HERO.powers5e, "characteristic");
             rangeForItem: fixedValueFunction(HERO.RANGE_TYPES.SELF),
             rangeText: function (item) {
                 // The maximum length of the swingline
-                let distanceInMetres = item.basePointsPlusAdders * 10;
-                return `Max swingline length ${getRoundedUpDistanceInSystemUnits(distanceInMetres, item.actor.is5e)}`;
+                let distanceInMeters = item.basePointsPlusAdders * 10;
+                return `Max swingline length ${getRoundedUpDistanceInSystemUnits(distanceInMeters, item.actor.is5e)}`;
             },
             costEnd: true,
             costPerLevel: fixedValueFunction(1 / 2),
