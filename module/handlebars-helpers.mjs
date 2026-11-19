@@ -1,6 +1,6 @@
 import { HEROSYS } from "./herosystem6e.mjs";
 
-import { getHeftUnits, getMonetaryUnits } from "./utility/units.mjs";
+import { getHeftUnits, getMonetaryUnits, heightInDisplayUnits, weightInDisplayUnits } from "./utility/units.mjs";
 
 export function initializeHandlebarsHelpers() {
     Handlebars.registerHelper("abs", abs);
@@ -23,6 +23,7 @@ export function initializeHandlebarsHelpers() {
     Handlebars.registerHelper("getCharacteristic", getCharacteristic);
     Handlebars.registerHelper("getUploadLastModifiedDate", getUploadLastModifiedDate);
     Handlebars.registerHelper("hasCharacteristic", hasCharacteristic);
+    Handlebars.registerHelper("heightInDisplayUnits", heightInDisplayUnits);
     Handlebars.registerHelper("includes", includes);
     Handlebars.registerHelper("increment", increment);
     Handlebars.registerHelper("indexOf", indexOf);
@@ -36,6 +37,7 @@ export function initializeHandlebarsHelpers() {
     Handlebars.registerHelper("toJSON", toJSON);
     Handlebars.registerHelper("toLowerCase", toLowerCase);
     Handlebars.registerHelper("toUpperCase", toUpperCase);
+    Handlebars.registerHelper("weightInDisplayUnits", weightInDisplayUnits);
 }
 
 function indexOf(str, searchTerm) {

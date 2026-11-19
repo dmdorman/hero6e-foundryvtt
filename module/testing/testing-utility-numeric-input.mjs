@@ -1,4 +1,5 @@
 import { createQuenchActor, deleteQuenchActor } from "./quench-helper.mjs";
+import { getAndSetGameSetting } from "../settings/settings-helpers.mjs";
 import {
     canonicalNumericText,
     describeNumericSchema,
@@ -8,17 +9,11 @@ import {
     withinDeclaredBounds,
 } from "../utility/numeric-input.mjs";
 
-/**
- * Tests for the number input contract in `module/utility/numeric-input.mjs`.
- *
- * Each case declares its markup, states one literal expectation, and names the markup in its title, so
- * a failure reads as the field that broke.
- */
 export function registerNumericInputTests(quench) {
     quench.registerBatch(
         `${game.system.id}.utils.numeric-input`,
         (context) => {
-            const { describe, expect, it } = context;
+            const { afterEach, beforeEach, describe, expect, it } = context;
 
             /**
              * Build a detached input with the given attributes.
@@ -821,6 +816,151 @@ export function registerNumericInputTests(quench) {
                         expect(actor._source.system.characteristics.str.value).to.equal(17);
 
                         await deleteQuenchActor({ quench: this, actor });
+                    });
+                });
+            });
+
+            describe("Unit display", async function () {
+                const HEIGHT_PATH = "system.CHARACTER.CHARACTER_INFO.HEIGHT";
+                const WEIGHT_PATH = "system.CHARACTER.CHARACTER_INFO.WEIGHT";
+
+                // Both store more than two decimals, so an unrounded draw breaks the cell's own contract.
+                // 31.111 inches is 79.02194 cm. 123.456 pounds is 55.998699630720004 kg.
+                //
+                // Expectations stay literal. Deriving them with `convertCmToInches` or `convertLbsToKg`
+                // would put one factor on both sides of every assertion, so each round trip would pass
+                // whatever factor the code carried. The factors themselves are definitions in
+                // `module/utility/units.mjs` and carry no test of their own.
+                const STORED_HEIGHT_INCHES = 31.111;
+                const STORED_WEIGHT_LBS = 123.456;
+
+                /**
+                 * Turn metric units on or off for every sheet render that follows.
+                 *
+                 * @param {boolean} enabled True draws centimetres and kilograms.
+                 * @returns {Promise<void>}
+                 */
+                async function setMetricUnits(enabled) {
+                    await getAndSetGameSetting("metricUnits", enabled);
+                }
+
+                /**
+                 * Read the text one cell holds.
+                 *
+                 * @param {Actor} actor Actor whose sheet holds the cell.
+                 * @param {string} path Property path the cell writes.
+                 * @returns {string} The `value` attribute of the rendered input.
+                 */
+                function drawnText(actor, path) {
+                    return actor.sheet.element.querySelector(`input[name="${path}"]`).value;
+                }
+
+                /**
+                 * Type into one cell on the rendered sheet and wait for its change handler.
+                 *
+                 * @param {Actor} actor Actor whose sheet holds the cell.
+                 * @param {string} path Property path the cell writes.
+                 * @param {string} text Value to type.
+                 * @returns {Promise<void>}
+                 */
+                async function typeIntoCell(actor, path, text) {
+                    const input = actor.sheet.element.querySelector(`input[name="${path}"]`);
+                    input.value = text;
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                    await new Promise((resolve) => setTimeout(resolve, 250));
+                }
+
+                let originalMetricUnits;
+
+                beforeEach(async function () {
+                    // Hold the world's value and start every case from imperial.
+                    originalMetricUnits = await getAndSetGameSetting("metricUnits", false);
+                });
+
+                afterEach(async function () {
+                    await getAndSetGameSetting("metricUnits", originalMetricUnits);
+                });
+
+                describe("background tab cells", async function () {
+                    let actor;
+
+                    beforeEach(async function () {
+                        actor = await createQuenchActor({
+                            quench: this,
+                            actorType: "pc",
+                            is5e: false,
+                            name: "unit display",
+                        });
+                        await actor.update({
+                            [HEIGHT_PATH]: STORED_HEIGHT_INCHES,
+                            [WEIGHT_PATH]: STORED_WEIGHT_LBS,
+                        });
+                        await actor.sheet.render({ force: true });
+                    });
+
+                    afterEach(async function () {
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("draws stored inches and pounds when imperial units are on", async function () {
+                        await setMetricUnits(false);
+                        await actor.sheet.render({ force: true });
+
+                        expect(drawnText(actor, HEIGHT_PATH)).to.equal("31.11");
+                        expect(drawnText(actor, WEIGHT_PATH)).to.equal("123.46");
+                    });
+
+                    it("draws centimetres and kilograms when metric units are on", async function () {
+                        await setMetricUnits(true);
+                        await actor.sheet.render({ force: true });
+
+                        expect(drawnText(actor, HEIGHT_PATH)).to.equal("79.02");
+                        expect(drawnText(actor, WEIGHT_PATH)).to.equal("56");
+                    });
+
+                    it("draws text every cell accepts, in both units", async function () {
+                        // Checks the drawn text against the step the markup declares, rather than against
+                        // a transcription of it, so a step change with no display change still fails.
+                        const rejected = [];
+
+                        for (const metric of [false, true]) {
+                            await setMetricUnits(metric);
+                            await actor.sheet.render({ force: true });
+
+                            for (const path of [HEIGHT_PATH, WEIGHT_PATH]) {
+                                const input = actor.sheet.element.querySelector(`input[name="${path}"]`);
+                                const text = input.value;
+
+                                if (parseNumericInput(text, readNumericSchema(input)) === null) {
+                                    rejected.push(`${metric ? "metric" : "imperial"} ${path}: "${text}"`);
+                                }
+                            }
+                        }
+
+                        expect(rejected).to.deep.equal([]);
+                    });
+
+                    it("stores a typed centimetre value as inches, then draws 175 again", async function () {
+                        await setMetricUnits(true);
+                        await actor.sheet.render({ force: true });
+
+                        await typeIntoCell(actor, HEIGHT_PATH, "175");
+
+                        // 175 cm as inches. Literal, so a factor change lands here rather than passing
+                        // unnoticed through the redraw below.
+                        expect(actor._source.system.CHARACTER.CHARACTER_INFO.HEIGHT).to.equal(68.89763779527559);
+
+                        await actor.sheet.render({ force: true });
+
+                        expect(drawnText(actor, HEIGHT_PATH)).to.equal("175");
+                    });
+
+                    it("draws 3.18 cm for 1.25 inches, the step rounding tie", async function () {
+                        await setMetricUnits(true);
+                        await actor.update({ [HEIGHT_PATH]: 1.25 });
+                        await actor.sheet.render({ force: true });
+
+                        expect(drawnText(actor, HEIGHT_PATH)).to.equal("3.18");
                     });
                 });
             });

@@ -39,6 +39,32 @@ export function getHeftUnits() {
     return metricUnitsEnabled() ? "kg" : "lbs";
 }
 
+/**
+ * Height in the unit a sheet draws: centimetres when metric, inches otherwise.
+ *
+ * Documents store inches. This converts for the drawing step only, and rounds nothing, because the
+ * field's declared `step` owns precision.
+ *
+ * @param {number} lengthInInches Stored height.
+ * @returns {number} The height in display units.
+ */
+export function heightInDisplayUnits(lengthInInches) {
+    return metricUnitsEnabled() ? convertInchesToCm(lengthInInches) : lengthInInches;
+}
+
+/**
+ * Weight in the unit a sheet draws: kilograms when metric, pounds otherwise.
+ *
+ * Documents store pounds. This converts for the drawing step only, and rounds nothing, because the
+ * field's declared `step` owns precision.
+ *
+ * @param {number} massInLbs Stored weight.
+ * @returns {number} The weight in display units.
+ */
+export function weightInDisplayUnits(massInLbs) {
+    return metricUnitsEnabled() ? convertLbsToKg(massInLbs) : massInLbs;
+}
+
 export function getMonetaryUnits(/*actor*/) {
     // PH: FIXME: Get them from the HDC campaign rules otherwise default to $
     return "$";
