@@ -7,6 +7,24 @@ import { HeroAppMixin } from "../applications/api/hero-app-mixin.mjs";
 export let overrideCanAct = false;
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+const { ActorSheetV2, ItemSheetV2 } = foundry.applications.sheets;
+
+/**
+ * Re-render every open actor and item shee.
+ *
+ * @returns {void}
+ */
+function renderAllActorAndItemSheets() {
+    for (const base of [ActorSheetV2, ItemSheetV2]) {
+        for (const sheet of base.instances()) {
+            if (sheet.state !== ApplicationV2.RENDER_STATES.RENDERED) {
+                continue;
+            }
+
+            sheet.render();
+        }
+    }
+}
 
 // Shared shell for AppV2 settings submenus: a form window that persists every change and stays open.
 class HeroSettingsMenu extends HeroAppMixin(HandlebarsApplicationMixin(ApplicationV2)) {
@@ -549,6 +567,7 @@ export default class SettingsHelpers {
             type: Boolean,
             default: true,
             requiresReload: false,
+            onChange: () => renderAllActorAndItemSheets(),
         });
 
         game.settings.register(module, "DiceSkinning", {
