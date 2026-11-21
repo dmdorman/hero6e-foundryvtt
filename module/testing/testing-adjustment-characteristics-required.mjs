@@ -53,7 +53,8 @@ export const REQUIRED_FIXTURES = freezeDeep({
  * Calculated names (OCV, DCV, OMCV, DMCV) read a primary's value, so an adjustment moves them. Figured
  * names (PD, ED, SPD, REC, END, STUN, LEAPING) read base plus levels, so an adjustment must not.
  *
- * @param {Function} add Case builder that takes the group, the fixture key, and the claim.
+ * @param {(group: string, fixtureKey: string, claim: string) => void} add Case builder. The fixture key
+ *   indexes `REQUIRED_FIXTURES`.
  */
 function adjustmentCases(add) {
     // Claims the 5e suite makes and no 6e test makes.

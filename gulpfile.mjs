@@ -142,7 +142,19 @@ const TYPELINT_PROGRAM_TEMPLATE = path.join(ROOT, "tools", "typelint", "jsconfig
 async function spawnTypeAwareLint(args) {
     fs.copyFileSync(TYPELINT_PROGRAM_TEMPLATE, TYPELINT_PROGRAM);
     try {
-        return await spawnTool("oxlint", oxlintBin, ["--config", TYPELINT_CONFIG, "--type-aware", ...args]);
+        // tsgolint lints every file in the program, so the `**/*.d.ts` entry in `.oxlintrc.json`
+        // `ignorePatterns` does not reach this path. Without the flag below, `types/*.d.ts` trips
+        // `no-redeclare` (4 errors), because each name is declared twice: once as a value, once as
+        // a type. The flag skips those files for reporting and keeps them in the program, so every
+        // type still resolves. Measured: 249 warnings before and after the flag.
+        return await spawnTool("oxlint", oxlintBin, [
+            "--config",
+            TYPELINT_CONFIG,
+            "--type-aware",
+            "--ignore-pattern",
+            "**/*.d.ts",
+            ...args,
+        ]);
     } finally {
         fs.rmSync(TYPELINT_PROGRAM, { force: true });
     }

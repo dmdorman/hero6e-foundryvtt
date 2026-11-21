@@ -5,9 +5,6 @@
   // The rules added here report warnings, not errors, so the run exits 0 while the set is
   // still being evaluated. Nothing in `lint`, `validate`, `build`, or `watch` reads this file.
   //
-  // Measured over `module/` with the Foundry types loaded: 74 floating promises, 59 misused
-  // promises, 46 async-function suggestions, 46 await-thenable hits, 29 return-await hits,
-  // 0 `only-throw-error` hits. See `oxlint_type_aware_plan.md`.
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "extends": ["./.oxlintrc.json"],
   "options": {

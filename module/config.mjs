@@ -1001,21 +1001,31 @@ function pdEdCostPerLevel(itemOrActor) {
  *   additional level.
  * @property {Function|undefined} [cost] - `(item) => number`. Cost outside the per-level path, for
  *   example a skill category. A description may set it to `undefined` to clear an inherited cost.
+ *   FIXME(type): untyped callback, 6 findings when declared. Blocker: its bodies read members the
+ *   model does not declare, for example `basePlusLevels`.
  * @property {Function} [realCost] - `(item) => number`. Cost after adders and limitations.
+ *   FIXME(type): untyped callback, 1 finding when declared. Blocker: `HeroSystem6eItem` declares no
+ *   `realCost` getter, and the COMPOUNDPOWER description sums `childItems[].realCost`.
  * @property {Function} [activePoints] - `(item) => number`. Active points the power is worth.
+ *   FIXME(type): untyped callback, 1 finding when declared. Blocker: `HeroSystem6eItem` declares no
+ *   `activePoints`, `realCost` or `_limitationCost` getter.
  * @property {(item: HeroSystem6eItem) => number} [basePoints] - Base points from purchased levels.
  * @property {(item: HeroSystem6eItem) => number} [addersCost] - Cost of the power's adders.
  * @property {Function} [adderCostAdjustment] - `({ adder, adderCost }) => number`. Edition specific
  *   adder cost.
+ *   FIXME(type): untyped callback, 3 findings when declared. Blocker: `XMLID`, `ID` and `item` are
+ *   undeclared on the adder parameter type.
  * @property {Function} [characterPointCostForElementalControl] - `(item) => number`. Control cost of
  *   an elemental Control Power.
+ *   FIXME(type): untyped callback, 3 findings when declared. Blocker: the same missing
+ *   `HeroSystem6eItem` getters.
  * @property {number} [minimumLimitation] - Lowest limitation ratio the power allows.
  * @property {((item?: HeroSystem6eItem) => string)} [rangeForItem] - Range of the power, a
  *   `HERO.RANGE_TYPES` value. Needed because martial arts share an XMLID.
  * @property {(item: HeroSystem6eItem) => string} [rangeText] - Range spelled for a card.
  * @property {PowerIgnoreForActor} [ignoreForActor] - Whether this actor type ignores the power.
  * @property {((modifier?: HeroSystem6eItem, item?: HeroSystem6eItem) => boolean)} [dcAffecting] - Whether an
- *   advantage changes the DC. `item.mjs` warns when an advantage has no such function.
+ *   advantage changes the DC. The item class warns when an advantage has no such function.
  * @property {((item: HeroSystem6eItem) => boolean)} [doesKillingDamage] - Whether the power does
  *   killing damage.
  * @property {boolean} [costEnd] - Whether the power costs endurance to use.
@@ -1028,29 +1038,49 @@ function pdEdCostPerLevel(itemOrActor) {
  * @property {boolean} [afterDefenses] - Whether the effect applies after defenses.
  * @property {boolean} [privateAsAdder] - Whether the power costs as an adder when private.
  * @property {boolean} [refreshAttackDialogWhenChanged] - Whether to rebuild an open attack dialog.
- * @property {Function} [defense] - `(item) => object`. Resistance and entangle profile the power grants.
+ * @property {Function} [defense] - `(item) => object`. Resistance and entangle profile the power
+ *   grants.
+ *   FIXME(type): untyped callback, 2 findings when declared. Blocker: the profile shape has no
+ *   typedef.
  * @property {Function} [defenseTagVsAttack] - `(defenseItem, attackItem, options)`. How much of the
  *   defense applies to one attack. Data returns a defense profile from `createDefenseProfile`, or a
- *   tag list. The one reader, `module/utility/defense.mjs:71`, returns the value unchanged.
+ *   tag list. Its only reader returns the value unchanged.
+ *   FIXME(type): untyped callback, 62 findings when declared. Blocker: the options bundle has no
+ *   typedef and the return needs a defense-profile union.
  * @property {(item: HeroSystem6eItem) => string} [attackDefenseVs] - Defense tag an attack uses against this power,
  *   for example `POWERDEFENSE`.
  * @property {(actor: HeroSystem6eActor) => number} [calculated5eCharacteristic] - 5e calculated value.
  * @property {Function} [figured5eCharacteristic] - `(actor) => number`. 5e figured value.
+ *   FIXME(type): untyped callback, 19 findings when declared. Blocker: its bodies read members the
+ *   model does not declare.
  * @property {Function} [baseEffectDicePartsBundle] - `(item, options) => object`. Dice, tags and base
- *   attack item for one effect.m
+ *   attack item for one effect.
+ *   FIXME(type): untyped callback, 4 findings when declared. Blocker: the options bundle has no
+ *   typedef, and `HeroSystemFormulaDicePartsBundle` omits `baseAttackItem`, which the dice-parts
+ *   reader unpacks.
  * @property {Function} [activeEffect] - `(item) => object|null`. Active effect the power grants.
+ *   FIXME(type): untyped callback, 13 findings when declared. Blocker: the bodies read keyed values
+ *   off `details()`, and that map has no declared key set.
  * @property {string} [expiryEvent] - Event name that expires the effect, for example `hero.nextTurnStart`.
  * @property {(item: HeroSystem6eItem) => boolean} [appliesTo] - Whether the power applies in a situation.
  * @property {Function} [heroValidation] - `(item) => Array<{property, message}>`. Sheet validation
  *   rules for the power.
+ *   FIXME(type): untyped callback. Blocker: callers pass either one argument, the item, or two,
+ *   a modifier and the item.
  * @property {Function} [notes] - `(char) => string|null`. Extra text for the card.
+ *   FIXME(type): untyped callback. Blocker: the argument type is undecided. The item data model
+ *   passes itself; the data names the parameter `char`.
  * @property {(item: HeroSystem6eItem) => string} [descriptionFactory] - Description text.
  * @property {(modifier: object, item: HeroSystem6eItem) => string} [descriptionModifier] - One modifier's text.
  * @property {(item: HeroSystem6eItem) => string} [nameOverride] - Name that replaces the sheet name.
  * @property {Function} [details] - `(item) => object`. Values a card shows for the power, keyed by
  *   characteristic name, for example `str`, `stun` or `running`.
+ *   FIXME(type): untyped callback. Declaring the return `object` moved 16 findings into the
+ *   `activeEffect` bodies that read it. Blocker: the key set has no typedef.
  * @property {Function} [optionIDFix] - `(json) => string`. Corrects an OPTIONID Hero Designer spells
  *   wrong.
+ *   FIXME(type): untyped callback, 2 findings when declared. Blocker: the XML-derived json node has
+ *   no typedef.
  * @property {PowerManeuverDesc} [maneuverDesc] - Row in the combat maneuver table.
  * @property {PowerEditOptions} [editOptions] - Sheet controls for the power.
  * @property {PowerSight} [sight] - Vision the power grants.

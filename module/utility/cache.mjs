@@ -83,8 +83,13 @@ function objectCachingEnabled() {
 /**
  * Add object caching functionality to this Base class.
  *
- * @param {*} Base
- * @returns HeroObjectCache
+ * `T` must be a constructor type, because that is what keeps the base class's instance members and
+ * static members on the returned class. A `*` or `Function` parameter erases both, so every read of an
+ * inherited member, for example a static `create`, then fails. The return type comes from inference.
+ * Restating it by hand would drop the members this mixin adds.
+ *
+ * @template {abstract new (...args: any) => any} T
+ * @param {T} Base
  */
 export const HeroObjectCacheMixin = (Base) =>
     class HeroObjectCache extends Base {

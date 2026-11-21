@@ -5,6 +5,21 @@
 // Every test suite this system registers is keyed with the system id first, for example
 // `hero6efoundryvttv2.utils.dice`. Callers pass names without that prefix, so a caller
 // cannot select another package's test suites.
+/**
+ * Register one test suite with Quench. Each suite module exports one of these, and the array order
+ * below is the order Quench shows.
+ *
+ * @callback QuenchSuiteRegistrar
+ * @param {object} quench The Quench instance.
+ */
+
+/**
+ * Delete every `_Quench` fixture from the world without Mocha. The global teardown batch runs the
+ * same helper through Mocha.
+ *
+ * @typedef {typeof import("./quench-helper.mjs").deleteQuenchFixtures} QuenchFixtureDeleter
+ */
+
 Hooks.on("quenchReady", async (quench) => {
     // Seconds to wait for an aborted run to wind down before dropping the runner reference. A full
     // suite abort unwinds suite by suite and runs each suite's `after` hooks, so give it room.
@@ -202,7 +217,7 @@ Hooks.on("quenchReady", async (quench) => {
      * breaks that order, throws here, so no suite goes missing and the list stays readable.
      *
      * @param {object} quench The Quench instance.
-     * @param {Function[]} testSuiteRegistrars One registration function per suite, in run order.
+     * @param {QuenchSuiteRegistrar[]} testSuiteRegistrars One registration function per suite, in run order.
      */
     function registerTestSuites(quench, testSuiteRegistrars) {
         for (const registerTestSuite of testSuiteRegistrars) {
@@ -218,10 +233,10 @@ Hooks.on("quenchReady", async (quench) => {
      * @param {object} root The module exports this API needs.
      * @param {string} root.setupSuite Global setup suite name, without the system prefix.
      * @param {string} root.teardownSuite Global teardown suite name, without the system prefix.
-     * @param {Function} root.deleteQuenchFixtures Deletes every `_Quench` fixture from the world.
+     * @param {QuenchFixtureDeleter} root.deleteQuenchFixtures Deletes every `_Quench` fixture from the world.
      * @param {object} root.chatCleanup The chat clean-up toggle module.
-     * @param {Function} root.chatCleanup.isChatCleanupEnabled Reports whether clean-up runs.
-     * @param {Function} root.chatCleanup.setChatCleanupEnabled Turns clean-up on or off.
+     * @param {() => boolean} root.chatCleanup.isChatCleanupEnabled Reports whether clean-up runs.
+     * @param {(enabled: boolean) => void} root.chatCleanup.setChatCleanupEnabled Turns clean-up on or off.
      * @param {string} root.chatCleanup.TOGGLE_STORAGE_KEY The localStorage key that holds the toggle.
      */
     function exposeConsoleApi({ setupSuite, teardownSuite, deleteQuenchFixtures, chatCleanup }) {
@@ -460,7 +475,7 @@ Hooks.on("quenchReady", async (quench) => {
      * @param {object} hooks Global suite names and the direct clean-up helper.
      * @param {string} hooks.setupSuite Global setup suite name, without the system prefix.
      * @param {string} hooks.teardownSuite Global teardown suite name, without the system prefix.
-     * @param {Function} hooks.deleteQuenchFixtures Deletes every `_Quench` fixture without Mocha.
+     * @param {QuenchFixtureDeleter} hooks.deleteQuenchFixtures Deletes every `_Quench` fixture without Mocha.
      *
      * @returns {Promise<Array<object>|Error>} One `{ loop, report }` entry per run, or an Error.
      */
@@ -902,7 +917,7 @@ Hooks.on("quenchReady", async (quench) => {
      * @param {RegExp|null} [root.grep] Narrows the run to selected test cases. Null runs whole suites.
      * @param {number} root.timeoutInMs Timeout for this run, in milliseconds.
      * @param {boolean} root.jsonReport Upload the report to the server.
-     * @param {Function} [root.onTimeout] Runs after a timeout aborts the run. Its return value is
+     * @param {() => Promise<string>} [root.onTimeout] Runs after a timeout aborts the run. Its return value is
      *                    appended to the rejection message. Omit it to skip the clean-up hand-off.
      *
      * @returns {Promise<object>} The parsed Mocha JSON report.
@@ -1085,7 +1100,7 @@ Hooks.on("quenchReady", async (quench) => {
      *
      * @param {object} root The teardown targets.
      * @param {string} root.teardownSuite Global teardown suite name, without the system prefix.
-     * @param {Function} root.deleteFixtures Deletes every `_Quench` fixture without Mocha.
+     * @param {QuenchFixtureDeleter} root.deleteFixtures Deletes every `_Quench` fixture without Mocha.
      * @param {number} root.timeoutInMs Timeout for the teardown run, in milliseconds.
      *
      * @returns {Promise<object|Error>} `{ via, deleted?, teardownReport?, reloadRequired }`. `via`
@@ -1164,7 +1179,7 @@ Hooks.on("quenchReady", async (quench) => {
      *
      * @param {object} hooks Global suite names and the direct clean-up helper.
      * @param {string} hooks.teardownSuite Global teardown suite name, without the system prefix.
-     * @param {Function} hooks.deleteQuenchFixtures Deletes every `_Quench` fixture without Mocha.
+     * @param {QuenchFixtureDeleter} hooks.deleteQuenchFixtures Deletes every `_Quench` fixture without Mocha.
      *
      * @returns {Promise<string>} A note describing the clean-up, for the timeout error message.
      */
