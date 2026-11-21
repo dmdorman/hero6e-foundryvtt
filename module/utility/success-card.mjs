@@ -2,6 +2,9 @@ import { overrideCanAct } from "../settings/settings-helpers.mjs";
 
 const { renderTemplate } = foundry.applications.handlebars;
 
+// `HeroRoller` is a class this repo exports, not a runtime global, so JSDoc must import the type.
+/** @typedef {import("../heroRoller/dice.mjs").HeroRoller} HeroRoller */
+
 /**
  * Make a success roll and update the flavor passed in with the results. We put emphasis on the results and style it.
  *
@@ -52,8 +55,8 @@ export function emphasizeSuccessFailureFlavour(succeeded, flavor) {
  * @param {HeroSystem6eActor} actor
  * @param {String} speaker
  * @param {String} flavor
- * @param {HeroRoller | falsy} roller
- * @param {String | falsy} resourceDescription
+ * @param {HeroRoller | null} roller - Null when the caller has no roll to render.
+ * @param {String | null} resourceDescription - Null when no resource was spent.
  */
 export async function generateSuccessChatCard(actor, speaker, flavor, roller, resourceDescription) {
     const renderedSuccessRoll = roller ? await roller.render() : null;

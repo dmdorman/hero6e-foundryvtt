@@ -634,7 +634,7 @@ export function markButtonUsed(button) {
  * TokenDocument uuid for a Token placeable, TokenDocument, or PrototypeToken.
  * Token placeables only expose a uuid via their document; PrototypeTokens have none.
  *
- * @param {HeroSystem6eToken | HeroSystem6eTokenDocument | PrototypeToken | null} token
+ * @param {HeroSystem6eToken | HeroSystem6eTokenDocument | foundry.data.PrototypeToken | null} token
  * @returns {string | null}
  */
 export function getTokenUuid(token) {
@@ -676,8 +676,11 @@ export function forceReplaceFields(forcedFields, otherFields = {}) {
  *       make distance calculations.
  *
  * @param {Object} options
- * @param {action} options.action
+ * @param {object} [options.action] - Action this call works for. Read for `action.current` only.
+ * @param {{ attackerTokenUuid?: string, actor?: HeroSystem6eActor }} [options.action.current]
  * @param {HeroSystem6eActor | undefined} options.actor
+ * @param {HeroSystem6eItem | undefined} options.item - Item this call works for. Read for its actor.
+ * @param {string | undefined} options.actorId
  * @param {Token | TokenDocument | undefined} options.token
  * @param {string | undefined} options.tokenId we should really get rid of this.
  *

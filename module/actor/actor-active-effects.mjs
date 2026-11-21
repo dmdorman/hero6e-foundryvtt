@@ -650,7 +650,7 @@ export class HeroSystem6eActorActiveEffects extends ActiveEffect {
      * Overrides core to round in the player's favor (e.g. halved DCV). Only
      * reached when applyChange is dispatched on this class, not the base class.
      * @param {Actor} targetDoc               The Document to which this effect should be applied
-     * @param {EffectChangeData} change       The change data being applied
+     * @param {ActiveEffect.ChangeData} change The change data being applied
      * @param {*} current                     The current value being modified
      * @param {*} delta                       The parsed value of the change object
      * @param {object} changes                An object which accumulates changes to be applied

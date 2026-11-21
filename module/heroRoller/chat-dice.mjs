@@ -115,7 +115,7 @@ Hooks.on("chatMessage", function (_this, message /*, _chatData*/) {
 /**
  * Generate a HeroRoller object from the /heroroll command
  *
- * @param {RegExpMatch} chatMessageCmd
+ * @param {RegExpMatchArray} chatMessageCmd
  *
  * @returns {HeroRoller}
  */
@@ -238,7 +238,7 @@ async function rollAndGenerateChatMessage(heroRoller, defenseType) {
 /**
  * Parse the /heroroll command and evaluate it generating a chat card with the result.
  *
- * @param {RegExpMatch} chatMessageCmd
+ * @param {RegExpMatchArray} chatMessageCmd
  *
  * @returns
  */

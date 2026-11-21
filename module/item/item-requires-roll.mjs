@@ -8,6 +8,9 @@ import { doSuccessRoll, emphasizeSuccessFailureFlavour, generateSuccessChatCard 
 import { tokenEducatedGuess } from "../utility/util.mjs";
 import { HeroDialogV2 } from "../applications/api/hero-app-mixin.mjs";
 
+// `HeroModifierModel` is a class this repo exports, not a runtime global, so JSDoc must import it.
+/** @typedef {import("./HeroSystem6eTypeDataModels.mjs").HeroModifierModel} HeroModifierModel */
+
 // Probability, in %, of that number on 3d6
 const HIT_LOCATION_PROBABILITY = Object.freeze({
     3: 0.46,
@@ -323,7 +326,7 @@ function findSkills(actor, skillName) {
  *
  * NOTE: Do not call unless it is appropriate for the type of roll (i.e. don't call for activation roll)
  *
- * @param {HeroModifierModel } rar
+ * @param {HeroModifierModel} rar
  *
  * @returns {number}
  */

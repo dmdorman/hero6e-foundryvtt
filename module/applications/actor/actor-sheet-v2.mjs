@@ -18,6 +18,19 @@ import { cmPerInch, kgPerLb, metricUnitsEnabled } from "../../utility/units.mjs"
 import { HeroAppMixin, HeroDialogV2 } from "../api/hero-app-mixin.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
+
+/**
+ * One row of the status effect list `_prepareStatusEffects` builds for the sheet template.
+ * Foundry publishes no type for this shape, so the sheet declares the one it writes.
+ *
+ * @typedef {object} ActorSheetStatusRow
+ * @property {string} _id - `_id` of the canonical status effect.
+ * @property {string} name - Status label or localization key.
+ * @property {string} img - Icon path.
+ * @property {boolean} disabled - True when an active effect holds the status but is not canonical.
+ * @property {string} active - `"active"` when the actor has the status, `""` otherwise.
+ * @property {string} [tooltip] - Enriched HTML of the status' rule page. Set only with a rule.
+ */
 const { ActorSheetV2 } = foundry.applications.sheets;
 const { DragDrop } = foundry.applications.ux;
 const { FilePicker } = foundry.applications.apps;
@@ -2152,7 +2165,7 @@ export class HeroSystemActorSheetV2 extends HeroAppMixin(HandlebarsApplicationMi
     }
 
     async _prepareStatusEffects() {
-        /** @type {Record<string, StatusInfo>} */
+        /** @type {Record<string, ActorSheetStatusRow>} */
         const statusInfo = {};
         for (const status of CONFIG.statusEffects) {
             // Only display if it would show in the token HUD *and* it has an assigned _id

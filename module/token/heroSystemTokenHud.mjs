@@ -2,6 +2,11 @@ import { MOVEMENT_NONE_ACTION, movementDisplayName } from "../utility/movement.m
 import { convertSystemUnitsToMeters, metersPerLightYear, turnsPerGregorianYear } from "../utility/units.mjs";
 import { ftlLevelsToLightYearsPerYear } from "../item/item.mjs";
 
+// Foundry movement types. The community types publish these under their owning namespace, so the
+// bare names read as TS2304 "cannot find name". Aliasing here keeps the callback signatures short.
+/** @typedef {foundry.grid.BaseGrid.Offset3D} GridOffset3D */
+/** @typedef {TokenDocument.MovementSegmentData} TokenMovementSegmentData */
+
 // PH: FIXME: Need to get extra dimensional appearing. We have icon now.
 // PH: FIXME: Megamovement is always non combat.
 // PH: FIXME: Encumberance can slow actors down

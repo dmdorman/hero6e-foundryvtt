@@ -3920,9 +3920,10 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         this._completedActiveEffectPhases.add(phase);
 
         // Organize non-disabled effects by their application priority
-        /** @type {ActiveEffectChangeData[]} */
+        // The Foundry types expose this shape as `ActiveEffect.ChangeData`, not as a bare name.
+        /** @type {ActiveEffect.ChangeData[]} */
         const changes = [];
-        /** @type {ActiveEffectChangeData[]} */
+        /** @type {ActiveEffect.ChangeData[]} */
         const tokenChanges = [];
         for (const effect of this.allApplicableEffects()) {
             if (!effect.active) continue;

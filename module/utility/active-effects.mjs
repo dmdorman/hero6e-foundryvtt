@@ -125,13 +125,15 @@ export function multiplyFavoringPlayer(current, delta) {
  * more are not halvings — an x2 doubling has to stack normally and must never be deduped away.
  *
  * Survivors keep their position so the caller's priority ordering is untouched.
+ * @template T - Declare this before the `@param` tags that use it. A `@template` placed after a
+ *   dotted `@param` (`accessors.changeKeyOf`) is dropped: TypeScript then reports 4 "cannot find
+ *   name 'T'" errors and the generic resolves to nothing.
  * @param {Array<T>} changes - Mutated in place.
  * @param {object} [accessors] - Readers for callers whose entries wrap the change data. Spelled
  *   `changeXOf` because a destructured `valueOf` default would resolve to Object.prototype's.
  * @param {(entry: T) => string} [accessors.changeKeyOf]
  * @param {(entry: T) => string|null} [accessors.changeTypeOf]
  * @param {(entry: T) => *} [accessors.changeValueOf]
- * @template T
  */
 export function removeRedundantHalvingChanges(
     changes,

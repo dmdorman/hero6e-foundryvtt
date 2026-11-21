@@ -887,24 +887,24 @@ function pdEdCostPerLevel(itemOrActor) {
  * @property {string} base - Base number of levels that are given automatically
  * @property {string} cost - Cost in character points per additional level
  * @property {Array<string>} type - A list of types associated with this power
- * @property {Array<"non-hd" | "optional-maneuver" | "success"| "dice" | "to-hit" | "activatable" | "adder" | "modifier" | "240DegreeArcBuiltIn" | "360DegreeArcBuiltIn" | "microscopicBuiltIn" | "senseBuiltIn" | "rangeBuiltIn" | "rapidBuiltIn" | "targetingBuiltIn" | telescopicBuiltIn | "penetrativeBuiltIn">} behaviors - A list of the behavior types this power exhibits in the code
- *        "non-hd" - this is not an XMLID that comes from Hero Designer
- *        "optional-maneuver" - this is an optional combat maneuver
- *        "success" - can roll some kind of success roll for this power
- *        "dice" - a damage/effect dice roll is associated with this power
- *        "to-hit" - a to-hit dice roll is associated with this power
- *        "activatable" - this power can be turned on/off/activated/deactivated
- *        "adder" - this power is actually a power adder
- *        "modifier" - this power is actually a power modifier (aka advantage)
+ * @property {Array<"240DegreeArcBuiltIn" | "360DegreeArcBuiltIn" | "activatable" | "adder" | "dice" | "microscopicBuiltIn" | "modifier" | "non-hd" | "optional-maneuver" | "penetrativeBuiltIn" | "rangeBuiltIn" | "rapidBuiltIn" | "senseBuiltIn" | "success" | "targetingBuiltIn" | "telescopicBuiltIn" | "to-hit">} behaviors - A list of the behavior types this power exhibits in the code
  *        "240DegreeArcBuiltIn" - this sense power has a 240 degree arc
  *        "360DegreeArcBuiltIn" - this sense power has a 360 degree arc
+ *        "activatable" - this power can be turned on/off/activated/deactivated
+ *        "adder" - this power is actually a power adder
+ *        "dice" - a damage/effect dice roll is associated with this power
  *        "microscopicBuiltIn" - this sense is microscopic
+ *        "modifier" - this power is actually a power modifier (aka advantage)
+ *        "non-hd" - this is not an XMLID that comes from Hero Designer
+ *        "optional-maneuver" - this is an optional combat maneuver
  *        "penetrativeBuiltIn" - this sense power is pentrative
  *        "rangeBuiltIn" - this sense power has range
  *        "rapidBuiltIn" - this sense is rapid
  *        "senseBuiltIn" - this sense power is passive
+ *        "success" - can roll some kind of success roll for this power
  *        "targetingBuiltIn" - this sense power can be used for targeting
  *        "telescopicBuiltIn" - this sense is telescopic
+ *        "to-hit" - a to-hit dice roll is associated with this power
  *
  * @property {"constant"|"instant"|"persistent"} duration - The lower case duration of the power
  * @property {Function(HeroSystem6eItem) => HERO.RANGE_TYPES} rangeForItem - The range of the power base on the item as many martial arts share the same XMLID
