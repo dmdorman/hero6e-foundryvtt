@@ -49,7 +49,7 @@ const { Actor } = foundry.documents;
  * `module/utility/numeric-input.mjs`. The browser blocks what it can, and this function is the
  * backstop: a cleared box reports an empty string, and a browser accepts an exponent such as `1e5`, so
  * both would otherwise reach `update()` and store null in a numeric field that allows null. Reject
- * them, restore the stored value, and tell the player. Nothing is guessed. A field with no `step`, a
+ * them, restore the text the sheet drew, and tell the player. Nothing is guessed. A field with no `step`, a
  * step outside the three, or a bound that is not a number throws `InputElementNumberSchemaError`; this function
  * reports it with the element markup and drops the write. Fields that take no number keep their raw
  * value.
@@ -61,12 +61,7 @@ const { Actor } = foundry.documents;
  * @returns {Promise<void>}
  */
 async function commitSheetInput(actor, input, path, divisor = 1) {
-    await commitValidatedNumber(
-        input,
-        (value) => actor.update({ [path]: value / divisor }),
-        () => actor,
-        path,
-    );
+    await commitValidatedNumber(input, (value) => actor.update({ [path]: value / divisor }), path);
 }
 
 /**
@@ -78,24 +73,21 @@ async function commitSheetInput(actor, input, path, divisor = 1) {
  * @returns {Promise<void>}
  */
 async function commitItemInput(item, input, path) {
-    await commitValidatedNumber(
-        input,
-        (value) => item.update({ [path]: value }),
-        () => item,
-        path,
-    );
+    await commitValidatedNumber(input, (value) => item.update({ [path]: value }), path);
 }
 
 /**
  * Validate one number input, then hand the parsed value to a writer.
  *
+ * A rejected change hands the input back to `restoreNumericInput`, which puts the drawn text back. The document
+ * is not read, because the markup already holds the text the player saw.
+ *
  * @param {HTMLInputElement} input The input that changed.
  * @param {(value: number) => Promise<object>} write Writes the parsed number.
- * @param {() => object} documentFor Holds the document the restore message reads back from.
  * @param {string} path Property path shown to the player.
  * @returns {Promise<void>}
  */
-async function commitValidatedNumber(input, write, documentFor, path) {
+async function commitValidatedNumber(input, write, path) {
     if (input.type !== "number" && input.dataset.dtype !== "Number") {
         await write(input.value);
         return;
@@ -113,7 +105,7 @@ async function commitValidatedNumber(input, write, documentFor, path) {
 
     const parsed = parseNumericInput(input.value, contract);
     if (parsed === null || !withinDeclaredBounds(parsed, contract)) {
-        restoreNumericInput(input, documentFor(), path, contract);
+        restoreNumericInput(input, path, contract);
         return;
     }
 

@@ -962,6 +962,84 @@ export function registerNumericInputTests(quench) {
 
                         expect(drawnText(actor, HEIGHT_PATH)).to.equal("3.18");
                     });
+
+                    it("restores centimetres when a rejected edit lands in the HEIGHT cell", async function () {
+                        await setMetricUnits(true);
+                        await actor.update({ [HEIGHT_PATH]: 40 });
+                        await actor.sheet.render({ force: true });
+
+                        await typeIntoCell(actor, HEIGHT_PATH, "abc");
+
+                        // 40 inches draws 101.6 cm. The old restore printed the stored inches, 40, in a cell
+                        // labelled centimetres.
+                        expect(drawnText(actor, HEIGHT_PATH)).to.equal("101.6");
+                        expect(actor._source.system.CHARACTER.CHARACTER_INFO.HEIGHT).to.equal(40);
+                    });
+
+                    it("restores kilograms when a rejected edit lands in the WEIGHT cell", async function () {
+                        await setMetricUnits(true);
+                        // The pounds a metric commit of 100 kg leaves behind.
+                        await actor.update({ [WEIGHT_PATH]: 220.46226218487757 });
+                        await actor.sheet.render({ force: true });
+
+                        await typeIntoCell(actor, WEIGHT_PATH, "abc");
+
+                        expect(drawnText(actor, WEIGHT_PATH)).to.equal("100");
+                        expect(actor._source.system.CHARACTER.CHARACTER_INFO.WEIGHT).to.equal(220.46226218487757);
+                    });
+
+                    it("restores the drawn 3.18 cm, not a re-rounded 3.17", async function () {
+                        await setMetricUnits(true);
+                        await actor.update({ [HEIGHT_PATH]: 1.25 });
+                        await actor.sheet.render({ force: true });
+
+                        await typeIntoCell(actor, HEIGHT_PATH, "abc");
+
+                        // Core rounds by step, so 1.25 inches draws 3.18. A restore that recomputed with
+                        // `toFixed` would print 3.17 and split the cell's own tie.
+                        expect(drawnText(actor, HEIGHT_PATH)).to.equal("3.18");
+                        expect(actor._source.system.CHARACTER.CHARACTER_INFO.HEIGHT).to.equal(1.25);
+                    });
+
+                    it("restores the last accepted value, not the value first drawn", async function () {
+                        await setMetricUnits(true);
+                        await actor.update({ [HEIGHT_PATH]: 40 });
+                        await actor.sheet.render({ force: true });
+
+                        await typeIntoCell(actor, HEIGHT_PATH, "180");
+
+                        // 180 cm as inches. The accepted commit must refresh the markup the next reject reads.
+                        expect(actor._source.system.CHARACTER.CHARACTER_INFO.HEIGHT).to.equal(70.86614173228347);
+
+                        await typeIntoCell(actor, HEIGHT_PATH, "abc");
+
+                        expect(drawnText(actor, HEIGHT_PATH)).to.equal("180");
+                        expect(actor._source.system.CHARACTER.CHARACTER_INFO.HEIGHT).to.equal(70.86614173228347);
+                    });
+
+                    it("restores the text a render draws, for both cells in both units", async function () {
+                        const drift = [];
+
+                        for (const metric of [false, true]) {
+                            await setMetricUnits(metric);
+
+                            for (const path of [HEIGHT_PATH, WEIGHT_PATH]) {
+                                await actor.sheet.render({ force: true });
+                                const before = drawnText(actor, path);
+
+                                await typeIntoCell(actor, path, "abc");
+                                const restored = drawnText(actor, path);
+
+                                if (restored !== before) {
+                                    drift.push(
+                                        `${metric ? "metric" : "imperial"} ${path}: "${restored}" not "${before}"`,
+                                    );
+                                }
+                            }
+                        }
+
+                        expect(drift).to.deep.equal([]);
+                    });
                 });
             });
         },

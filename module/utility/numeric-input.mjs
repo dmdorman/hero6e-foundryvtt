@@ -304,23 +304,25 @@ function describeBounds({ min, max }) {
 }
 
 /**
- * Put the stored value back into a numeric input and tell the player what the field accepts.
+ * Put the text the sheet last drew back into a rejected input, and tell the player what the field accepts.
+ *
+ * `input.defaultValue` mirrors the `value` attribute, and the template wrote that attribute. Core writes it
+ * from the converted value, already rounded to the field's `step`, so the attribute carries the unit the label
+ * names and the precision the field declares. This function converts nothing and rounds nothing, so a converted
+ * field cannot drift from its own label here.
+ *
+ * A rejection writes no document, so no render competes with this write. An accepted change does update the
+ * document, and core re-renders the sheet, which replaces the part with fresh markup. The attribute therefore
+ * tracks every commit the player makes. REF: `Document#_onUpdate` and `createNumberInput` in foundry.mjs.
  *
  * @param {HTMLInputElement} input The input whose change was rejected.
- * @param {Actor} actor Document the input writes to.
- * @param {string} path Property path the input writes.
+ * @param {string} path Property path shown to the player.
  * @param {{decimals: number, min: number|null, max: number|null}} contract The resolved contract.
  *
  * @returns {void}
  */
-export function restoreNumericInput(input, actor, path, contract) {
-    const stored = foundry.utils.getProperty(actor, path);
-
-    if (typeof stored === "number" && Number.isFinite(stored)) {
-        input.value = stored;
-    } else {
-        input.value = "";
-    }
+export function restoreNumericInput(input, path, contract) {
+    input.value = input.defaultValue;
 
     ui.notifications.error(`${path} needs ${describeNumericSchema(contract)}.`);
 }
