@@ -455,7 +455,7 @@ export async function getConditionalDefenses(token, item, avad) {
     );
 
     // Remove conditional defenses that provide no defense
-    if (!game.settings.get(HEROSYS.module, "ShowAllConditionalDefenses")) {
+    if (!game.settings.get(game.system.id, "ShowAllConditionalDefenses")) {
         conditionalDefenses = conditionalDefenses.filter((defense) => defense.getDefense(token.actor, item));
     }
 

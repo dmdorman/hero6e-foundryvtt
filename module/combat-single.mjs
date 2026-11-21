@@ -24,9 +24,9 @@ const warnedSettingKeys = new Set();
 /**
  * Reads a world setting, degrading to the fallback when it is not registered
  * (early init, isolated tests). Warns once per key so hot paths stay quiet.
- * @param {string} key
- * @param {*} fallback
- * @returns {*}
+ * @param {HeroSettingKey} key - The registered setting key.
+ * @param {*} fallback - The value to return when the setting is not registered.
+ * @returns {*} The stored value, or the fallback.
  */
 function _getSetting(key, fallback) {
     try {

@@ -300,7 +300,7 @@ export class HeroSystem6eToken extends Token {
             this.inCombat &&
             this.combatant.combat.started &&
             this.combatant.combat.current?.tokenId !== this.id &&
-            game.settings.get(HEROSYS.module, "CombatMovementOnlyOnActorsPhase")
+            game.settings.get(game.system.id, "CombatMovementOnlyOnActorsPhase")
         ) {
             ui.notifications.warn("Combat has started and you must wait for your phase to move.");
             canDragLeftStart = false;

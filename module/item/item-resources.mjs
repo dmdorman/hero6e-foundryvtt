@@ -270,7 +270,7 @@ function calculateRequiredCharges(item, boostableChargesToUse) {
 function calculateRequiredEnd(item) {
     let endToUse = 0;
 
-    if (game.settings.get(HEROSYS.module, "use endurance")) {
+    if (game.settings.get(game.system.id, "use endurance")) {
         // If this item uses an endurance reserve, can it optionally draw from actor's endurance?
         if (item.system.USE_END_RESERVE && item.findModsByXmlid("ENDRESERVEOREND")) {
             ui.notifications.error(
@@ -310,7 +310,7 @@ function calculateRequiredEnd(item) {
 function calculateRequiredReserveEndurance(item) {
     let reserveEndToUse = 0;
 
-    if (item.system.USE_END_RESERVE && game.settings.get(HEROSYS.module, "use endurance")) {
+    if (item.system.USE_END_RESERVE && game.settings.get(game.system.id, "use endurance")) {
         // TODO: Lack of support for ENDRESERVEOREND is coded in calculateRequiredEnd
         // Strength purchased as a power never costs resources. Strength only consumes resources when used. Internally, strength used for damage, is
         // tracked via a different XMLID ("__STRENGTHDAMAGE"). We don't distinguish the "I'm lifting something" case.
@@ -396,7 +396,7 @@ async function rollStunForEnd(stunDice) {
  */
 
 export function actorAutomation(actor) {
-    const automation = game.settings.get(HEROSYS.module, "automation");
+    const automation = game.settings.get(game.system.id, "automation");
 
     return {
         endurance:

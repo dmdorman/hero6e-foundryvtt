@@ -1,5 +1,4 @@
 import { HeroApplication } from "../applications/api/application.mjs";
-import { HEROSYS } from "../herosystem6e.mjs";
 
 //import { getCharacteristicInfoArrayForActor } from "../utility/util.mjs";
 
@@ -63,7 +62,7 @@ export class CampaignRulesSettingsConfig extends HeroApplication {
         switch (partId) {
             case "characteristicMaxima":
                 {
-                    const DefaultEdition = game.settings.get(HEROSYS.module, "DefaultEdition");
+                    const DefaultEdition = game.settings.get(game.system.id, "DefaultEdition");
                     const powerList = DefaultEdition === "five" ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
                     context.fields = [];
 

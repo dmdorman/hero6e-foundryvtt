@@ -52,8 +52,18 @@ function increment(str, value) {
     return parseInt(str) + parseInt(value);
 }
 
+/**
+ * Handlebars helper: read one of this system's settings by key.
+ *
+ * `templates/attack/item-attack-application-v2.hbs` calls this. A template passes a key the
+ * checker cannot see, and `game.settings.get` throws for an unregistered key, so a typo fails
+ * loudly at render time.
+ * @template {HeroSettingKey} Key
+ * @param {Key} configSetting - A registered setting key.
+ * @returns {HeroSettingValue<Key>} The stored value.
+ */
 function gameConfigValue(configSetting) {
-    return game.settings.get(HEROSYS.module, configSetting);
+    return game.settings.get(game.system.id, configSetting);
 }
 
 function getModulePath(templateDirectory) {

@@ -1,5 +1,3 @@
-import { HEROSYS } from "../herosystem6e.mjs";
-
 import { HeroRoll, HeroRoller } from "../heroRoller/dice.mjs";
 import { calculateDicePartsForItem } from "../utility/damage.mjs";
 import { FrozenSet } from "../utility/freeze-helpers.mjs";
@@ -660,7 +658,7 @@ function buildActivationOrSectionalDefenseInternalRepresentation(item, rar) {
         // Do we have valid ranges defined and are sectional defenses turned on?
         if (
             validSectionalComment &&
-            game.settings.get(HEROSYS.module, "hit locations") === "hitLocationsWithSectional"
+            game.settings.get(game.system.id, "hit locations") === "hitLocationsWithSectional"
         ) {
             return {
                 type: RSR_ROLL_TYPE.SECTIONAL_DEFENSES_ROLL,

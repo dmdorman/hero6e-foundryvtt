@@ -65,7 +65,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
             const is5e =
                 options.is5e != undefined
                     ? options.is5e
-                    : game.settings.get(HEROSYS.module, "DefaultEdition") === "five";
+                    : game.settings.get(game.system.id, "DefaultEdition") === "five";
 
             actorChanges.prototypeToken = {
                 displayBars: CONST.TOKEN_DISPLAY_MODES.HOVER,
@@ -3614,7 +3614,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         }
 
         if (this.system.is5e == null) {
-            return game.settings.get(HEROSYS.module, "DefaultEdition") === "five" ? true : false;
+            return game.settings.get(game.system.id, "DefaultEdition") === "five" ? true : false;
         }
 
         return this.system.is5e;
@@ -3699,7 +3699,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
                     (item) =>
                         (item.rollsToHit() &&
                             (!item.baseInfo.behaviors.includes("optional-maneuver") ||
-                                game.settings.get(HEROSYS.module, "optionalManeuvers")) &&
+                                game.settings.get(game.system.id, "optionalManeuvers")) &&
                             !item.system.XMLID.startsWith("__")) ||
                         item.system.XMLID === "HANDTOHANDATTACK" || // PH: FIXME: Not sure why we're using rollsToHit as it misses this. Might be only exception.
                         (item.baseInfo.type.includes("framework") && // CSL custom adders can specify a framework to indicate all of the framework's children are included.
@@ -4039,7 +4039,7 @@ export class HeroSystem6eActor extends HeroObjectCacheMixin(Actor) {
         const endForAttack = Math.max(
             1,
             Math.ceil(
-                this.getCharacteristic("str").value / (game.settings.get(HEROSYS.module, "StrEnd") === "five" ? 5 : 10),
+                this.getCharacteristic("str").value / (game.settings.get(game.system.id, "StrEnd") === "five" ? 5 : 10),
             ),
         );
 

@@ -773,12 +773,12 @@ async function addAttackHitLocationsIntoToHitRoll(item, attackHeroRoller, option
     let remainingAimOcvPenalty = 0;
 
     if (
-        game.settings.get(HEROSYS.module, "hit locations") !== "noHitLocations" &&
+        game.settings.get(game.system.id, "hit locations") !== "noHitLocations" &&
         options.aim &&
         options.aim !== "none"
     ) {
         const aimTargetLocation =
-            game.settings.get(HEROSYS.module, "hitLocTracking") === "all" && options.aimSide !== "none"
+            game.settings.get(game.system.id, "hitLocTracking") === "all" && options.aimSide !== "none"
                 ? `${options.aimSide} ${options.aim}`
                 : options.aim;
 
@@ -2521,7 +2521,7 @@ async function _rollApplyKnockback(token, knockbackDice) {
     // npcOnly: "NPCs Only (end, stun, body)",
     // pcEndOnly: "PCs (end) and NPCs (end, stun, body)",
     // all: "PCs and NPCs (end, stun, body)"
-    const automation = game.settings.get(HEROSYS.module, "automation");
+    const automation = game.settings.get(game.system.id, "automation");
     if (automation === "all" || (automation === "npcOnly" && token.actor.type === "npc")) {
         const changes = {};
 
@@ -2688,7 +2688,7 @@ export async function _onRollDamage(event) {
     });
 
     const includeHitLocation =
-        game.settings.get(HEROSYS.module, "hit locations") !== "noHitLocations" &&
+        game.settings.get(game.system.id, "hit locations") !== "noHitLocations" &&
         !item.effectiveAttackItem.system.noHitLocations;
 
     const customStunMultiplierSetting = game.settings.get(
@@ -2726,7 +2726,7 @@ export async function _onRollDamage(event) {
         .addToHitLocation(
             includeHitLocation,
             toHitData.aim,
-            includeHitLocation && game.settings.get(HEROSYS.module, "hitLocTracking") === "all",
+            includeHitLocation && game.settings.get(game.system.id, "hitLocTracking") === "all",
             toHitData.aim === "none" ? "none" : toHitData.aimSide, // Can't just select a side to hit as that doesn't have a penalty
         );
 
@@ -3367,7 +3367,7 @@ export async function _onApplyDamageToSpecificToken(item, _damageData, action, t
 
             // 5e distance measurements are not the same as 6e which just uses euclidian measurements. If the game
             // is being played with 5e measurements use them to figure the distance correctly.
-            const hexTemplates = game.settings.get(HEROSYS.module, "HexTemplates");
+            const hexTemplates = game.settings.get(game.system.id, "HexTemplates");
             const hexGrid = currentSceneUsesHexGrid();
 
             // Unclear why we need this (token vs prototypetoken?, different code paths?)
@@ -3413,7 +3413,7 @@ export async function _onApplyDamageToSpecificToken(item, _damageData, action, t
     // You probably don't want to use it - use damageRoller instead.
     const baseDamageRoller = damageRoller.clone();
 
-    const automation = game.settings.get(HEROSYS.module, "automation");
+    const automation = game.settings.get(game.system.id, "automation");
 
     // Maneuvers can include effects beyond damage
     if (["maneuver", "martialart"].includes(item.type)) {
@@ -3666,7 +3666,7 @@ export async function _onApplyDamageToSpecificToken(item, _damageData, action, t
     // this token may have originally been a PC, and changed to a BASE.
     // check if target is stunned.  Must have CON.
     const hasCon = targetToken.actor.hasCharacteristic("CON");
-    if (damageDetail.stun > 0 && game.settings.get(HEROSYS.module, "stunned") && hasCon) {
+    if (damageDetail.stun > 0 && game.settings.get(game.system.id, "stunned") && hasCon) {
         // determine if target was Stunned
         if (
             damageDetail.stun > targetToken.actor.getCharacteristic("con").value &&
@@ -4673,7 +4673,7 @@ async function _calcDamage(damageRoller, item, options) {
 
     const noHitLocationsPower = !!item.effectiveAttackItem.system.noHitLocations;
     const useHitLocations =
-        game.settings.get(HEROSYS.module, "hit locations") !== "noHitLocations" && !noHitLocationsPower;
+        game.settings.get(game.system.id, "hit locations") !== "noHitLocations" && !noHitLocationsPower;
     const hasStunMultiplierRoll = isKillingAttack && !useHitLocations;
 
     const stunMultiplier = hasStunMultiplierRoll ? damageRoller.getStunMultiplier() : 1;
@@ -4693,7 +4693,7 @@ async function _calcDamage(damageRoller, item, options) {
     if (useHitLocations) {
         useHitLoc = true;
 
-        if (game.settings.get(HEROSYS.module, "hitLocTracking") === "all") {
+        if (game.settings.get(game.system.id, "hitLocTracking") === "all") {
             hitLocation = damageRoller.getHitLocation().fullName;
         } else {
             hitLocation = damageRoller.getHitLocation().name;
@@ -4969,7 +4969,7 @@ export async function _calcKnockback(bodyForKbCalculations, item, options, knock
     // - Bases don't take knockback - is the target a base?
     // - Does this attack do knockback and was there effective knockback BODY?
     if (
-        game.settings.get(HEROSYS.module, "knockback") &&
+        game.settings.get(game.system.id, "knockback") &&
         !isBase &&
         knockbackMultiplier > 0 &&
         bodyForKbCalculations > 0

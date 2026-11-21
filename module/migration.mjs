@@ -101,7 +101,8 @@ async function willNotMigrate(lastMigration) {
  * @param {string} lastMigration
  * @param {Array<Object>} queue
  * @param {string} queueType
- * @param {(queueElement) => Promise<void>} asyncFn - Runs once per queued element.
+ * @param {(queueElement) => Promise<unknown>} asyncFn - Runs once per queued element. Its result is awaited and discarded, so the
+ *     value type is unknown. Steps that report progress by returning a value stay valid this way.
  */
 async function migrateToVersion(migratesToVersion, lastMigration, queue, queueType, asyncFn) {
     if (!lastMigration || foundry.utils.isNewerVersion(migratesToVersion, lastMigration)) {

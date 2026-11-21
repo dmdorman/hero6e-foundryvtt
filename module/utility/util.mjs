@@ -1,6 +1,6 @@
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { performAdjustment } from "../actor/actor-adjustment.mjs";
-import { HEROSYS } from "../herosystem6e.mjs";
+
 import { HeroSystem6eItem } from "../item/item.mjs";
 //import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { renderAdjustmentChatCards } from "./adjustment.mjs";
@@ -75,7 +75,7 @@ export function getPowerInfo(options) {
             `DefaultEdition was used to determine is5e for ${actor?.name || options.item?.pack || (Item.get(options.item?.id) ? "Item" : undefined)}:${options.item?.name || xmlid}`,
         );
         // This has a problem if we're passed in an XMLID for a power as we don't know the actor so we don't know if it's 5e or 6e
-        const DefaultEdition = game.settings.get(HEROSYS.module, "DefaultEdition");
+        const DefaultEdition = game.settings.get(game.system.id, "DefaultEdition");
         if (DefaultEdition === "five") {
             is5e = true;
         } else {

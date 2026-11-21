@@ -1,8 +1,6 @@
 import { createTemporaryItemAttackActionForApplyingDamage, generateChatMessage } from "./chat-output.mjs";
 import { HeroRoller } from "./dice.mjs";
 
-import { HEROSYS } from "../herosystem6e.mjs";
-
 const heroRollRegExpString =
     "(?<cmd>\\/heroroll)(?:[\\s]+)(?<nonCmd>(?<numDice>[\\d\\.]+)d(?<diceSize>[\\d]+)?(?<numTerm>(?<numTermSign>[-+]?)[\\d]+)?(?<flavourTerm>\\[(?<flavourTermContent>(?<heroSystemVersion>[56]?)(?<hitLoc>h)?(?<flavour>.*?))\\])?)(?<flavourDefenseTerm>\\[(?<flavourDefenseType>[emp])\\])?";
 const chatHeroRollRegExpString = `^${heroRollRegExpString}$`;
@@ -197,7 +195,7 @@ function buildDamageInformation(chatMessageCmd) {
         .addNumber(Math.trunc(numericTerm));
 
     const useHitLocations = !!chatMessageCmd.groups.hitLoc;
-    const useHitLocationsSide = game.settings.get(HEROSYS.module, "hitLocTracking") === "all";
+    const useHitLocationsSide = game.settings.get(game.system.id, "hitLocTracking") === "all";
     heroRoller.addToHitLocation(useHitLocations, "none", useHitLocationsSide, "none");
 
     let defenseType = "PD";

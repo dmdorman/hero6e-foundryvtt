@@ -850,7 +850,7 @@ async function _outOfCombatRecovery(actor, multiplier) {
     if (game.combats.some((c) => c.started && c.getCombatantsByActor(actor).length > 0)) return;
     if (multiplier <= 0) return;
 
-    const automation = game.settings.get(HEROSYS.module, "automation");
+    const automation = game.settings.get(game.system.id, "automation");
 
     if (
         automation === "all" ||

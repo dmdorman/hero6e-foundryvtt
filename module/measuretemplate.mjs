@@ -1,5 +1,3 @@
-import { HEROSYS } from "./herosystem6e.mjs";
-
 import {
     currentSceneUsesHexGrid,
     getRoundedUpDistanceInSystemUnits,
@@ -8,7 +6,7 @@ import {
 } from "./utility/units.mjs";
 
 function isHexTemplatesEnabled() {
-    return game.settings.get(HEROSYS.module, "HexTemplates");
+    return game.settings.get(game.system.id, "HexTemplates");
 }
 
 export default class HeroSystem6eMeasuredTemplate extends foundry.canvas.placeables.MeasuredTemplate {

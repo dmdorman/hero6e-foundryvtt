@@ -1,8 +1,6 @@
 import { roundFavorPlayerAwayFromZero } from "./round.mjs";
 import { getSystemDisplayUnits } from "./units.mjs";
 
-import { HEROSYS } from "../herosystem6e.mjs";
-
 import { getCostPerHalfDie, getCostPerDiePip, HeroSystem6eItem } from "../item/item.mjs";
 import { getManeuverEffect } from "../item/maneuver-bases-and-elements.mjs";
 
@@ -346,7 +344,7 @@ export function getManeuverEffectWithPlaceholdersReplaced(item) {
 }
 
 function doubleDamageLimit() {
-    return game.settings.get(HEROSYS.module, "DoubleDamageLimit");
+    return game.settings.get(game.system.id, "DoubleDamageLimit");
 }
 
 /**

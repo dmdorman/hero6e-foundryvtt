@@ -11,8 +11,13 @@ const { FormDataExtended } = foundry.applications.ux;
 export class GenericRoller {
     static Initialize() {
         Hooks.on("renderAbstractSidebarTab", async (_sidebar, html, _context, options) => {
-            if (!game.settings.get(HEROSYS.module, "ShowGenericRoller")) return;
-            if (options && !options.isFirstRender) return;
+            if (!game.settings.get(game.system.id, "ShowGenericRoller")) {
+                return;
+            }
+
+            if (options && !options.isFirstRender) {
+                return;
+            }
 
             const $chat = $(html).find(".chat-form");
             if ($chat.length === 0) {
@@ -121,7 +126,7 @@ export class GenericRoller {
             },
         };
 
-        const includeHitLocation = game.settings.get(HEROSYS.module, "hit locations") !== "noHitLocations";
+        const includeHitLocation = game.settings.get(game.system.id, "hit locations") !== "noHitLocations";
         if (includeHitLocation) {
             options.hitLoc = [
                 { key: "noHitLocation", label: `No Hit Location` },
@@ -164,7 +169,7 @@ export class GenericRoller {
         );
 
         // Roll as if 5e or 6e?
-        const DefaultEdition = game.settings.get(HEROSYS.module, "DefaultEdition");
+        const DefaultEdition = game.settings.get(game.system.id, "DefaultEdition");
         const is5eAttack = canvas.tokens.controlled.at(0)?.actor
             ? canvas.tokens.controlled.at(0).actor.is5e
             : DefaultEdition === "five";
@@ -213,7 +218,7 @@ export class GenericRoller {
             .addToHitLocation(
                 damageTypeSupportsHitLocation && userSelection.aim !== "noHitLocation",
                 userSelection.aim,
-                includeHitLocation && game.settings.get(HEROSYS.module, "hitLocTracking") === "all",
+                includeHitLocation && game.settings.get(game.system.id, "hitLocTracking") === "all",
                 userSelection.aim === "none" ? "none" : userSelection.aimSide, // Can't just select a side to hit as that doesn't have a penalty
             );
 
