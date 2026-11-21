@@ -7,14 +7,7 @@ import {
     getManeuverEffectWithPlaceholdersReplaced,
 } from "../utility/damage.mjs";
 import { roundFavorPlayerAwayFromZero } from "../utility/round.mjs";
-import {
-    calculateVelocityInSystemUnits,
-    convertCmToInches,
-    convertInchesToCm,
-    convertKgToLbs,
-    convertLbsToKg,
-    metricUnitsEnabled,
-} from "../utility/units.mjs";
+import { calculateVelocityInSystemUnits, convertCmToInches, convertKgToLbs } from "../utility/units.mjs";
 import { getPowerInfo, hdcTextNumberToNumeric, squelch } from "../utility/util.mjs";
 import { HeroSystem6eItem } from "./item.mjs";
 import { maneuverBlockBasis, maneuverFlashBasis } from "./maneuver.mjs";
@@ -2092,14 +2085,6 @@ export class HeroActorCharacterInfoModel extends foundry.abstract.DataModel {
             xmlTag: new StringField(),
             _hdcXml: new StringField(),
         };
-    }
-
-    get height() {
-        return metricUnitsEnabled() ? convertInchesToCm(this.HEIGHT) : this.HEIGHT;
-    }
-
-    get weight() {
-        return metricUnitsEnabled() ? Math.round(convertLbsToKg(this.WEIGHT)) : this.WEIGHT;
     }
 }
 
