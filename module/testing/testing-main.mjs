@@ -455,8 +455,8 @@ Hooks.on("quenchReady", async (quench) => {
      * @param {number} root.numLoops Times to run the selection.
      * @param {number} root.timeoutInMs Timeout for one run, in milliseconds.
      * @param {boolean} root.jsonReport Upload the report to the server.
-     * @param {string|string[]|null} root.suites Suite names without the system prefix.
-     * @param {object|null} root.tests Suite name mapped to single test case titles.
+     * @param {string|string[]|null} [root.suites] Suite names without the system prefix.
+     * @param {object|null} [root.tests] Suite name mapped to single test case titles.
      * @param {object} hooks Global suite names and the direct clean-up helper.
      * @param {string} hooks.setupSuite Global setup suite name, without the system prefix.
      * @param {string} hooks.teardownSuite Global teardown suite name, without the system prefix.
@@ -547,8 +547,8 @@ Hooks.on("quenchReady", async (quench) => {
      * `suites` means the caller left the option out, so those batch keys stay out.
      *
      * @param {object} root The caller's selection.
-     * @param {string|string[]|null} root.suites Suite names without the system prefix.
-     * @param {object|null} root.tests Suite name mapped to single test case titles.
+     * @param {string|string[]|null} [root.suites] Suite names without the system prefix.
+     * @param {object|null} [root.tests] Suite name mapped to single test case titles.
      * @param {object} hooks Global suite names.
      * @param {string} hooks.setupSuite Global setup suite name, without the system prefix.
      * @param {string} hooks.teardownSuite Global teardown suite name, without the system prefix.
@@ -899,7 +899,7 @@ Hooks.on("quenchReady", async (quench) => {
      *
      * @param {object} root The resolved run targets.
      * @param {string[]} root.keys The batch keys to run.
-     * @param {RegExp|null} root.grep Narrows the run to selected test cases. Null runs whole suites.
+     * @param {RegExp|null} [root.grep] Narrows the run to selected test cases. Null runs whole suites.
      * @param {number} root.timeoutInMs Timeout for this run, in milliseconds.
      * @param {boolean} root.jsonReport Upload the report to the server.
      * @param {Function} [root.onTimeout] Runs after a timeout aborts the run. Its return value is

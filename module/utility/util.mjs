@@ -678,11 +678,11 @@ export function forceReplaceFields(forcedFields, otherFields = {}) {
  * @param {Object} options
  * @param {object} [options.action] - Action this call works for. Read for `action.current` only.
  * @param {{ attackerTokenUuid?: string, actor?: HeroSystem6eActor }} [options.action.current]
- * @param {HeroSystem6eActor | undefined} options.actor
- * @param {HeroSystem6eItem | undefined} options.item - Item this call works for. Read for its actor.
- * @param {string | undefined} options.actorId
- * @param {Token | TokenDocument | undefined} options.token
- * @param {string | undefined} options.tokenId we should really get rid of this.
+ * @param {HeroSystem6eActor} [options.actor]
+ * @param {HeroSystem6eItem} [options.item] - Item this call works for. Read for its actor.
+ * @param {string} [options.actorId]
+ * @param {Token | TokenDocument} [options.token]
+ * @param {string} [options.tokenId] we should really get rid of this.
  *
  * @returns {Token | TokenDocument}
  */

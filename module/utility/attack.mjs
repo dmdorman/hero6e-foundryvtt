@@ -528,8 +528,10 @@ export function actionFromJSON(json) {
  *
  * @typedef {object} TokenObj
  * @property {string|null} uuid - uuid of the TokenDocument. Null for a PrototypeToken.
- * @property {object|null} protoObj - `PrototypeToken#toObject` output. Set for PrototypeTokens only.
- * @property {ActorObj|null} actorObj - Parent actor of `protoObj`. Set for PrototypeTokens only.
+ * @property {object|null} protoObj - `PrototypeToken#toObject` output. Null unless the token is a
+ *   PrototypeToken, because `tokenToTokenObj` always writes the key.
+ * @property {ActorObj|null} actorObj - Parent actor of `protoObj`. Null unless the token is a
+ *   PrototypeToken.
  */
 
 /**
@@ -538,7 +540,8 @@ export function actionFromJSON(json) {
  *
  * @typedef {object} ActorObj
  * @property {string|null} uuid - uuid of a database actor.
- * @property {object|null} json - `Actor#toObject` output for a temporary actor.
+ * @property {object|null} json - `Actor#toObject` output for a temporary actor. Null for a database
+ *   actor, because `actorToActorObj` always writes the key.
  */
 
 /**

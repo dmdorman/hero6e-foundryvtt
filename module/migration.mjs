@@ -101,7 +101,7 @@ async function willNotMigrate(lastMigration) {
  * @param {string} lastMigration
  * @param {Array<Object>} queue
  * @param {string} queueType
- * @param {async fn(queueElement)} asyncFn
+ * @param {(queueElement) => Promise<void>} asyncFn - Runs once per queued element.
  */
 async function migrateToVersion(migratesToVersion, lastMigration, queue, queueType, asyncFn) {
     if (!lastMigration || foundry.utils.isNewerVersion(migratesToVersion, lastMigration)) {

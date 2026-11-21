@@ -260,7 +260,7 @@ async function userSelectsASkill(skillArray) {
  * If there are more than one skill, then prompt the user and have them decide.
  *
  * @param {Array<Object>} skillArray
- * @param {Number | null} selectedIndex
+ * @param {Number|null} arrayIndex - Dialog choice. Null means the user closed the dialog.
  *
  * @returns {Object | null} - returns the info about the item that is selected or null if the user has chosen to cancel the operation at this point by closing the dialog.
  */
@@ -557,7 +557,7 @@ const VALIDATE_SECTION_DEFENSE_ERROR_REASON = Object.freeze({
 /**
  *
  * @param {HeroSystem6eItem} item
- * @param {string} potentialSectionalComment
+ * @param {object} modifier - Modifier whose COMMENTS field may hold a sectional defense comment.
  *
  * @returns {{ valid: boolean, reason?: string, sectionalDefenseLocationsSet?: Set }} - returns validation result with location Set on success or error reason on failure
  */
