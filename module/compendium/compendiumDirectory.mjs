@@ -45,10 +45,7 @@ export class HeroSystem6eCompendiumDirectory extends HeroAppMixin(CompendiumDire
 
             const folders = game.packs._formatFolderSelectOptions();
 
-            // Render create template (handles v12/v13+ extension compatibility)
-            const templatePath = `templates/sidebar/compendium-create.${
-                game.version.split(".")[0] === "12" ? "html" : "hbs"
-            }`;
+            const templatePath = "templates/sidebar/compendium-create.hbs";
             const htmlString = await renderTemplate(templatePath, {
                 types,
                 folders,
