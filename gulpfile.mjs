@@ -4,6 +4,7 @@ import gulpSass from "gulp-sass";
 import * as dartSass from "sass";
 import stylelint from "stylelint";
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -120,6 +121,42 @@ function runTool(name, fixScript, run) {
 
 function runOxlint(args) {
     return runTool("oxlint", "lint:fix", spawnOxlint(args));
+}
+
+/* ----------------------------------------- */
+/*  Type-aware lint
+/* ----------------------------------------- */
+
+// Type-aware linting runs through tsgolint, which loads the TypeScript engine. It is opt-in:
+// no rule below joins `lint`, `validate`, `build`, or `watch` until the findings are triaged.
+const TYPELINT_CONFIG = path.join(ROOT, ".oxlintrc.typelint.json");
+// tsgolint finds its program by walking up from each linted file, so the program config must
+// sit at the repo root under the standard name. oxlint's `--tsconfig` flag only feeds import
+// resolution; it does not select the program. Measured with oxlint 1.87.
+const TYPELINT_PROGRAM = path.join(ROOT, "jsconfig.json");
+const TYPELINT_PROGRAM_TEMPLATE = path.join(ROOT, "tools", "typelint", "jsconfig.json");
+
+// Publish the program config for the duration of one run, then remove it. Keeping the tracked
+// copy under `tools/` leaves the editor out: a `jsconfig.json` at the repo root makes VS Code
+// open the folder as a TypeScript project.
+async function spawnTypeAwareLint(args) {
+    fs.copyFileSync(TYPELINT_PROGRAM_TEMPLATE, TYPELINT_PROGRAM);
+    try {
+        return await spawnTool("oxlint", oxlintBin, ["--config", TYPELINT_CONFIG, "--type-aware", ...args]);
+    } finally {
+        fs.rmSync(TYPELINT_PROGRAM, { force: true });
+    }
+}
+
+// Report type-aware findings. Every added rule warns, so this exits 0 today.
+function lintTypes() {
+    return spawnTypeAwareLint(["."]);
+}
+
+// Same run, plus TypeScript compiler diagnostics. A file needs `// @ts-check`, or the template
+// needs `checkJs: true`, for those to appear. Reports thousands of findings today.
+function lintTypesCheck() {
+    return spawnTypeAwareLint(["--type-check", "."]);
 }
 
 function runOxfmt(args) {
@@ -370,4 +407,6 @@ export {
     formatAutoFix,
     lintWithoutFailing,
     validateWithoutFailing,
+    lintTypes,
+    lintTypesCheck,
 };

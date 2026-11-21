@@ -11,6 +11,8 @@
     "gulp": "gulp",
     "lint": "gulp lint",
     "lint:fix": "gulp lintAutoFix",
+    "lint:types": "gulp lintTypes",
+    "lint:types:check": "gulp lintTypesCheck",
     "validate": "gulp validate",
     "watch": "gulp",
     "pack:macros:build": "fvtt package pack heroMacros",
@@ -26,6 +28,7 @@
   "license": "MIT",
   "private": true,
   "devDependencies": {
+    "@league-of-foundry-developers/foundry-vtt-types": "14.370.0-beta.20261107215328",
     "@stylistic/stylelint-config": "^5.0.0",
     "@stylistic/stylelint-plugin": "^5.3.1",
     "gulp": "^5.0.0",
@@ -35,6 +38,7 @@
     "npm-run-all": "^4.1.5",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "7.0.2007",
     "sass": "^1.102.0",
     "stylelint": "^17.14.1",
     "stylelint-config-standard-scss": "^17.0.0"

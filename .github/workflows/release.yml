@@ -61,7 +61,7 @@ jobs:
 
     - name: Make a FoundryVTT system package (manifest and stuff required for execution) and ignore the rest as it is already archived in GitHub and is only needed to build or develop
       run: |
-        zip -r hero6efoundryvttv2.zip . -x .git/\* -x .github/\* -x .vscode/\* -x node_modules/\* -x scss/\* -x .gitattributes -x .gitignore -x .git-blame-ignore-revs -x .oxlintrc.json -x .npmignore -x .oxfmtrc.json -x stylelint.config.mjs -x gulpfile.mjs -x package.json -x package-lock.json
+        zip -r hero6efoundryvttv2.zip . -x .git/\* -x .github/\* -x .vscode/\* -x node_modules/\* -x scss/\* -x .gitattributes -x .gitignore -x .git-blame-ignore-revs -x .oxlintrc.json -x .oxlintrc.typelint.json -x tools/\* -x types/\* -x jsconfig.json -x .npmignore -x .oxfmtrc.json -x stylelint.config.mjs -x gulpfile.mjs -x package.json -x package-lock.json
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v6

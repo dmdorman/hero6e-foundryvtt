@@ -1,0 +1,29 @@
+{
+  // Opt-in type-aware lint configuration. Run it with `npm run lint:types`.
+  //
+  // It extends the everyday `.oxlintrc.json`, so it carries every rule that already passes.
+  // The rules added here report warnings, not errors, so the run exits 0 while the set is
+  // still being evaluated. Nothing in `lint`, `validate`, `build`, or `watch` reads this file.
+  //
+  // Measured over `module/` with the Foundry types loaded: 74 floating promises, 59 misused
+  // promises, 46 async-function suggestions, 46 await-thenable hits, 29 return-await hits,
+  // 0 `only-throw-error` hits. See `oxlint_type_aware_plan.md`.
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "extends": ["./.oxlintrc.json"],
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    // `--type-check` evaluates `no-undef` without this file's inherited `env` and `globals`, so
+    // every Foundry name reads as undefined: 4,178 false findings over the repo. The type engine
+    // resolves those names instead. The everyday `.oxlintrc.json` keeps the rule on, so nothing
+    // is lost. Measured with oxlint 1.87 and oxlint-tsgolint 7.0.2007.
+    "eslint/no-undef": "off",
+    "typescript/no-floating-promises": "warn",
+    "typescript/only-throw-error": "warn",
+    "typescript/no-misused-promises": "warn",
+    "typescript/promise-function-async": "warn",
+    "typescript/await-thenable": "warn",
+    "typescript/return-await": "warn"
+  }
+}

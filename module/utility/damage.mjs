@@ -76,15 +76,15 @@ const zeroDiceParts = Object.freeze({
  * @property {number} dc - damage class with factional DCs allowed
  */
 /**
- * @typedef {HeroSystemFormulaTag}
+ * @typedef {Object} HeroSystemFormulaTag
  * @property {string} value - value of the tag
  * @property {string} name - name of the tag
  * @property {string} title - tooltip string
  */
 /**
- * @typedef {HeroSystemFormulaDicePartsBundle}
+ * @typedef {Object} HeroSystemFormulaDicePartsBundle
  * @property {HeroSystemFormulaDiceParts} diceParts
- * @property {array.<HeroSystemFormulaTag>} tags
+ * @property {Array<HeroSystemFormulaTag>} tags
  */
 
 function characteristicDicePartsToDc(charDiceParts) {
