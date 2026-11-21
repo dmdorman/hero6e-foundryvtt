@@ -71,8 +71,7 @@ const GROUPS = freezeDeep({
  * The fixtures these cases wait for, and what makes each one differ from a baseline actor.
  *
  * A fixture earns its place by answering a question no current fixture can. A second plain pc, a
- * second plain vehicle, or an `npc` twin of a `pc` row answers nothing, so it is not here. See
- * "Not gaps" in `characteristics_coverage_gaps.md`.
+ * second plain vehicle, or an `npc` twin of a `pc` row answers nothing, so it is not here.
  *
  * `blocks` names what must settle first. `blocks: null` means the fixture is ready to build.
  */
@@ -88,8 +87,7 @@ export const REQUIRED_FIXTURES = freezeDeep({
             "figured names computed from them. A bare actor is still cheap: " +
             "`createQuenchActor({ quench, is5e, actorType })` with no `contents`. Nothing is bought, so the " +
             "cost is 0, and no Hero Designer XML is uploaded. The document carries no ActiveEffect flag, yet " +
-            "`getActiveEffects()` still returns one entry per movement power. See gap 3 of " +
-            "`characteristics_coverage_gaps.md`.",
+            "`getActiveEffects()` still returns one entry per movement power.",
         blocks: null,
     },
     pcAllChars6e: {
@@ -495,10 +493,12 @@ function movementCases(add) {
  * @param {Function} add Case builder.
  */
 function usableSetCases(add) {
-    // Measured on bare actors, the equality holds for computer and ai in both editions. For pc, vehicle,
-    // and automaton it cannot hold until bug 4 of `characteristics_bugs.md` lands, because the usable list
-    // carries FLIGHT, FTL, SWINGING, TELEPORTATION, and TUNNELING (plus GLIDING in 5e) while those names have
-    // no node to have.
+    // Measured on bare actors, the equality holds for computer and ai in both editions.
+    // It cannot hold for pc, vehicle, and automaton yet. The usable list carries FLIGHT, FTL,
+    // SWINGING, TELEPORTATION, and TUNNELING, plus GLIDING in 5e. Those names have no node.
+    // `hasCharacteristic` answers only the actor-type permission question, never ownership.
+    // Adding the nodes would report movement as owned by every actor type, which is wrong too.
+    // So the usable set stays larger than the node list until that method splits the questions.
     for (const actorType of USABLE_SET_ACTOR_TYPES) {
         for (const edition of EDITIONS) {
             add(GROUPS.usableSets, "bare", `the ${edition.label} ${actorType} usable set equals the names it has`);

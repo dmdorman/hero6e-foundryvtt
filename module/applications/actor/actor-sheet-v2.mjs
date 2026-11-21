@@ -250,10 +250,10 @@ export class HeroSystemActorSheetV2 extends HeroAppMixin(HandlebarsApplicationMi
         if (!error) return;
 
         const context = this.actor.getFlag(game.system.id, "uploadingErrorContext") ?? {};
-        const foundryBuild = context.foundryBuild ?? game.release?.build ?? null;
+        const foundryBuild = context.foundryBuild ?? game.release.build;
         const report = [
             `Actor: ${this.actor.name}`,
-            `Foundry: ${context.foundry ?? game.release?.display ?? game.version}${foundryBuild != null ? ` (build ${foundryBuild})` : ``}`,
+            `Foundry: ${context.foundry ?? game.release.display} (build ${foundryBuild})`,
             `System: ${game.system.id} ${context.system ?? game.system.version}`,
             ``,
             `Error:`,
