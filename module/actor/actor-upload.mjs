@@ -109,10 +109,11 @@ export async function uploadActorFromXml(actor, xml, options = {}) {
 }
 
 // Environment block for the uploadingErrorContext flag; the sheet's error report reads these keys back.
-export function buildUploadErrorContext(extra = {}) {
+// `extra` may be omitted. Object spread ignores nullish values, so no default is needed.
+export function buildUploadErrorContext(extra) {
     return {
-        foundry: game.release?.display || game.version,
-        foundryBuild: game.release?.build ?? null,
+        foundry: game.release.display,
+        foundryBuild: game.release.build,
         system: game.system.version,
         ...extra,
     };

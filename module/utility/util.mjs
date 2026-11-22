@@ -1,6 +1,6 @@
 import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { performAdjustment } from "../actor/actor-adjustment.mjs";
-import { HEROSYS } from "../herosystem6e.mjs";
+
 import { HeroSystem6eItem } from "../item/item.mjs";
 //import { HeroSystem6eActor } from "../actor/actor.mjs";
 import { renderAdjustmentChatCards } from "./adjustment.mjs";
@@ -75,7 +75,7 @@ export function getPowerInfo(options) {
             `DefaultEdition was used to determine is5e for ${actor?.name || options.item?.pack || (Item.get(options.item?.id) ? "Item" : undefined)}:${options.item?.name || xmlid}`,
         );
         // This has a problem if we're passed in an XMLID for a power as we don't know the actor so we don't know if it's 5e or 6e
-        const DefaultEdition = game.settings.get(HEROSYS.module, "DefaultEdition");
+        const DefaultEdition = game.settings.get(game.system.id, "DefaultEdition");
         if (DefaultEdition === "five") {
             is5e = true;
         } else {
@@ -634,7 +634,7 @@ export function markButtonUsed(button) {
  * TokenDocument uuid for a Token placeable, TokenDocument, or PrototypeToken.
  * Token placeables only expose a uuid via their document; PrototypeTokens have none.
  *
- * @param {HeroSystem6eToken | HeroSystem6eTokenDocument | PrototypeToken | null} token
+ * @param {HeroSystem6eToken | HeroSystem6eTokenDocument | foundry.data.PrototypeToken | null} token
  * @returns {string | null}
  */
 export function getTokenUuid(token) {
@@ -676,10 +676,13 @@ export function forceReplaceFields(forcedFields, otherFields = {}) {
  *       make distance calculations.
  *
  * @param {Object} options
- * @param {action} options.action
- * @param {HeroSystem6eActor | undefined} options.actor
- * @param {Token | TokenDocument | undefined} options.token
- * @param {string | undefined} options.tokenId we should really get rid of this.
+ * @param {object} [options.action] - Action this call works for. Read for `action.current` only.
+ * @param {{ attackerTokenUuid?: string, actor?: HeroSystem6eActor }} [options.action.current]
+ * @param {HeroSystem6eActor} [options.actor]
+ * @param {HeroSystem6eItem} [options.item] - Item this call works for. Read for its actor.
+ * @param {string} [options.actorId]
+ * @param {Token | TokenDocument} [options.token]
+ * @param {string} [options.tokenId] we should really get rid of this.
  *
  * @returns {Token | TokenDocument}
  */

@@ -1,8 +1,6 @@
 import { roundFavorPlayerAwayFromZero } from "./round.mjs";
 import { getSystemDisplayUnits } from "./units.mjs";
 
-import { HEROSYS } from "../herosystem6e.mjs";
-
 import { getCostPerHalfDie, getCostPerDiePip, HeroSystem6eItem } from "../item/item.mjs";
 import { getManeuverEffect } from "../item/maneuver-bases-and-elements.mjs";
 
@@ -76,15 +74,15 @@ const zeroDiceParts = Object.freeze({
  * @property {number} dc - damage class with factional DCs allowed
  */
 /**
- * @typedef {HeroSystemFormulaTag}
+ * @typedef {Object} HeroSystemFormulaTag
  * @property {string} value - value of the tag
  * @property {string} name - name of the tag
  * @property {string} title - tooltip string
  */
 /**
- * @typedef {HeroSystemFormulaDicePartsBundle}
+ * @typedef {Object} HeroSystemFormulaDicePartsBundle
  * @property {HeroSystemFormulaDiceParts} diceParts
- * @property {array.<HeroSystemFormulaTag>} tags
+ * @property {Array<HeroSystemFormulaTag>} tags
  */
 
 function characteristicDicePartsToDc(charDiceParts) {
@@ -346,7 +344,7 @@ export function getManeuverEffectWithPlaceholdersReplaced(item) {
 }
 
 function doubleDamageLimit() {
-    return game.settings.get(HEROSYS.module, "DoubleDamageLimit");
+    return game.settings.get(game.system.id, "DoubleDamageLimit");
 }
 
 /**

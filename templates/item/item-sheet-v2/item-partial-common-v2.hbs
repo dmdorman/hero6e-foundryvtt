@@ -71,14 +71,16 @@
 {{#if (isdefined item.system.BASECOST)}}
     <div class="form-group">
         <label>BASECOST</label>
-        <input type="text" name="system.BASECOST" value="{{item.system.BASECOST}}" />
+        <input type="text" name="system.BASECOST" value="{{item.system.BASECOST}}" data-dtype="Number"
+            step="0.01" />
     </div>
 {{/if}}
 
 {{#if (isdefined item.system.ACTIVECOST)}}
     <div class="form-group">
         <label>ACTIVECOST</label>
-        <input type="text" name="system.ACTIVECOST" value="{{item.system.ACTIVECOST}}" />
+        <input type="text" name="system.ACTIVECOST" value="{{item.system.ACTIVECOST}}" data-dtype="Number"
+            step="0.01" />
     </div>
 {{/if}}
 
@@ -88,14 +90,14 @@
         <div class="form-group">
             <label>LEVELS</label>
             <input {{#if (isdefined item.system.PDLEVELS item "system.PDLEVELS")}}disabled{{/if}}
-            type="text" name="system.LEVELS" value="{{item.system.LEVELS}}" data-dtype="Number" 
+            type="text" name="system.LEVELS" value="{{item.system.LEVELS}}" data-dtype="Number" step="1" min="0"
             />
         </div>
 
         <div class="form-group">
             {{#if (isdefined item.system.QUANTITY)}}
                 <label>QUANTITY</label>
-                {{numberInput item.system.QUANTITY name="system.QUANTITY"}}
+                {{numberInput item.system.QUANTITY name="system.QUANTITY" step=1 min=0}}
             {{/if}}
         </div>
     {{/unless}}
@@ -247,7 +249,8 @@
 {{#if (and (eq item.type "martialart") (isdefined item.system.RANGE item "system.RANGE"))}}
 <div class="form-group">
     <label>RANGE</label>
-    <input type="text" name="system.RANGE" value="{{item.system.RANGE}}" data-dtype="Number" />
+    {{!-- Floor -2: RANGE is the maneuver's built-in range offset, -2 being the largest offset a maneuver grants. --}}
+    <input type="text" name="system.RANGE" value="{{item.system.RANGE}}" data-dtype="Number" step="1" min="-2" />
 </div>
 {{/if}}
 
@@ -260,7 +263,7 @@
 
 <div class="form-group" title="Maximum STR that can add to this maneuver. Hero Designer exports 0 for most maneuvers; weapon-based ones (e.g. Killing Strike) carry a real cap.">
     <label>MAXSTR</label>
-    <input type="text" name="system.MAXSTR" value="{{system.MAXSTR}}" data-dtype="Number" />
+    <input type="text" name="system.MAXSTR" value="{{system.MAXSTR}}" data-dtype="Number" step="1" min="0" />
 </div>
 {{/if}}
 
@@ -282,25 +285,29 @@
 {{#if (isdefined item.system.PDLEVELS)}}
 <div class="form-group">
     <label>PDLEVELS</label>
-    <input type="text" name="system.PDLEVELS" value="{{item.system.PDLEVELS}}" data-dtype="Number" />
+    <input type="text" name="system.PDLEVELS" value="{{item.system.PDLEVELS}}" data-dtype="Number" step="1"
+        min="0" />
 </div>
 {{/if}}
 {{#if (isdefined item.system.EDLEVELS)}}
 <div class="form-group">
     <label>EDLEVELS</label>
-    <input type="text" name="system.EDLEVELS" value="{{item.system.EDLEVELS}}" data-dtype="Number" />
+    <input type="text" name="system.EDLEVELS" value="{{item.system.EDLEVELS}}" data-dtype="Number" step="1"
+        min="0" />
 </div>
 {{/if}}
 {{#if (isdefined item.system.MDLEVELS)}}
 <div class="form-group">
     <label>MDLEVELS</label>
-    <input type="text" name="system.MDLEVELS" value="{{item.system.MDLEVELS}}" data-dtype="Number" />
+    <input type="text" name="system.MDLEVELS" value="{{item.system.MDLEVELS}}" data-dtype="Number" step="1"
+        min="0" />
 </div>
 {{/if}}
 {{#if (isdefined item.system.POWDLEVELS)}}
 <div class="form-group">
     <label>POWDLEVELS</label>
-    <input type="text" name="system.POWDLEVELS" value="{{item.system.POWDLEVELS}}" data-dtype="Number" />
+    <input type="text" name="system.POWDLEVELS" value="{{item.system.POWDLEVELS}}" data-dtype="Number" step="1"
+        min="0" />
 </div>
 {{/if}}
 
@@ -308,25 +315,29 @@
 {{#if (isdefined item.system.LENGTHLEVELS)}}
 <div class="form-group">
     <label>LENGTHLEVELS</label>
-    <input type="text" name="system.LENGTHLEVELS" value="{{item.system.LENGTHLEVELS}}" data-dtype="Number" />
+    <input type="text" name="system.LENGTHLEVELS" value="{{item.system.LENGTHLEVELS}}" data-dtype="Number" step="1"
+        min="0" />
 </div>
 {{/if}}
 {{#if (isdefined item.system.HEIGHTLEVELS)}}
 <div class="form-group">
     <label>HEIGHTLEVELS</label>
-    <input type="text" name="system.HEIGHTLEVELS" value="{{item.system.HEIGHTLEVELS}}" data-dtype="Number" />
+    <input type="text" name="system.HEIGHTLEVELS" value="{{item.system.HEIGHTLEVELS}}" data-dtype="Number" step="1"
+        min="0" />
 </div>
 {{/if}}
 {{#if (isdefined item.system.WIDTHLEVELS)}}
 <div class="form-group">
     <label>WIDTHLEVELS</label>
-    <input type="text" name="system.WIDTHLEVELS" value="{{item.system.WIDTHLEVELS}}" data-dtype="Number" />
+    <input type="text" name="system.WIDTHLEVELS" value="{{item.system.WIDTHLEVELS}}" data-dtype="Number" step="1"
+        min="0" />
 </div>
 {{/if}}
 {{#if (isdefined item.system.BODYLEVELS)}}
 <div class="form-group">
     <label>BODYLEVELS</label>
-    <input type="text" name="system.BODYLEVELS" value="{{item.system.BODYLEVELS}}" data-dtype="Number" />
+    <input type="text" name="system.BODYLEVELS" value="{{item.system.BODYLEVELS}}" data-dtype="Number" step="1"
+        min="0" />
 </div>
 {{/if}}
 
@@ -422,7 +433,8 @@
     <div class="form-group">
         <label>Charges</label>
         <div class="resource-fraction">
-            <input type="text" name="system.numCharges" value="{{system.numCharges}}" data-dtype="Number" />
+            <input type="text" name="system.numCharges" value="{{system.numCharges}}" data-dtype="Number" step="1"
+                min="0" />
             <span class="resource-max" title="Maximum; edit with the CHARGES modifier">/ {{system.chargesMax}}</span>
         </div>
     </div>
@@ -432,6 +444,7 @@
             <label>Clips</label>
             <div class="resource-fraction">
                 <input type="text" name="system.clipsTotal" value="{{system.clipsTotal}}" data-dtype="Number"
+                    step="1" min="0"
                     title="Usable clips: spares plus the loaded clip while it has charges" />
                 <span class="resource-max" title="Maximum; edit with the CLIPS adder">/ {{system.clipsMax}}</span>
             </div>
@@ -443,7 +456,8 @@
     {{#if this.isAblativeDefense}}
         <div class="form-group">
             <label>Ablative Threshold Exceeded</label>
-            <input type="text" name="system.ablative" value="{{system.ablative}}" data-dtype="Number" />
+            <input type="text" name="system.ablative" value="{{system.ablative}}" data-dtype="Number" step="1"
+                min="0" />
         </div>
     {{/if}}
 {{/with}}

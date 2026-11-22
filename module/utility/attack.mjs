@@ -518,6 +518,32 @@ export function actionFromJSON(json) {
     return action;
 }
 
+// The const destructure above binds the value. JSDoc needs the data-model type, which the
+// Foundry types do not expose under the bare name. Measured: bare `PrototypeToken` in a JSDoc
+// type reads as TS2749 "refers to a value, but is being used as a type".
+/** @typedef {foundry.data.PrototypeToken} PrototypeToken */
+
+/**
+ * Serialized token reference. `tokenToTokenObj` writes this shape and `tokenFromTokenObj` reads it.
+ *
+ * @typedef {object} TokenObj
+ * @property {string|null} uuid - uuid of the TokenDocument. Null for a PrototypeToken.
+ * @property {object|null} protoObj - `PrototypeToken#toObject` output. Null unless the token is a
+ *   PrototypeToken, because `tokenToTokenObj` always writes the key.
+ * @property {ActorObj|null} actorObj - Parent actor of `protoObj`. Null unless the token is a
+ *   PrototypeToken.
+ */
+
+/**
+ * Serialized actor reference. `actorToActorObj` writes this shape and `actorObjToActor` reads it.
+ * A temporary actor has no uuid, so its data travels in `json`.
+ *
+ * @typedef {object} ActorObj
+ * @property {string|null} uuid - uuid of a database actor.
+ * @property {object|null} json - `Actor#toObject` output for a temporary actor. Null for a database
+ *   actor, because `actorToActorObj` always writes the key.
+ */
+
 /**
  * A way to serialize a token (either a HeroSystem6eToken, HeroSystem6eTokenDocument or PrototypeToken). It will, however,
  * only lead to deserializing a HeroSystem6eTokenDocument or PrototypeToken. HeroSystem6eToken will be converted into a HeroSystem6eTokenDocument

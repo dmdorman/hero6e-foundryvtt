@@ -6,7 +6,10 @@
   // set and would add ~500 findings (mostly chai assertion "unused expressions").
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   // oxlint lints JavaScript only. stylelint owns SCSS.
-  "ignorePatterns": ["node_modules/**", "css/**", "packs_old/**", "**/*.scss", "**/*.sass"],
+  // `**/*.d.ts`: declaration files hold no runtime code, so there is nothing to lint. The type
+  // engine still reads them, because tsgolint takes its file list from the program config.
+  // Without this entry `types/globals.d.ts` trips `no-redeclare` against the globals listed below.
+  "ignorePatterns": ["node_modules/**", "css/**", "packs_old/**", "**/*.scss", "**/*.sass", "**/*.d.ts"],
   "env": {
     "browser": true,
     "jquery": true,

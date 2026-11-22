@@ -103,8 +103,8 @@ export function registerSpeedChartCombatValidationTests(quench) {
         (context) => {
             const { after, before, describe, expect, it } = context;
 
-            const foundryVersion = game.release?.version ?? "Unknown V13/Prior";
-            const generationLabel = game.release?.generation ?? 13;
+            const foundryVersion = game.release.version;
+            const generationLabel = game.release.generation;
 
             // This has to be the top level so isSingleCombatTracker can be changed
             describe(`Hero System 6e Speed Chart Turn Progression Matrix (Foundry Gen: ${generationLabel})`, function () {

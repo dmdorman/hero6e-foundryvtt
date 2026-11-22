@@ -1,5 +1,3 @@
-import { HEROSYS } from "../herosystem6e.mjs";
-
 import { HeroRoll, HeroRoller } from "../heroRoller/dice.mjs";
 import { calculateDicePartsForItem } from "../utility/damage.mjs";
 import { FrozenSet } from "../utility/freeze-helpers.mjs";
@@ -7,6 +5,9 @@ import { roundFavorPlayerTowardsZero } from "../utility/round.mjs";
 import { doSuccessRoll, emphasizeSuccessFailureFlavour, generateSuccessChatCard } from "../utility/success-card.mjs";
 import { tokenEducatedGuess } from "../utility/util.mjs";
 import { HeroDialogV2 } from "../applications/api/hero-app-mixin.mjs";
+
+// `HeroModifierModel` is a class this repo exports, not a runtime global, so JSDoc must import it.
+/** @typedef {import("./HeroSystem6eTypeDataModels.mjs").HeroModifierModel} HeroModifierModel */
 
 // Probability, in %, of that number on 3d6
 const HIT_LOCATION_PROBABILITY = Object.freeze({
@@ -257,7 +258,7 @@ async function userSelectsASkill(skillArray) {
  * If there are more than one skill, then prompt the user and have them decide.
  *
  * @param {Array<Object>} skillArray
- * @param {Number | null} selectedIndex
+ * @param {Number|null} arrayIndex - Dialog choice. Null means the user closed the dialog.
  *
  * @returns {Object | null} - returns the info about the item that is selected or null if the user has chosen to cancel the operation at this point by closing the dialog.
  */
@@ -323,7 +324,7 @@ function findSkills(actor, skillName) {
  *
  * NOTE: Do not call unless it is appropriate for the type of roll (i.e. don't call for activation roll)
  *
- * @param {HeroModifierModel } rar
+ * @param {HeroModifierModel} rar
  *
  * @returns {number}
  */
@@ -554,7 +555,7 @@ const VALIDATE_SECTION_DEFENSE_ERROR_REASON = Object.freeze({
 /**
  *
  * @param {HeroSystem6eItem} item
- * @param {string} potentialSectionalComment
+ * @param {object} modifier - Modifier whose COMMENTS field may hold a sectional defense comment.
  *
  * @returns {{ valid: boolean, reason?: string, sectionalDefenseLocationsSet?: Set }} - returns validation result with location Set on success or error reason on failure
  */
@@ -657,7 +658,7 @@ function buildActivationOrSectionalDefenseInternalRepresentation(item, rar) {
         // Do we have valid ranges defined and are sectional defenses turned on?
         if (
             validSectionalComment &&
-            game.settings.get(HEROSYS.module, "hit locations") === "hitLocationsWithSectional"
+            game.settings.get(game.system.id, "hit locations") === "hitLocationsWithSectional"
         ) {
             return {
                 type: RSR_ROLL_TYPE.SECTIONAL_DEFENSES_ROLL,

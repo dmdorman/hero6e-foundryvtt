@@ -2613,6 +2613,12 @@ function injectTrackerConfigFields(_app, html) {
         const root = html;
         if (!root || root.querySelector(".hero-tracker-config")) return;
 
+        /**
+         * @param {string} id
+         * @param {HeroSettingKey} settingKey - The registered setting key.
+         *
+         * @returns {string}
+         */
         const checkboxRow = (id, settingKey) => `
                     <div class="form-group">
                         <label for="${id}">${game.i18n.localize(`Settings.${settingKey}.Name`)}</label>
@@ -2631,10 +2637,12 @@ function injectTrackerConfigFields(_app, html) {
                     ${game.user.can("SETTINGS_MODIFY") ? checkboxRow("hero-tracker-grouping", "combatTrackerGrouping") : ""}`;
         for (const input of fieldset.querySelectorAll("input[data-setting-key]")) {
             input.addEventListener("change", (event) => {
-                // Applies live: each setting's onChange re-renders the tracker
-                game.settings
-                    .set(game.system.id, event.target.dataset.settingKey, event.target.checked)
-                    .catch((e) => console.error(e));
+                // Applies live: each setting's onChange re-renders the tracker. Only the two rows
+                // injected above carry this attribute, which the checker cannot see, so the key is cast.
+                const changedKey = /** @type {"combatTrackerCompact" | "combatTrackerGrouping"} */ (
+                    event.target.dataset.settingKey
+                );
+                game.settings.set(game.system.id, changedKey, event.target.checked).catch((e) => console.error(e));
             });
         }
 

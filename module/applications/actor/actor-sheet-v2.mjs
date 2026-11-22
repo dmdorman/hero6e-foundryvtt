@@ -6,18 +6,24 @@ import {
     tokenEducatedGuess,
     whisperUserTargetsForActor,
 } from "../../utility/util.mjs";
-import {
-    InputElementNumberSchemaError,
-    canonicalNumericText,
-    parseNumericInput,
-    readNumericSchema,
-    restoreNumericInput,
-    withinDeclaredBounds,
-} from "../../utility/numeric-input.mjs";
+import { commitNumericInput } from "../../utility/numeric-input.mjs";
 import { cmPerInch, kgPerLb, metricUnitsEnabled } from "../../utility/units.mjs";
 import { HeroAppMixin, HeroDialogV2 } from "../api/hero-app-mixin.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
+
+/**
+ * One row of the status effect list `_prepareStatusEffects` builds for the sheet template.
+ * Foundry publishes no type for this shape, so the sheet declares the one it writes.
+ *
+ * @typedef {object} ActorSheetStatusRow
+ * @property {string} _id - `_id` of the canonical status effect.
+ * @property {string} name - Status label or localization key.
+ * @property {string} img - Icon path.
+ * @property {boolean} disabled - True when an active effect holds the status but is not canonical.
+ * @property {string} active - `"active"` when the actor has the status, `""` otherwise.
+ * @property {string} [tooltip] - Enriched HTML of the status' rule page. Set only with a rule.
+ */
 const { ActorSheetV2 } = foundry.applications.sheets;
 const { DragDrop } = foundry.applications.ux;
 const { FilePicker } = foundry.applications.apps;
@@ -26,91 +32,6 @@ const { Actor } = foundry.documents;
 
 // REF: https://foundryvtt.wiki/en/development/guides/converting-to-appv2
 // REF: https://foundryvtt.wiki/en/development/guides/applicationV2-conversion-guide
-
-/**
- * Write one sheet input to the actor, validating numbers before the write.
- *
- * The markup declares each field with `step`, `min`, and `max`: `step` sets the decimal places, from
- * `1`, `0.1`, or `0.01`, and the two bounds decide the range, so a minus is legal only when `min` is
- * absent or below zero. See `readNumericSchema` in
- * `module/utility/numeric-input.mjs`. The browser blocks what it can, and this function is the
- * backstop: a cleared box reports an empty string, and a browser accepts an exponent such as `1e5`, so
- * both would otherwise reach `update()` and store null in a numeric field that allows null. Reject
- * them, restore the stored value, and tell the player. Nothing is guessed. A field with no `step`, a
- * step outside the three, or a bound that is not a number throws `InputElementNumberSchemaError`; this function
- * reports it with the element markup and drops the write. Fields that take no number keep their raw
- * value.
- *
- * @param {Actor} actor Document the input writes to.
- * @param {HTMLInputElement} input The input that changed.
- * @param {string} path Actor property the input writes.
- * @param {number} [divisor=1] Unit conversion applied to a valid number.
- * @returns {Promise<void>}
- */
-async function commitSheetInput(actor, input, path, divisor = 1) {
-    await commitValidatedNumber(
-        input,
-        (value) => actor.update({ [path]: value / divisor }),
-        () => actor,
-        path,
-    );
-}
-
-/**
- * Write one item input on the sheet, validating numbers first.
- *
- * @param {Item} item Item the input writes to.
- * @param {HTMLInputElement} input The input that changed.
- * @param {string} path Item property the input writes.
- * @returns {Promise<void>}
- */
-async function commitItemInput(item, input, path) {
-    await commitValidatedNumber(
-        input,
-        (value) => item.update({ [path]: value }),
-        () => item,
-        path,
-    );
-}
-
-/**
- * Validate one number input, then hand the parsed value to a writer.
- *
- * @param {HTMLInputElement} input The input that changed.
- * @param {(value: number) => Promise<object>} write Writes the parsed number.
- * @param {() => object} documentFor Holds the document the restore message reads back from.
- * @param {string} path Property path shown to the player.
- * @returns {Promise<void>}
- */
-async function commitValidatedNumber(input, write, documentFor, path) {
-    if (input.type !== "number" && input.dataset.dtype !== "Number") {
-        await write(input.value);
-        return;
-    }
-
-    let contract;
-    try {
-        contract = readNumericSchema(input);
-    } catch (error) {
-        if (!(error instanceof InputElementNumberSchemaError)) throw error;
-        console.error(error);
-        ui.notifications.error(error.message);
-        return;
-    }
-
-    const parsed = parseNumericInput(input.value, contract);
-    if (parsed === null || !withinDeclaredBounds(parsed, contract)) {
-        restoreNumericInput(input, documentFor(), path, contract);
-        return;
-    }
-
-    const text = canonicalNumericText(input.value, contract);
-    if (text !== null && text !== input.value) {
-        input.value = text;
-    }
-
-    await write(parsed);
-}
 
 export class HeroSystemActorSheetV2 extends HeroAppMixin(HandlebarsApplicationMixin(ActorSheetV2)) {
     // Dynamic PARTS based on system.id
@@ -250,10 +171,10 @@ export class HeroSystemActorSheetV2 extends HeroAppMixin(HandlebarsApplicationMi
         if (!error) return;
 
         const context = this.actor.getFlag(game.system.id, "uploadingErrorContext") ?? {};
-        const foundryBuild = context.foundryBuild ?? game.release?.build ?? null;
+        const foundryBuild = context.foundryBuild ?? game.release.build;
         const report = [
             `Actor: ${this.actor.name}`,
-            `Foundry: ${context.foundry ?? game.release?.display ?? game.version}${foundryBuild != null ? ` (build ${foundryBuild})` : ``}`,
+            `Foundry: ${context.foundry ?? game.release.display} (build ${foundryBuild})`,
             `System: ${game.system.id} ${context.system ?? game.system.version}`,
             ``,
             `Error:`,
@@ -1083,20 +1004,27 @@ export class HeroSystemActorSheetV2 extends HeroAppMixin(HandlebarsApplicationMi
                         e.preventDefault();
                         e.stopImmediatePropagation();
                         const heightDivisor = metricUnitsEnabled() ? cmPerInch : 1;
-                        await commitSheetInput(this.actor, e.currentTarget, attributeName, heightDivisor);
+                        const actor = this.actor;
+                        await commitNumericInput(e.currentTarget, (value) =>
+                            actor.update({ [attributeName]: Number(value) / heightDivisor }),
+                        );
                     });
                 } else if (attributeName.endsWith("WEIGHT")) {
                     input.addEventListener("change", async (e) => {
                         e.preventDefault();
                         e.stopImmediatePropagation();
                         const weightDivisor = metricUnitsEnabled() ? kgPerLb : 1;
-                        await commitSheetInput(this.actor, e.currentTarget, attributeName, weightDivisor);
+                        const actor = this.actor;
+                        await commitNumericInput(e.currentTarget, (value) =>
+                            actor.update({ [attributeName]: Number(value) / weightDivisor }),
+                        );
                     });
                 } else {
                     input.addEventListener("change", async (e) => {
                         e.preventDefault();
                         e.stopImmediatePropagation();
-                        await commitSheetInput(this.actor, e.currentTarget, attributeName);
+                        const actor = this.actor;
+                        await commitNumericInput(e.currentTarget, (value) => actor.update({ [attributeName]: value }));
                     });
                 }
             } else if (attributeName.startsWith("endReserve")) {
@@ -1107,7 +1035,7 @@ export class HeroSystemActorSheetV2 extends HeroAppMixin(HandlebarsApplicationMi
                     input.addEventListener("change", async (e) => {
                         e.preventDefault();
                         e.stopImmediatePropagation();
-                        await commitItemInput(endItem, e.currentTarget, "system.value");
+                        await commitNumericInput(e.currentTarget, (value) => endItem.update({ "system.value": value }));
                     });
                 } else {
                     console.error(`Unhandled INPUT name="${attributeName}`);
@@ -2152,7 +2080,7 @@ export class HeroSystemActorSheetV2 extends HeroAppMixin(HandlebarsApplicationMi
     }
 
     async _prepareStatusEffects() {
-        /** @type {Record<string, StatusInfo>} */
+        /** @type {Record<string, ActorSheetStatusRow>} */
         const statusInfo = {};
         for (const status of CONFIG.statusEffects) {
             // Only display if it would show in the token HUD *and* it has an assigned _id

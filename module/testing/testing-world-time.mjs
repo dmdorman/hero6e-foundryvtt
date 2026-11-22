@@ -1,5 +1,5 @@
-import { HEROSYS } from "../herosystem6e.mjs";
 import { setQuenchTimeout } from "./quench-helper.mjs";
+import { getAndSetGameSetting } from "../settings/settings-helpers.mjs";
 import {
     getCharacteristicMaxFromActor,
     getCharacteristicValueFromActor,
@@ -46,12 +46,11 @@ export function registerWorldTimeRecoveryAndExpiryTests(quench) {
                 const noopChange = { key: "system.characteristics.str.value", mode: 2, value: "0" };
 
                 before(async () => {
-                    originalAutomation = game.settings.get(HEROSYS.module, "automation");
-                    await game.settings.set(HEROSYS.module, "automation", "all");
+                    originalAutomation = await getAndSetGameSetting("automation", "all");
                 });
 
                 after(async () => {
-                    await game.settings.set(HEROSYS.module, "automation", originalAutomation);
+                    await getAndSetGameSetting("automation", originalAutomation);
                 });
 
                 beforeEach(async () => {

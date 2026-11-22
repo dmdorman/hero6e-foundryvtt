@@ -105,17 +105,11 @@ export class HEROSYS {
 }
 
 Hooks.once("init", async function () {
-    // Compatibility warnings for initial release of v13
-    // In chrome use -/Deprecated since Version 13/ as a console log filter
-    // Some v13 warning still slip in during initial load, re-applying filter is a temp fix.
-
     // CONFIG.debug.hooks = true;
     CONFIG.debug.combat = true;
 
-    // V13 & V14 differences in how chat messages are displayed
-    HERO.CHAT_MESSAGE_DEFAULT_STYLE = game.version.startsWith("13")
-        ? CONST.CHAT_MESSAGE_STYLES.IC
-        : CONST.CHAT_MESSAGE_STYLES.OOC;
+    // v13 showed new chat messages as IC. v14 shows them as OOC. Only v14 is supported.
+    HERO.CHAT_MESSAGE_DEFAULT_STYLE = CONST.CHAT_MESSAGE_STYLES.OOC;
 
     // Custom HeroSystem VisionMode
     initializeHeroVisionV14();
@@ -180,16 +174,13 @@ Hooks.once("init", async function () {
     CONFIG.Token.documentClass = HeroSystem6eTokenDocument;
     CONFIG.Token.hudClass = HeroSystemTokenHud;
 
-    // v13 onwards. Remove if check when v12 support dropped.
-    if (CONFIG.Token.movement) {
-        CONFIG.Token.movement.actions = HeroSystemTokenHud.initializeMovementActions(HEROSYS.module);
-        CONFIG.Token.movement.defaultAction = "RUNNING";
-    }
+    CONFIG.Token.movement.actions = HeroSystemTokenHud.initializeMovementActions(HEROSYS.module);
+    CONFIG.Token.movement.defaultAction = "RUNNING";
 
     CONFIG.Token.objectClass = HeroSystem6eToken;
     CONFIG.MeasuredTemplate.objectClass = HeroSystem6eMeasuredTemplate;
     CONFIG.ActiveEffect.documentClass = HeroSystem6eActorActiveEffects;
-    CONFIG.Token.rulerClass = HeroTokenRuler; //V13
+    CONFIG.Token.rulerClass = HeroTokenRuler;
 
     Object.assign(CONFIG.ActiveEffect.dataModels, {
         // REF: https://foundryvtt.wiki/en/development/api/DataModel
@@ -296,23 +287,12 @@ Hooks.once("init", async function () {
     GenericRoller.Initialize();
     HeroSocketHandler.Initialize();
 
-    // Insert EffectsPanel template into DOM tree so it can render
-    if (parseInt(game.version.split(".")[0] || 0) === 12) {
-        // Template element for effects-panel
-        const ui = document.querySelector("#ui-right-column-1");
-        if (ui) {
-            const template = document.createElement("template");
-            template.setAttribute("id", "hero-effects-panel");
-            ui.insertAdjacentElement("afterend", template);
-        }
-    } else if (parseInt(game.version.split(".")[0] || 0) > 12) {
-        // Template element for effects-panel
-        const ui = document.querySelector("#ui-right-column-1");
-        if (ui) {
-            const template = document.createElement("template");
-            template.setAttribute("id", "hero-effects-panel");
-            ui?.insertAdjacentElement("afterend", template);
-        }
+    // Insert the effects-panel template into the DOM tree so it can render.
+    const effectsPanelAnchor = document.querySelector("#ui-right-column-1");
+    if (effectsPanelAnchor) {
+        const effectsPanelTemplate = document.createElement("template");
+        effectsPanelTemplate.setAttribute("id", "hero-effects-panel");
+        effectsPanelAnchor.insertAdjacentElement("afterend", effectsPanelTemplate);
     }
 
     game[HEROSYS.module] ??= {};
@@ -870,7 +850,7 @@ async function _outOfCombatRecovery(actor, multiplier) {
     if (game.combats.some((c) => c.started && c.getCombatantsByActor(actor).length > 0)) return;
     if (multiplier <= 0) return;
 
-    const automation = game.settings.get(HEROSYS.module, "automation");
+    const automation = game.settings.get(game.system.id, "automation");
 
     if (
         automation === "all" ||

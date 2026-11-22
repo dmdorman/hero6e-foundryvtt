@@ -53,7 +53,7 @@ function quenchTitlePath(context) {
  * so a caller that leaves it out gets no actor and no Foundry error.
  *
  * A full actor export can change the type. `uploadFromXml` reads the export `TEMPLATE` attribute and
- * updates `actor.type` to match (`module/actor/actor-upload.mjs:371`). This helper rejects a finished
+ * updates `actor.type` to match. This helper rejects a finished
  * actor of another type, so a row cannot claim one type and test another. The retype never produces
  * npc. The upload treats pc and npc as one bucket, so an npc actor keeps its type and matches.
  *
@@ -253,7 +253,7 @@ export async function deleteQuenchCompendium({ pack }) {
         throw new Error("missing pack");
     }
 
-    // Foundry refuses to delete a locked pack (`compendium-collection.mjs:936`).
+    // Foundry refuses to delete a locked pack.
     if (pack.config?.locked) {
         await pack.configure({ locked: false });
     }
@@ -338,8 +338,7 @@ export async function deleteQuenchTokensAndActors() {
 
 // A pack this system generated for a test carries two marks that real content lacks. The label keeps
 // the `_Quench` fixture prefix, because `uploadFromXml` names the pack after the export's
-// CHARACTER_NAME, and the metadata carries the creation flag that same upload writes
-// (`module/compendium/compendiumDirectory.mjs:214-222`).
+// CHARACTER_NAME, and the metadata carries the creation flag that same upload writes.
 const QUENCH_PACK_PREFIX = "_Quench";
 const QUENCH_PACK_FLAG = "versionHeroSystem6eCreated";
 
@@ -354,7 +353,7 @@ const QUENCH_PACK_FLAG = "versionHeroSystem6eCreated";
  * The flag is read in two shapes, because both are in use. `uploadFromXml` sends one dotted key
  * (`"<systemId>.versionHeroSystem6eCreated"`), and an older build wrote the nested scope
  * (`flags[<systemId>][<key>]`), which is the shape the saved `Dismantlers` pack carries. The metadata
- * schema types that field as a plain `ObjectField` (`base-package.mjs:53`), so no step rewrites either
+ * schema types that field as a plain `ObjectField`, so no step rewrites either
  * shape. Read both.
  *
  * @param {CompendiumCollection} pack The pack to test.
@@ -383,15 +382,15 @@ function isQuenchGeneratedPack(pack) {
  * Delete the `_Quench` compendium packs this system generated during testing.
  *
  * A leaked pack blocks the next run rather than merely cluttering the sidebar. A fresh upload meets
- * its own generated name and answers with an `Overwrite Compendium Entry` confirm
- * (`module/compendium/compendiumDirectory.mjs:249-263`). No player sits at the screen to answer it, so
+ * its own generated name and answers with an `Overwrite Compendium Entry` confirm. No player sits at
+ * the screen to answer it, so
  * the next suite's `before` hook waits on a dialog and every test in that suite fails.
  *
  * The sweep deletes only packs `isQuenchGeneratedPack` proves. It never deletes a world pack the
  * system did not generate for a fixture, because a world pack holds authored content.
  *
  * Foundry gates a pack delete on `game.user.isGM` and the unlock on pack ownership, both stricter than
- * the ASSISTANT floor this cleanup otherwise needs (`compendium-collection.mjs:936`). A GM who lacks the
+ * the ASSISTANT floor this cleanup otherwise needs. A GM who lacks the
  * pack fails here, and the error names that pack.
  *
  * @returns {Promise<string[]>} The pack labels deleted.
@@ -408,8 +407,8 @@ export async function deleteQuenchCompendiums() {
     for (const pack of candidates) {
         const label = pack.metadata.label;
         try {
-            // Clear the lock first. Foundry refuses to delete a locked pack
-            // (`compendium-collection.mjs:936`). An unlock failure reports that pack and leaves it for
+            // Clear the lock first. Foundry refuses to delete a locked pack. An unlock failure reports
+            // that pack and leaves it for
             // the next run, which is the outcome the unlock itself prevents.
             if (pack.config?.locked) {
                 await pack.configure({ locked: false });

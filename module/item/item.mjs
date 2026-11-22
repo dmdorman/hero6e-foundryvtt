@@ -1,7 +1,6 @@
 import { HeroDialogV2, heroDialogOptions } from "../applications/api/hero-app-mixin.mjs";
 import { ItemVppConfig } from "../applications/apps/item-vpp-config.mjs";
 import { HeroRoller } from "../heroRoller/dice.mjs";
-import { HEROSYS } from "../herosystem6e.mjs";
 import { collectActionDataBeforeToHitOptions, rollEffect, rollLuck, rollUnluck } from "../item/item-attack.mjs";
 import { createSkillPopOutFromItem } from "../item/skill.mjs";
 import { tagObjectForPersistence } from "../migration.mjs";
@@ -364,7 +363,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             (options.is5e ??
             this.actor?.is5e ??
             data.system?.is5e ??
-            game.settings.get(HEROSYS.module, "DefaultEdition") === "five")
+            game.settings.get(game.system.id, "DefaultEdition") === "five")
                 ? true
                 : false;
 
@@ -2744,7 +2743,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         }
         itemData.system.is5e =
             actor?.system?.is5e == undefined
-                ? game.settings.get(HEROSYS.module, "DefaultEdition") === "five"
+                ? game.settings.get(game.system.id, "DefaultEdition") === "five"
                     ? true
                     : false
                 : actor?.system?.is5e;
@@ -3081,7 +3080,7 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
         }
 
         // Everything else is based on 1 END per 10 active points except for strength & HANDTOHANDATTACK which is 1 per 5 when using optional heroic rules.
-        const endUnitSize = isStrOrStrDamage && game.settings.get(HEROSYS.module, "StrEnd") === "five" ? 5 : 10;
+        const endUnitSize = isStrOrStrDamage && game.settings.get(game.system.id, "StrEnd") === "five" ? 5 : 10;
 
         const activePoints = this.system._active?.originalActivePoints ?? this._activePoints;
 

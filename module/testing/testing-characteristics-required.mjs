@@ -6,6 +6,15 @@
 
 import { freezeDeep } from "../utility/freeze-helpers.mjs";
 
+/**
+ * Add one required case to the report.
+ *
+ * @callback RequiredCaseBuilder
+ * @param {string} group Group label from `GROUPS`.
+ * @param {string} fixtureKey Key into `REQUIRED_FIXTURES`. An unknown key throws.
+ * @param {string} claim The one thing the case checks.
+ */
+
 const EDITIONS = freezeDeep([
     {
         label: "6e",
@@ -71,8 +80,7 @@ const GROUPS = freezeDeep({
  * The fixtures these cases wait for, and what makes each one differ from a baseline actor.
  *
  * A fixture earns its place by answering a question no current fixture can. A second plain pc, a
- * second plain vehicle, or an `npc` twin of a `pc` row answers nothing, so it is not here. See
- * "Not gaps" in `characteristics_coverage_gaps.md`.
+ * second plain vehicle, or an `npc` twin of a `pc` row answers nothing, so it is not here.
  *
  * `blocks` names what must settle first. `blocks: null` means the fixture is ready to build.
  */
@@ -88,8 +96,7 @@ export const REQUIRED_FIXTURES = freezeDeep({
             "figured names computed from them. A bare actor is still cheap: " +
             "`createQuenchActor({ quench, is5e, actorType })` with no `contents`. Nothing is bought, so the " +
             "cost is 0, and no Hero Designer XML is uploaded. The document carries no ActiveEffect flag, yet " +
-            "`getActiveEffects()` still returns one entry per movement power. See gap 3 of " +
-            "`characteristics_coverage_gaps.md`.",
+            "`getActiveEffects()` still returns one entry per movement power.",
         blocks: null,
     },
     pcAllChars6e: {
@@ -344,7 +351,7 @@ export function buildRequiredCases() {
 /**
  * Add the three level properties for names where base and levels differ. Gap 2.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function nodePropertyCases(add) {
     for (const name of LEVEL_CLAIM_NAMES) {
@@ -359,7 +366,7 @@ function nodePropertyCases(add) {
 /**
  * Add the campaign cap cases. The property is null everywhere today.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function characteristicMaxCases(add) {
     add(GROUPS.characteristicMax, "pcCampaignCap6e", "STR carries the campaign maximum");
@@ -371,7 +378,7 @@ function characteristicMaxCases(add) {
 /**
  * Add the success-roll cases, one per name an edition states, plus the three special answers.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function rollCases(add) {
     for (const edition of EDITIONS) {
@@ -393,7 +400,7 @@ function rollCases(add) {
  * Bucket G changes the 6e cost curve. Nothing in the suite would notice today. Movement names get
  * their own claims in the movement group, on a fixture that actually buys them.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function uploaded6eCases(add) {
     for (const name of PC_CHARACTERISTICS_6E) {
@@ -408,7 +415,7 @@ function uploaded6eCases(add) {
  * Measured in the current XML: every 5e COM row uses LEVELS 8, 0, or -5. Nothing states an odd count,
  * and no row states a COM value that an item contributes.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function oddPointCases(add) {
     add(GROUPS.oddPoints, "pcAllChars5e", "COM reports the 7 levels the template buys");
@@ -421,7 +428,7 @@ function oddPointCases(add) {
 /**
  * Add the actor-level cost totals no row states yet. Gap 5.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function totalCases(add) {
     for (const fixtureKey of [
@@ -440,7 +447,7 @@ function totalCases(add) {
 /**
  * Add the 6e negative and floor cases. Gap 6 covers 5e only today.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function negativeValueCases(add) {
     add(GROUPS.negativeValues, "pcBuyback6e", "STR at minus 5 levels costs less than nothing");
@@ -458,7 +465,7 @@ function negativeValueCases(add) {
  * Phase 4 dropped six `flight.max` claims read on actors that own no flight. These rows are their
  * honest replacement.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function movementCases(add) {
     const fixtureFor = (label) => (label === "6e" ? "pcAllMovement6e" : "pcAllMovement5e");
@@ -492,13 +499,15 @@ function movementCases(add) {
  * An npc is absent from the loop on purpose. Its answer is the pc answer, so one claim per edition
  * compares the two instead of repeating the whole set.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function usableSetCases(add) {
-    // Measured on bare actors, the equality holds for computer and ai in both editions. For pc, vehicle,
-    // and automaton it cannot hold until bug 4 of `characteristics_bugs.md` lands, because the usable list
-    // carries FLIGHT, FTL, SWINGING, TELEPORTATION, and TUNNELING (plus GLIDING in 5e) while those names have
-    // no node to have.
+    // Measured on bare actors, the equality holds for computer and ai in both editions.
+    // It cannot hold for pc, vehicle, and automaton yet. The usable list carries FLIGHT, FTL,
+    // SWINGING, TELEPORTATION, and TUNNELING, plus GLIDING in 5e. Those names have no node.
+    // `hasCharacteristic` answers only the actor-type permission question, never ownership.
+    // Adding the nodes would report movement as owned by every actor type, which is wrong too.
+    // So the usable set stays larger than the node list until that method splits the questions.
     for (const actorType of USABLE_SET_ACTOR_TYPES) {
         for (const edition of EDITIONS) {
             add(GROUPS.usableSets, "bare", `the ${edition.label} ${actorType} usable set equals the names it has`);
@@ -517,7 +526,7 @@ function usableSetCases(add) {
  * below the max stays there. `str.value` ADD 2 moves the value alone. Setting `disabled` on either
  * effect takes its contribution back off, on both doors. The stored node keeps 10 and 5 throughout.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function activeEffectCases(add) {
     add(GROUPS.activeEffects, "pcEffects6e", "the AID on STR adds 3 to the played STR max");
@@ -534,7 +543,7 @@ function activeEffectCases(add) {
 /**
  * Add the computer and AI upload cases. Gap 7.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function computerAiCases(add) {
     for (const bought of COMPUTER_BOUGHT) {
@@ -563,7 +572,7 @@ function computerAiCases(add) {
  * 5e, and the one 6e row covers only the STUN removal. The last claim points at
  * `PC_CHARACTERISTICS_6E`.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function automaton6eCases(add) {
     add(GROUPS.automaton6e, "automaton6eUpload", "does not have STUN");
@@ -574,7 +583,7 @@ function automaton6eCases(add) {
 /**
  * Add the write funnel cases. Every one goes through `updateCharacteristicPropertiesOnActor` or `updateMultipleCharacteristicsOnActor`.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function writeFunnelCases(add) {
     add(GROUPS.writeFunnel, "pcAllChars6e", "a STUN write above max does not persist a value above max");
@@ -590,7 +599,7 @@ function writeFunnelCases(add) {
 /**
  * Add the cases that compare a 5e sheet and a 6e sheet of the same character.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function conversionCases(add) {
     // pcAllChars6e and pcAllChars5e buy the same LEVELS numbers in two sheets, one per edition.
@@ -603,7 +612,7 @@ function conversionCases(add) {
 /**
  * Add the boundaries that other systems read: knocked out, out of END, and destroyed.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function damageCases(add) {
     add(GROUPS.damage, "pcDamaged6e", "STUN at 0 reads 0 and not the max");
@@ -619,7 +628,7 @@ function damageCases(add) {
 /**
  * Add the label handling cases, including the locale bug the refactor plan records.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function labelCases(add) {
     add(GROUPS.labels, "bare", "hasCharacteristic answers the same for STR and str");
@@ -631,7 +640,7 @@ function labelCases(add) {
 /**
  * Add the base and vehicle cost details no row states. Gap 9 sits here.
  *
- * @param {Function} add Case builder.
+ * @param {RequiredCaseBuilder} add Case builder.
  */
 function baseVehicleCases(add) {
     // A 5e base holds BASESIZE, BODY, and DEF. A 6e base holds BASESIZE, BODY, PD, and ED. Neither holds both.

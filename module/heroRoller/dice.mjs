@@ -441,6 +441,7 @@ export class HeroRoller {
     /**
      *
      * @param {DICE_SO_NICE_CUSTOM_SETS} purpose
+     *
      * @returns {HeroRoller}
      */
     setPurpose(purpose) {
@@ -889,6 +890,7 @@ export class HeroRoller {
     /**
      *
      * @param {number} ranksToRemove
+     *
      * @returns {HeroRoller}
      */
     removeNHighestRankTerms(ranksToRemove) {
@@ -902,6 +904,7 @@ export class HeroRoller {
     /**
      *
      * @param {number} ranksToRemove
+     *
      * @returns {HeroRoller}
      */
     removeFirstNTerms(ranksToRemove) {
@@ -915,6 +918,7 @@ export class HeroRoller {
     /**
      *
      * @param {number} dcToRemove
+     *
      * @returns {HeroRoller}
      */
     removeNDC(dcToRemove) {
@@ -2171,11 +2175,9 @@ export class HeroRoller {
     }
 
     /**
+     * Builds the summary of this roll from its parsed terms.
      *
      * @returns {Object[]} summary
-     * @param {string} total
-     * @param {string} terms
-     * @param {string} annotatedTerms
      */
     #getRawSummary() {
         switch (this._type) {

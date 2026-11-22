@@ -1,0 +1,28 @@
+{
+  // TypeScript program for the opt-in type-aware lint. Nothing reads this file in place.
+  // `gulp lintTypes` copies it to `jsconfig.json` at the repo root, runs oxlint, then deletes
+  // the copy. The copy is required: tsgolint finds its program by walking up from each linted
+  // file, so the file must sit at the repo root under the standard name. oxlint's `--tsconfig`
+  // flag only feeds import resolution. Measured with oxlint 1.87.
+  //
+  // `include` paths resolve against the copy at the repo root, not against this directory.
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    // `checkJs: false` keeps TypeScript compiler diagnostics out of the run. Add
+    // `// @ts-check` to one file, or set this to true, to get them. See `lint:types:check`.
+    "checkJs": false,
+    "noEmit": true,
+    // Measured on `module/`: `strict: true` adds about 13,000 implicit-`any` and
+    // possibly-undefined diagnostics on top of the 6,800 the loose settings report.
+    // Tighten this after the JSDoc backlog shrinks.
+    "strict": false,
+    "noImplicitAny": false,
+    // Community types for the Foundry global API. Pinned to the release that matches
+    // `compatibility.verified` in system.json.
+    "types": ["@league-of-foundry-developers/foundry-vtt-types"]
+  },
+  "include": ["module/**/*.mjs", "types/**/*.d.ts"]
+}

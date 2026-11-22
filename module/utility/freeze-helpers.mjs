@@ -39,9 +39,10 @@ export class FrozenSet extends Set {
  * Strings, numbers, and null need nothing. A function keeps its own properties: pass it to
  * `freezeDeep` only when you mean to freeze those too.
  *
- * @param {object|Array} value Value to freeze.
+ * @template T
+ * @param {T} value Value to freeze.
  *
- * @returns {object|Array} The same value, frozen.
+ * @returns {T} The same value, frozen.
  */
 export function freezeDeep(value) {
     for (const child of Object.values(value)) {

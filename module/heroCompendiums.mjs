@@ -1,5 +1,3 @@
-import { HEROSYS } from "./herosystem6e.mjs";
-
 const { Item, Macro } = foundry.documents;
 
 const { CompendiumCollection } = foundry.documents.collections;
@@ -94,7 +92,7 @@ if(user_token)
 
 async function CreateHeroItems(edition) {
     // 5e vs 6e
-    edition ??= game.settings.get(HEROSYS.module, "DefaultEdition");
+    edition ??= game.settings.get(game.system.id, "DefaultEdition");
     const powers = edition === "five" ? CONFIG.HERO.powers5e : CONFIG.HERO.powers6e;
     const bogusActor = {
         system: { is5e: edition === "five" ? true : false },

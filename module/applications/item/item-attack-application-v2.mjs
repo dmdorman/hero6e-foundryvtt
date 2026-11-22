@@ -1,7 +1,6 @@
 // REF: https://foundryvtt.wiki/en/development/api/applicationv2
 import { filterIgnoreCompoundAndFrameworkItems } from "../../config.mjs";
 import { HeroSystem6eRegionDocument } from "../../heroRegion.mjs";
-import { HEROSYS } from "../../herosystem6e.mjs";
 import { dehydrateAttackItem, processActionToHit } from "../../item/item-attack.mjs";
 import {
     calculateRequiredResourcesToUse,
@@ -530,9 +529,9 @@ export class ItemAttackFormApplicationV2 extends HeroAppMixin(HandlebarsApplicat
      */
     #setAoeAndHitLocationDataForEffectiveItem() {
         const aoe = this.data.effectiveItem.effectiveAttackItem.aoeAttackParameters;
-        this.data.hitLocationsEnabled = game.settings.get(HEROSYS.module, "hit locations") !== "noHitLocations";
+        this.data.hitLocationsEnabled = game.settings.get(game.system.id, "hit locations") !== "noHitLocations";
         this.data.hitLocationSideEnabled =
-            this.data.hitLocationsEnabled && game.settings.get(HEROSYS.module, "hitLocTracking") === "all";
+            this.data.hitLocationsEnabled && game.settings.get(game.system.id, "hitLocTracking") === "all";
 
         // If there are no hit locations for the power or this is an AoE then the user cannot
         // place a shot. If they can't place a shot the only options should be "none"
@@ -716,7 +715,7 @@ export class ItemAttackFormApplicationV2 extends HeroAppMixin(HandlebarsApplicat
             return metersToPixels(convertSystemUnitsToMeters(distanceInSystemUnits, actor.is5e));
         }
 
-        const hexTemplates = game.settings.get(HEROSYS.module, "HexTemplates");
+        const hexTemplates = game.settings.get(game.system.id, "HexTemplates");
         const hexGrid = currentSceneUsesHexGrid();
 
         // NOTE: If we're using hex templates (i.e. 5e), the target hex should count as a distance of 1". This means

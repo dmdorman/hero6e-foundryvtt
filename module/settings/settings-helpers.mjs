@@ -234,7 +234,8 @@ export default class SettingsHelpers {
     // registration order (menus always float to the top of the section), so the
     // calls below are arranged in the groups declared in SETTINGS_GROUPS.
     static initLevelSettings() {
-        const module = HEROSYS.module;
+        // The checker tests every key and value below against `types/hero-settings.d.ts`.
+        const module = game.system.id;
 
         game.settings.register(module, "automation", {
             name: game.i18n.localize("Settings.Automation.Name"),
@@ -762,6 +763,14 @@ function invalidGameSettingValueReason(config, value) {
 }
 
 /**
+ * `game.settings` with untyped keys, for the one call site that picks a namespace at runtime.
+ * @typedef {{
+ *     get: (namespace: string, key: string, options?: { document?: boolean }) => unknown,
+ *     set: (namespace: string, key: string, value: any, options?: { document?: boolean }) => Promise<unknown>,
+ * }} LooseSettingsAccess
+ */
+
+/**
  * game.settings.set does not validate: it coerces (false → "false" for String
  * settings), and readers comparing against choice strings then take the wrong
  * branch. Throw instead so a bad write fails loudly at the call site. A stored
@@ -774,6 +783,11 @@ function invalidGameSettingValueReason(config, value) {
  * @returns {any} - the settingKey's value before applying newValue
  */
 async function getAndSetValidatedGameSetting(namespace, settingKey, newValue) {
+    // Deliberately loose. The namespace arrives at runtime and may be "core", and the typed map
+    // covers this system's namespace only. Every other read and write calls `game.settings`
+    // directly with a literal key.
+    const settings = /** @type {LooseSettingsAccess} */ (/** @type {unknown} */ (game.settings));
+
     const config = game.settings.settings.get(`${namespace}.${settingKey}`);
     if (!config) {
         throw new Error(`Unknown game setting "${namespace}.${settingKey}"`);
@@ -786,7 +800,7 @@ async function getAndSetValidatedGameSetting(namespace, settingKey, newValue) {
         );
     }
 
-    let presentValue = game.settings.get(namespace, settingKey);
+    let presentValue = settings.get(namespace, settingKey);
     if (invalidGameSettingValueReason(config, presentValue)) {
         console.warn(
             `Stored value ${JSON.stringify(presentValue)} for game setting "${namespace}.${settingKey}" is invalid; ` +
@@ -795,7 +809,7 @@ async function getAndSetValidatedGameSetting(namespace, settingKey, newValue) {
         presentValue = config.default;
     }
 
-    await game.settings.set(namespace, settingKey, newValue);
+    await settings.set(namespace, settingKey, newValue);
     return presentValue;
 }
 

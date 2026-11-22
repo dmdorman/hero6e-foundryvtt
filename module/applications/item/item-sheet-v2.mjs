@@ -10,6 +10,7 @@ import { adjustmentSourcesPermissive, adjustmentSourcesStrict } from "../../util
 import { HeroAdderModel, HeroModifierModel } from "../../item/HeroSystem6eTypeDataModels.mjs";
 import { ItemModifierApplicationV2 } from "./item-modifier-application.mjs";
 import { HeroAppMixin, HeroDialogV2 } from "../api/hero-app-mixin.mjs";
+import { commitNumericInput } from "../../utility/numeric-input.mjs";
 
 // REF: https://foundryvtt.wiki/en/development/guides/converting-to-appv2
 // REF: https://foundryvtt.wiki/en/development/guides/applicationV2-conversion-guide
@@ -248,22 +249,39 @@ export class HeroSystemItemSheetV2 extends HeroAppMixin(HandlebarsApplicationMix
         return super._processSubmitData(event, form, submitData, options);
     }
 
+    /**
+     * Persist one changed input.
+     *
+     * A checkbox answers with its checked state, because that is its value. Everything else runs through
+     * `commitNumericInput`: a field whose markup declares `type="number"` or `data-dtype="Number"` must parse
+     * against its own `step`, `min`, and `max` before any writer sees it, and a rejected edit puts the drawn
+     * text back and tells the player what the field accepts. The markup carries no such declaration for
+     * selects, textarea, and plain text inputs, so those reach the writer unchanged. See
+     * `module/utility/numeric-input.mjs`.
+     *
+     * @param {HTMLInputElement} input The input that changed.
+     * @returns {Promise<unknown>} The writer's result, or undefined when the edit was rejected.
+     */
     async #onChangeInput(input) {
-        const name = input.name;
-        const item = this.item;
-
-        let value = input.type?.toLowerCase() === "checkbox" ? input.checked : input.value;
-        if (input.dataset.dtype === "Number") {
-            value = Number(value);
-            // Revert to the original value, like the V1 sheet's NaN scrub did
-            if (Number.isNaN(value)) {
-                if (foundry.utils.hasProperty(item, name)) {
-                    input.value = foundry.utils.getProperty(item, name);
-                    return;
-                }
-                return this.render();
-            }
+        if (input.type?.toLowerCase() === "checkbox") {
+            return this.#writeItemInput(input.name, input.checked);
         }
+
+        const name = input.name;
+
+        return commitNumericInput(input, async (value) => this.#writeItemInput(name, value));
+    }
+
+    /**
+     * Write one accepted value to the item.
+     *
+     * @param {string} name Property path the input names.
+     * @param {number|boolean|string} value The accepted value: a number for a declared number field, a
+     *     checked state for a checkbox, the raw text otherwise.
+     * @returns {Promise<unknown>} The write result.
+     */
+    async #writeItemInput(name, value) {
+        const item = this.item;
 
         // CHARGES and CLIPS route through their DataModel helpers
         if (name === "system.numCharges") {
@@ -277,25 +295,25 @@ export class HeroSystemItemSheetV2 extends HeroAppMixin(HandlebarsApplicationMix
         if (name === "rec") {
             const ENDURANCERESERVEREC = item.findModsByXmlid("ENDURANCERESERVEREC");
             if (ENDURANCERESERVEREC) {
-                ENDURANCERESERVEREC.LEVELS = parseInt(value) || 1;
+                ENDURANCERESERVEREC.LEVELS = value;
                 await item.update({ "system.POWER": item.system.POWER });
             }
-            return;
+            return undefined;
         }
 
         // VPP control cost is the LEVELS of a CONTROLCOST adder
         if (name === "vppControlCost") {
             const CONTROLCOST = item.findModsByXmlid("CONTROLCOST");
             if (CONTROLCOST) {
-                CONTROLCOST.LEVELS = parseInt(value) || 0;
+                CONTROLCOST.LEVELS = value;
                 await item.update({ [`system.${CONTROLCOST.xmlTag}`]: item.system[CONTROLCOST.xmlTag] });
             }
-            return;
+            return undefined;
         }
 
         // Attack toggles on CSL/PSL type items become custom adders
         if (name.startsWith("attacks.")) {
-            return this.#toggleAttackAdder(name.slice("attacks.".length), input.checked);
+            return this.#toggleAttackAdder(name.slice("attacks.".length), value);
         }
 
         // Adjustment source/target selects combine into system.INPUT
@@ -329,7 +347,7 @@ export class HeroSystemItemSheetV2 extends HeroAppMixin(HandlebarsApplicationMix
 
         if (!foundry.utils.hasProperty(item, name)) {
             console.error(`Unhandled INPUT name="${name}"`);
-            return;
+            return undefined;
         }
 
         const changes = { [name]: value };
@@ -339,7 +357,7 @@ export class HeroSystemItemSheetV2 extends HeroAppMixin(HandlebarsApplicationMix
             changes["system.FAMILIARITY"] = true;
         }
 
-        await item.update(changes);
+        return item.update(changes);
     }
 
     async #toggleAttackAdder(attackId, checked) {

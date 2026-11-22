@@ -844,6 +844,18 @@ function noDamageBaseEffectDicePartsBundle(item /* , _options */) {
     };
 }
 
+/**
+ * `ignoreForActor` callback. `ignoreForTypes` carries the declared scope, so tests and tooling read
+ * which actor types ignore a power without calling the function.
+ *
+ * @typedef {((actor: HeroSystem6eActor) => boolean) & { ignoreForTypes?: Array<string> }} PowerIgnoreForActor
+ */
+
+/**
+ * @param {Array<string>} alwaysIgnore - Actor types that always ignore the power.
+ *
+ * @returns {PowerIgnoreForActor}
+ */
 function staticIgnoreForActorFunction(alwaysIgnore) {
     const ignoreForTypes = freezeDeep([...alwaysIgnore]);
 
@@ -880,35 +892,204 @@ function pdEdCostPerLevel(itemOrActor) {
 }
 
 /**
- * @typedef {Object} PowerDescription
- * @type Object
- * @property {string} key - Hero Designer XMLID of the power
- * @property {string} name - Human readable name of the power
- * @property {string} base - Base number of levels that are given automatically
- * @property {string} cost - Cost in character points per additional level
- * @property {Array<string>} type - A list of types associated with this power
- * @property {Array<"non-hd" | "optional-maneuver" | "success"| "dice" | "to-hit" | "activatable" | "adder" | "modifier" | "240DegreeArcBuiltIn" | "360DegreeArcBuiltIn" | "microscopicBuiltIn" | "senseBuiltIn" | "rangeBuiltIn" | "rapidBuiltIn" | "targetingBuiltIn" | telescopicBuiltIn | "penetrativeBuiltIn">} behaviors - A list of the behavior types this power exhibits in the code
- *        "non-hd" - this is not an XMLID that comes from Hero Designer
- *        "optional-maneuver" - this is an optional combat maneuver
- *        "success" - can roll some kind of success roll for this power
- *        "dice" - a damage/effect dice roll is associated with this power
- *        "to-hit" - a to-hit dice roll is associated with this power
- *        "activatable" - this power can be turned on/off/activated/deactivated
- *        "adder" - this power is actually a power adder
- *        "modifier" - this power is actually a power modifier (aka advantage)
+ * @typedef {"240DegreeArcBuiltIn" | "360DegreeArcBuiltIn" | "activatable" | "adder" | "ae-only" | "calculated" | "calculatedDEX" | "calculatedEGO" | "calculatedSTR" | "defaultoff" | "defense" | "dice" | "figured" | "figuredBODY" | "figuredCON" | "figuredDEX" | "figuredSTR" | "microscopicBuiltIn" | "modifier" | "non-hd" | "optional-maneuver" | "penetrativeBuiltIn" | "rangeBuiltIn" | "rapidBuiltIn" | "sense" | "senseBuiltIn" | "success" | "targetingBuiltIn" | "telescopicBuiltIn" | "to-hit" | "transmitBuiltIn"} PowerBehavior
  *        "240DegreeArcBuiltIn" - this sense power has a 240 degree arc
- *        "360DegreeArcBuiltIn" - this sense power has a 360 degree arc
- *        "microscopicBuiltIn" - this sense is microscopic
- *        "penetrativeBuiltIn" - this sense power is pentrative
- *        "rangeBuiltIn" - this sense power has range
- *        "rapidBuiltIn" - this sense is rapid
- *        "senseBuiltIn" - this sense power is passive
- *        "targetingBuiltIn" - this sense power can be used for targeting
- *        "telescopicBuiltIn" - this sense is telescopic
+ *   "360DegreeArcBuiltIn" - this sense power has a 360 degree arc
+ *   "activatable" - this power can be turned on/off/activated/deactivated
+ *   "adder" - this power is actually a power adder
+ *   "ae-only" - activating the power is the effect: no to-hit roll and no effect dice
+ *   "calculated" - figured characteristic, see the calculated suffixes
+ *   "calculatedDEX" - figured characteristic calculated from DEX
+ *   "calculatedEGO" - figured characteristic calculated from EGO
+ *   "calculatedSTR" - figured characteristic calculated from STR
+ *   "defaultoff" - the on/off control starts off.
+ *   "defense" - usable as a defense
+ *   "dice" - a damage/effect dice roll is associated with this power
+ *   "figured" - figured characteristic, see the figured suffixes
+ *   "figuredBODY" - figured from BODY
+ *   "figuredCON" - figured from CON
+ *   "figuredDEX" - figured from DEX
+ *   "figuredSTR" - figured from STR
+ *   "microscopicBuiltIn" - this sense is microscopic
+ *   "modifier" - this power is actually a power modifier (aka advantage)
+ *   "non-hd" - this is not an XMLID that comes from Hero Designer
+ *   "optional-maneuver" - this is an optional combat maneuver
+ *   "penetrativeBuiltIn" - this sense power is penetrative
+ *   "rangeBuiltIn" - this sense power has range
+ *   "rapidBuiltIn" - this sense is rapid
+ *   "sense" - marks a sense power. No reader of this behavior found outside this file
+ *   "senseBuiltIn" - this sense power is passive
+ *   "success" - can roll some kind of success roll for this power
+ *   "targetingBuiltIn" - this sense power can be used for targeting
+ *   "telescopicBuiltIn" - this sense is telescopic
+ *   "to-hit" - a to-hit dice roll is associated with this power
+ *   "transmitBuiltIn" - this sense power transmits.
+ */
+
+/**
+ * One line of the combat maneuver table `maneuverDesc` renders.
  *
- * @property {"constant"|"instant"|"persistent"} duration - The lower case duration of the power
- * @property {Function(HeroSystem6eItem) => HERO.RANGE_TYPES} rangeForItem - The range of the power base on the item as many martial arts share the same XMLID
- * @property {boolean} [costEnd] - If the power costs endurance to use. true if it does, false or undefined if it doesn't
+ * @typedef {Object} PowerManeuverDesc
+ * @property {string} phase - Segment or phase the maneuver takes.
+ * @property {string} ocv - Change to the character's OCV.
+ * @property {string} dcv - Change to the character's DCV.
+ * @property {string} effects - Rule text shown to the player.
+ * @property {string} dc - Damage class text.
+ * @property {boolean} attack - Whether the maneuver counts as an attack.
+ * @property {boolean} addStr - Whether STR adds to damage.
+ * @property {boolean} useWeapon - Whether a weapon is required.
+ * @property {string} [range] - Range text.
+ * @property {string} [weaponEffect] - Weapon effect text.
+ */
+
+/**
+ * Item sheet controls for one power. Each member is a callback or a list of choices.
+ *
+ * Every field is optional: a power sets the controls it needs.
+ *
+ * @typedef {Object} PowerEditOptions
+ * @property {(item: HeroSystem6eItem) => boolean} [showAttacks] - Whether to offer attack mapping.
+ * @property {boolean} [editableOption_ALIAS] - Whether the option alias is editable. Set statically.
+ * @property {Array<object>} [choices] - Options the sheet lists.
+ * @property {Array<object>} [choicesInput] - Choices for an input control. Set statically.
+ * @property {Record<string, string>} [penaltyChoices] - Penalty key to label map the sheet lists.
+ * @property {boolean} [hideLEVELS] - Whether to hide the LEVELS field. Set statically.
+ */
+
+/**
+ * Vision the power grants, read by `module/herovision`.
+ *
+ * @typedef {Object} PowerSight
+ * @property {string} visionMode - Foundry vision mode name, for example `basic`.
+ * @property {number|null} range - Metres of vision. Null means unlimited.
+ */
+
+/**
+ * Per-field sheet presentation overrides.
+ *
+ * @typedef {Object} PowerSheetOptions
+ * @property {{ label?: string, selectOptions?: Record<string, string> }} [INPUT] - Label and choices for the INPUT field.
+ */
+
+/**
+ * One power description. `addPower` freezes it into `HERO.powers6e` and `HERO.powers5e`, and
+ * `item.baseInfo` returns one at run time.
+ *
+ * Every property is optional. `addPower(undefined, override)` registers a 5e-only power, and the
+ * second argument may set any subset of the first. `addPower` fills `key`, `name` and `xmlTag` from
+ * `xml`, so a description may omit all three. `validatePowers` warns when a power still has no
+ * `key`, `type` or `behaviors`.
+ *
+ * Callback types name the arguments the call sites pass and read.
+ *
+ * @typedef {Object} PowerDescription
+ * @property {string} [key] - Hero Designer XMLID of the power, and its dictionary key.
+ * @property {string} [name] - Human readable name. A description without one takes the `xml` ALIAS.
+ * @property {string} [xmlTag] - Upper case XML root tag. `addPower` writes it, no data sets it.
+ * @property {string|undefined} [xml] - Hero Designer XML for the power.
+ * @property {Array<string>} [type] - Type marks such as `characteristic` or `movement`.
+ *   `powersOfType` selects on them, so the set stays open.
+ * @property {Array<PowerBehavior>} [behaviors] - Behaviors the code switches on.
+ * @property {(item: HeroSystem6eItem) => Array<PowerBehavior>} [behaviorsByItem] - Builds behaviors that depend on
+ *   the item, for example a MANEUVER.
+ * @property {string} [duration] - Duration of the effect. Pass a `HERO.DURATION_TYPES` value:
+ *   `instant`, `constant`, `persistent` or `inherent`.
+ * @property {string} [target] - Free text who the power targets, for example `self only`.
+ * @property {((source?: HeroSystem6eActor | HeroSystem6eItem) => number)} [base] - Base value in
+ *   levels before adders. Required for characteristics and movement.
+ * @property {((itemOrActor?: HeroSystem6eItem | HeroSystem6eActor) => number)} [costPerLevel] - Character points per
+ *   additional level.
+ * @property {Function|undefined} [cost] - `(item) => number`. Cost outside the per-level path, for
+ *   example a skill category. A description may set it to `undefined` to clear an inherited cost.
+ *   FIXME(type): untyped callback, 6 findings when declared. Blocker: its bodies read members the
+ *   model does not declare, for example `basePlusLevels`.
+ * @property {Function} [realCost] - `(item) => number`. Cost after adders and limitations.
+ *   FIXME(type): untyped callback, 1 finding when declared. Blocker: `HeroSystem6eItem` declares no
+ *   `realCost` getter, and the COMPOUNDPOWER description sums `childItems[].realCost`.
+ * @property {Function} [activePoints] - `(item) => number`. Active points the power is worth.
+ *   FIXME(type): untyped callback, 1 finding when declared. Blocker: `HeroSystem6eItem` declares no
+ *   `activePoints`, `realCost` or `_limitationCost` getter.
+ * @property {(item: HeroSystem6eItem) => number} [basePoints] - Base points from purchased levels.
+ * @property {(item: HeroSystem6eItem) => number} [addersCost] - Cost of the power's adders.
+ * @property {Function} [adderCostAdjustment] - `({ adder, adderCost }) => number`. Edition specific
+ *   adder cost.
+ *   FIXME(type): untyped callback, 3 findings when declared. Blocker: `XMLID`, `ID` and `item` are
+ *   undeclared on the adder parameter type.
+ * @property {Function} [characterPointCostForElementalControl] - `(item) => number`. Control cost of
+ *   an elemental Control Power.
+ *   FIXME(type): untyped callback, 3 findings when declared. Blocker: the same missing
+ *   `HeroSystem6eItem` getters.
+ * @property {number} [minimumLimitation] - Lowest limitation ratio the power allows.
+ * @property {((item?: HeroSystem6eItem) => string)} [rangeForItem] - Range of the power, a
+ *   `HERO.RANGE_TYPES` value. Needed because martial arts share an XMLID.
+ * @property {(item: HeroSystem6eItem) => string} [rangeText] - Range spelled for a card.
+ * @property {PowerIgnoreForActor} [ignoreForActor] - Whether this actor type ignores the power.
+ * @property {((modifier?: HeroSystem6eItem, item?: HeroSystem6eItem) => boolean)} [dcAffecting] - Whether an
+ *   advantage changes the DC. The item class warns when an advantage has no such function.
+ * @property {((item: HeroSystem6eItem) => boolean)} [doesKillingDamage] - Whether the power does
+ *   killing damage.
+ * @property {boolean} [costEnd] - Whether the power costs endurance to use.
+ * @property {boolean} [usesStrength] - Whether the power adds STR.
+ * @property {boolean} [unusualDicePerDc] - Whether the power breaks the usual dice-per-DC table.
+ * @property {boolean} [categorized] - Whether one purchase covers a category.
+ * @property {boolean} [isContainer] - Whether the power holds other powers.
+ * @property {boolean} [hasNoDefense] - Whether no defense applies to the power.
+ * @property {boolean} [nonDmgEffect] - Whether the effect is non-damaging.
+ * @property {boolean} [afterDefenses] - Whether the effect applies after defenses.
+ * @property {boolean} [privateAsAdder] - Whether the power costs as an adder when private.
+ * @property {boolean} [refreshAttackDialogWhenChanged] - Whether to rebuild an open attack dialog.
+ * @property {Function} [defense] - `(item) => object`. Resistance and entangle profile the power
+ *   grants.
+ *   FIXME(type): untyped callback, 2 findings when declared. Blocker: the profile shape has no
+ *   typedef.
+ * @property {Function} [defenseTagVsAttack] - `(defenseItem, attackItem, options)`. How much of the
+ *   defense applies to one attack. Data returns a defense profile from `createDefenseProfile`, or a
+ *   tag list. Its only reader returns the value unchanged.
+ *   FIXME(type): untyped callback, 62 findings when declared. Blocker: the options bundle has no
+ *   typedef and the return needs a defense-profile union.
+ * @property {(item: HeroSystem6eItem) => string} [attackDefenseVs] - Defense tag an attack uses against this power,
+ *   for example `POWERDEFENSE`.
+ * @property {(actor: HeroSystem6eActor) => number} [calculated5eCharacteristic] - 5e calculated value.
+ * @property {Function} [figured5eCharacteristic] - `(actor) => number`. 5e figured value.
+ *   FIXME(type): untyped callback, 19 findings when declared. Blocker: its bodies read members the
+ *   model does not declare.
+ * @property {Function} [baseEffectDicePartsBundle] - `(item, options) => object`. Dice, tags and base
+ *   attack item for one effect.
+ *   FIXME(type): untyped callback, 4 findings when declared. Blocker: the options bundle has no
+ *   typedef, and `HeroSystemFormulaDicePartsBundle` omits `baseAttackItem`, which the dice-parts
+ *   reader unpacks.
+ * @property {Function} [activeEffect] - `(item) => object|null`. Active effect the power grants.
+ *   FIXME(type): untyped callback, 13 findings when declared. Blocker: the bodies read keyed values
+ *   off `details()`, and that map has no declared key set.
+ * @property {string} [expiryEvent] - Event name that expires the effect, for example `hero.nextTurnStart`.
+ * @property {(item: HeroSystem6eItem) => boolean} [appliesTo] - Whether the power applies in a situation.
+ * @property {Function} [heroValidation] - `(item) => Array<{property, message}>`. Sheet validation
+ *   rules for the power.
+ *   FIXME(type): untyped callback. Blocker: callers pass either one argument, the item, or two,
+ *   a modifier and the item.
+ * @property {Function} [notes] - `(char) => string|null`. Extra text for the card.
+ *   FIXME(type): untyped callback. Blocker: the argument type is undecided. The item data model
+ *   passes itself; the data names the parameter `char`.
+ * @property {(item: HeroSystem6eItem) => string} [descriptionFactory] - Description text.
+ * @property {(modifier: object, item: HeroSystem6eItem) => string} [descriptionModifier] - One modifier's text.
+ * @property {(item: HeroSystem6eItem) => string} [nameOverride] - Name that replaces the sheet name.
+ * @property {Function} [details] - `(item) => object`. Values a card shows for the power, keyed by
+ *   characteristic name, for example `str`, `stun` or `running`.
+ *   FIXME(type): untyped callback. Declaring the return `object` moved 16 findings into the
+ *   `activeEffect` bodies that read it. Blocker: the key set has no typedef.
+ * @property {Function} [optionIDFix] - `(json) => string`. Corrects an OPTIONID Hero Designer spells
+ *   wrong.
+ *   FIXME(type): untyped callback, 2 findings when declared. Blocker: the XML-derived json node has
+ *   no typedef.
+ * @property {PowerManeuverDesc} [maneuverDesc] - Row in the combat maneuver table.
+ * @property {PowerEditOptions} [editOptions] - Sheet controls for the power.
+ * @property {PowerSight} [sight] - Vision the power grants.
+ * @property {PowerSheetOptions} [sheet] - Per-field sheet overrides.
+ * @property {string} [perceivability] - How noticeable the power is: `obvious`, `inobvious`,
+ *   `imperceptible` or `Special`.
+ * @property {string} [senseGroup] - Sense group the power belongs to, for example `mental`.
+ * @property {string} [senseType] - `passive` or `active`.
+ * @property {string} [img] - Icon path shown on the sheet.
  */
 
 /**
@@ -994,7 +1175,7 @@ function addPower(powerDescription6e, powerOverrideFor5e) {
  * A power description marks its kind with `type`, for example `type: ["characteristic"]`. Every
  * derived list and table walks this generator, so the mark is read in one place.
  *
- * @param {object[]} powerList Power descriptions of one edition.
+ * @param {Array<PowerDescription>} powerList Power descriptions of one edition.
  * @param {string} type        Type mark to select, for example `movement`.
  *
  * @yields {{label: string, power: object}} The uppercase key and its description.
@@ -1020,7 +1201,7 @@ function* powersOfType(powerList, type) {
 /**
  * Collect the sorted labels of one power type for one edition.
  *
- * @param {object[]} powerList Power descriptions of one edition.
+ * @param {Array<PowerDescription>} powerList Power descriptions of one edition.
  * @param {string} type        Type mark to select, for example `characteristic`.
  *
  * @returns {string[]} Uppercase labels, sorted and frozen.
@@ -3253,7 +3434,7 @@ const MOVEMENT_KEYS_WITHOUT_VALUE = freezeDeep(["FIXEDLOCATION", "FLOATINGLOCATI
  * The table maps the lowercase characteristic key to the power name, for example
  * `{ running: "Running" }`. Callers read it as the set of movement modes and as the label source.
  *
- * @param {object[]} powerList Power descriptions of one edition.
+ * @param {Array<PowerDescription>} powerList Power descriptions of one edition.
  *
  * @returns {object} Frozen map of lowercase movement key to power name.
  */
@@ -3311,7 +3492,7 @@ HERO.customCharacteristicLabels = freezeDeep([
  * entry is `null` and callers decide by actor. STUN is the one case: an automaton built with
  * "cannot be stunned" has no STUN, and the flag lives on the actor, not in the description.
  *
- * @param {object[]} powerList Power descriptions of one edition.
+ * @param {Array<PowerDescription>} powerList Power descriptions of one edition.
  *
  * @returns {object} Frozen map of uppercase label to the sorted actor types that have it, or `null`.
  */
@@ -7043,73 +7224,69 @@ HERO.characteristicHasTypes5e = hasTypesByLabel(HERO.powers5e);
         },
         {},
     );
-    addPower(
-        undefined,
-        {
-            key: "DAMAGERESISTANCE",
-            type: ["defense"],
-            behaviors: ["activatable", "defense"],
-            //perceivability: "obvious",
-            duration: HERO.DURATION_TYPES.PERSISTENT,
-            target: "self only",
-            rangeForItem: fixedValueFunction(HERO.RANGE_TYPES.SELF),
-            costEnd: false,
-            costPerLevel: fixedValueFunction(1 / 2),
-            defenseTagVsAttack: function (actorItemDefense, attackItem, options) {
-                let value = 0;
-                let purchasedLevels = 0;
-                let maxValue = 0;
-                switch (options.attackDefenseVs) {
-                    case "PD":
-                    case "ED": {
-                        const characteristic = actorItemDefense.actor?.getCharacteristic(options.attackDefenseVs);
-                        purchasedLevels = parseInt(actorItemDefense.system[`${options.attackDefenseVs}LEVELS`]) || 0;
-                        maxValue = parseInt(characteristic?.basePlusLevels) || 0;
-                        // Damage Resistance converts existing normal defense (5ER p. 146); it can
-                        // only convert what the characteristic currently holds, and a
-                        // characteristic drained into the negatives functions as 0 (6E1 p. 135).
-                        value = Math.min(purchasedLevels, Math.max(0, parseInt(characteristic?.value) || 0));
-                        break;
-                    }
-
-                    case "MD":
-                        value = purchasedLevels = parseInt(actorItemDefense.system.MDLEVELS) || 0;
-                        // Icky to calculate maxValue. Deferring for now.
-                        maxValue = value;
-                        break;
-
-                    case "FLASHDEFENSE":
-                        value = purchasedLevels = parseInt(actorItemDefense.system.FDLEVELS) || 0;
-                        // Icky to calculate maxValue. Deferring for now.
-                        maxValue = value;
-                        break;
-
-                    case "POWERDEFENSE":
-                        value = purchasedLevels = parseInt(actorItemDefense.system.POWDLEVELS) || 0;
-                        // Icky to calculate maxValue. Deferring for now.
-                        maxValue = value;
-                        break;
+    addPower(undefined, {
+        key: "DAMAGERESISTANCE",
+        type: ["defense"],
+        behaviors: ["activatable", "defense"],
+        //perceivability: "obvious",
+        duration: HERO.DURATION_TYPES.PERSISTENT,
+        target: "self only",
+        rangeForItem: fixedValueFunction(HERO.RANGE_TYPES.SELF),
+        costEnd: false,
+        costPerLevel: fixedValueFunction(1 / 2),
+        defenseTagVsAttack: function (actorItemDefense, attackItem, options) {
+            let value = 0;
+            let purchasedLevels = 0;
+            let maxValue = 0;
+            switch (options.attackDefenseVs) {
+                case "PD":
+                case "ED": {
+                    const characteristic = actorItemDefense.actor?.getCharacteristic(options.attackDefenseVs);
+                    purchasedLevels = parseInt(actorItemDefense.system[`${options.attackDefenseVs}LEVELS`]) || 0;
+                    maxValue = parseInt(characteristic?.basePlusLevels) || 0;
+                    // Damage Resistance converts existing normal defense (5ER p. 146); it can
+                    // only convert what the characteristic currently holds, and a
+                    // characteristic drained into the negatives functions as 0 (6E1 p. 135).
+                    value = Math.min(purchasedLevels, Math.max(0, parseInt(characteristic?.value) || 0));
+                    break;
                 }
 
-                if (purchasedLevels > maxValue) {
-                    const msg = `${actorItemDefense.detailedName()} has more ${options.attackDefenseVs} LEVELS (${purchasedLevels}) than natural LEVELS (${maxValue}). Defenses may not properly represent this defense. Consider ARMOR if you want resistant defenses.`;
-                    if (!squelch(actorItemDefense.id)) {
-                        ui.notifications.warn(msg, actorItemDefense);
-                    }
+                case "MD":
+                    value = purchasedLevels = parseInt(actorItemDefense.system.MDLEVELS) || 0;
+                    // Icky to calculate maxValue. Deferring for now.
+                    maxValue = value;
+                    break;
+
+                case "FLASHDEFENSE":
+                    value = purchasedLevels = parseInt(actorItemDefense.system.FDLEVELS) || 0;
+                    // Icky to calculate maxValue. Deferring for now.
+                    maxValue = value;
+                    break;
+
+                case "POWERDEFENSE":
+                    value = purchasedLevels = parseInt(actorItemDefense.system.POWDLEVELS) || 0;
+                    // Icky to calculate maxValue. Deferring for now.
+                    maxValue = value;
+                    break;
+            }
+
+            if (purchasedLevels > maxValue) {
+                const msg = `${actorItemDefense.detailedName()} has more ${options.attackDefenseVs} LEVELS (${purchasedLevels}) than natural LEVELS (${maxValue}). Defenses may not properly represent this defense. Consider ARMOR if you want resistant defenses.`;
+                if (!squelch(actorItemDefense.id)) {
+                    ui.notifications.warn(msg, actorItemDefense);
                 }
-                if (value > 0) {
-                    const newOptions = foundry.utils.deepClone(options);
-                    newOptions.operation = "add";
-                    newOptions.resistant = true;
-                    return createDefenseProfile(actorItemDefense, attackItem, value, newOptions);
-                }
-                return null;
-            },
-            baseEffectDicePartsBundle: noDamageBaseEffectDicePartsBundle,
-            xml: `<POWER XMLID="DAMAGERESISTANCE" ID="1709342567780" BASECOST="0.0" LEVELS="0" ALIAS="Damage Resistance" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" PDLEVELS="0" EDLEVELS="0" MDLEVELS="0" FDLEVELS="0" POWDLEVELS="0"></POWER>`,
+            }
+            if (value > 0) {
+                const newOptions = foundry.utils.deepClone(options);
+                newOptions.operation = "add";
+                newOptions.resistant = true;
+                return createDefenseProfile(actorItemDefense, attackItem, value, newOptions);
+            }
+            return null;
         },
-        {},
-    );
+        baseEffectDicePartsBundle: noDamageBaseEffectDicePartsBundle,
+        xml: `<POWER XMLID="DAMAGERESISTANCE" ID="1709342567780" BASECOST="0.0" LEVELS="0" ALIAS="Damage Resistance" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" PDLEVELS="0" EDLEVELS="0" MDLEVELS="0" FDLEVELS="0" POWDLEVELS="0"></POWER>`,
+    });
     addPower(
         {
             key: "DARKNESS",
