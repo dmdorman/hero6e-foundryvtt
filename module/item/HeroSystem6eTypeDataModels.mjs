@@ -1288,6 +1288,16 @@ export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
             WEIGHT: new HeroNumberField({ integer: false, min: 0.0, initial: 0.0 }),
         };
     }
+
+    /**
+     * Whether LEVELS totals the purchased defense rather than purchasing something of its own.
+     *
+     * @returns {boolean} True when the item carries a purchased-defense level field.
+     */
+    get levelsTotalPurchasedDefenses() {
+        const data = this.toObject(false);
+        return ["PDLEVELS", "EDLEVELS", "MDLEVELS", "FDLEVELS", "POWDLEVELS"].some((key) => data[key] !== undefined);
+    }
 }
 
 export class HeroSystem6eItemEquipment extends HeroSystem6eItemPower {
