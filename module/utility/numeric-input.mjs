@@ -25,6 +25,9 @@
  * The browser enforces what it can during typing. This module is the backstop, because a cleared
  * `input type="number"` still reports an empty string and a browser still accepts an exponent such as
  * `1e5`.
+ *
+ * `commitNumericInput` is the entry point both sheets use. A sheet hands it the input and a writer, and the
+ * writer sees only an accepted value.
  */
 
 /** Allowed `step` values, mapped to the decimal places they permit. */
@@ -304,25 +307,174 @@ function describeBounds({ min, max }) {
 }
 
 /**
+ * State whether one input carries a number contract the sheet must enforce.
+ *
+ * Markup opts a field in with `type="number"` or `data-dtype="Number"`. Only an `<input>` carries such a
+ * contract. A `<select data-dtype="Number">` exists so Foundry casts the chosen option, and its text comes
+ * from the option list rather than from a player's keyboard, so no rule applies to it. Text, checkbox, and
+ * textarea keep their raw value for the same reason.
+ *
+ * @param {HTMLInputElement} input The input to read.
+ *
+ * @returns {boolean} True when the value must parse as a number.
+ */
+function declaresNumberContract(input) {
+    return input.tagName === "INPUT" && (input.type === "number" || input.dataset.dtype === "Number");
+}
+
+/**
+ * Check one input's text against the contract its own markup declares.
+ *
+ * This function reads and decides. It writes nothing: no document, and not even the input.
+ *
+ * A `step` the module does not know, a bound that is not a number, or inverted bounds are a markup bug, not
+ * a player error, so they report `reason: "schema"` and carry the thrown `InputElementNumberSchemaError`.
+ * Text the contract cannot describe reports `reason: "shape"`. A number outside the bounds reports
+ * `reason: "range"`.
+ *
+ * @param {HTMLInputElement} input The input to check.
+ *
+ * @returns {{ok: true, value: number, contract: {decimals: number, min: number|null, max: number|null}, text: string}
+ *     | {ok: false, reason: "schema" | "shape" | "range", contract: {decimals: number, min: number|null, max: number|null}|null, error?: InputElementNumberSchemaError}}
+ *     The parsed number and canonical text, or the reason the text was rejected.
+ *
+ * @throws {Error} Anything other than `InputElementNumberSchemaError` from the contract read.
+ */
+function validateNumericInput(input) {
+    let contract;
+
+    try {
+        contract = readNumericSchema(input);
+    } catch (error) {
+        if (!(error instanceof InputElementNumberSchemaError)) {
+            throw error;
+        }
+
+        return { ok: false, reason: "schema", contract: null, error };
+    }
+
+    const parsed = parseNumericInput(input.value, contract);
+
+    if (parsed === null) {
+        return { ok: false, reason: "shape", contract };
+    }
+
+    if (!withinDeclaredBounds(parsed, contract)) {
+        return { ok: false, reason: "range", contract };
+    }
+
+    const text = canonicalNumericText(input.value, contract);
+
+    // `canonicalNumericText` answers null only for text `parseNumericInput` already refused.
+    return { ok: true, value: parsed, contract, text: text ?? input.value };
+}
+
+/**
+ * Find the words a player uses for one input.
+ *
+ * Markup wins in this order: a `data-field-label`, a `<label for>` pointing at the input's `id`, the first
+ * label in the enclosing `.form-group`, then the first legend of the enclosing `fieldset`. The property path
+ * answers last, because a player cannot read a path.
+ *
+ * @param {HTMLInputElement} input The input to name.
+ *
+ * @returns {string} The visible label, or the input's `name`.
+ */
+function labelForNumericInput(input) {
+    if (input.dataset.fieldLabel) {
+        return input.dataset.fieldLabel;
+    }
+
+    if (input.id) {
+        const bound = input.ownerDocument.querySelector(`label[for="${input.id}"]`);
+
+        if (bound?.textContent?.trim()) {
+            return bound.textContent.trim();
+        }
+    }
+
+    const group = input.closest(".form-group");
+    const groupLabel = group?.querySelector("label")?.textContent?.trim();
+
+    if (groupLabel) {
+        return groupLabel;
+    }
+
+    const legend = input.closest("fieldset")?.querySelector("legend")?.textContent?.trim();
+
+    if (legend) {
+        return legend;
+    }
+
+    return input.name;
+}
+
+/**
  * Put the text the sheet last drew back into a rejected input, and tell the player what the field accepts.
  *
  * `input.defaultValue` mirrors the `value` attribute, and the template wrote that attribute. Core writes it
  * from the converted value, already rounded to the field's `step`, so the attribute carries the unit the label
  * names and the precision the field declares. This function converts nothing and rounds nothing, so a converted
- * field cannot drift from its own label here.
+ * field cannot drift from its own label here. A field whose stored value is a string, such as `BODYLEVELS`,
+ * restores that string for the same reason: the markup already holds it.
  *
  * A rejection writes no document, so no render competes with this write. An accepted change does update the
  * document, and core re-renders the sheet, which replaces the part with fresh markup. The attribute therefore
  * tracks every commit the player makes. REF: `Document#_onUpdate` and `createNumberInput` in foundry.mjs.
  *
  * @param {HTMLInputElement} input The input whose change was rejected.
- * @param {string} path Property path shown to the player.
- * @param {{decimals: number, min: number|null, max: number|null}} contract The resolved contract.
+ * @param {{reason: "schema" | "shape" | "range", contract: {decimals: number, min: number|null, max: number|null}|null, error?: InputElementNumberSchemaError}} result
+ *     The rejection from `validateNumericInput`.
+ * @param {string} [label] Name shown to the player. Omit it to let `labelForNumericInput` answer.
  *
  * @returns {void}
  */
-export function restoreNumericInput(input, path, contract) {
+function rejectNumericInput(input, result, label) {
+    if (result.reason === "schema") {
+        console.error(result.error);
+        ui.notifications.error(result.error.message);
+        return;
+    }
+
     input.value = input.defaultValue;
 
-    ui.notifications.error(`${path} needs ${describeNumericSchema(contract)}.`);
+    const name = label ?? labelForNumericInput(input);
+
+    ui.notifications.error(`${name} needs ${describeNumericSchema(result.contract)}.`);
+}
+
+/**
+ * Validate one number input, then hand the parsed value to a writer.
+ *
+ * A rejected change hands the input back to `rejectNumericInput`, which puts the drawn text back. The document
+ * is not read, because the markup already holds the text the player saw. Nothing is guessed.
+ *
+ * Non-numeric inputs keep their raw value, so a sheet may route every change through this function.
+ *
+ * @param {HTMLInputElement} input The input that changed.
+ * @param {(value: number|string) => Promise<unknown>} write Writes the parsed number, or the raw text of a
+ *     non-numeric input.
+ * @param {string} [label] Name shown to the player when the value is rejected. Omit it to let the markup
+ *     answer.
+ *
+ * @returns {Promise<void>} Resolves when the write finishes, or at once when the value is rejected.
+ */
+export async function commitNumericInput(input, write, label) {
+    if (!declaresNumberContract(input)) {
+        await write(input.value);
+        return;
+    }
+
+    const result = validateNumericInput(input);
+
+    if (!result.ok) {
+        rejectNumericInput(input, result, label);
+        return;
+    }
+
+    if (result.text !== input.value) {
+        input.value = result.text;
+    }
+
+    await write(result.value);
 }

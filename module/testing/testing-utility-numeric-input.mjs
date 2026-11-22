@@ -1042,6 +1042,402 @@ export function registerNumericInputTests(quench) {
                     });
                 });
             });
+
+            describe("Item sheet number contract", async function () {
+                // Each fixture is one item, so the sheet renders only the cells that item owns. The XML
+                // carries a BASECOST below zero on purpose: the contract must draw what Hero Designer
+                // exports, not merely what a form expects.
+                const BLAST_XML = `
+                    <POWER XMLID="ENERGYBLAST" ID="1000000000021" BASECOST="-0.25" LEVELS="6" ALIAS="Blast"
+                        POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default"
+                        SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Contract Blast" INPUT="ED"
+                        USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                        <NOTES />
+                    </POWER>`;
+
+                // OPTION THREE gives three charges, so the sheet draws the Charges cell.
+                const CHARGED_XML = `
+                    <POWER XMLID="ENERGYBLAST" ID="1000000000031" BASECOST="5.0" LEVELS="1" ALIAS="Blast"
+                        POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default"
+                        SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Charged Blast" INPUT="ED"
+                        USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="Yes" AFFECTS_TOTAL="Yes">
+                        <NOTES />
+                        <MODIFIER XMLID="CHARGES" ID="1000000000032" BASECOST="-1.25" LEVELS="0" ALIAS="Charges"
+                            POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default"
+                            SHOW_ACTIVE_COST="Yes" OPTION="THREE" OPTIONID="THREE" OPTION_ALIAS="3"
+                            INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS="" PRIVATE="No" FORCEALLOW="No">
+                            <NOTES />
+                        </MODIFIER>
+                    </POWER>`;
+
+                // REC is the LEVELS of the nested ENDURANCERESERVEREC power, written through its own branch.
+                const RESERVE_XML = `
+                    <POWER XMLID="ENDURANCERESERVE" ID="1000000000041" BASECOST="0.0" LEVELS="20"
+                        ALIAS="Endurance Reserve" POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst"
+                        COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes"
+                        NAME="Reserve" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
+                        <POWER XMLID="ENDURANCERESERVEREC" ID="1000000000042" BASECOST="0.0" LEVELS="4"
+                            ALIAS="Recovery" POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255"
+                            SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME=""
+                            AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes"></POWER>
+                    </POWER>`;
+
+                /**
+                 * Create one item and open its sheet, so the sheet's own listener is attached.
+                 *
+                 * @param {object} test Mocha test context. The fixture helpers name the actor from it.
+                 * @param {string} xml Hero Designer XML for one item.
+                 *
+                 * @returns {Promise<{actor: HeroSystem6eActor, item: HeroSystem6eItem}>} The fixture pair.
+                 */
+                async function openItemSheet(test, xml) {
+                    const actor = await createQuenchActor({
+                        quench: test,
+                        contents: xml,
+                        is5e: false,
+                        actorType: "pc",
+                    });
+                    const item = actor.items.contents[0];
+
+                    await item.sheet.render({ force: true });
+
+                    return { actor, item };
+                }
+
+                /**
+                 * Read one cell of a rendered item sheet.
+                 *
+                 * @param {HeroSystem6eItem} item Item whose sheet holds the cell.
+                 * @param {string} name Property path the cell writes.
+                 *
+                 * @returns {HTMLInputElement} The input.
+                 *
+                 * @throws {Error} When the sheet renders no such cell.
+                 */
+                function cell(item, name) {
+                    const input = item.sheet.element.querySelector(`input[name="${name}"]`);
+
+                    if (!input) {
+                        throw new Error(`item sheet renders no input[name="${name}"] for ${item.name}`);
+                    }
+
+                    return input;
+                }
+
+                /**
+                 * Put text in one cell and blur it, so the sheet's change handler runs.
+                 *
+                 * @param {HeroSystem6eItem} item Item whose sheet holds the cell.
+                 * @param {string} name Property path the cell writes.
+                 * @param {string} text Text to commit.
+                 *
+                 * @returns {Promise<void>} Resolves once the handler and its write have settled.
+                 */
+                async function typeIntoItemCell(item, name, text) {
+                    const input = cell(item, name);
+                    input.value = text;
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                    await new Promise((resolve) => setTimeout(resolve, 250));
+                }
+
+                /**
+                 * Put text in one focused cell and fire nothing, so the edit stays pending.
+                 *
+                 * Closing a sheet fires no change event for the focused input, so the sheet commits that cell
+                 * itself. Focus is what puts the edit on that path.
+                 *
+                 * @param {HeroSystem6eItem} item Item whose sheet holds the cell.
+                 * @param {string} name Property path the cell writes.
+                 * @param {string} text Text to leave pending.
+                 *
+                 * @returns {void}
+                 */
+                function focusCellWithPendingText(item, name, text) {
+                    const input = cell(item, name);
+                    input.focus();
+                    input.value = text;
+                }
+
+                /**
+                 * Collect the error notifications one run raises, without showing them.
+                 *
+                 * @param {() => Promise<void>} run Work that may reject an edit.
+                 *
+                 * @returns {Promise<string[]>} The messages, in the order raised.
+                 */
+                async function collectErrorNotifications(run) {
+                    const messages = [];
+                    const notify = ui.notifications.error;
+                    ui.notifications.error = (message) => {
+                        messages.push(String(message));
+                    };
+
+                    try {
+                        await run();
+                    } finally {
+                        ui.notifications.error = notify;
+                    }
+
+                    return messages;
+                }
+
+                describe("markup contract", async function () {
+                    it("declares a legal contract that the drawn text satisfies", async function () {
+                        const problems = [];
+
+                        for (const xml of [BLAST_XML, CHARGED_XML, RESERVE_XML]) {
+                            const { actor, item } = await openItemSheet(this, xml);
+
+                            for (const input of item.sheet.element.querySelectorAll(
+                                'input[type="number"], input[data-dtype="Number"]',
+                            )) {
+                                let contract;
+
+                                try {
+                                    contract = readNumericSchema(input);
+                                } catch (error) {
+                                    if (error instanceof InputElementNumberSchemaError) {
+                                        problems.push(`${item.name} ${input.name}: ${error.reason}`);
+                                        continue;
+                                    }
+                                    throw error;
+                                }
+
+                                // The text the sheet drew must pass the contract the same markup declares.
+                                // A floor that real data breaks lands here: a negative BASECOST in a cell
+                                // declared min="0", or a decimal in a cell declared step="1".
+                                if (parseNumericInput(input.value, contract) === null) {
+                                    problems.push(`${item.name} ${input.name}: draws "${input.value}"`);
+                                }
+                            }
+
+                            await deleteQuenchActor({ quench: this, actor });
+                        }
+
+                        expect(problems).to.deep.equal([]);
+                    });
+
+                    it("declares no floor on BASECOST, so an exported negative still draws", async function () {
+                        const { actor, item } = await openItemSheet(this, BLAST_XML);
+                        const input = cell(item, "system.BASECOST");
+
+                        expect(input.getAttribute("step")).to.equal("0.01");
+                        expect(input.getAttribute("min")).to.equal(null);
+                        expect(input.value).to.equal("-0.25");
+
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+                });
+
+                describe("rejected edits", async function () {
+                    let actor;
+                    let item;
+
+                    beforeEach(async function () {
+                        ({ actor, item } = await openItemSheet(this, BLAST_XML));
+                    });
+
+                    afterEach(async function () {
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("refuses text that is not a number, and names the field", async function () {
+                        const drawn = cell(item, "system.BASECOST").value;
+
+                        const messages = await collectErrorNotifications(async () =>
+                            typeIntoItemCell(item, "system.BASECOST", "abc"),
+                        );
+
+                        expect(item._source.system.BASECOST).to.equal(-0.25);
+                        expect(messages.length, "one rejection must notify once").to.equal(1);
+                        expect(messages[0]).to.include("BASECOST");
+                        expect(cell(item, "system.BASECOST").value).to.equal(drawn);
+                    });
+
+                    it("refuses an exponent in a whole quantity cell", async function () {
+                        await collectErrorNotifications(async () => typeIntoItemCell(item, "system.QUANTITY", "1e5"));
+
+                        expect(item._source.system.QUANTITY).to.equal(1);
+                    });
+
+                    it("refuses a decimal in a whole quantity cell", async function () {
+                        await collectErrorNotifications(async () => typeIntoItemCell(item, "system.QUANTITY", "3.5"));
+
+                        expect(item._source.system.QUANTITY).to.equal(1);
+                    });
+
+                    it("refuses a negative in a floored quantity cell", async function () {
+                        await collectErrorNotifications(async () => typeIntoItemCell(item, "system.QUANTITY", "-1"));
+
+                        expect(item._source.system.QUANTITY).to.equal(1);
+                    });
+                });
+
+                describe("accepted edits", async function () {
+                    let actor;
+                    let item;
+
+                    beforeEach(async function () {
+                        ({ actor, item } = await openItemSheet(this, BLAST_XML));
+                    });
+
+                    afterEach(async function () {
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("writes a whole number and drops the leading zero from the box", async function () {
+                        await typeIntoItemCell(item, "system.QUANTITY", "010");
+
+                        expect(item._source.system.QUANTITY).to.equal(10);
+                        expect(cell(item, "system.QUANTITY").value).to.equal("10");
+                    });
+
+                    it("keeps a negative base cost, because an exported power can carry one", async function () {
+                        await typeIntoItemCell(item, "system.BASECOST", "-1.25");
+
+                        expect(item._source.system.BASECOST).to.equal(-1.25);
+                    });
+
+                    it("commits the pending edit when the sheet closes with the cell focused", async function () {
+                        focusCellWithPendingText(item, "system.QUANTITY", "7");
+                        await item.sheet.close();
+
+                        expect(item._source.system.QUANTITY).to.equal(7);
+                    });
+
+                    it("drops a pending invalid edit when the sheet closes", async function () {
+                        focusCellWithPendingText(item, "system.QUANTITY", "1e5");
+
+                        await collectErrorNotifications(async () => item.sheet.close());
+
+                        expect(item._source.system.QUANTITY).to.equal(1);
+                    });
+                });
+
+                describe("cells that write another field", async function () {
+                    it("stores a REC of zero instead of rounding it up to one", async function () {
+                        const { actor, item } = await openItemSheet(this, RESERVE_XML);
+
+                        expect(cell(item, "rec").value, "REC draws the nested power's levels").to.equal("4");
+
+                        await typeIntoItemCell(item, "rec", "0");
+
+                        expect(item.findModsByXmlid("ENDURANCERESERVEREC").LEVELS).to.equal(0);
+
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("stores a negative REC, because recovery code interprets it, not the cell", async function () {
+                        const { actor, item } = await openItemSheet(this, RESERVE_XML);
+
+                        const messages = await collectErrorNotifications(async () =>
+                            typeIntoItemCell(item, "rec", "-2"),
+                        );
+
+                        expect(messages, "a negative REC is legal, so nothing may notify").to.deep.equal([]);
+                        expect(item.findModsByXmlid("ENDURANCERESERVEREC").LEVELS).to.equal(-2);
+
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("stores a negative END current, because a drained reserve sits below zero", async function () {
+                        const { actor, item } = await openItemSheet(this, RESERVE_XML);
+
+                        const messages = await collectErrorNotifications(async () =>
+                            typeIntoItemCell(item, "system.value", "-3"),
+                        );
+
+                        expect(messages, "a negative pool current is legal, so nothing may notify").to.deep.equal([]);
+                        expect(item._source.system.value).to.equal(-3);
+
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("refuses a negative charge count at the cell", async function () {
+                        const charged = await openItemSheet(this, CHARGED_XML);
+
+                        // OPTION THREE fills the clip: three charges to start.
+                        expect(cell(charged.item, "system.numCharges").value).to.equal("3");
+
+                        const messages = await collectErrorNotifications(async () =>
+                            typeIntoItemCell(charged.item, "system.numCharges", "-1"),
+                        );
+
+                        expect(charged.item.system.numCharges).to.equal(3);
+                        expect(messages.length, "one rejection must notify once").to.equal(1);
+                        expect(messages[0]).to.include("Charges");
+
+                        await deleteQuenchActor({ quench: this, actor: charged.actor });
+                    });
+
+                    it("routes the charges cell to the helper that writes _charges", async function () {
+                        const { actor, item } = await openItemSheet(this, CHARGED_XML);
+
+                        // `system.numCharges` names no stored field. The sheet must hand the value to
+                        // setChargesAndSave, which writes the _charges field the getter reads.
+                        await typeIntoItemCell(item, "system.numCharges", "2");
+
+                        expect(item._source.system._charges).to.equal(2);
+                        expect(item.system.numCharges).to.equal(2);
+
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+                });
+
+                describe("martial art range offset", async function () {
+                    /**
+                     * Create an actor and one martial art, so the sheet draws the RANGE cell. An item needs an
+                     * XMLID, and GENERIC_OBJECT is the one Hero Designer writes for a hand-built maneuver.
+                     *
+                     * @param {object} test Mocha test context. The fixture helpers name the actor from it.
+                     * @param {number} range Stored range offset for the martial art.
+                     *
+                     * @returns {Promise<{actor: HeroSystem6eActor, item: HeroSystem6eItem}>} The fixture pair.
+                     */
+                    async function openMartialArt(test, range) {
+                        const actor = await createQuenchActor({
+                            quench: test,
+                            contents: BLAST_XML,
+                            is5e: false,
+                            actorType: "pc",
+                        });
+                        const [item] = await actor.createEmbeddedDocuments("Item", [
+                            {
+                                name: "Contract Maneuver",
+                                type: "martialart",
+                                system: { XMLID: "GENERIC_OBJECT", RANGE: range },
+                            },
+                        ]);
+
+                        await item.sheet.render({ force: true });
+
+                        return { actor, item };
+                    }
+
+                    it("stores -2, the deepest offset the range table grants", async function () {
+                        const { actor, item } = await openMartialArt(this, 0);
+
+                        await typeIntoItemCell(item, "system.RANGE", "-2");
+
+                        expect(item._source.system.RANGE).to.equal(-2);
+
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+
+                    it("refuses -3, past the floor the range table grants", async function () {
+                        const { actor, item } = await openMartialArt(this, 0);
+
+                        const messages = await collectErrorNotifications(async () =>
+                            typeIntoItemCell(item, "system.RANGE", "-3"),
+                        );
+
+                        expect(item._source.system.RANGE).to.equal(0);
+                        expect(messages.length, "one rejection must notify once").to.equal(1);
+
+                        await deleteQuenchActor({ quench: this, actor });
+                    });
+                });
+            });
         },
         { displayName: "HERO: Numeric Input Validation" },
     );

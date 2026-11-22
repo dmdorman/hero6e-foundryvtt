@@ -21,12 +21,12 @@
     {{#if isEnduranceReserve}}
         <div class="form-group">
             <label>ENDURANCE (current)</label>
-            <input type="text" name="system.value" value="{{system.value}}" data-dtype="Number" />
+            <input type="text" name="system.value" value="{{system.value}}" data-dtype="Number" step="1" />
         </div>
 
         <div class="form-group">
             <label>REC</label>
-            <input type="text" name="rec" value="{{rec}}" data-dtype="Number" />
+            <input type="text" name="rec" value="{{rec}}" data-dtype="Number" step="1" />
         </div>
 
         <hr />
@@ -35,7 +35,7 @@
     {{#if isVpp}}
         <div class="form-group">
             <label>Control Cost</label>
-            <input type="text" name="vppControlCost" value="{{vppControlCost}}" data-dtype="Number"
+            <input type="text" name="vppControlCost" value="{{vppControlCost}}" data-dtype="Number" step="1" min="0"
                 {{#unless vppControlCostEditable}}disabled title="5e control cost is derived from the pool (pool / 2)"{{/unless}} />
         </div>
     {{/if}}
@@ -53,12 +53,14 @@
 
         <div class="form-group">
             <label>Weight</label>
-            <input type="text" name="system.WEIGHT" value="{{system.WEIGHT}}" data-dtype="Number" />
+            <input type="text" name="system.WEIGHT" value="{{system.WEIGHT}}" data-dtype="Number" step="0.01"
+                min="0" />
         </div>
 
         <div class="form-group">
             <label>Price</label>
-            <input type="text" name="system.PRICE" value="{{system.PRICE}}" data-dtype="Number" />
+            <input type="text" name="system.PRICE" value="{{system.PRICE}}" data-dtype="Number" step="0.01"
+                min="0" />
         </div>
     {{/if}}
 
