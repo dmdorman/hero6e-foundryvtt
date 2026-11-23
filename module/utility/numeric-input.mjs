@@ -28,6 +28,10 @@
  *
  * `commitNumericInput` is the entry point both sheets use. A sheet hands it the input and a writer, and the
  * writer sees only an accepted value.
+ *
+ * The adder and modifier editor persists on form submit rather than on one input's change, so it cannot use
+ * `commitNumericInput`. It calls `declaresNumberContract`, `validateNumericInput`, and `rejectNumericInput`
+ * directly, so both paths read the same markup contract and raise the same message.
  */
 
 /** Allowed `step` values, mapped to the decimal places they permit. */
@@ -318,7 +322,7 @@ function describeBounds({ min, max }) {
  *
  * @returns {boolean} True when the value must parse as a number.
  */
-function declaresNumberContract(input) {
+export function declaresNumberContract(input) {
     return input.tagName === "INPUT" && (input.type === "number" || input.dataset.dtype === "Number");
 }
 
@@ -340,7 +344,7 @@ function declaresNumberContract(input) {
  *
  * @throws {Error} Anything other than `InputElementNumberSchemaError` from the contract read.
  */
-function validateNumericInput(input) {
+export function validateNumericInput(input) {
     let contract;
 
     try {
@@ -429,7 +433,7 @@ function labelForNumericInput(input) {
  *
  * @returns {void}
  */
-function rejectNumericInput(input, result, label) {
+export function rejectNumericInput(input, result, label) {
     if (result.reason === "schema") {
         console.error(result.error);
         ui.notifications.error(result.error.message);

@@ -1,4 +1,37 @@
 import { HeroAppMixin } from "../api/hero-app-mixin.mjs";
+import { declaresNumberContract, rejectNumericInput, validateNumericInput } from "../../utility/numeric-input.mjs";
+
+/**
+ * Drop from a submitted payload any text the cell's own number contract refuses.
+ *
+ * @param {HTMLFormElement} form The submitted form.
+ * @param {object} [expandedMod] The `mod` branch of the submitted data, edited in place.
+ * @returns {void}
+ */
+function dropRejectedNumberFields(form, expandedMod) {
+    if (!expandedMod) {
+        return;
+    }
+
+    for (const input of form.querySelectorAll('input[name^="mod."]')) {
+        if (!declaresNumberContract(input)) {
+            continue;
+        }
+
+        const field = input.name.slice("mod.".length);
+        const result = validateNumericInput(input);
+
+        if (result.ok) {
+            // The submitted text may carry a leading zero or spaces, so write the parsed number.
+            expandedMod[field] = result.value;
+            continue;
+        }
+
+        rejectNumericInput(input, result);
+        delete expandedMod[field];
+    }
+}
+
 const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
 export class ItemModifierApplicationV2 extends HeroAppMixin(HandlebarsApplicationMixin(ApplicationV2)) {
@@ -78,6 +111,8 @@ export class ItemModifierApplicationV2 extends HeroAppMixin(HandlebarsApplicatio
         if (!modSource) {
             return ui.notifications.error(`Unable to edit ${this.modOrig.XMLID}; it no longer exists on the item.`);
         }
+
+        dropRejectedNumberFields(form, expandedData.mod);
 
         foundry.utils.mergeObject(modSource, expandedData.mod ?? {});
 

@@ -1222,6 +1222,45 @@ export class HeroSystem6eItemTypeDataModelProps extends HeroSystem6eItemTypeData
     }
 }
 
+/**
+ * Level fields that hold a purchased defense.
+ *
+ * Hero Designer exports one per defense a power protects: ARMOR two, Force Field and Barrier four,
+ * Damage Resistance five. LEVELS holds their sum, so `cost()` needs LEVELS alone.
+ *
+ * @type {string[]}
+ */
+export const DEFENSE_LEVEL_FIELDS = ["PDLEVELS", "EDLEVELS", "MDLEVELS", "FDLEVELS", "POWDLEVELS"];
+
+/**
+ * Whether stored power data records a purchased defense in level fields.
+ *
+ * Presence decides, not value. Hero Designer exports `PDLEVELS="0"` for a defense nobody bought.
+ *
+ * @param {object} data Stored power data.
+ * @returns {boolean} True when the data carries at least one defense level field.
+ */
+function hasPurchasedDefenseLevelFields(data) {
+    return DEFENSE_LEVEL_FIELDS.some((key) => data?.[key] !== undefined);
+}
+
+/**
+ * Sum the level fields that hold a purchased defense. `HeroSystem6eItem#_preUpdate` writes this into
+ * LEVELS whenever an update changes one of those fields, so the locked cell and the cost stay in step.
+ *
+ * Hero Designer sums the same fields into LEVELS. Measured on its own exports: `Test6e_Barrier.hdc`
+ * holds PD 1, ED 2, MD 3 and POWD 4 in LEVELS 10, and `Test5e_DamageReduction.hdc` sums five fields
+ * into LEVELS 15. Barrier geometry stays out, because `cost()` adds LENGTHLEVELS, HEIGHTLEVELS,
+ * WIDTHLEVELS and BODYLEVELS on top of the LEVELS total. FDLEVELS is a StringField, so Number()
+ * converts its text.
+ *
+ * @param {object} data Stored power data.
+ * @returns {number} The total of the defense level fields present.
+ */
+export function sumPurchasedDefenseLevels(data) {
+    return DEFENSE_LEVEL_FIELDS.reduce((total, key) => total + (Number(data?.[key]) || 0), 0);
+}
+
 export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
     /// https://foundryvtt.wiki/en/development/api/DataModel
 
@@ -1287,6 +1326,15 @@ export class HeroSystem6eItemPower extends HeroSystem6eItemTypeDataModelProps {
             PRICE: new HeroNumberField({ integer: false, min: 0.0, initial: 0.0 }),
             WEIGHT: new HeroNumberField({ integer: false, min: 0.0, initial: 0.0 }),
         };
+    }
+
+    /**
+     * Whether LEVELS totals the purchased defense rather than purchasing something of its own.
+     *
+     * @returns {boolean} True when the item carries a purchased-defense level field.
+     */
+    get levelsTotalPurchasedDefenses() {
+        return hasPurchasedDefenseLevelFields(this.toObject(false));
     }
 }
 

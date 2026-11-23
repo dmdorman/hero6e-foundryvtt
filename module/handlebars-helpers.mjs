@@ -118,6 +118,7 @@ function isDefined(value, item, property) {
     if (item.constructor?.name === "HeroSystem6eItem") {
         return foundry.utils.hasProperty(item, property);
     }
+
     return value !== undefined;
 }
 

@@ -89,7 +89,11 @@
     {{#unless editOptions.hideLEVELS}}
         <div class="form-group">
             <label>LEVELS</label>
-            <input {{#if (isdefined item.system.PDLEVELS item "system.PDLEVELS")}}disabled{{/if}}
+            {{!-- LEVELS is a purchase the player owns, except on a power that records its defense in the
+                 defense-type level fields. There LEVELS is the total, and it is the only number cost
+                 reads, so the cell states the rule instead of taking a number. See `levelsTotalPurchasedDefenses`.
+            --}}
+            <input {{#if item.system.levelsTotalPurchasedDefenses}}disabled title="LEVELS totals the PD, ED, MD, FD and POWD levels. Edit those fields."{{/if}}
             type="text" name="system.LEVELS" value="{{item.system.LEVELS}}" data-dtype="Number" step="1" min="0"
             />
         </div>
@@ -300,6 +304,13 @@
 <div class="form-group">
     <label>MDLEVELS</label>
     <input type="text" name="system.MDLEVELS" value="{{item.system.MDLEVELS}}" data-dtype="Number" step="1"
+        min="0" />
+</div>
+{{/if}}
+{{#if (isdefined item.system.FDLEVELS)}}
+<div class="form-group">
+    <label>FDLEVELS</label>
+    <input type="text" name="system.FDLEVELS" value="{{item.system.FDLEVELS}}" data-dtype="Number" step="1"
         min="0" />
 </div>
 {{/if}}
