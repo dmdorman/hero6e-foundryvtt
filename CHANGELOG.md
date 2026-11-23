@@ -1,6 +1,6 @@
 # Releases
 
-### Version 5.0.4 So Far... [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
+### Version 5.0.4 20261122 [Hero System 6e (Unofficial) v2](https://github.com/dmdorman/hero6e-foundryvtt)
 
 - All tokens with linked data share an active movement state. Actors without any movement types now show in the token movement HUD as having "no movement".
 - Knockback modifier correctly calculated for airbourne (flying, gliding, leaping, swinging) actors. [#4793](https://github.com/dmdorman/hero6e-foundryvtt/issues/4793)
