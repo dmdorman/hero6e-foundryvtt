@@ -28,58 +28,39 @@ import { createQuenchActor, deleteQuenchActor, waitUntil } from "./quench-helper
  * the cell and says why. The check is presence, not value: an unpurchased defense exports as 0, so a
  * truth test would unlock the one cell cost ignores.
  *
- * Geometry gets no case, because it is not a dimension of LEVELS. LENGTHLEVELS, HEIGHTLEVELS,
- * WIDTHLEVELS and BODYLEVELS buy barrier size, and `FORCEWALL.cost()` adds them separately.
- *
- * These cases do not assert a derived-value rule. Nothing recomputes the LEVELS total today, so a
- * player who edits PDLEVELS leaves LEVELS, and therefore cost, stale. An invariant needs a rule before
- * it gets a test; until then the locked cell is the honest state.
  */
 
 // The sheet's change listener writes through `item.update`, which settles asynchronously.
 const WRITE_SETTLE_MS = 2000;
 
-// Copied verbatim from `EVERYTHING_LASS_6E_HDC` in `testing-everything-lad-lass.mjs`. No level fields
-// beyond LEVELS, so this is a plain power: LEVELS is the purchase and the only cost input.
 const BLAST_6E_XML = `<POWER XMLID="ENERGYBLAST" ID="1709333792635" BASECOST="0.0" LEVELS="1" ALIAS="Blast" POSITION="4" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" INPUT="ED" USESTANDARDEFFECT="No" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
                           <NOTES />
                         </POWER>`;
 
-// Copied verbatim from `EVERYTHING_LASS_6E_HDC`. A defense power with no level fields of its own:
-// `defenseTagVsAttack` reads `adjustedLevels`, so LEVELS is the defense value.
 const MENTAL_DEFENSE_6E_XML = `<POWER XMLID="MENTALDEFENSE" ID="1709333957464" BASECOST="0.0" LEVELS="1" ALIAS="Mental Defense" POSITION="59" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
                           <NOTES />
                         </POWER>`;
 
-// Copied verbatim from `EVERYTHING_LASS_6E_HDC`. Resistant protection carries the defense-type fields:
-// cost reads LEVELS, while rPD and rED read PDLEVELS and EDLEVELS.
 const RESISTANT_PROTECTION_6E_XML = `<POWER XMLID="FORCEFIELD" ID="1709334003070" BASECOST="0.0" LEVELS="0" ALIAS="Resistant Protection" POSITION="71" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" PDLEVELS="0" EDLEVELS="0" MDLEVELS="0" POWDLEVELS="0">
                           <NOTES />
                         </POWER>`;
 
-// Copied verbatim from `EVERYTHING_LASS_6E_HDC`. Barrier carries the defense-type fields plus LENGTH,
-// HEIGHT, BODY and WIDTH, and it costs BASECOST on top of the level total.
 const BARRIER_6E_XML = `<POWER XMLID="FORCEWALL" ID="1711932416775" BASECOST="3.0" LEVELS="0" ALIAS="Barrier" POSITION="3" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" PDLEVELS="0" EDLEVELS="0" MDLEVELS="0" POWDLEVELS="0" LENGTHLEVELS="0" HEIGHTLEVELS="0" BODYLEVELS="0" WIDTHLEVELS="0.0">
                           <NOTES />
                         </POWER>`;
 
-// Copied verbatim from `EVERYTHING_LAD_5E_HDC`. This export holds the only ARMOR element, so the shape
-// carries the 5e edition. Armor carries PDLEVELS and EDLEVELS.
 const ARMOR_5E_XML = `<POWER XMLID="ARMOR" ID="1709342537943" BASECOST="0.0" LEVELS="0" ALIAS="Armor" POSITION="2" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" PDLEVELS="0" EDLEVELS="0">
                           <NOTES />
                         </POWER>`;
 
-// Copied verbatim from `EVERYTHING_LAD_5E_HDC`. Invisibility buys a sense group in OPTIONID, its LEVELS
-// costs nothing, so the cell holds dead data, and whether it should render at all is a display question.
-// The rule here only says LEVELS is no purchased defense. Keep OPTION and OPTION_ALIAS in this element:
-// `getItemDescription` filters the adder list for a name ending in "Group", and without the option it
-// reads undefined and throws inside `description`.
 const INVISIBILITY_5E_XML = `<POWER XMLID="INVISIBILITY" ID="1709342653112" BASECOST="10.0" LEVELS="0" ALIAS="Invisibility" POSITION="36" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" OPTION="HEARINGGROUP" OPTIONID="HEARINGGROUP" OPTION_ALIAS="Hearing Group" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes">
                           <NOTES />
                         </POWER>`;
 
-// Copied verbatim from `EVERYTHING_LAD_5E_HDC`. Damage Resistance keeps its DR amount in PDLEVELS. See
-// `defense.mjs` `drLevels`.
+const FORCE_FIELD_5E_XML = `<POWER XMLID="FORCEFIELD" ID="1702155860391" BASECOST="0.0" LEVELS="21" ALIAS="Force Field" POSITION="8" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" PDLEVELS="10" EDLEVELS="11" MDLEVELS="0" POWDLEVELS="0">
+                          <NOTES/>
+                        </POWER>`;
+
 const DAMAGE_RESISTANCE_5E_XML = `<POWER XMLID="DAMAGERESISTANCE" ID="1709342567780" BASECOST="0.0" LEVELS="0" ALIAS="Damage Resistance" POSITION="9" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default" SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes" PDLEVELS="0" EDLEVELS="0" MDLEVELS="0" FDLEVELS="0" POWDLEVELS="0">
                           <NOTES />
                         </POWER>`;
@@ -148,10 +129,7 @@ async function editItemSheetCell(item, { name, value, read }) {
     await sheet.render({ force: true });
 
     try {
-        const input = sheet.element.querySelector(`input[name="${name}"]`);
-        if (!input) {
-            throw new Error(`No cell named "${name}" rendered for ${item.name} (${item.type}/${item.system.XMLID})`);
-        }
+        const input = findCell(sheet, name, item);
 
         const { disabled, title } = input;
         const { value: drawnValue } = input;
@@ -161,6 +139,75 @@ async function editItemSheetCell(item, { name, value, read }) {
         await waitUntil(() => read(item) === value, WRITE_SETTLE_MS);
 
         return { disabled, title, drawnValue, stored: read(item) };
+    } finally {
+        await sheet.close();
+    }
+}
+
+/**
+ * Find one cell of a rendered sheet.
+ *
+ * @param {object} sheet Rendered item sheet.
+ * @param {string} name `name` attribute the cell carries.
+ * @param {HeroSystem6eItem} item Item the sheet belongs to, for the error text.
+ * @returns {HTMLInputElement} The cell.
+ * @throws {Error} When the sheet renders no such cell.
+ */
+function findCell(sheet, name, item) {
+    const input = sheet.element.querySelector(`input[name="${name}"]`);
+
+    if (!input) {
+        throw new Error(`No cell named "${name}" rendered for ${item.name} (${item.type}/${item.system.XMLID})`);
+    }
+
+    return input;
+}
+
+/**
+ * Type into cells in order, wait for each write to land, then report what one further cell drew.
+ *
+ * An edited cell answers whether its write happened. The read cell answers whether the document kept a
+ * derived field in step, which is the half a player actually reads. Order matters where a case builds a
+ * shape the export does not carry: length first, defense second, then the total.
+ *
+ * @param {HeroSystem6eItem} item Item whose sheet renders.
+ * @param {object} options Cell options.
+ * @param {Array<object>} options.edits Cells to edit in order.
+ * @param {string} options.edits[].name `name` attribute of the cell to edit.
+ * @param {number|string} options.edits[].text Text to commit.
+ * @param {(item: HeroSystem6eItem) => boolean} options.edits[].landed Reports whether that write reached
+ *     the document.
+ * @param {(item: HeroSystem6eItem) => unknown} [options.readDerived] Reads the field the document derives,
+ *     so a case can see it after every edit rather than only after the last one.
+ * @param {string} options.thenRead `name` attribute of the cell to read once every write has settled.
+ * @returns {Promise<{edits: Array<{name: string, written: boolean, disabled: boolean, derived: unknown}>,
+ *     drawn: {value: string, disabled: boolean, title: string}}>} What each edit did, the derived value
+ *     after it, and the text the read cell drew at the end.
+ */
+async function editCellsThenReadCell(item, { edits, readDerived, thenRead }) {
+    const sheet = item.sheet;
+
+    try {
+        const done = [];
+
+        for (const { name, text, landed } of edits) {
+            await sheet.render({ force: true });
+
+            const input = findCell(sheet, name, item);
+            const { disabled } = input;
+
+            input.value = String(text);
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            const written = await waitUntil(() => landed(item), WRITE_SETTLE_MS);
+
+            done.push({ name, written, disabled, derived: readDerived ? readDerived(item) : undefined });
+        }
+
+        await sheet.render({ force: true });
+
+        const reader = findCell(sheet, thenRead, item);
+
+        return { edits: done, drawn: { value: reader.value, disabled: reader.disabled, title: reader.title } };
     } finally {
         await sheet.close();
     }
@@ -336,6 +383,117 @@ export function registerItemSheetTests(quench) {
                             ).to.not.be.empty;
                         });
                     }
+                });
+
+                /**
+                 * A locked LEVELS cell is only honest while the document keeps the total in step. These cases
+                 * edit one defense field through the sheet and read the total back from the document and from
+                 * the cell, so a derivation that never ran, or ran over the wrong field list, fails here.
+                 *
+                 * Each expected value is a literal, added by hand from the levels the fixture carries, and the
+                 * cost expectation comes from the power's own rate in `config.mjs`. Neither is computed with
+                 * the code under test.
+                 */
+                describe("LEVELS total after a defense-level edit", function () {
+                    it("PDLEVELS 10 to 13 on top of rED 11 totals 24 and costs 24", async function () {
+                        actor = await createFixtureActor(this, true);
+                        const item = await createFixtureItem(actor, FORCE_FIELD_5E_XML);
+
+                        const { edits, drawn } = await editCellsThenReadCell(item, {
+                            edits: [
+                                {
+                                    name: "system.PDLEVELS",
+                                    text: 13,
+                                    landed: (editedItem) => editedItem.system.PDLEVELS === 13,
+                                },
+                            ],
+                            readDerived: (editedItem) => editedItem.system.LEVELS,
+                            thenRead: "system.LEVELS",
+                        });
+
+                        expect(
+                            edits[0].written,
+                            "the rPD edit never reached the document, so nothing could total it",
+                        ).to.equal(true);
+                        expect(edits[0].disabled, "a locked rPD cell takes no player edit").to.equal(false);
+
+                        expect(edits[0].derived, "13 rPD plus 11 rED plus 0 MD plus 0 POWD is 24").to.equal(24);
+                        expect(drawn.value, "the LEVELS cell still drew the imported total").to.equal("24");
+                        expect(drawn.disabled, "the total is not a cell a player types into").to.equal(true);
+
+                        // 5e Force Field costs 1 CP per level (`config.mjs`, FORCEFIELD 5e variant).
+                        expect(
+                            item.realCost,
+                            "24 levels at 1 CP each costs 24, not the 21 the export carried",
+                        ).to.equal(24);
+                    });
+
+                    it("flash defense joins the total on Damage Resistance", async function () {
+                        actor = await createFixtureActor(this, true);
+                        const item = await createFixtureItem(actor, DAMAGE_RESISTANCE_5E_XML);
+
+                        const { edits, drawn } = await editCellsThenReadCell(item, {
+                            edits: [
+                                {
+                                    name: "system.FDLEVELS",
+                                    text: 3,
+                                    landed: (editedItem) => Number(editedItem.system.FDLEVELS) === 3,
+                                },
+                            ],
+                            readDerived: (editedItem) => editedItem.system.LEVELS,
+                            thenRead: "system.LEVELS",
+                        });
+
+                        expect(edits[0].written, "the FDLEVELS cell wrote nothing").to.equal(true);
+                        expect(
+                            edits[0].disabled,
+                            "FDLEVELS is a purchase the player owns, so the cell is open",
+                        ).to.equal(false);
+
+                        // FDLEVELS is a StringField, so the total has to convert its text before adding it.
+                        expect(edits[0].derived, "3 levels of flash defense is a total of 3").to.equal(3);
+                        expect(drawn.value, "the LEVELS cell ignored the flash defense level").to.equal("3");
+                    });
+
+                    it("barrier length stays out of the total, before and after a defense edit", async function () {
+                        actor = await createFixtureActor(this, false);
+                        const item = await createFixtureItem(actor, BARRIER_6E_XML);
+
+                        const { edits, drawn } = await editCellsThenReadCell(item, {
+                            edits: [
+                                {
+                                    name: "system.LENGTHLEVELS",
+                                    text: 4,
+                                    landed: (editedItem) => Number(editedItem.system.LENGTHLEVELS) === 4,
+                                },
+                                {
+                                    name: "system.PDLEVELS",
+                                    text: 2,
+                                    landed: (editedItem) => editedItem.system.PDLEVELS === 2,
+                                },
+                            ],
+                            readDerived: (editedItem) => editedItem.system.LEVELS,
+                            thenRead: "system.LEVELS",
+                        });
+
+                        expect(
+                            edits.map((edit) => [edit.name, edit.written, edit.disabled]),
+                            "neither barrier cell took its edit, so the case tested nothing",
+                        ).to.deep.equal([
+                            ["system.LENGTHLEVELS", true, false],
+                            ["system.PDLEVELS", true, false],
+                        ]);
+
+                        // Length alone must not move the total. `FORCEWALL.cost()` adds it on top of LEVELS.
+                        expect(edits[0].derived, "4 m of barrier buys size, not defense, so LEVELS stays 0").to.equal(
+                            0,
+                        );
+
+                        // And once a defense level does move the total, the length the barrier also holds must
+                        // stay out of the addition.
+                        expect(edits[1].derived, "2 rPD totals 2, not 6 with the 4 m of length added in").to.equal(2);
+                        expect(drawn.value, "the LEVELS cell drew something other than the rPD total").to.equal("2");
+                    });
                 });
             });
         },

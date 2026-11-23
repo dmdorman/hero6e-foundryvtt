@@ -1,4 +1,5 @@
 import { createQuenchActor, deleteQuenchActor } from "./quench-helper.mjs";
+import { ItemModifierApplicationV2 } from "../applications/item/item-modifier-application.mjs";
 import { getAndSetGameSetting } from "../settings/settings-helpers.mjs";
 import {
     canonicalNumericText,
@@ -14,6 +15,32 @@ export function registerNumericInputTests(quench) {
         `${game.system.id}.utils.numeric-input`,
         (context) => {
             const { afterEach, beforeEach, describe, expect, it } = context;
+
+            /**
+             * Collect the error notifications one run raises, without showing them.
+             *
+             * Both item UIs raise a rejection through `ui.notifications.error`, and every suite case that
+             * refuses an edit needs the message count without a toast flashing across the screen.
+             *
+             * @param {() => Promise<void>} run Work that may reject an edit.
+             *
+             * @returns {Promise<string[]>} The messages, in the order raised.
+             */
+            async function collectErrorNotifications(run) {
+                const messages = [];
+                const notify = ui.notifications.error;
+                ui.notifications.error = (message) => {
+                    messages.push(String(message));
+                };
+
+                try {
+                    await run();
+                } finally {
+                    ui.notifications.error = notify;
+                }
+
+                return messages;
+            }
 
             /**
              * Build a detached input with the given attributes.
@@ -1158,29 +1185,6 @@ export function registerNumericInputTests(quench) {
                     input.value = text;
                 }
 
-                /**
-                 * Collect the error notifications one run raises, without showing them.
-                 *
-                 * @param {() => Promise<void>} run Work that may reject an edit.
-                 *
-                 * @returns {Promise<string[]>} The messages, in the order raised.
-                 */
-                async function collectErrorNotifications(run) {
-                    const messages = [];
-                    const notify = ui.notifications.error;
-                    ui.notifications.error = (message) => {
-                        messages.push(String(message));
-                    };
-
-                    try {
-                        await run();
-                    } finally {
-                        ui.notifications.error = notify;
-                    }
-
-                    return messages;
-                }
-
                 describe("markup contract", async function () {
                     it("declares a legal contract that the drawn text satisfies", async function () {
                         const problems = [];
@@ -1436,6 +1440,195 @@ export function registerNumericInputTests(quench) {
 
                         await deleteQuenchActor({ quench: this, actor });
                     });
+                });
+            });
+
+            /**
+             * The adder and modifier editor declares the same LEVELS contract as the item sheet, and it persists
+             * on form submit rather than on one input's change. That second path needs its own cases, because it
+             * reaches the item through a merged payload instead of a writer the sheet picks.
+             *
+             * Measured before the wiring, on this fixture's COSTSEND adder: `3.5` stored 4, `abc` vanished with
+             * no message, and `-2` stored -2. The DataModel decided, because nothing read the markup first.
+             */
+            describe("Adder editor number contract", async function () {
+                // One power, one modifier. COSTSEND carries LEVELS, and the editor draws a cell for it.
+                const COST_SEND_XML = `
+                    <POWER XMLID="FORCEFIELD" ID="1000000000051" BASECOST="0.0" LEVELS="6" ALIAS="Resistant Protection"
+                        POSITION="1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default"
+                        SHOW_ACTIVE_COST="Yes" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="Contract Protection"
+                        QUANTITY="1" AFFECTS_PRIMARY="No" AFFECTS_TOTAL="Yes"
+                        PDLEVELS="3" EDLEVELS="3" MDLEVELS="0" POWDLEVELS="0">
+                        <NOTES />
+                        <MODIFIER XMLID="COSTSEND" ID="1000000000052" BASECOST="-0.5" LEVELS="0" ALIAS="Costs Endurance"
+                            POSITION="-1" MULTIPLIER="1.0" GRAPHIC="Burst" COLOR="255 255 255" SFX="Default"
+                            SHOW_ACTIVE_COST="Yes" OPTION="EVERYPHASE" OPTIONID="EVERYPHASE"
+                            OPTION_ALIAS="Costs END Every Phase" INCLUDE_NOTES_IN_PRINTOUT="Yes" NAME="" COMMENTS=""
+                            PRIVATE="No" FORCEALLOW="No">
+                            <NOTES />
+                        </MODIFIER>
+                    </POWER>`;
+
+                /**
+                 * Create the fixture item and open the editor for its one modifier.
+                 *
+                 * @param {object} test Mocha test context. The fixture helper names the actor from it.
+                 *
+                 * @returns {Promise<{actor: HeroSystem6eActor, item: HeroSystem6eItem, editor: ItemModifierApplicationV2}>}
+                 *     The fixture pair and the open editor.
+                 *
+                 * @throws {Error} When the fixture carries no COSTSEND modifier.
+                 */
+                async function openAdderEditor(test) {
+                    const actor = await createQuenchActor({
+                        quench: test,
+                        contents: COST_SEND_XML,
+                        is5e: false,
+                        actorType: "pc",
+                    });
+                    const item = actor.items.contents[0];
+                    const mod = item.system.MODIFIER?.find((entry) => entry.XMLID === "COSTSEND");
+
+                    if (!mod) {
+                        throw new Error("fixture holds no COSTSEND modifier, so the editor has nothing to edit");
+                    }
+
+                    const editor = new ItemModifierApplicationV2({ item, mod }, {});
+                    await editor.render(true);
+
+                    return { actor, item, editor };
+                }
+
+                /**
+                 * Read one stored field of the fixture's adder.
+                 *
+                 * @param {HeroSystem6eItem} item Item that owns the adder.
+                 * @param {string} field Field name on the adder source, for example `LEVELS`.
+                 *
+                 * @returns {number} The stored value.
+                 */
+                function storedAdderField(item, field) {
+                    return item._source.system.MODIFIER.find((entry) => entry.XMLID === "COSTSEND")[field];
+                }
+
+                /**
+                 * Read one cell of the editor by the label above it.
+                 *
+                 * A calculated cell carries no `name`, so a name lookup cannot find it. The label is what the
+                 * player reads, so the label is what the case matches.
+                 *
+                 * @param {ItemModifierApplicationV2} editor Open editor holding the cell.
+                 * @param {string} label Label text, for example `BASECOST`.
+                 *
+                 * @returns {HTMLInputElement} The input.
+                 *
+                 * @throws {Error} When the editor renders no cell with that label.
+                 */
+                function cellByLabel(editor, label) {
+                    const group = [...editor.element.querySelectorAll(".form-group")].find(
+                        (g) => g.querySelector("label")?.textContent?.trim() === label,
+                    );
+
+                    if (!group) {
+                        throw new Error(`adder editor renders no ${label} cell`);
+                    }
+
+                    return group.querySelector("input");
+                }
+
+                /**
+                 * Put text in one editor cell and fire the change that submits the form.
+                 *
+                 * @param {ItemModifierApplicationV2} editor Open editor holding the cell.
+                 * @param {string} name Property path the cell writes, for example `mod.LEVELS`.
+                 * @param {string} text Text to commit.
+                 *
+                 * @returns {Promise<void>} Resolves once the submit and its write have settled.
+                 *
+                 * @throws {Error} When the editor renders no such cell.
+                 */
+                async function typeIntoAdderCell(editor, name, text) {
+                    const input = editor.element.querySelector(`input[name="${name}"]`);
+
+                    if (!input) {
+                        throw new Error(`adder editor renders no input[name="${name}"]`);
+                    }
+
+                    input.value = text;
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                    await new Promise((resolve) => setTimeout(resolve, 250));
+                }
+
+                it("stores 4, the whole level a player typed", async function () {
+                    const { actor, editor, item } = await openAdderEditor(this);
+
+                    const messages = await collectErrorNotifications(async () =>
+                        typeIntoAdderCell(editor, "mod.LEVELS", "4"),
+                    );
+
+                    expect(storedAdderField(item, "LEVELS"), "a legal whole level must reach the adder").to.equal(4);
+                    expect(messages, "an accepted edit raises no message").to.be.empty;
+
+                    // Close without the animation. It costs about 1.3 s, and Mocha's per-test timeout
+                    // is 2 s.
+                    await editor.close({ animate: false });
+                    await deleteQuenchActor({ quench: this, actor });
+                });
+
+                it("refuses 3.5 instead of storing the rounded 4", async function () {
+                    const { actor, editor, item } = await openAdderEditor(this);
+
+                    const messages = await collectErrorNotifications(async () =>
+                        typeIntoAdderCell(editor, "mod.LEVELS", "3.5"),
+                    );
+
+                    expect(
+                        storedAdderField(item, "LEVELS"),
+                        "step 1 admits no fraction, so nothing may be stored",
+                    ).to.equal(0);
+                    expect(messages.length, "one rejection must notify once").to.equal(1);
+
+                    // Close without the animation. It costs about 1.3 s, and Mocha's per-test timeout
+                    // is 2 s.
+                    await editor.close({ animate: false });
+                    await deleteQuenchActor({ quench: this, actor });
+                });
+
+                it("draws BASECOST read-only, because the item calculates it", async function () {
+                    const { actor, editor, item } = await openAdderEditor(this);
+                    const cell = cellByLabel(editor, "BASECOST");
+
+                    // The adder's cost comes from the Hero Designer XML, from the OPTION choice table, and from
+                    // `replaceBaseCostForHalfDieAdderXml` and `replaceBaseCostForPipAdderXml`. The editor only
+                    // shows the answer, so the cell stays disabled and unnamed: a disabled field never enters
+                    // the submitted form, and an unnamed one has no key to write.
+                    expect(cell.disabled, "BASECOST is calculated, so the player may not type it").to.equal(true);
+                    expect(cell.getAttribute("name"), "no name means no key in the payload").to.equal(null);
+                    expect(cell.value, "the cell draws the stored cost").to.equal(
+                        String(storedAdderField(item, "BASECOST")),
+                    );
+
+                    await editor.close({ animate: false });
+                    await deleteQuenchActor({ quench: this, actor });
+                });
+
+                it("refuses -2, below the level floor of zero", async function () {
+                    const { actor, editor, item } = await openAdderEditor(this);
+
+                    const messages = await collectErrorNotifications(async () =>
+                        typeIntoAdderCell(editor, "mod.LEVELS", "-2"),
+                    );
+
+                    expect(
+                        storedAdderField(item, "LEVELS"),
+                        "levels count a purchase, so a minus may not be stored",
+                    ).to.equal(0);
+                    expect(messages.length, "one rejection must notify once").to.equal(1);
+
+                    // Close without the animation. It costs about 1.3 s, and Mocha's per-test timeout
+                    // is 2 s.
+                    await editor.close({ animate: false });
+                    await deleteQuenchActor({ quench: this, actor });
                 });
             });
         },

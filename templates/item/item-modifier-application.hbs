@@ -11,7 +11,8 @@
             {{#unless editOptions.hideLEVELS}}
                 <div class="form-group">
                     <label>LEVELS</label>
-                    <input type="text" name="mod.LEVELS" value="{{mod.LEVELS}}" />
+                    <input type="text" name="mod.LEVELS" value="{{mod.LEVELS}}" data-dtype="Number" step="1"
+                        min="0" />
                 </div>
             {{/unless}}
         {{/if}}

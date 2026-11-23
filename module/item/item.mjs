@@ -42,7 +42,7 @@ import {
     whisperUserTargetsForActor,
 } from "../utility/util.mjs";
 import { xmlToJsonNode } from "../utility/xml-to-json.mjs";
-import { HeroAdderModel } from "./HeroSystem6eTypeDataModels.mjs";
+import { DEFENSE_LEVEL_FIELDS, HeroAdderModel, sumPurchasedDefenseLevels } from "./HeroSystem6eTypeDataModels.mjs";
 import { isActivatedForThisUse } from "./item-requires-roll.mjs";
 import { userInteractiveVerifyOptionallyPromptThenSpendResources } from "./item-resources.mjs";
 import {
@@ -1258,6 +1258,25 @@ export class HeroSystem6eItem extends HeroObjectCacheMixin(Item) {
             if (changes.system?.ADDER != null) {
                 const relinkChanges = this.linkBasedOnCustomAdders(changes.system.ADDER, this.actor?.pslItems || []);
                 foundry.utils.mergeObject(changes, relinkChanges);
+            }
+        }
+
+        // LEVELS totals the purchased defense on a power that records that defense in level fields, and
+        // `realCost` reads LEVELS alone there. Rewrite the total, so editing one defense field cannot
+        // leave the cost holding the old total. Measured: a 5e Force Field at PD 10 and ED 11 costs 21, and
+        // raising PD to 13 while LEVELS stays 21 leaves the cost at 21.
+        if (this.system?.levelsTotalPurchasedDefenses) {
+            const editedDefenseFields = DEFENSE_LEVEL_FIELDS.filter(
+                (key) => changes[`system.${key}`] !== undefined || changes.system?.[key] !== undefined,
+            );
+
+            if (editedDefenseFields.length > 0) {
+                const changedSystem = foundry.utils.expandObject(changes)?.system ?? {};
+                const futureSystem = foundry.utils.mergeObject(this.system.toObject(false), changedSystem, {
+                    keepInvalid: true,
+                });
+
+                changes["system.LEVELS"] = sumPurchasedDefenseLevels(futureSystem);
             }
         }
 

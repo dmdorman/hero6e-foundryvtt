@@ -307,6 +307,13 @@
         min="0" />
 </div>
 {{/if}}
+{{#if (isdefined item.system.FDLEVELS)}}
+<div class="form-group">
+    <label>FDLEVELS</label>
+    <input type="text" name="system.FDLEVELS" value="{{item.system.FDLEVELS}}" data-dtype="Number" step="1"
+        min="0" />
+</div>
+{{/if}}
 {{#if (isdefined item.system.POWDLEVELS)}}
 <div class="form-group">
     <label>POWDLEVELS</label>
