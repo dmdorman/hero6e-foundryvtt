@@ -511,8 +511,8 @@ async function handleMacroCreation(bar, data, slot, item) {
     if (!item) return;
     if (!item.roll) return;
 
-    // Create the macro command
-    const command = `game.herosystem6e.rollItemMacro("${item.name}", "${item.type}");`;
+    // Create the macro command. JSON.stringify to handle quotes etc.
+    const command = `game.herosystem6e.rollItemMacro(${JSON.stringify(item.name)}, ${JSON.stringify(item.type)});`;
     let macro = game.macros.find((m) => m.command === command && m.name === item.name && m.img === item.img);
     if (!macro) {
         macro = await Macro.create({
